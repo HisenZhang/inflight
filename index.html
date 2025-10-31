@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flight Planning Tool</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>✈️ Flight Planning Tool</h1>
+            <p class="subtitle">Calculate distances and bearings for your flight route</p>
+        </header>
+
+        <div class="data-status">
+            <div id="dataStatus" class="status-box">
+                <span class="status-indicator">⚠️</span>
+                <span id="statusText">Airport data not loaded</span>
+                <button id="loadDataBtn" class="btn btn-primary">Load Airport Data</button>
+                <button id="clearCacheBtn" class="btn btn-secondary" style="display: none;">Clear Cache</button>
+            </div>
+            <div id="dataInfo" class="data-info"></div>
+        </div>
+
+        <div class="input-section">
+            <h2>Route Planning</h2>
+            <div class="route-input">
+                <label for="routeInput">Enter Route (Space-separated airport codes):</label>
+                <input
+                    type="text"
+                    id="routeInput"
+                    placeholder="e.g., KJFK EGLL LFPG or JFK LHR CDG"
+                    disabled
+                >
+                <button id="calculateBtn" class="btn btn-primary" disabled>Calculate Route</button>
+                <button id="clearRouteBtn" class="btn btn-secondary">Clear</button>
+            </div>
+            <p class="help-text">
+                Enter airport codes (ICAO or IATA) separated by spaces. Example: KJFK EGLL LFPG
+            </p>
+        </div>
+
+        <div id="resultsSection" class="results-section" style="display: none;">
+            <h2>Route Results</h2>
+            <div id="routeSummary" class="route-summary"></div>
+            <div id="routeLegs" class="route-legs"></div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
