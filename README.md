@@ -1,6 +1,6 @@
 # Flight Planning Webapp
 
-A lightweight web application for flight planning that calculates distances and bearings between airports and navaids.
+A lightweight web application for flight planning with a CDU/avionics-style interface that calculates distances and bearings between airports and navaids.
 
 ## Features
 
@@ -25,6 +25,12 @@ A lightweight web application for flight planning that calculates distances and 
 - **Bearing Calculation**: Computes initial bearing for each leg with cardinal direction
 - **Dual Code Support**: Accepts both ICAO (e.g., KJFK) and IATA (e.g., JFK) airport codes
 - **Database Timestamp**: Shows when data was last updated and how many days ago
+- **CDU/Avionics UI**: High-contrast green-on-black interface inspired by aircraft CDUs
+  - Monospace fonts throughout
+  - Technical aviation formatting and terminology
+  - Compact, efficient layout
+  - All frequencies displayed (no truncation)
+- **Smart Code Resolution**: ICAO codes prioritized over IATA to avoid navaid conflicts
 - **Responsive Design**: Works on desktop, tablet, and mobile devices
 
 ## How to Use
@@ -38,22 +44,26 @@ A lightweight web application for flight planning that calculates distances and 
 2. **Plan Your Route**
    - Enter waypoint codes separated by spaces (e.g., `KJFK MERIT EGLL`)
    - Mix airports and navaids as needed
-   - Airports: Use ICAO codes (4 letters, e.g., KJFK) or IATA codes (3 letters, e.g., JFK)
+   - **Code Priority**: ICAO (4 chars) → Navaid → IATA (3 chars)
+     - Use ICAO codes (KJFK) to avoid conflicts with navaids
+     - IATA codes (JFK) checked last to prevent navaid conflicts
    - Navaids: Use the navaid identifier (e.g., MERIT, OAK)
-   - Click "Calculate Route" or press Enter
+   - Click "COMPUTE" or press Enter
 
 3. **View Results**
-   - See the total route distance and number of legs
-   - Each leg shows detailed information for both waypoints:
+   - CDU-style display with high-contrast green/amber text
+   - Route summary shows total distance and leg count
+   - Each leg displays detailed information for DEPART and ARRIVE waypoints:
      - Name and type (with color-coded badge)
      - Location (municipality and country)
-     - Coordinates (degrees and minutes)
-     - Elevation (feet and meters)
-     - Frequencies:
-       - Airports: Tower, Ground, ATIS, Approach, etc.
+     - Position (POS) in degrees/minutes format
+     - Elevation (ELEV) in feet and meters
+     - Frequencies (FREQ):
+       - Airports: All frequencies shown (Tower, Ground, ATIS, Approach, etc.)
        - Navaids: VOR frequency (MHz) or NDB frequency (kHz)
-     - Distance in nautical miles (NM) and kilometers (km)
-     - Initial bearing in degrees and cardinal direction
+     - Distance (DIST) in nautical miles and kilometers
+     - Track bearing with 3-digit formatting (001°, 090°, 270°)
+     - Cardinal direction (N, NE, E, SE, S, SW, W, NW)
 
 ## Example Routes
 
@@ -67,6 +77,23 @@ A lightweight web application for flight planning that calculates distances and 
 - **VOR Navigation**: `KJFK MERIT EGLL` (New York → VOR → London)
 - **Mixed Waypoints**: `KSFO OAK SFO` (San Francisco → Oakland VOR → San Francisco Airport)
 - **NDB Navigation**: `KBOS PATSS CYYT` (Boston → NDB → St. John's)
+
+## UI Design
+
+The app features a CDU (Control Display Unit) / avionics-style interface:
+
+### Visual Design
+- **Color Scheme**: Dark background (#0a0e14) with bright green (#00ff00) primary text and amber (#ffb000) highlights
+- **Typography**: Monospace fonts (Courier New, Consolas, Monaco) throughout
+- **Layout**: Grid-based, compact design for efficient space usage
+- **Formatting**: All uppercase text with letter-spacing for aviation readability
+
+### Technical Presentation
+- Status messages use aviation format: `[OK]`, `[ERR]`, `[!]`, `[...]`
+- Labels use aviation terminology: DEPART, ARRIVE, TRACK, DIST, POS, ELEV, FREQ
+- Numeric formatting: Zero-padded bearings (001°), leg numbers (LEG 01)
+- ISO timestamps for database updates
+- Route display uses hyphens (KJFK-MERIT-EGLL)
 
 ## Technical Details
 
@@ -120,6 +147,16 @@ Data URLs (updated daily):
 - **Stored Data**: Airports CSV, Navaids CSV, Frequencies CSV, and timestamp
 - **Update Tracking**: Shows last update date/time and days since update
 
+## Code Resolution Priority
+
+To avoid conflicts between IATA codes and navaid identifiers, the app uses smart lookup priority:
+
+1. **4+ characters**: Try ICAO code first (most specific, e.g., KJFK)
+2. **Any length**: Try navaid identifier (e.g., MERIT, OAK)
+3. **3 characters**: Try IATA code last (e.g., JFK) - least specific
+
+**Best Practice**: Use ICAO codes (4 letters) for airports to ensure unambiguous waypoint resolution.
+
 ## Browser Compatibility
 
 - Chrome/Edge (recommended)
@@ -131,6 +168,7 @@ Requires a modern browser with support for:
 - IndexedDB API (for large data storage)
 - Fetch API
 - ES6 JavaScript features
+- CSS Grid and Flexbox
 
 ## Privacy
 
