@@ -24,7 +24,12 @@ const calculateBtn = document.getElementById('calculateBtn');
 const clearRouteBtn = document.getElementById('clearRouteBtn');
 const resultsSection = document.getElementById('resultsSection');
 const routeSummary = document.getElementById('routeSummary');
-const routeLegs = document.getElementById('routeLegs');
+const navlogTable = document.getElementById('navlogTable');
+const autocompleteDropdown = document.getElementById('autocompleteDropdown');
+
+// Autocomplete state
+let selectedAutocompleteIndex = -1;
+let autocompleteResults = [];
 
 // Initialize IndexedDB
 function initDB() {
@@ -108,10 +113,18 @@ function setupEventListeners() {
     calculateBtn.addEventListener('click', calculateRoute);
     clearRouteBtn.addEventListener('click', clearRoute);
 
-    // Allow Enter key to trigger calculation
-    routeInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter' && !calculateBtn.disabled) {
-            calculateRoute();
+    // Autocomplete events
+    routeInput.addEventListener('input', handleAutocompleteInput);
+    routeInput.addEventListener('keydown', handleAutocompleteKeydown);
+    routeInput.addEventListener('blur', () => {
+        // Delay to allow click on dropdown item
+        setTimeout(() => hideAutocomplete(), 200);
+    });
+
+    // Click outside to close
+    document.addEventListener('click', (e) => {
+        if (!routeInput.contains(e.target) && !autocompleteDropdown.contains(e.target)) {
+            hideAutocomplete();
         }
     });
 }
@@ -459,48 +472,105 @@ function displayResults(waypoints, legs, totalDistance) {
     // Route summary
     const routeCodes = waypoints.map(w => getWaypointCode(w)).join('-');
     routeSummary.innerHTML = `
-        <div class="summary-card">
-            <h3>ROUTE: ${routeCodes}</h3>
-            <p><strong>TOTAL DIST:</strong> ${totalDistance.toFixed(1)} NM (${(totalDistance * 1.852).toFixed(1)} KM)</p>
-            <p><strong>WAYPOINTS:</strong> ${waypoints.length} | <strong>LEGS:</strong> ${legs.length}</p>
+        <div class="summary-item">
+            <span class="summary-label">ROUTE</span>
+            <span class="summary-value">${routeCodes}</span>
+        </div>
+        <div class="summary-item">
+            <span class="summary-label">TOTAL DISTANCE</span>
+            <span class="summary-value">${totalDistance.toFixed(1)} NM</span>
+        </div>
+        <div class="summary-item">
+            <span class="summary-label">WAYPOINTS</span>
+            <span class="summary-value">${waypoints.length}</span>
+        </div>
+        <div class="summary-item">
+            <span class="summary-label">LEGS</span>
+            <span class="summary-value">${legs.length}</span>
         </div>
     `;
 
-    // Individual legs
-    let legsHTML = '<div class="legs-container">';
+    // Build navlog table
+    let tableHTML = `
+        <table>
+            <thead>
+                <tr>
+                    <th>WAYPOINT</th>
+                    <th>POSITION / ELEVATION / FREQUENCIES</th>
+                    <th>LEG DIST</th>
+                    <th>CUM DIST</th>
+                    <th>TRACK</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
 
-    legs.forEach((leg, index) => {
-        const fromCode = getWaypointCode(leg.from);
-        const toCode = getWaypointCode(leg.to);
+    let cumulativeDistance = 0;
 
-        legsHTML += `
-            <div class="leg-card">
-                <div class="leg-header">
-                    <h4>LEG ${String(index + 1).padStart(2, '0')}: ${fromCode} > ${toCode}</h4>
-                </div>
-                <div class="leg-details">
-                    ${formatWaypointInfo(leg.from, 'DEPART')}
-                    ${formatWaypointInfo(leg.to, 'ARRIVE')}
-                    <div class="leg-metrics">
-                        <div class="metric">
-                            <span class="metric-label">DISTANCE</span>
-                            <span class="metric-value">${leg.distance.toFixed(1)}</span>
-                            <span class="metric-sub">NM (${(leg.distance * 1.852).toFixed(1)} KM)</span>
-                        </div>
-                        <div class="metric">
-                            <span class="metric-label">TRACK</span>
-                            <span class="metric-value">${String(Math.round(leg.bearing)).padStart(3, '0')}°</span>
-                            <span class="metric-sub">${getCardinalDirection(leg.bearing)}</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    waypoints.forEach((waypoint, index) => {
+        const code = getWaypointCode(waypoint);
+        const colorClass = waypoint.waypointType === 'airport' ? 'airport' : 'navaid';
+
+        // Position
+        const pos = `${formatCoordinate(waypoint.lat, 'lat')} ${formatCoordinate(waypoint.lon, 'lon')}`;
+
+        // Elevation
+        const elev = waypoint.elevation !== null && !isNaN(waypoint.elevation)
+            ? `${Math.round(waypoint.elevation)}FT`
+            : 'N/A';
+
+        // Get primary frequency
+        let freqHTML = '';
+        if (waypoint.waypointType === 'airport' && waypoint.id) {
+            const frequencies = frequenciesData.get(waypoint.id);
+            if (frequencies && frequencies.length > 0) {
+                freqHTML = frequencies.map(f =>
+                    `<span class="wpt-freq-item">${f.type.toUpperCase()} ${f.frequency.toFixed(3)}</span>`
+                ).join(' ');
+            }
+        } else if (waypoint.waypointType === 'navaid' && waypoint.frequency) {
+            freqHTML = `<span class="wpt-freq-item">${formatNavaidFrequency(waypoint.frequency, waypoint.type)}</span>`;
+        }
+
+        // Calculate leg distance and track (to NEXT waypoint)
+        let legDist = '---';
+        let track = '---';
+
+        if (index < waypoints.length - 1) {
+            const leg = legs[index];
+            legDist = `<span class="metric-value">${leg.distance.toFixed(1)}</span><span class="metric-sub">NM</span>`;
+            cumulativeDistance += leg.distance;
+            track = `<span class="metric-value">${String(Math.round(leg.bearing)).padStart(3, '0')}°</span><span class="metric-sub">${getCardinalDirection(leg.bearing)}</span>`;
+        }
+
+        const cumDist = index === 0
+            ? '---'
+            : `<span class="metric-value">${cumulativeDistance.toFixed(1)}</span><span class="metric-sub">NM</span>`;
+
+        tableHTML += `
+            <tr>
+                <td>
+                    <div class="wpt-ident ${colorClass}">${code}</div>
+                    <div class="wpt-type">${waypoint.type}</div>
+                </td>
+                <td>
+                    <div class="wpt-info">${pos}</div>
+                    <div class="wpt-info">ELEV ${elev}</div>
+                    ${freqHTML ? `<div class="wpt-freqs">${freqHTML}</div>` : ''}
+                </td>
+                <td>${legDist}</td>
+                <td>${cumDist}</td>
+                <td>${track}</td>
+            </tr>
         `;
     });
 
-    legsHTML += '</div>';
-    routeLegs.innerHTML = legsHTML;
+    tableHTML += `
+            </tbody>
+        </table>
+    `;
 
+    navlogTable.innerHTML = tableHTML;
     resultsSection.style.display = 'block';
 }
 
@@ -601,6 +671,183 @@ function getCardinalDirection(bearing) {
 function clearRoute() {
     routeInput.value = '';
     resultsSection.style.display = 'none';
+    hideAutocomplete();
+}
+
+// Autocomplete: Handle input
+function handleAutocompleteInput(e) {
+    const value = e.target.value;
+    const cursorPos = e.target.selectionStart;
+
+    // Get the current word being typed
+    const beforeCursor = value.substring(0, cursorPos);
+    const words = beforeCursor.split(/\s+/);
+    const currentWord = words[words.length - 1].toUpperCase();
+
+    if (currentWord.length < 2) {
+        hideAutocomplete();
+        return;
+    }
+
+    // Search for matches
+    searchWaypoints(currentWord);
+}
+
+// Autocomplete: Search waypoints
+function searchWaypoints(query) {
+    const results = [];
+    const maxResults = 10;
+
+    // Search airports
+    for (const [code, airport] of airportsData) {
+        if (results.length >= maxResults) break;
+
+        const icao = airport.icao?.toUpperCase() || '';
+        const iata = airport.iata?.toUpperCase() || '';
+        const name = airport.name?.toUpperCase() || '';
+
+        if (icao.includes(query) || iata.includes(query) || name.includes(query)) {
+            results.push({
+                code: iata || icao,
+                fullCode: icao,
+                type: 'AIRPORT',
+                waypointType: 'airport',
+                name: airport.name,
+                location: `${airport.municipality || ''}, ${airport.country}`.trim(),
+                data: airport
+            });
+        }
+    }
+
+    // Search navaids
+    for (const [ident, navaid] of navaidsData) {
+        if (results.length >= maxResults) break;
+
+        const identUpper = ident.toUpperCase();
+        const name = navaid.name?.toUpperCase() || '';
+
+        if (identUpper.includes(query) || name.includes(query)) {
+            results.push({
+                code: navaid.ident,
+                fullCode: navaid.ident,
+                type: navaid.type,
+                waypointType: 'navaid',
+                name: navaid.name,
+                location: navaid.country,
+                data: navaid
+            });
+        }
+    }
+
+    autocompleteResults = results;
+    displayAutocomplete(results);
+}
+
+// Autocomplete: Display results
+function displayAutocomplete(results) {
+    if (results.length === 0) {
+        autocompleteDropdown.innerHTML = '<div class="autocomplete-empty">No results found</div>';
+        autocompleteDropdown.classList.add('show');
+        return;
+    }
+
+    let html = '';
+    results.forEach((result, index) => {
+        const colorClass = result.waypointType === 'airport' ? 'airport' : 'navaid';
+        html += `
+            <div class="autocomplete-item" data-index="${index}">
+                <span class="autocomplete-code ${colorClass}">${result.code}</span>
+                <span class="autocomplete-type">${result.type}</span>
+                <span class="autocomplete-name">${result.name}</span>
+                <span class="autocomplete-location">${result.location}</span>
+            </div>
+        `;
+    });
+
+    autocompleteDropdown.innerHTML = html;
+    autocompleteDropdown.classList.add('show');
+    selectedAutocompleteIndex = -1;
+
+    // Add click handlers
+    autocompleteDropdown.querySelectorAll('.autocomplete-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const index = parseInt(item.getAttribute('data-index'));
+            selectAutocompleteItem(index);
+        });
+    });
+}
+
+// Autocomplete: Hide dropdown
+function hideAutocomplete() {
+    autocompleteDropdown.classList.remove('show');
+    autocompleteDropdown.innerHTML = '';
+    selectedAutocompleteIndex = -1;
+    autocompleteResults = [];
+}
+
+// Autocomplete: Handle keyboard navigation
+function handleAutocompleteKeydown(e) {
+    if (!autocompleteDropdown.classList.contains('show')) {
+        if (e.key === 'Enter' && !calculateBtn.disabled) {
+            calculateRoute();
+        }
+        return;
+    }
+
+    const items = autocompleteDropdown.querySelectorAll('.autocomplete-item');
+
+    if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        selectedAutocompleteIndex = Math.min(selectedAutocompleteIndex + 1, items.length - 1);
+        updateAutocompleteSelection(items);
+    } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        selectedAutocompleteIndex = Math.max(selectedAutocompleteIndex - 1, -1);
+        updateAutocompleteSelection(items);
+    } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (selectedAutocompleteIndex >= 0) {
+            selectAutocompleteItem(selectedAutocompleteIndex);
+        }
+    } else if (e.key === 'Escape') {
+        e.preventDefault();
+        hideAutocomplete();
+    }
+}
+
+// Autocomplete: Update selection highlight
+function updateAutocompleteSelection(items) {
+    items.forEach((item, index) => {
+        if (index === selectedAutocompleteIndex) {
+            item.classList.add('selected');
+            item.scrollIntoView({ block: 'nearest' });
+        } else {
+            item.classList.remove('selected');
+        }
+    });
+}
+
+// Autocomplete: Select item
+function selectAutocompleteItem(index) {
+    const result = autocompleteResults[index];
+    if (!result) return;
+
+    const value = routeInput.value;
+    const cursorPos = routeInput.selectionStart;
+    const beforeCursor = value.substring(0, cursorPos);
+    const afterCursor = value.substring(cursorPos);
+
+    // Replace the current word with selected code
+    const words = beforeCursor.split(/\s+/);
+    words[words.length - 1] = result.fullCode;
+    const newBefore = words.join(' ');
+
+    routeInput.value = newBefore + ' ' + afterCursor;
+    const newPos = newBefore.length + 1;
+    routeInput.setSelectionRange(newPos, newPos);
+    routeInput.focus();
+
+    hideAutocomplete();
 }
 
 // Clear cache

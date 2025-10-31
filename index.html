@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Flight Planning Tool</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -27,24 +30,28 @@
             <h2>ROUTE ENTRY</h2>
             <div class="route-input">
                 <label for="routeInput">WAYPOINTS (SPACE SEPARATED):</label>
-                <input
-                    type="text"
-                    id="routeInput"
-                    placeholder="KJFK MERIT EGLL"
-                    disabled
-                >
+                <div class="input-wrapper">
+                    <input
+                        type="text"
+                        id="routeInput"
+                        placeholder="KJFK MERIT EGLL"
+                        autocomplete="off"
+                        disabled
+                    >
+                    <div id="autocompleteDropdown" class="autocomplete-dropdown"></div>
+                </div>
                 <button id="calculateBtn" class="btn btn-primary" disabled>COMPUTE</button>
                 <button id="clearRouteBtn" class="btn btn-secondary">CLEAR</button>
             </div>
             <p class="help-text">
-                ICAO (4 CHAR) PRIORITIZED. NAVAID IDENTS SUPPORTED. EXAMPLE: KJFK MERIT EGLL
+                START TYPING TO SEE SUGGESTIONS. CYAN=AIRPORT, MAGENTA=NAVAID
             </p>
         </div>
 
         <div id="resultsSection" class="results-section" style="display: none;">
-            <h2>FLIGHT PLAN DATA</h2>
+            <h2>NAVIGATION LOG</h2>
             <div id="routeSummary" class="route-summary"></div>
-            <div id="routeLegs" class="route-legs"></div>
+            <div id="navlogTable" class="navlog-table"></div>
         </div>
     </div>
 

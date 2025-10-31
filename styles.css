@@ -1,16 +1,16 @@
-/* Flight Planning Tool - CDU/Avionics Style */
+/* Flight Planning Tool - Navlog Style */
 
 :root {
-    --bg-primary: #0a0e14;
-    --bg-secondary: #151a21;
-    --bg-panel: #1a1f26;
-    --text-primary: #00ff00;
-    --text-secondary: #00cc00;
-    --text-amber: #ffb000;
-    --text-dim: #008800;
-    --border-color: #00ff00;
-    --border-dim: #004400;
-    --alert-color: #ff4400;
+    --bg-primary: #000000;
+    --bg-panel: #0a0a0a;
+    --border-color: #ffffff;
+    --text-primary: #ffffff;
+    --text-secondary: #cccccc;
+    --color-airport: #00ffff;
+    --color-navaid: #ff00ff;
+    --color-metric: #00ff00;
+    --color-warning: #ffff00;
+    --color-error: #ff0000;
 }
 
 * {
@@ -20,16 +20,16 @@
 }
 
 body {
-    font-family: 'Courier New', 'Consolas', 'Monaco', monospace;
+    font-family: 'Roboto Mono', 'Courier New', monospace;
     background: var(--bg-primary);
     color: var(--text-primary);
-    line-height: 1.4;
-    font-size: 14px;
+    line-height: 1.5;
+    font-size: 13px;
     padding: 10px;
 }
 
 .container {
-    max-width: 1400px;
+    max-width: 1600px;
     margin: 0 auto;
 }
 
@@ -37,29 +37,29 @@ body {
 header {
     text-align: center;
     border: 2px solid var(--border-color);
-    background: var(--bg-secondary);
-    padding: 15px;
+    background: var(--bg-primary);
+    padding: 12px;
     margin-bottom: 10px;
 }
 
 header h1 {
-    font-size: 1.5rem;
-    letter-spacing: 3px;
-    color: var(--text-amber);
-    font-weight: bold;
-    text-transform: uppercase;
+    font-size: 1.4rem;
+    letter-spacing: 4px;
+    color: var(--text-primary);
+    font-weight: 700;
 }
 
 .subtitle {
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     color: var(--text-secondary);
-    letter-spacing: 1px;
-    margin-top: 5px;
+    letter-spacing: 2px;
+    margin-top: 4px;
+    font-weight: 400;
 }
 
 /* Status Box */
 .data-status {
-    background: var(--bg-panel);
+    background: var(--bg-primary);
     border: 2px solid var(--border-color);
     padding: 10px;
     margin-bottom: 10px;
@@ -70,28 +70,27 @@ header h1 {
     align-items: center;
     gap: 10px;
     padding: 8px;
-    border: 1px solid var(--border-dim);
+    border: 1px solid var(--border-color);
     margin-bottom: 8px;
-    background: var(--bg-secondary);
 }
 
 .status-box.status-success {
-    border-color: var(--text-primary);
+    border-color: var(--color-metric);
 }
 
 .status-box.status-warning {
-    border-color: var(--text-amber);
-    color: var(--text-amber);
+    border-color: var(--color-warning);
+    color: var(--color-warning);
 }
 
 .status-box.status-error {
-    border-color: var(--alert-color);
-    color: var(--alert-color);
+    border-color: var(--color-error);
+    color: var(--color-error);
 }
 
 .status-box.status-loading {
-    border-color: var(--text-amber);
-    color: var(--text-amber);
+    border-color: var(--color-warning);
+    color: var(--color-warning);
 }
 
 .status-indicator {
@@ -100,32 +99,31 @@ header h1 {
 
 #statusText {
     flex: 1;
-    font-weight: bold;
+    font-weight: 500;
     letter-spacing: 1px;
 }
 
 .data-info {
     color: var(--text-secondary);
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     line-height: 1.6;
 }
 
 .data-info strong {
-    color: var(--text-amber);
+    color: var(--text-primary);
 }
 
 /* Buttons */
 .btn {
     padding: 8px 16px;
     border: 2px solid var(--border-color);
-    background: var(--bg-secondary);
+    background: var(--bg-primary);
     color: var(--text-primary);
-    font-size: 0.9rem;
-    font-weight: bold;
+    font-size: 0.85rem;
+    font-weight: 700;
     cursor: pointer;
     font-family: inherit;
     letter-spacing: 1px;
-    text-transform: uppercase;
     transition: all 0.1s;
 }
 
@@ -134,27 +132,29 @@ header h1 {
     color: var(--bg-primary);
 }
 
-.btn:active:not(:disabled) {
-    border-color: var(--text-amber);
-}
-
 .btn:disabled {
     opacity: 0.3;
     cursor: not-allowed;
 }
 
 .btn-primary {
-    border-color: var(--text-primary);
+    border-color: var(--color-metric);
+    color: var(--color-metric);
+}
+
+.btn-primary:hover:not(:disabled) {
+    background: var(--color-metric);
+    color: var(--bg-primary);
 }
 
 .btn-secondary {
-    border-color: var(--text-dim);
+    border-color: var(--text-secondary);
     color: var(--text-secondary);
 }
 
 /* Input Section */
 .input-section {
-    background: var(--bg-panel);
+    background: var(--bg-primary);
     border: 2px solid var(--border-color);
     padding: 10px;
     margin-bottom: 10px;
@@ -162,11 +162,11 @@ header h1 {
 
 .input-section h2 {
     margin-bottom: 10px;
-    color: var(--text-amber);
-    font-size: 1.1rem;
+    color: var(--text-primary);
+    font-size: 1rem;
     letter-spacing: 2px;
-    text-transform: uppercase;
-    border-bottom: 1px solid var(--border-dim);
+    font-weight: 700;
+    border-bottom: 1px solid var(--border-color);
     padding-bottom: 5px;
 }
 
@@ -179,28 +179,31 @@ header h1 {
 
 .route-input label {
     grid-column: 1 / -1;
-    font-weight: bold;
+    font-weight: 500;
     margin-bottom: 3px;
-    color: var(--text-secondary);
+    color: var(--text-primary);
     letter-spacing: 1px;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
+}
+
+.input-wrapper {
+    position: relative;
 }
 
 .route-input input {
+    width: 100%;
     padding: 8px;
     border: 2px solid var(--border-color);
-    background: var(--bg-secondary);
+    background: var(--bg-primary);
     color: var(--text-primary);
-    font-size: 1rem;
+    font-size: 0.95rem;
     font-family: inherit;
     letter-spacing: 2px;
-    text-transform: uppercase;
 }
 
 .route-input input:focus {
     outline: none;
-    border-color: var(--text-amber);
-    background: var(--bg-primary);
+    border-color: var(--color-metric);
 }
 
 .route-input input:disabled {
@@ -209,234 +212,254 @@ header h1 {
 }
 
 .help-text {
-    color: var(--text-dim);
-    font-size: 0.8rem;
+    color: var(--text-secondary);
+    font-size: 0.75rem;
     line-height: 1.4;
-    border-left: 2px solid var(--border-dim);
+    border-left: 2px solid var(--border-color);
     padding-left: 8px;
+}
+
+/* Autocomplete Dropdown */
+.autocomplete-dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-height: 300px;
+    overflow-y: auto;
+    background: var(--bg-primary);
+    border: 2px solid var(--border-color);
+    border-top: none;
+    z-index: 1000;
+    margin-top: -2px;
+}
+
+.autocomplete-dropdown.show {
+    display: block;
+}
+
+.autocomplete-item {
+    padding: 8px 10px;
+    cursor: pointer;
+    border-bottom: 1px solid #333;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.autocomplete-item:last-child {
+    border-bottom: none;
+}
+
+.autocomplete-item:hover,
+.autocomplete-item.selected {
+    background: #1a1a1a;
+}
+
+.autocomplete-code {
+    font-weight: 700;
+    min-width: 60px;
+}
+
+.autocomplete-code.airport {
+    color: var(--color-airport);
+}
+
+.autocomplete-code.navaid {
+    color: var(--color-navaid);
+}
+
+.autocomplete-type {
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-primary);
+    min-width: 70px;
+    text-align: center;
+}
+
+.autocomplete-name {
+    flex: 1;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}
+
+.autocomplete-location {
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+}
+
+.autocomplete-empty {
+    padding: 8px 10px;
+    color: var(--text-secondary);
+    text-align: center;
 }
 
 /* Results Section */
 .results-section {
-    background: var(--bg-panel);
+    background: var(--bg-primary);
     border: 2px solid var(--border-color);
     padding: 10px;
 }
 
 .results-section h2 {
     margin-bottom: 10px;
-    color: var(--text-amber);
-    font-size: 1.1rem;
+    color: var(--text-primary);
+    font-size: 1rem;
     letter-spacing: 2px;
-    text-transform: uppercase;
-    border-bottom: 1px solid var(--border-dim);
+    font-weight: 700;
+    border-bottom: 1px solid var(--border-color);
     padding-bottom: 5px;
 }
 
 /* Summary Card */
-.summary-card {
-    background: var(--bg-secondary);
-    border: 2px solid var(--text-amber);
-    padding: 12px;
-    margin-bottom: 10px;
-}
-
-.summary-card h3 {
-    font-size: 1.1rem;
-    margin-bottom: 8px;
-    color: var(--text-amber);
-    letter-spacing: 2px;
-}
-
-.summary-card p {
-    margin: 4px 0;
-    font-size: 0.95rem;
-    color: var(--text-primary);
-}
-
-.summary-card strong {
-    color: var(--text-secondary);
-}
-
-/* Legs Container */
-.legs-container {
-    display: grid;
-    gap: 8px;
-}
-
-.leg-card {
-    border: 2px solid var(--border-dim);
-    background: var(--bg-secondary);
-}
-
-.leg-card:hover {
-    border-color: var(--border-color);
-}
-
-.leg-header {
-    background: var(--bg-primary);
-    padding: 8px 10px;
-    border-bottom: 1px solid var(--border-dim);
-}
-
-.leg-header h4 {
-    color: var(--text-amber);
-    font-size: 1rem;
-    letter-spacing: 2px;
-}
-
-.leg-details {
+.route-summary {
+    border: 1px solid var(--border-color);
     padding: 10px;
+    margin-bottom: 10px;
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
 }
 
-/* Waypoint Information */
-.waypoint-info {
-    border: 1px solid var(--border-dim);
-    background: var(--bg-panel);
-    padding: 8px;
+.summary-item {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
 }
 
-.waypoint-info strong {
-    color: var(--text-amber);
-    font-size: 0.85rem;
-    letter-spacing: 1px;
-}
-
-.waypoint-location {
+.summary-label {
+    font-size: 0.75rem;
     color: var(--text-secondary);
-    font-size: 0.85rem;
-}
-
-.coordinates {
-    color: var(--text-primary);
-    font-size: 0.85rem;
     letter-spacing: 1px;
 }
 
-.elevation {
-    color: var(--text-secondary);
-    font-size: 0.85rem;
-}
-
-.frequency {
-    color: var(--text-amber);
-    font-size: 0.85rem;
-    font-weight: bold;
-}
-
-/* Navaid and Type Badges */
-.navaid-badge {
-    display: inline-block;
-    background: var(--text-primary);
-    color: var(--bg-primary);
-    padding: 1px 6px;
-    border: 1px solid var(--text-primary);
-    font-size: 0.7rem;
-    font-weight: bold;
-    margin-left: 6px;
+.summary-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--color-metric);
     letter-spacing: 1px;
 }
 
-.airport-type {
-    display: inline-block;
+/* Navigation Log Table */
+.navlog-table {
+    border: 2px solid var(--border-color);
+    overflow-x: auto;
+}
+
+.navlog-table table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+}
+
+.navlog-table th {
     background: var(--bg-primary);
-    color: var(--text-secondary);
-    padding: 1px 6px;
-    border: 1px solid var(--text-secondary);
-    font-size: 0.7rem;
-    font-weight: bold;
-    margin-left: 6px;
-    letter-spacing: 1px;
-}
-
-/* Frequencies List */
-.frequencies-list {
-    margin-top: 6px;
-    padding: 6px;
-    background: var(--bg-secondary);
-    border-left: 2px solid var(--text-amber);
-}
-
-.frequencies-list strong {
-    color: var(--text-amber);
-    font-size: 0.8rem;
-    letter-spacing: 1px;
-}
-
-.freq-item {
     color: var(--text-primary);
-    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 8px 6px;
+    text-align: left;
+    border: 1px solid var(--border-color);
     letter-spacing: 1px;
-    display: block;
+    font-size: 0.75rem;
+}
+
+.navlog-table td {
+    padding: 8px 6px;
+    border: 1px solid var(--border-color);
+    vertical-align: top;
+}
+
+.navlog-table tr:hover {
+    background: #0a0a0a;
+}
+
+/* Waypoint Identifier */
+.wpt-ident {
+    font-weight: 700;
+    font-size: 0.95rem;
+    letter-spacing: 1px;
+}
+
+.wpt-ident.airport {
+    color: var(--color-airport);
+}
+
+.wpt-ident.navaid {
+    color: var(--color-navaid);
+}
+
+/* Type Badge */
+.wpt-type {
+    display: inline-block;
+    font-size: 0.65rem;
+    padding: 2px 6px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-primary);
+    margin-top: 2px;
+}
+
+/* Position, Elevation, Frequencies */
+.wpt-info {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
     line-height: 1.4;
 }
 
-/* Metrics */
-.leg-metrics {
-    grid-column: 1 / -1;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 8px;
-    margin-top: 8px;
-    padding-top: 8px;
-    border-top: 1px solid var(--border-dim);
+.wpt-freqs {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    line-height: 1.3;
+    margin-top: 3px;
 }
 
-.metric {
-    text-align: center;
-    padding: 8px;
-    background: var(--bg-primary);
-    border: 1px solid var(--border-dim);
+.wpt-freq-item {
+    display: inline-block;
+    margin-right: 8px;
+    white-space: nowrap;
 }
 
-.metric-label {
-    display: block;
-    font-size: 0.75rem;
-    color: var(--text-dim);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: 4px;
-}
-
+/* Distance and Track */
 .metric-value {
-    display: block;
-    font-size: 1.3rem;
-    font-weight: bold;
-    color: var(--text-amber);
-    letter-spacing: 2px;
-    margin-bottom: 2px;
+    color: var(--color-metric);
+    font-weight: 700;
+    font-size: 0.85rem;
 }
 
 .metric-sub {
-    display: block;
-    font-size: 0.8rem;
     color: var(--text-secondary);
+    font-size: 0.7rem;
+    display: block;
 }
 
 /* Responsive Design */
+@media (max-width: 1200px) {
+    .navlog-table {
+        font-size: 0.75rem;
+    }
+
+    .navlog-table th,
+    .navlog-table td {
+        padding: 6px 4px;
+    }
+}
+
 @media (max-width: 768px) {
     body {
         font-size: 12px;
-    }
-
-    header h1 {
-        font-size: 1.2rem;
-        letter-spacing: 2px;
     }
 
     .route-input {
         grid-template-columns: 1fr;
     }
 
-    .leg-details {
-        grid-template-columns: 1fr;
+    .summary-value {
+        font-size: 1rem;
     }
 
-    .metric-value {
-        font-size: 1.1rem;
+    .navlog-table {
+        font-size: 0.7rem;
     }
 }
 
@@ -447,12 +470,30 @@ header h1 {
     }
 
     header h1 {
-        font-size: 1rem;
+        font-size: 1.1rem;
+        letter-spacing: 2px;
     }
 
-    .input-section,
-    .results-section,
-    .data-status {
-        padding: 8px;
+    .navlog-table th,
+    .navlog-table td {
+        padding: 4px 3px;
+        font-size: 0.65rem;
     }
+}
+
+/* Scrollbar Styling */
+.autocomplete-dropdown::-webkit-scrollbar,
+.navlog-table::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.autocomplete-dropdown::-webkit-scrollbar-track,
+.navlog-table::-webkit-scrollbar-track {
+    background: var(--bg-primary);
+}
+
+.autocomplete-dropdown::-webkit-scrollbar-thumb,
+.navlog-table::-webkit-scrollbar-thumb {
+    background: var(--border-color);
 }
