@@ -1,19 +1,16 @@
-/* Flight Planning Tool - Styles */
+/* Flight Planning Tool - CDU/Avionics Style */
 
 :root {
-    --primary-color: #2563eb;
-    --primary-hover: #1d4ed8;
-    --secondary-color: #64748b;
-    --success-color: #10b981;
-    --warning-color: #f59e0b;
-    --error-color: #ef4444;
-    --bg-color: #f8fafc;
-    --card-bg: #ffffff;
-    --text-primary: #1e293b;
-    --text-secondary: #64748b;
-    --border-color: #e2e8f0;
-    --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+    --bg-primary: #0a0e14;
+    --bg-secondary: #151a21;
+    --bg-panel: #1a1f26;
+    --text-primary: #00ff00;
+    --text-secondary: #00cc00;
+    --text-amber: #ffb000;
+    --text-dim: #008800;
+    --border-color: #00ff00;
+    --border-dim: #004400;
+    --alert-color: #ff4400;
 }
 
 * {
@@ -23,414 +20,439 @@
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    font-family: 'Courier New', 'Consolas', 'Monaco', monospace;
+    background: var(--bg-primary);
     color: var(--text-primary);
-    line-height: 1.6;
-    min-height: 100vh;
-    padding: 20px;
+    line-height: 1.4;
+    font-size: 14px;
+    padding: 10px;
 }
 
 .container {
-    max-width: 1200px;
+    max-width: 1400px;
     margin: 0 auto;
 }
 
 /* Header */
 header {
     text-align: center;
-    color: white;
-    margin-bottom: 30px;
+    border: 2px solid var(--border-color);
+    background: var(--bg-secondary);
+    padding: 15px;
+    margin-bottom: 10px;
 }
 
 header h1 {
-    font-size: 2.5rem;
-    margin-bottom: 10px;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    font-size: 1.5rem;
+    letter-spacing: 3px;
+    color: var(--text-amber);
+    font-weight: bold;
+    text-transform: uppercase;
 }
 
 .subtitle {
-    font-size: 1.1rem;
-    opacity: 0.9;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    letter-spacing: 1px;
+    margin-top: 5px;
 }
 
 /* Status Box */
 .data-status {
-    background: var(--card-bg);
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 20px;
-    box-shadow: var(--shadow-lg);
+    background: var(--bg-panel);
+    border: 2px solid var(--border-color);
+    padding: 10px;
+    margin-bottom: 10px;
 }
 
 .status-box {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 16px;
-    border-radius: 8px;
-    border: 2px solid var(--border-color);
-    margin-bottom: 12px;
+    gap: 10px;
+    padding: 8px;
+    border: 1px solid var(--border-dim);
+    margin-bottom: 8px;
+    background: var(--bg-secondary);
 }
 
 .status-box.status-success {
-    background-color: #ecfdf5;
-    border-color: var(--success-color);
+    border-color: var(--text-primary);
 }
 
 .status-box.status-warning {
-    background-color: #fffbeb;
-    border-color: var(--warning-color);
+    border-color: var(--text-amber);
+    color: var(--text-amber);
 }
 
 .status-box.status-error {
-    background-color: #fef2f2;
-    border-color: var(--error-color);
+    border-color: var(--alert-color);
+    color: var(--alert-color);
 }
 
 .status-box.status-loading {
-    background-color: #eff6ff;
-    border-color: var(--primary-color);
+    border-color: var(--text-amber);
+    color: var(--text-amber);
 }
 
 .status-indicator {
-    font-size: 1.5rem;
+    font-size: 1rem;
 }
 
 #statusText {
     flex: 1;
-    font-weight: 500;
+    font-weight: bold;
+    letter-spacing: 1px;
 }
 
 .data-info {
     color: var(--text-secondary);
-    font-size: 0.95rem;
+    font-size: 0.9rem;
+    line-height: 1.6;
+}
+
+.data-info strong {
+    color: var(--text-amber);
 }
 
 /* Buttons */
 .btn {
-    padding: 10px 20px;
-    border: none;
-    border-radius: 6px;
-    font-size: 0.95rem;
-    font-weight: 500;
+    padding: 8px 16px;
+    border: 2px solid var(--border-color);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    font-weight: bold;
     cursor: pointer;
-    transition: all 0.2s;
     font-family: inherit;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: all 0.1s;
 }
 
 .btn:hover:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: var(--shadow);
+    background: var(--text-primary);
+    color: var(--bg-primary);
+}
+
+.btn:active:not(:disabled) {
+    border-color: var(--text-amber);
 }
 
 .btn:disabled {
-    opacity: 0.5;
+    opacity: 0.3;
     cursor: not-allowed;
 }
 
 .btn-primary {
-    background-color: var(--primary-color);
-    color: white;
-}
-
-.btn-primary:hover:not(:disabled) {
-    background-color: var(--primary-hover);
+    border-color: var(--text-primary);
 }
 
 .btn-secondary {
-    background-color: var(--secondary-color);
-    color: white;
-}
-
-.btn-secondary:hover:not(:disabled) {
-    background-color: #475569;
+    border-color: var(--text-dim);
+    color: var(--text-secondary);
 }
 
 /* Input Section */
 .input-section {
-    background: var(--card-bg);
-    border-radius: 12px;
-    padding: 24px;
-    margin-bottom: 20px;
-    box-shadow: var(--shadow-lg);
+    background: var(--bg-panel);
+    border: 2px solid var(--border-color);
+    padding: 10px;
+    margin-bottom: 10px;
 }
 
 .input-section h2 {
-    margin-bottom: 20px;
-    color: var(--text-primary);
+    margin-bottom: 10px;
+    color: var(--text-amber);
+    font-size: 1.1rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border-dim);
+    padding-bottom: 5px;
 }
 
 .route-input {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 12px;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 8px;
+    margin-bottom: 8px;
 }
 
 .route-input label {
-    width: 100%;
-    font-weight: 500;
-    margin-bottom: 8px;
-    color: var(--text-primary);
+    grid-column: 1 / -1;
+    font-weight: bold;
+    margin-bottom: 3px;
+    color: var(--text-secondary);
+    letter-spacing: 1px;
+    font-size: 0.85rem;
 }
 
 .route-input input {
-    flex: 1;
-    min-width: 300px;
-    padding: 12px 16px;
+    padding: 8px;
     border: 2px solid var(--border-color);
-    border-radius: 6px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
     font-size: 1rem;
     font-family: inherit;
-    transition: border-color 0.2s;
+    letter-spacing: 2px;
+    text-transform: uppercase;
 }
 
 .route-input input:focus {
     outline: none;
-    border-color: var(--primary-color);
+    border-color: var(--text-amber);
+    background: var(--bg-primary);
 }
 
 .route-input input:disabled {
-    background-color: #f1f5f9;
+    opacity: 0.3;
     cursor: not-allowed;
 }
 
 .help-text {
-    color: var(--text-secondary);
-    font-size: 0.9rem;
-    margin-top: 8px;
+    color: var(--text-dim);
+    font-size: 0.8rem;
+    line-height: 1.4;
+    border-left: 2px solid var(--border-dim);
+    padding-left: 8px;
 }
 
 /* Results Section */
 .results-section {
-    background: var(--card-bg);
-    border-radius: 12px;
-    padding: 24px;
-    box-shadow: var(--shadow-lg);
-    animation: fadeIn 0.3s ease-in;
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    background: var(--bg-panel);
+    border: 2px solid var(--border-color);
+    padding: 10px;
 }
 
 .results-section h2 {
-    margin-bottom: 20px;
-    color: var(--text-primary);
+    margin-bottom: 10px;
+    color: var(--text-amber);
+    font-size: 1.1rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border-dim);
+    padding-bottom: 5px;
 }
 
 /* Summary Card */
 .summary-card {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 24px;
-    border-radius: 8px;
-    margin-bottom: 24px;
+    background: var(--bg-secondary);
+    border: 2px solid var(--text-amber);
+    padding: 12px;
+    margin-bottom: 10px;
 }
 
 .summary-card h3 {
-    font-size: 1.5rem;
-    margin-bottom: 12px;
+    font-size: 1.1rem;
+    margin-bottom: 8px;
+    color: var(--text-amber);
+    letter-spacing: 2px;
 }
 
 .summary-card p {
-    margin: 8px 0;
-    font-size: 1.05rem;
+    margin: 4px 0;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+}
+
+.summary-card strong {
+    color: var(--text-secondary);
 }
 
 /* Legs Container */
 .legs-container {
     display: grid;
-    gap: 16px;
+    gap: 8px;
 }
 
 .leg-card {
-    border: 2px solid var(--border-color);
-    border-radius: 8px;
-    overflow: hidden;
-    transition: transform 0.2s, box-shadow 0.2s;
+    border: 2px solid var(--border-dim);
+    background: var(--bg-secondary);
 }
 
 .leg-card:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow);
+    border-color: var(--border-color);
 }
 
 .leg-header {
-    background-color: #f8fafc;
-    padding: 12px 16px;
-    border-bottom: 2px solid var(--border-color);
+    background: var(--bg-primary);
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border-dim);
 }
 
 .leg-header h4 {
-    color: var(--text-primary);
-    font-size: 1.1rem;
+    color: var(--text-amber);
+    font-size: 1rem;
+    letter-spacing: 2px;
 }
 
 .leg-details {
-    padding: 16px;
+    padding: 10px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
 }
 
 /* Waypoint Information */
 .waypoint-info {
-    padding: 12px 0;
-    border-bottom: 1px solid var(--border-color);
+    border: 1px solid var(--border-dim);
+    background: var(--bg-panel);
+    padding: 8px;
 }
 
-.waypoint-info:last-of-type {
-    border-bottom: none;
+.waypoint-info strong {
+    color: var(--text-amber);
+    font-size: 0.85rem;
+    letter-spacing: 1px;
 }
 
 .waypoint-location {
     color: var(--text-secondary);
-    font-size: 0.9rem;
+    font-size: 0.85rem;
 }
 
 .coordinates {
-    color: var(--text-secondary);
+    color: var(--text-primary);
     font-size: 0.85rem;
-    font-family: 'Courier New', monospace;
+    letter-spacing: 1px;
 }
 
 .elevation {
     color: var(--text-secondary);
-    font-size: 0.9rem;
-    font-weight: 500;
+    font-size: 0.85rem;
 }
 
 .frequency {
-    color: var(--primary-color);
-    font-size: 0.9rem;
-    font-weight: 500;
+    color: var(--text-amber);
+    font-size: 0.85rem;
+    font-weight: bold;
 }
 
 /* Navaid and Type Badges */
 .navaid-badge {
     display: inline-block;
-    background-color: var(--primary-color);
-    color: white;
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    font-weight: 600;
+    background: var(--text-primary);
+    color: var(--bg-primary);
+    padding: 1px 6px;
+    border: 1px solid var(--text-primary);
+    font-size: 0.7rem;
+    font-weight: bold;
     margin-left: 6px;
+    letter-spacing: 1px;
 }
 
 .airport-type {
     display: inline-block;
-    background-color: var(--secondary-color);
-    color: white;
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    font-weight: 600;
+    background: var(--bg-primary);
+    color: var(--text-secondary);
+    padding: 1px 6px;
+    border: 1px solid var(--text-secondary);
+    font-size: 0.7rem;
+    font-weight: bold;
     margin-left: 6px;
+    letter-spacing: 1px;
 }
 
 /* Frequencies List */
 .frequencies-list {
-    margin-top: 8px;
-    padding: 8px;
-    background-color: #f8fafc;
-    border-radius: 4px;
-    border-left: 3px solid var(--primary-color);
+    margin-top: 6px;
+    padding: 6px;
+    background: var(--bg-secondary);
+    border-left: 2px solid var(--text-amber);
+}
+
+.frequencies-list strong {
+    color: var(--text-amber);
+    font-size: 0.8rem;
+    letter-spacing: 1px;
 }
 
 .freq-item {
     color: var(--text-primary);
-    font-size: 0.85rem;
-    font-family: 'Courier New', monospace;
-}
-
-.freq-more {
-    color: var(--text-secondary);
-    font-size: 0.85rem;
-    font-style: italic;
+    font-size: 0.8rem;
+    letter-spacing: 1px;
+    display: block;
+    line-height: 1.4;
 }
 
 /* Metrics */
 .leg-metrics {
+    grid-column: 1 / -1;
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 16px;
-    margin-top: 16px;
-    padding-top: 16px;
-    border-top: 2px solid var(--border-color);
+    gap: 8px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border-dim);
 }
 
 .metric {
     text-align: center;
-    padding: 12px;
-    background-color: #f8fafc;
-    border-radius: 6px;
+    padding: 8px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-dim);
 }
 
 .metric-label {
     display: block;
-    font-size: 0.85rem;
-    color: var(--text-secondary);
+    font-size: 0.75rem;
+    color: var(--text-dim);
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 1px;
     margin-bottom: 4px;
 }
 
 .metric-value {
     display: block;
-    font-size: 1.5rem;
+    font-size: 1.3rem;
     font-weight: bold;
-    color: var(--primary-color);
+    color: var(--text-amber);
+    letter-spacing: 2px;
     margin-bottom: 2px;
 }
 
 .metric-sub {
     display: block;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     color: var(--text-secondary);
 }
 
 /* Responsive Design */
 @media (max-width: 768px) {
+    body {
+        font-size: 12px;
+    }
+
     header h1 {
-        font-size: 2rem;
+        font-size: 1.2rem;
+        letter-spacing: 2px;
     }
 
     .route-input {
-        flex-direction: column;
-    }
-
-    .route-input input {
-        min-width: 100%;
-    }
-
-    .leg-metrics {
         grid-template-columns: 1fr;
+    }
+
+    .leg-details {
+        grid-template-columns: 1fr;
+    }
+
+    .metric-value {
+        font-size: 1.1rem;
     }
 }
 
 @media (max-width: 480px) {
     body {
-        padding: 10px;
+        padding: 5px;
+        font-size: 11px;
     }
 
     header h1 {
-        font-size: 1.5rem;
-    }
-
-    .subtitle {
         font-size: 1rem;
     }
 
     .input-section,
     .results-section,
     .data-status {
-        padding: 16px;
+        padding: 8px;
     }
 }

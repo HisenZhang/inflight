@@ -9,40 +9,40 @@
 <body>
     <div class="container">
         <header>
-            <h1>✈️ Flight Planning Tool</h1>
-            <p class="subtitle">Calculate distances and bearings for your flight route</p>
+            <h1>FLIGHT PLANNING SYSTEM</h1>
+            <p class="subtitle">FMS ROUTE CALCULATOR v2.0</p>
         </header>
 
         <div class="data-status">
             <div id="dataStatus" class="status-box">
-                <span class="status-indicator">⚠️</span>
-                <span id="statusText">Flight data not loaded</span>
-                <button id="loadDataBtn" class="btn btn-primary">Load Flight Data</button>
-                <button id="clearCacheBtn" class="btn btn-secondary" style="display: none;">Clear Cache</button>
+                <span class="status-indicator">[!]</span>
+                <span id="statusText">DATABASE NOT LOADED</span>
+                <button id="loadDataBtn" class="btn btn-primary">LOAD DATA</button>
+                <button id="clearCacheBtn" class="btn btn-secondary" style="display: none;">CLEAR CACHE</button>
             </div>
             <div id="dataInfo" class="data-info"></div>
         </div>
 
         <div class="input-section">
-            <h2>Route Planning</h2>
+            <h2>ROUTE ENTRY</h2>
             <div class="route-input">
-                <label for="routeInput">Enter Route (Space-separated waypoints):</label>
+                <label for="routeInput">WAYPOINTS (SPACE SEPARATED):</label>
                 <input
                     type="text"
                     id="routeInput"
-                    placeholder="e.g., KJFK MERIT EGLL or KSFO OAK VOR SFO"
+                    placeholder="KJFK MERIT EGLL"
                     disabled
                 >
-                <button id="calculateBtn" class="btn btn-primary" disabled>Calculate Route</button>
-                <button id="clearRouteBtn" class="btn btn-secondary">Clear</button>
+                <button id="calculateBtn" class="btn btn-primary" disabled>COMPUTE</button>
+                <button id="clearRouteBtn" class="btn btn-secondary">CLEAR</button>
             </div>
             <p class="help-text">
-                Enter waypoints (airports or navaids) separated by spaces. Airports: ICAO or IATA codes (KJFK, JFK). Navaids: VOR, NDB, DME, etc. Example: KJFK MERIT EGLL
+                ICAO (4 CHAR) PRIORITIZED. NAVAID IDENTS SUPPORTED. EXAMPLE: KJFK MERIT EGLL
             </p>
         </div>
 
         <div id="resultsSection" class="results-section" style="display: none;">
-            <h2>Route Results</h2>
+            <h2>FLIGHT PLAN DATA</h2>
             <div id="routeSummary" class="route-summary"></div>
             <div id="routeLegs" class="route-legs"></div>
         </div>

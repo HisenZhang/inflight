@@ -98,7 +98,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         setupEventListeners();
     } catch (error) {
         console.error('Failed to initialize database:', error);
-        updateStatus('⚠️ Failed to initialize storage. Please reload the page.', 'error');
+        updateStatus('[ERR] INDEXEDDB INITIALIZATION FAILED', 'error');
     }
 });
 
@@ -126,11 +126,11 @@ async function checkCachedData() {
             if (age < CACHE_DURATION) {
                 loadFromCache(cachedData.airportsCSV, cachedData.navaidsCSV, cachedData.frequenciesCSV, cachedData.timestamp);
                 const daysOld = Math.floor(age / (24 * 60 * 60 * 1000));
-                updateStatus(`✅ Data loaded from cache (${daysOld} day${daysOld !== 1 ? 's' : ''} old)`, 'success');
+                updateStatus(`[OK] DATABASE LOADED FROM CACHE (${daysOld}D OLD)`, 'success');
                 showDataInfo();
                 return;
             } else {
-                updateStatus('⚠️ Cached data expired. Please reload.', 'warning');
+                updateStatus('[!] CACHE EXPIRED - RELOAD REQUIRED', 'warning');
             }
         }
     } catch (error) {
@@ -141,36 +141,36 @@ async function checkCachedData() {
 
 // Load airport data from API
 async function loadAirportData() {
-    updateStatus('⏳ Loading airports data...', 'loading');
+    updateStatus('[...] LOADING AIRPORTS DATABASE', 'loading');
     loadDataBtn.disabled = true;
 
     try {
         // Fetch airports
-        updateStatus('⏳ Loading airports data...', 'loading');
+        updateStatus('[...] DOWNLOADING AIRPORTS DATA', 'loading');
         const airportsResponse = await fetch(AIRPORTS_CSV_URL);
         if (!airportsResponse.ok) {
-            throw new Error(`Airports HTTP error! status: ${airportsResponse.status}`);
+            throw new Error(`HTTP ${airportsResponse.status}`);
         }
         const airportsCSV = await airportsResponse.text();
 
         // Fetch navaids
-        updateStatus('⏳ Loading navaids data...', 'loading');
+        updateStatus('[...] DOWNLOADING NAVAIDS DATA', 'loading');
         const navaidsResponse = await fetch(NAVAIDS_CSV_URL);
         if (!navaidsResponse.ok) {
-            throw new Error(`Navaids HTTP error! status: ${navaidsResponse.status}`);
+            throw new Error(`HTTP ${navaidsResponse.status}`);
         }
         const navaidsCSV = await navaidsResponse.text();
 
         // Fetch frequencies
-        updateStatus('⏳ Loading frequencies data...', 'loading');
+        updateStatus('[...] DOWNLOADING FREQUENCIES DATA', 'loading');
         const frequenciesResponse = await fetch(FREQUENCIES_CSV_URL);
         if (!frequenciesResponse.ok) {
-            throw new Error(`Frequencies HTTP error! status: ${frequenciesResponse.status}`);
+            throw new Error(`HTTP ${frequenciesResponse.status}`);
         }
         const frequenciesCSV = await frequenciesResponse.text();
 
         // Parse all data
-        updateStatus('⏳ Parsing data...', 'loading');
+        updateStatus('[...] PARSING DATABASE', 'loading');
         const timestamp = Date.now();
         parseAirportData(airportsCSV);
         parseNavaidData(navaidsCSV);
@@ -178,14 +178,14 @@ async function loadAirportData() {
         dataTimestamp = timestamp;
 
         // Cache the data in IndexedDB
-        updateStatus('⏳ Saving to cache...', 'loading');
+        updateStatus('[...] CACHING TO INDEXEDDB', 'loading');
         await saveToCache(airportsCSV, navaidsCSV, frequenciesCSV);
 
-        updateStatus('✅ All data loaded successfully!', 'success');
+        updateStatus('[OK] DATABASE READY - ALL SYSTEMS OPERATIONAL', 'success');
         showDataInfo();
         enableRouteInput();
     } catch (error) {
-        updateStatus(`❌ Error loading data: ${error.message}`, 'error');
+        updateStatus(`[ERR] ${error.message}`, 'error');
         console.error('Error loading data:', error);
         loadDataBtn.disabled = false;
     }
@@ -357,7 +357,7 @@ function calculateRoute() {
     const route = routeInput.value.trim().toUpperCase().split(/\s+/);
 
     if (route.length < 2) {
-        alert('Please enter at least 2 waypoints (airports or navaids)');
+        alert('ERROR: MINIMUM 2 WAYPOINTS REQUIRED');
         return;
     }
 
@@ -366,12 +366,26 @@ function calculateRoute() {
     const notFound = [];
 
     for (const code of route) {
-        // Try to find in airports first
-        let waypoint = airportsData.get(code);
+        let waypoint = null;
 
-        // If not found in airports, try navaids
+        // Prioritize by code length and type to avoid IATA/navaid conflicts:
+        // 1. If 4+ letters, try ICAO first (most specific)
+        // 2. Try as navaid
+        // 3. If 3 letters, try IATA (least specific, may conflict with navaids)
+
+        if (code.length >= 4) {
+            // Likely ICAO code - check airports first
+            waypoint = airportsData.get(code);
+        }
+
+        // If not found, try navaids
         if (!waypoint) {
             waypoint = navaidsData.get(code);
+        }
+
+        // If still not found and 3 letters, try IATA
+        if (!waypoint && code.length === 3) {
+            waypoint = airportsData.get(code);
         }
 
         if (waypoint) {
@@ -382,7 +396,7 @@ function calculateRoute() {
     }
 
     if (notFound.length > 0) {
-        alert(`Waypoint(s) not found: ${notFound.join(', ')}\n\nPlease check the codes and try again.`);
+        alert(`ERROR: WAYPOINT(S) NOT IN DATABASE\n\n${notFound.join(', ')}\n\nVERIFY WAYPOINT IDENTIFIERS`);
         return;
     }
 
@@ -443,13 +457,12 @@ function calculateBearing(lat1, lon1, lat2, lon2) {
 // Display results
 function displayResults(waypoints, legs, totalDistance) {
     // Route summary
-    const routeCodes = waypoints.map(w => getWaypointCode(w)).join(' → ');
+    const routeCodes = waypoints.map(w => getWaypointCode(w)).join('-');
     routeSummary.innerHTML = `
         <div class="summary-card">
-            <h3>Route: ${routeCodes}</h3>
-            <p><strong>Total Distance:</strong> ${totalDistance.toFixed(1)} NM (${(totalDistance * 1.852).toFixed(1)} km)</p>
-            <p><strong>Waypoints:</strong> ${waypoints.length}</p>
-            <p><strong>Legs:</strong> ${legs.length}</p>
+            <h3>ROUTE: ${routeCodes}</h3>
+            <p><strong>TOTAL DIST:</strong> ${totalDistance.toFixed(1)} NM (${(totalDistance * 1.852).toFixed(1)} KM)</p>
+            <p><strong>WAYPOINTS:</strong> ${waypoints.length} | <strong>LEGS:</strong> ${legs.length}</p>
         </div>
     `;
 
@@ -463,20 +476,20 @@ function displayResults(waypoints, legs, totalDistance) {
         legsHTML += `
             <div class="leg-card">
                 <div class="leg-header">
-                    <h4>Leg ${index + 1}: ${fromCode} → ${toCode}</h4>
+                    <h4>LEG ${String(index + 1).padStart(2, '0')}: ${fromCode} > ${toCode}</h4>
                 </div>
                 <div class="leg-details">
-                    ${formatWaypointInfo(leg.from, 'From')}
-                    ${formatWaypointInfo(leg.to, 'To')}
+                    ${formatWaypointInfo(leg.from, 'DEPART')}
+                    ${formatWaypointInfo(leg.to, 'ARRIVE')}
                     <div class="leg-metrics">
                         <div class="metric">
-                            <span class="metric-label">Distance</span>
-                            <span class="metric-value">${leg.distance.toFixed(1)} NM</span>
-                            <span class="metric-sub">${(leg.distance * 1.852).toFixed(1)} km</span>
+                            <span class="metric-label">DISTANCE</span>
+                            <span class="metric-value">${leg.distance.toFixed(1)}</span>
+                            <span class="metric-sub">NM (${(leg.distance * 1.852).toFixed(1)} KM)</span>
                         </div>
                         <div class="metric">
-                            <span class="metric-label">Bearing</span>
-                            <span class="metric-value">${Math.round(leg.bearing)}°</span>
+                            <span class="metric-label">TRACK</span>
+                            <span class="metric-value">${String(Math.round(leg.bearing)).padStart(3, '0')}°</span>
                             <span class="metric-sub">${getCardinalDirection(leg.bearing)}</span>
                         </div>
                     </div>
@@ -522,16 +535,16 @@ function formatWaypointInfo(waypoint, label) {
     }
 
     // Coordinates
-    html += `<span class="coordinates">${formatCoordinate(waypoint.lat, 'lat')}, ${formatCoordinate(waypoint.lon, 'lon')}</span><br>`;
+    html += `<span class="coordinates">POS ${formatCoordinate(waypoint.lat, 'lat')} ${formatCoordinate(waypoint.lon, 'lon')}</span><br>`;
 
     // Elevation
     if (waypoint.elevation !== null && !isNaN(waypoint.elevation)) {
-        html += `<span class="elevation">Elevation: ${Math.round(waypoint.elevation)} ft (${Math.round(waypoint.elevation * 0.3048)} m)</span><br>`;
+        html += `<span class="elevation">ELEV ${Math.round(waypoint.elevation)}FT / ${Math.round(waypoint.elevation * 0.3048)}M</span><br>`;
     }
 
     // Navaid frequency
     if (waypoint.waypointType === 'navaid' && waypoint.frequency) {
-        html += `<span class="frequency">Frequency: ${formatNavaidFrequency(waypoint.frequency, waypoint.type)}</span><br>`;
+        html += `<span class="frequency">FREQ ${formatNavaidFrequency(waypoint.frequency, waypoint.type)}</span><br>`;
     }
 
     // Airport frequencies
@@ -539,13 +552,11 @@ function formatWaypointInfo(waypoint, label) {
         const frequencies = frequenciesData.get(waypoint.id);
         if (frequencies && frequencies.length > 0) {
             html += `<div class="frequencies-list">`;
-            html += `<strong>Frequencies:</strong><br>`;
-            frequencies.slice(0, 5).forEach(freq => {
-                html += `<span class="freq-item">${freq.type}: ${freq.frequency.toFixed(3)} MHz</span><br>`;
+            html += `<strong>FREQ:</strong><br>`;
+            frequencies.forEach(freq => {
+                const freqType = freq.type.toUpperCase().padEnd(8);
+                html += `<span class="freq-item">${freqType} ${freq.frequency.toFixed(3)}</span><br>`;
             });
-            if (frequencies.length > 5) {
-                html += `<span class="freq-more">+${frequencies.length - 5} more</span>`;
-            }
             html += `</div>`;
         }
     }
@@ -594,11 +605,11 @@ function clearRoute() {
 
 // Clear cache
 async function clearCache() {
-    if (confirm('Are you sure you want to clear the cached airport data?')) {
+    if (confirm('CONFIRM: CLEAR ALL CACHED DATA?')) {
         try {
             await clearCacheDB();
             airportsData.clear();
-            updateStatus('⚠️ Cache cleared. Please reload airport data.', 'warning');
+            updateStatus('[!] CACHE CLEARED - RELOAD DATABASE', 'warning');
             dataInfo.innerHTML = '';
             routeInput.disabled = true;
             calculateBtn.disabled = true;
@@ -608,7 +619,7 @@ async function clearCache() {
             resultsSection.style.display = 'none';
         } catch (error) {
             console.error('Error clearing cache:', error);
-            alert('Failed to clear cache. Please try again.');
+            alert('ERROR: CACHE CLEAR OPERATION FAILED');
         }
     }
 }
@@ -634,11 +645,13 @@ function showDataInfo() {
     if (dataTimestamp) {
         const date = new Date(dataTimestamp);
         const daysAgo = Math.floor((Date.now() - dataTimestamp) / (24 * 60 * 60 * 1000));
-        timestampText = `<p><strong>Last Updated:</strong> ${date.toLocaleDateString()} ${date.toLocaleTimeString()} (${daysAgo} day${daysAgo !== 1 ? 's' : ''} ago)</p>`;
+        const dateStr = date.toISOString().split('T')[0];
+        const timeStr = date.toTimeString().split(' ')[0];
+        timestampText = `<p><strong>DB UPDATE:</strong> ${dateStr} ${timeStr} UTC (${daysAgo}D AGO)</p>`;
     }
 
     dataInfo.innerHTML = `
-        <p><strong>${totalAirports.toLocaleString()}</strong> airports and <strong>${totalNavaids.toLocaleString()}</strong> navaids loaded and ready for route planning</p>
+        <p><strong>AIRPORTS:</strong> ${totalAirports.toLocaleString()} | <strong>NAVAIDS:</strong> ${totalNavaids.toLocaleString()} | <strong>STATUS:</strong> READY</p>
         ${timestampText}
     `;
 }
