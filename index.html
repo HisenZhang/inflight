@@ -16,8 +16,8 @@
         <div class="data-status">
             <div id="dataStatus" class="status-box">
                 <span class="status-indicator">⚠️</span>
-                <span id="statusText">Airport data not loaded</span>
-                <button id="loadDataBtn" class="btn btn-primary">Load Airport Data</button>
+                <span id="statusText">Flight data not loaded</span>
+                <button id="loadDataBtn" class="btn btn-primary">Load Flight Data</button>
                 <button id="clearCacheBtn" class="btn btn-secondary" style="display: none;">Clear Cache</button>
             </div>
             <div id="dataInfo" class="data-info"></div>
@@ -26,18 +26,18 @@
         <div class="input-section">
             <h2>Route Planning</h2>
             <div class="route-input">
-                <label for="routeInput">Enter Route (Space-separated airport codes):</label>
+                <label for="routeInput">Enter Route (Space-separated waypoints):</label>
                 <input
                     type="text"
                     id="routeInput"
-                    placeholder="e.g., KJFK EGLL LFPG or JFK LHR CDG"
+                    placeholder="e.g., KJFK MERIT EGLL or KSFO OAK VOR SFO"
                     disabled
                 >
                 <button id="calculateBtn" class="btn btn-primary" disabled>Calculate Route</button>
                 <button id="clearRouteBtn" class="btn btn-secondary">Clear</button>
             </div>
             <p class="help-text">
-                Enter airport codes (ICAO or IATA) separated by spaces. Example: KJFK EGLL LFPG
+                Enter waypoints (airports or navaids) separated by spaces. Airports: ICAO or IATA codes (KJFK, JFK). Navaids: VOR, NDB, DME, etc. Example: KJFK MERIT EGLL
             </p>
         </div>
 

@@ -1,13 +1,18 @@
 // Flight Planning Tool - Main Application
 
 const AIRPORTS_CSV_URL = 'https://cors.hisenz.com/?url=https://davidmegginson.github.io/ourairports-data/airports.csv';
+const NAVAIDS_CSV_URL = 'https://cors.hisenz.com/?url=https://davidmegginson.github.io/ourairports-data/navaids.csv';
+const FREQUENCIES_CSV_URL = 'https://cors.hisenz.com/?url=https://davidmegginson.github.io/ourairports-data/airport-frequencies.csv';
 const DB_NAME = 'FlightPlanningDB';
-const DB_VERSION = 1;
-const STORE_NAME = 'airports';
+const DB_VERSION = 2;
+const STORE_NAME = 'flightdata';
 const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
 
 let airportsData = new Map(); // Map of airport code -> airport object
+let navaidsData = new Map(); // Map of navaid ident -> navaid object
+let frequenciesData = new Map(); // Map of airport_id -> frequencies array
 let db = null; // IndexedDB database
+let dataTimestamp = null; // Last update timestamp
 
 // DOM Elements
 const loadDataBtn = document.getElementById('loadDataBtn');
@@ -42,14 +47,16 @@ function initDB() {
 }
 
 // Save data to IndexedDB
-function saveToCache(csvData) {
+function saveToCache(airportsCSV, navaidsCSV, frequenciesCSV) {
     return new Promise((resolve, reject) => {
         const transaction = db.transaction([STORE_NAME], 'readwrite');
         const store = transaction.objectStore(STORE_NAME);
 
         const data = {
-            id: 'airports_cache',
-            csvData: csvData,
+            id: 'flightdata_cache',
+            airportsCSV: airportsCSV,
+            navaidsCSV: navaidsCSV,
+            frequenciesCSV: frequenciesCSV,
             timestamp: Date.now()
         };
 
@@ -64,7 +71,7 @@ function loadFromCacheDB() {
     return new Promise((resolve, reject) => {
         const transaction = db.transaction([STORE_NAME], 'readonly');
         const store = transaction.objectStore(STORE_NAME);
-        const request = store.get('airports_cache');
+        const request = store.get('flightdata_cache');
 
         request.onsuccess = () => resolve(request.result);
         request.onerror = () => reject(request.error);
@@ -76,7 +83,7 @@ function clearCacheDB() {
     return new Promise((resolve, reject) => {
         const transaction = db.transaction([STORE_NAME], 'readwrite');
         const store = transaction.objectStore(STORE_NAME);
-        const request = store.delete('airports_cache');
+        const request = store.delete('flightdata_cache');
 
         request.onsuccess = () => resolve();
         request.onerror = () => reject(request.error);
@@ -114,12 +121,12 @@ async function checkCachedData() {
     try {
         const cachedData = await loadFromCacheDB();
 
-        if (cachedData && cachedData.csvData && cachedData.timestamp) {
+        if (cachedData && cachedData.airportsCSV && cachedData.timestamp) {
             const age = Date.now() - cachedData.timestamp;
             if (age < CACHE_DURATION) {
-                loadFromCache(cachedData.csvData);
+                loadFromCache(cachedData.airportsCSV, cachedData.navaidsCSV, cachedData.frequenciesCSV, cachedData.timestamp);
                 const daysOld = Math.floor(age / (24 * 60 * 60 * 1000));
-                updateStatus(`✅ Airport data loaded from cache (${daysOld} days old)`, 'success');
+                updateStatus(`✅ Data loaded from cache (${daysOld} day${daysOld !== 1 ? 's' : ''} old)`, 'success');
                 showDataInfo();
                 return;
             } else {
@@ -134,36 +141,62 @@ async function checkCachedData() {
 
 // Load airport data from API
 async function loadAirportData() {
-    updateStatus('⏳ Loading airport data...', 'loading');
+    updateStatus('⏳ Loading airports data...', 'loading');
     loadDataBtn.disabled = true;
 
     try {
-        const response = await fetch(AIRPORTS_CSV_URL);
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+        // Fetch airports
+        updateStatus('⏳ Loading airports data...', 'loading');
+        const airportsResponse = await fetch(AIRPORTS_CSV_URL);
+        if (!airportsResponse.ok) {
+            throw new Error(`Airports HTTP error! status: ${airportsResponse.status}`);
         }
+        const airportsCSV = await airportsResponse.text();
 
-        const csvText = await response.text();
-        updateStatus('⏳ Parsing airport data...', 'loading');
-        parseAirportData(csvText);
+        // Fetch navaids
+        updateStatus('⏳ Loading navaids data...', 'loading');
+        const navaidsResponse = await fetch(NAVAIDS_CSV_URL);
+        if (!navaidsResponse.ok) {
+            throw new Error(`Navaids HTTP error! status: ${navaidsResponse.status}`);
+        }
+        const navaidsCSV = await navaidsResponse.text();
+
+        // Fetch frequencies
+        updateStatus('⏳ Loading frequencies data...', 'loading');
+        const frequenciesResponse = await fetch(FREQUENCIES_CSV_URL);
+        if (!frequenciesResponse.ok) {
+            throw new Error(`Frequencies HTTP error! status: ${frequenciesResponse.status}`);
+        }
+        const frequenciesCSV = await frequenciesResponse.text();
+
+        // Parse all data
+        updateStatus('⏳ Parsing data...', 'loading');
+        const timestamp = Date.now();
+        parseAirportData(airportsCSV);
+        parseNavaidData(navaidsCSV);
+        parseFrequencyData(frequenciesCSV);
+        dataTimestamp = timestamp;
 
         // Cache the data in IndexedDB
         updateStatus('⏳ Saving to cache...', 'loading');
-        await saveToCache(csvText);
+        await saveToCache(airportsCSV, navaidsCSV, frequenciesCSV);
 
-        updateStatus('✅ Airport data loaded successfully!', 'success');
+        updateStatus('✅ All data loaded successfully!', 'success');
         showDataInfo();
         enableRouteInput();
     } catch (error) {
         updateStatus(`❌ Error loading data: ${error.message}`, 'error');
-        console.error('Error loading airport data:', error);
+        console.error('Error loading data:', error);
         loadDataBtn.disabled = false;
     }
 }
 
 // Load data from IndexedDB cache
-function loadFromCache(csvText) {
-    parseAirportData(csvText);
+function loadFromCache(airportsCSV, navaidsCSV, frequenciesCSV, timestamp) {
+    parseAirportData(airportsCSV);
+    parseNavaidData(navaidsCSV);
+    parseFrequencyData(frequenciesCSV);
+    dataTimestamp = timestamp;
     enableRouteInput();
 }
 
@@ -179,6 +212,7 @@ function parseAirportData(csvText) {
     const nameIdx = headers.indexOf('name');
     const latIdx = headers.indexOf('latitude_deg');
     const lonIdx = headers.indexOf('longitude_deg');
+    const elevIdx = headers.indexOf('elevation_ft');
     const iataIdx = headers.indexOf('iata_code');
     const municipalityIdx = headers.indexOf('municipality');
     const isoCountryIdx = headers.indexOf('iso_country');
@@ -197,9 +231,11 @@ function parseAirportData(csvText) {
             name: values[nameIdx],
             lat: parseFloat(values[latIdx]),
             lon: parseFloat(values[lonIdx]),
+            elevation: values[elevIdx] ? parseFloat(values[elevIdx]) : null,
             iata: values[iataIdx],
             municipality: values[municipalityIdx],
-            country: values[isoCountryIdx]
+            country: values[isoCountryIdx],
+            waypointType: 'airport'
         };
 
         // Only store airports with valid coordinates
@@ -213,6 +249,83 @@ function parseAirportData(csvText) {
                 airportsData.set(airport.iata.toUpperCase(), airport);
             }
         }
+    }
+}
+
+// Parse navaid data
+function parseNavaidData(csvText) {
+    const lines = csvText.split('\n');
+    const headers = parseCSVLine(lines[0]);
+
+    // Find column indices
+    const idIdx = headers.indexOf('id');
+    const identIdx = headers.indexOf('ident');
+    const nameIdx = headers.indexOf('name');
+    const typeIdx = headers.indexOf('type');
+    const freqIdx = headers.indexOf('frequency_khz');
+    const latIdx = headers.indexOf('latitude_deg');
+    const lonIdx = headers.indexOf('longitude_deg');
+    const elevIdx = headers.indexOf('elevation_ft');
+    const isoCountryIdx = headers.indexOf('iso_country');
+
+    navaidsData.clear();
+
+    for (let i = 1; i < lines.length; i++) {
+        if (!lines[i].trim()) continue;
+
+        const values = parseCSVLine(lines[i]);
+
+        const navaid = {
+            id: values[idIdx],
+            ident: values[identIdx],
+            name: values[nameIdx],
+            type: values[typeIdx],
+            frequency: values[freqIdx] ? parseFloat(values[freqIdx]) : null,
+            lat: parseFloat(values[latIdx]),
+            lon: parseFloat(values[lonIdx]),
+            elevation: values[elevIdx] ? parseFloat(values[elevIdx]) : null,
+            country: values[isoCountryIdx],
+            waypointType: 'navaid'
+        };
+
+        // Only store navaids with valid coordinates
+        if (!isNaN(navaid.lat) && !isNaN(navaid.lon) && navaid.ident) {
+            navaidsData.set(navaid.ident.toUpperCase(), navaid);
+        }
+    }
+}
+
+// Parse frequency data
+function parseFrequencyData(csvText) {
+    const lines = csvText.split('\n');
+    const headers = parseCSVLine(lines[0]);
+
+    // Find column indices
+    const airportIdIdx = headers.indexOf('airport_ref');
+    const typeIdx = headers.indexOf('type');
+    const descIdx = headers.indexOf('description');
+    const freqIdx = headers.indexOf('frequency_mhz');
+
+    frequenciesData.clear();
+
+    for (let i = 1; i < lines.length; i++) {
+        if (!lines[i].trim()) continue;
+
+        const values = parseCSVLine(lines[i]);
+        const airportId = values[airportIdIdx];
+
+        if (!airportId) continue;
+
+        const frequency = {
+            type: values[typeIdx],
+            description: values[descIdx],
+            frequency: parseFloat(values[freqIdx])
+        };
+
+        if (!frequenciesData.has(airportId)) {
+            frequenciesData.set(airportId, []);
+        }
+        frequenciesData.get(airportId).push(frequency);
     }
 }
 
@@ -244,25 +357,32 @@ function calculateRoute() {
     const route = routeInput.value.trim().toUpperCase().split(/\s+/);
 
     if (route.length < 2) {
-        alert('Please enter at least 2 airport codes');
+        alert('Please enter at least 2 waypoints (airports or navaids)');
         return;
     }
 
-    // Find all airports
-    const airports = [];
+    // Find all waypoints (airports or navaids)
+    const waypoints = [];
     const notFound = [];
 
     for (const code of route) {
-        const airport = airportsData.get(code);
-        if (airport) {
-            airports.push(airport);
+        // Try to find in airports first
+        let waypoint = airportsData.get(code);
+
+        // If not found in airports, try navaids
+        if (!waypoint) {
+            waypoint = navaidsData.get(code);
+        }
+
+        if (waypoint) {
+            waypoints.push(waypoint);
         } else {
             notFound.push(code);
         }
     }
 
     if (notFound.length > 0) {
-        alert(`Airport(s) not found: ${notFound.join(', ')}\n\nPlease check the codes and try again.`);
+        alert(`Waypoint(s) not found: ${notFound.join(', ')}\n\nPlease check the codes and try again.`);
         return;
     }
 
@@ -270,9 +390,9 @@ function calculateRoute() {
     const legs = [];
     let totalDistance = 0;
 
-    for (let i = 0; i < airports.length - 1; i++) {
-        const from = airports[i];
-        const to = airports[i + 1];
+    for (let i = 0; i < waypoints.length - 1; i++) {
+        const from = waypoints[i];
+        const to = waypoints[i + 1];
 
         const distance = calculateDistance(from.lat, from.lon, to.lat, to.lon);
         const bearing = calculateBearing(from.lat, from.lon, to.lat, to.lon);
@@ -287,7 +407,7 @@ function calculateRoute() {
         totalDistance += distance;
     }
 
-    displayResults(airports, legs, totalDistance);
+    displayResults(waypoints, legs, totalDistance);
 }
 
 // Calculate distance using Haversine formula (in nautical miles)
@@ -321,14 +441,14 @@ function calculateBearing(lat1, lon1, lat2, lon2) {
 }
 
 // Display results
-function displayResults(airports, legs, totalDistance) {
+function displayResults(waypoints, legs, totalDistance) {
     // Route summary
-    const routeCodes = airports.map(a => a.iata || a.icao).join(' → ');
+    const routeCodes = waypoints.map(w => getWaypointCode(w)).join(' → ');
     routeSummary.innerHTML = `
         <div class="summary-card">
             <h3>Route: ${routeCodes}</h3>
             <p><strong>Total Distance:</strong> ${totalDistance.toFixed(1)} NM (${(totalDistance * 1.852).toFixed(1)} km)</p>
-            <p><strong>Waypoints:</strong> ${airports.length}</p>
+            <p><strong>Waypoints:</strong> ${waypoints.length}</p>
             <p><strong>Legs:</strong> ${legs.length}</p>
         </div>
     `;
@@ -337,8 +457,8 @@ function displayResults(airports, legs, totalDistance) {
     let legsHTML = '<div class="legs-container">';
 
     legs.forEach((leg, index) => {
-        const fromCode = leg.from.iata || leg.from.icao;
-        const toCode = leg.to.iata || leg.to.icao;
+        const fromCode = getWaypointCode(leg.from);
+        const toCode = getWaypointCode(leg.to);
 
         legsHTML += `
             <div class="leg-card">
@@ -346,16 +466,8 @@ function displayResults(airports, legs, totalDistance) {
                     <h4>Leg ${index + 1}: ${fromCode} → ${toCode}</h4>
                 </div>
                 <div class="leg-details">
-                    <div class="leg-airport">
-                        <strong>From:</strong> ${leg.from.name}<br>
-                        <span class="airport-location">${leg.from.municipality}, ${leg.from.country}</span><br>
-                        <span class="coordinates">${formatCoordinate(leg.from.lat, 'lat')}, ${formatCoordinate(leg.from.lon, 'lon')}</span>
-                    </div>
-                    <div class="leg-airport">
-                        <strong>To:</strong> ${leg.to.name}<br>
-                        <span class="airport-location">${leg.to.municipality}, ${leg.to.country}</span><br>
-                        <span class="coordinates">${formatCoordinate(leg.to.lat, 'lat')}, ${formatCoordinate(leg.to.lon, 'lon')}</span>
-                    </div>
+                    ${formatWaypointInfo(leg.from, 'From')}
+                    ${formatWaypointInfo(leg.to, 'To')}
                     <div class="leg-metrics">
                         <div class="metric">
                             <span class="metric-label">Distance</span>
@@ -377,6 +489,84 @@ function displayResults(airports, legs, totalDistance) {
     routeLegs.innerHTML = legsHTML;
 
     resultsSection.style.display = 'block';
+}
+
+// Get waypoint code
+function getWaypointCode(waypoint) {
+    if (waypoint.waypointType === 'airport') {
+        return waypoint.iata || waypoint.icao;
+    } else {
+        return waypoint.ident;
+    }
+}
+
+// Format waypoint information
+function formatWaypointInfo(waypoint, label) {
+    let html = `<div class="waypoint-info">`;
+    html += `<strong>${label}:</strong> ${waypoint.name}`;
+
+    // Add waypoint type badge
+    if (waypoint.waypointType === 'navaid') {
+        html += ` <span class="navaid-badge">${waypoint.type}</span>`;
+    } else if (waypoint.type) {
+        html += ` <span class="airport-type">${waypoint.type}</span>`;
+    }
+
+    html += `<br>`;
+
+    // Location info
+    if (waypoint.municipality) {
+        html += `<span class="waypoint-location">${waypoint.municipality}, ${waypoint.country}</span><br>`;
+    } else {
+        html += `<span class="waypoint-location">${waypoint.country}</span><br>`;
+    }
+
+    // Coordinates
+    html += `<span class="coordinates">${formatCoordinate(waypoint.lat, 'lat')}, ${formatCoordinate(waypoint.lon, 'lon')}</span><br>`;
+
+    // Elevation
+    if (waypoint.elevation !== null && !isNaN(waypoint.elevation)) {
+        html += `<span class="elevation">Elevation: ${Math.round(waypoint.elevation)} ft (${Math.round(waypoint.elevation * 0.3048)} m)</span><br>`;
+    }
+
+    // Navaid frequency
+    if (waypoint.waypointType === 'navaid' && waypoint.frequency) {
+        html += `<span class="frequency">Frequency: ${formatNavaidFrequency(waypoint.frequency, waypoint.type)}</span><br>`;
+    }
+
+    // Airport frequencies
+    if (waypoint.waypointType === 'airport' && waypoint.id) {
+        const frequencies = frequenciesData.get(waypoint.id);
+        if (frequencies && frequencies.length > 0) {
+            html += `<div class="frequencies-list">`;
+            html += `<strong>Frequencies:</strong><br>`;
+            frequencies.slice(0, 5).forEach(freq => {
+                html += `<span class="freq-item">${freq.type}: ${freq.frequency.toFixed(3)} MHz</span><br>`;
+            });
+            if (frequencies.length > 5) {
+                html += `<span class="freq-more">+${frequencies.length - 5} more</span>`;
+            }
+            html += `</div>`;
+        }
+    }
+
+    html += `</div>`;
+    return html;
+}
+
+// Format navaid frequency
+function formatNavaidFrequency(freqKhz, type) {
+    if (type === 'VOR' || type === 'VOR-DME' || type === 'VORTAC') {
+        // VOR frequencies are in VHF band (108-118 MHz)
+        const freqMhz = freqKhz / 1000;
+        return `${freqMhz.toFixed(2)} MHz`;
+    } else if (type === 'NDB' || type === 'NDB-DME') {
+        // NDB frequencies are in kHz (190-1750 kHz)
+        return `${freqKhz} kHz`;
+    } else {
+        // Default to kHz
+        return `${freqKhz} kHz`;
+    }
 }
 
 // Format coordinates
@@ -438,8 +628,18 @@ function updateStatus(message, type) {
 // Show data information
 function showDataInfo() {
     const totalAirports = airportsData.size;
+    const totalNavaids = navaidsData.size;
+
+    let timestampText = '';
+    if (dataTimestamp) {
+        const date = new Date(dataTimestamp);
+        const daysAgo = Math.floor((Date.now() - dataTimestamp) / (24 * 60 * 60 * 1000));
+        timestampText = `<p><strong>Last Updated:</strong> ${date.toLocaleDateString()} ${date.toLocaleTimeString()} (${daysAgo} day${daysAgo !== 1 ? 's' : ''} ago)</p>`;
+    }
+
     dataInfo.innerHTML = `
-        <p><strong>${totalAirports.toLocaleString()}</strong> airport codes loaded and ready for route planning</p>
+        <p><strong>${totalAirports.toLocaleString()}</strong> airports and <strong>${totalNavaids.toLocaleString()}</strong> navaids loaded and ready for route planning</p>
+        ${timestampText}
     `;
 }
 
