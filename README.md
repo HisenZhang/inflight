@@ -4,7 +4,7 @@ A lightweight web application for flight planning that calculates distances and 
 
 ## Features
 
-- **Airport Database**: Caches airport data from [OurAirports GitHub mirror](https://github.com/davidmegginson/ourairports-data) in local storage
+- **Airport Database**: Caches airport data from [OurAirports GitHub mirror](https://github.com/davidmegginson/ourairports-data) using IndexedDB
 - **Smart Caching**: Stores data locally for 7 days to minimize network requests
 - **Route Planning**: Input multiple airport codes to plan your route
 - **Distance Calculation**: Uses the Haversine formula to calculate great circle distances in nautical miles
@@ -67,12 +67,11 @@ Airport data is sourced from the [OurAirports GitHub mirror](https://github.com/
 
 The data is fetched from: `https://davidmegginson.github.io/ourairports-data/airports.csv` (updated daily)
 
-### Local Storage
+### Storage
+- **Technology**: IndexedDB (for large data storage)
 - **Cache Duration**: 7 days
-- **Storage Keys**:
-  - `airports_data`: CSV data
-  - `airports_data_timestamp`: Cache timestamp
-- **Size**: Approximately 5-10 MB (varies by data)
+- **Database**: `FlightPlanningDB`
+- **Storage Size**: Handles large datasets (10+ MB) without browser storage limits
 
 ## Browser Compatibility
 
@@ -82,7 +81,7 @@ The data is fetched from: `https://davidmegginson.github.io/ourairports-data/air
 - Opera
 
 Requires a modern browser with support for:
-- LocalStorage API
+- IndexedDB API (for large data storage)
 - Fetch API
 - ES6 JavaScript features
 
@@ -96,7 +95,7 @@ After loading the airport data once, the app can work offline for up to 7 days u
 
 ## Clearing Cache
 
-Click the "Clear Cache" button to remove stored airport data and free up browser storage. You'll need to reload the data to use the app again.
+Click the "Clear Cache" button to remove stored airport data from IndexedDB. You'll need to reload the data to use the app again.
 
 ## License
 

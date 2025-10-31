@@ -1,11 +1,13 @@
 // Flight Planning Tool - Main Application
 
 const AIRPORTS_CSV_URL = 'https://cors.hisenz.com/?url=https://davidmegginson.github.io/ourairports-data/airports.csv';
-const CACHE_KEY = 'airports_data';
-const CACHE_TIMESTAMP_KEY = 'airports_data_timestamp';
+const DB_NAME = 'FlightPlanningDB';
+const DB_VERSION = 1;
+const STORE_NAME = 'airports';
 const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
 
 let airportsData = new Map(); // Map of airport code -> airport object
+let db = null; // IndexedDB database
 
 // DOM Elements
 const loadDataBtn = document.getElementById('loadDataBtn');
@@ -19,10 +21,78 @@ const resultsSection = document.getElementById('resultsSection');
 const routeSummary = document.getElementById('routeSummary');
 const routeLegs = document.getElementById('routeLegs');
 
+// Initialize IndexedDB
+function initDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => {
+            db = request.result;
+            resolve(db);
+        };
+
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains(STORE_NAME)) {
+                db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+            }
+        };
+    });
+}
+
+// Save data to IndexedDB
+function saveToCache(csvData) {
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction([STORE_NAME], 'readwrite');
+        const store = transaction.objectStore(STORE_NAME);
+
+        const data = {
+            id: 'airports_cache',
+            csvData: csvData,
+            timestamp: Date.now()
+        };
+
+        const request = store.put(data);
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+    });
+}
+
+// Load data from IndexedDB
+function loadFromCacheDB() {
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction([STORE_NAME], 'readonly');
+        const store = transaction.objectStore(STORE_NAME);
+        const request = store.get('airports_cache');
+
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+// Clear IndexedDB cache
+function clearCacheDB() {
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction([STORE_NAME], 'readwrite');
+        const store = transaction.objectStore(STORE_NAME);
+        const request = store.delete('airports_cache');
+
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+    });
+}
+
 // Initialize app
-document.addEventListener('DOMContentLoaded', () => {
-    checkCachedData();
-    setupEventListeners();
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        await initDB();
+        await checkCachedData();
+        setupEventListeners();
+    } catch (error) {
+        console.error('Failed to initialize database:', error);
+        updateStatus('⚠️ Failed to initialize storage. Please reload the page.', 'error');
+    }
 });
 
 function setupEventListeners() {
@@ -40,21 +110,25 @@ function setupEventListeners() {
 }
 
 // Check if we have cached data
-function checkCachedData() {
-    const cachedData = localStorage.getItem(CACHE_KEY);
-    const cacheTimestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
+async function checkCachedData() {
+    try {
+        const cachedData = await loadFromCacheDB();
 
-    if (cachedData && cacheTimestamp) {
-        const age = Date.now() - parseInt(cacheTimestamp);
-        if (age < CACHE_DURATION) {
-            loadFromCache(cachedData);
-            const daysOld = Math.floor(age / (24 * 60 * 60 * 1000));
-            updateStatus(`✅ Airport data loaded from cache (${daysOld} days old)`, 'success');
-            showDataInfo();
-            return;
-        } else {
-            updateStatus('⚠️ Cached data expired. Please reload.', 'warning');
+        if (cachedData && cachedData.csvData && cachedData.timestamp) {
+            const age = Date.now() - cachedData.timestamp;
+            if (age < CACHE_DURATION) {
+                loadFromCache(cachedData.csvData);
+                const daysOld = Math.floor(age / (24 * 60 * 60 * 1000));
+                updateStatus(`✅ Airport data loaded from cache (${daysOld} days old)`, 'success');
+                showDataInfo();
+                return;
+            } else {
+                updateStatus('⚠️ Cached data expired. Please reload.', 'warning');
+            }
         }
+    } catch (error) {
+        console.error('Error loading cached data:', error);
+        // No cached data or error, user will need to load data
     }
 }
 
@@ -70,11 +144,12 @@ async function loadAirportData() {
         }
 
         const csvText = await response.text();
+        updateStatus('⏳ Parsing airport data...', 'loading');
         parseAirportData(csvText);
 
-        // Cache the data
-        localStorage.setItem(CACHE_KEY, csvText);
-        localStorage.setItem(CACHE_TIMESTAMP_KEY, Date.now().toString());
+        // Cache the data in IndexedDB
+        updateStatus('⏳ Saving to cache...', 'loading');
+        await saveToCache(csvText);
 
         updateStatus('✅ Airport data loaded successfully!', 'success');
         showDataInfo();
@@ -86,7 +161,7 @@ async function loadAirportData() {
     }
 }
 
-// Load data from localStorage cache
+// Load data from IndexedDB cache
 function loadFromCache(csvText) {
     parseAirportData(csvText);
     enableRouteInput();
@@ -328,19 +403,23 @@ function clearRoute() {
 }
 
 // Clear cache
-function clearCache() {
+async function clearCache() {
     if (confirm('Are you sure you want to clear the cached airport data?')) {
-        localStorage.removeItem(CACHE_KEY);
-        localStorage.removeItem(CACHE_TIMESTAMP_KEY);
-        airportsData.clear();
-        updateStatus('⚠️ Cache cleared. Please reload airport data.', 'warning');
-        dataInfo.innerHTML = '';
-        routeInput.disabled = true;
-        calculateBtn.disabled = true;
-        loadDataBtn.disabled = false;
-        loadDataBtn.style.display = 'inline-block';
-        clearCacheBtn.style.display = 'none';
-        resultsSection.style.display = 'none';
+        try {
+            await clearCacheDB();
+            airportsData.clear();
+            updateStatus('⚠️ Cache cleared. Please reload airport data.', 'warning');
+            dataInfo.innerHTML = '';
+            routeInput.disabled = true;
+            calculateBtn.disabled = true;
+            loadDataBtn.disabled = false;
+            loadDataBtn.style.display = 'inline-block';
+            clearCacheBtn.style.display = 'none';
+            resultsSection.style.display = 'none';
+        } catch (error) {
+            console.error('Error clearing cache:', error);
+            alert('Failed to clear cache. Please try again.');
+        }
     }
 }
 
