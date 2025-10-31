@@ -4,7 +4,7 @@ A lightweight web application for flight planning that calculates distances and 
 
 ## Features
 
-- **Airport Database**: Caches airport data from [OurAirports.com](https://ourairports.com/data/) in local storage
+- **Airport Database**: Caches airport data from [OurAirports GitHub mirror](https://github.com/davidmegginson/ourairports-data) in local storage
 - **Smart Caching**: Stores data locally for 7 days to minimize network requests
 - **Route Planning**: Input multiple airport codes to plan your route
 - **Distance Calculation**: Uses the Haversine formula to calculate great circle distances in nautical miles
@@ -59,11 +59,13 @@ bearing = atan2(y, x)
 ```
 
 ### Data Source
-Airport data is sourced from [OurAirports.com](https://ourairports.com/data/airports.csv), which provides comprehensive airport information including:
+Airport data is sourced from the [OurAirports GitHub mirror](https://github.com/davidmegginson/ourairports-data), which provides comprehensive airport information including:
 - ICAO and IATA codes
 - Airport names and locations
 - Latitude and longitude coordinates
 - Country and municipality information
+
+The data is fetched from: `https://raw.githubusercontent.com/davidmegginson/ourairports-data/main/airports.csv`
 
 ### Local Storage
 - **Cache Duration**: 7 days
@@ -86,7 +88,7 @@ Requires a modern browser with support for:
 
 ## Privacy
 
-All data processing happens in your browser. No data is sent to any server except the initial fetch from OurAirports.com.
+All data processing happens in your browser. No data is sent to any server except the initial fetch from the OurAirports GitHub mirror.
 
 ## Offline Usage
 
@@ -98,4 +100,4 @@ Click the "Clear Cache" button to remove stored airport data and free up browser
 
 ## License
 
-This project uses data from OurAirports.com. Please see their website for data licensing information.
+This project uses data from OurAirports via the [GitHub mirror](https://github.com/davidmegginson/ourairports-data). The data is in the public domain.
