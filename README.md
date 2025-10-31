@@ -65,7 +65,7 @@ Airport data is sourced from the [OurAirports GitHub mirror](https://github.com/
 - Latitude and longitude coordinates
 - Country and municipality information
 
-The data is fetched from: `https://raw.githubusercontent.com/davidmegginson/ourairports-data/main/airports.csv`
+The data is fetched from: `https://davidmegginson.github.io/ourairports-data/airports.csv` (updated daily)
 
 ### Local Storage
 - **Cache Duration**: 7 days
