@@ -1,6 +1,6 @@
 // Flight Planning Tool - Main Application
 
-const AIRPORTS_CSV_URL = 'https://ourairports.com/data/airports.csv';
+const AIRPORTS_CSV_URL = 'https://cors.hisenz.com/?url=https://ourairports.com/data/airports.csv';
 const CACHE_KEY = 'airports_data';
 const CACHE_TIMESTAMP_KEY = 'airports_data_timestamp';
 const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
