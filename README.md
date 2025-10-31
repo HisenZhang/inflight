@@ -1,6 +1,6 @@
 # Flight Planning Webapp
 
-A lightweight web application for flight planning with a CDU/avionics-style interface that calculates distances and bearings between airports and navaids.
+A lightweight web application for flight planning with a professional navigation log interface that calculates distances and bearings between airports and navaids.
 
 ## Features
 
@@ -25,11 +25,21 @@ A lightweight web application for flight planning with a CDU/avionics-style inte
 - **Bearing Calculation**: Computes initial bearing for each leg with cardinal direction
 - **Dual Code Support**: Accepts both ICAO (e.g., KJFK) and IATA (e.g., JFK) airport codes
 - **Database Timestamp**: Shows when data was last updated and how many days ago
-- **CDU/Avionics UI**: High-contrast green-on-black interface inspired by aircraft CDUs
-  - Monospace fonts throughout
-  - Technical aviation formatting and terminology
-  - Compact, efficient layout
+- **Autocomplete Search**: Smart waypoint search with dropdown suggestions
+  - Search by ICAO, IATA, navaid identifier, or name
+  - Color-coded results (Cyan=Airport, Magenta=Navaid)
+  - Keyboard navigation (↑↓ arrows, Enter, Esc)
+  - Shows type, full name, and location
+- **Navigation Log Table**: Professional airline-style navlog display
+  - Compact table format with all info inline
+  - Leg distance (to next waypoint) and cumulative distance
   - All frequencies displayed (no truncation)
+  - Color-coded waypoints
+- **Modern UI**: Clean professional interface
+  - Roboto Mono font
+  - Black background with white borders
+  - Cyan/Magenta/Green color scheme
+  - Efficient use of screen space
 - **Smart Code Resolution**: ICAO codes prioritized over IATA to avoid navaid conflicts
 - **Responsive Design**: Works on desktop, tablet, and mobile devices
 
@@ -42,28 +52,33 @@ A lightweight web application for flight planning with a CDU/avionics-style inte
    - You'll see the count of loaded airports and navaids, plus the last update timestamp
 
 2. **Plan Your Route**
-   - Enter waypoint codes separated by spaces (e.g., `KJFK MERIT EGLL`)
-   - Mix airports and navaids as needed
-   - **Code Priority**: ICAO (4 chars) → Navaid → IATA (3 chars)
-     - Use ICAO codes (KJFK) to avoid conflicts with navaids
-     - IATA codes (JFK) checked last to prevent navaid conflicts
-   - Navaids: Use the navaid identifier (e.g., MERIT, OAK)
-   - Click "COMPUTE" or press Enter
+   - Start typing a waypoint code or name
+   - Autocomplete dropdown will show suggestions:
+     - **Cyan** entries are airports
+     - **Magenta** entries are navaids
+     - Shows code, type, full name, and location
+   - Use arrow keys (↑↓) to navigate, Enter to select
+   - Or click on a suggestion to add it
+   - Repeat for each waypoint (separated by spaces)
+   - Example routes: `KJFK MERIT EGLL` or `KSFO OAK SFO`
+   - Click "COMPUTE" or press Enter when ready
 
 3. **View Results**
-   - CDU-style display with high-contrast green/amber text
-   - Route summary shows total distance and leg count
-   - Each leg displays detailed information for DEPART and ARRIVE waypoints:
-     - Name and type (with color-coded badge)
-     - Location (municipality and country)
-     - Position (POS) in degrees/minutes format
-     - Elevation (ELEV) in feet and meters
-     - Frequencies (FREQ):
-       - Airports: All frequencies shown (Tower, Ground, ATIS, Approach, etc.)
-       - Navaids: VOR frequency (MHz) or NDB frequency (kHz)
-     - Distance (DIST) in nautical miles and kilometers
-     - Track bearing with 3-digit formatting (001°, 090°, 270°)
-     - Cardinal direction (N, NE, E, SE, S, SW, W, NW)
+   - Navigation log displayed in professional table format
+   - **Summary Bar**: Route, total distance, waypoint count, leg count
+   - **Navlog Table** with columns:
+     - **Waypoint**: Identifier (color-coded) and type badge
+     - **Position/Elevation/Frequencies**: All info displayed inline
+       - Coordinates in degrees/minutes
+       - Elevation in feet
+       - ALL frequencies (Tower, Ground, ATIS, Approach, etc.)
+     - **Leg Dist**: Distance TO the next waypoint
+     - **Cum Dist**: Cumulative distance from origin
+     - **Track**: Bearing and cardinal direction to next waypoint
+   - **Color coding**:
+     - Airports in CYAN
+     - Navaids in MAGENTA
+     - Distances/metrics in GREEN
 
 ## Example Routes
 
@@ -80,20 +95,37 @@ A lightweight web application for flight planning with a CDU/avionics-style inte
 
 ## UI Design
 
-The app features a CDU (Control Display Unit) / avionics-style interface:
+The app features a professional navigation log interface:
 
 ### Visual Design
-- **Color Scheme**: Dark background (#0a0e14) with bright green (#00ff00) primary text and amber (#ffb000) highlights
-- **Typography**: Monospace fonts (Courier New, Consolas, Monaco) throughout
-- **Layout**: Grid-based, compact design for efficient space usage
-- **Formatting**: All uppercase text with letter-spacing for aviation readability
+- **Color Scheme**:
+  - Background: Black (#000000)
+  - Borders: White (#ffffff)
+  - Text: White for labels
+  - Airports: Cyan (#00ffff)
+  - Navaids: Magenta (#ff00ff)
+  - Metrics: Green (#00ff00)
+  - Warnings: Yellow (#ffff00)
+  - Errors: Red (#ff0000)
+- **Typography**: Roboto Mono (from Google Fonts)
+- **Layout**: Compact table-based navigation log
+- **Formatting**: Clean, professional airline-style presentation
 
-### Technical Presentation
-- Status messages use aviation format: `[OK]`, `[ERR]`, `[!]`, `[...]`
-- Labels use aviation terminology: DEPART, ARRIVE, TRACK, DIST, POS, ELEV, FREQ
-- Numeric formatting: Zero-padded bearings (001°), leg numbers (LEG 01)
-- ISO timestamps for database updates
-- Route display uses hyphens (KJFK-MERIT-EGLL)
+### Navigation Log Table
+- One row per waypoint
+- All information displayed inline (no expanding rows)
+- White borders with hover effects
+- Horizontal scroll on smaller screens
+- Frequencies grouped with type labels (TOWER, GROUND, ATIS, etc.)
+- Zero-padded track bearings (001°, 090°, 270°)
+
+### Autocomplete Features
+- Dropdown appears below input field
+- Max 10 results shown at once
+- Scrollable if more results
+- Keyboard navigation support
+- Visual distinction between airports and navaids
+- Shows full context (code, type, name, location)
 
 ## Technical Details
 
@@ -167,8 +199,9 @@ To avoid conflicts between IATA codes and navaid identifiers, the app uses smart
 Requires a modern browser with support for:
 - IndexedDB API (for large data storage)
 - Fetch API
-- ES6 JavaScript features
+- ES6 JavaScript features (Map, Set, async/await, arrow functions)
 - CSS Grid and Flexbox
+- Google Fonts (Roboto Mono)
 
 ## Privacy
 
