@@ -578,24 +578,32 @@ function displayResults(waypoints, legs, totalDistance) {
 
         // Get frequencies (grouped by type for airports)
         let freqHTML = '';
-        if (waypoint.waypointType === 'airport' && waypoint.id) {
-            const frequencies = frequenciesData.get(waypoint.id);
-            if (frequencies && frequencies.length > 0) {
-                // Group frequencies by type
-                const grouped = {};
-                frequencies.forEach(f => {
-                    const type = f.type.toUpperCase();
-                    if (!grouped[type]) {
-                        grouped[type] = [];
-                    }
-                    grouped[type].push(f.frequency.toFixed(3));
-                });
+        if (waypoint.waypointType === 'airport') {
+            if (waypoint.id) {
+                const frequencies = frequenciesData.get(waypoint.id);
+                if (frequencies && frequencies.length > 0) {
+                    // Group frequencies by type
+                    const grouped = {};
+                    frequencies.forEach(f => {
+                        const type = f.type.toUpperCase();
+                        if (!grouped[type]) {
+                            grouped[type] = [];
+                        }
+                        grouped[type].push(f.frequency.toFixed(3));
+                    });
 
-                // Format as "TYPE freq1/freq2/freq3"
-                const freqItems = Object.entries(grouped).map(([type, freqs]) =>
-                    `<span class="wpt-freq-item">${type} ${freqs.join('/')}</span>`
-                );
-                freqHTML = freqItems.join(' ');
+                    // Format as "TYPE freq1/freq2/freq3"
+                    const freqItems = Object.entries(grouped).map(([type, freqs]) =>
+                        `<span class="wpt-freq-item">${type} ${freqs.join('/')}</span>`
+                    );
+                    freqHTML = freqItems.join(' ');
+                } else {
+                    // Airport exists but no frequencies in database
+                    freqHTML = `<span class="wpt-freq-item wpt-freq-none">NO FREQ DATA</span>`;
+                }
+            } else {
+                // Airport has no ID (shouldn't happen, but handle it)
+                freqHTML = `<span class="wpt-freq-item wpt-freq-none">NO FREQ DATA</span>`;
             }
         } else if (waypoint.waypointType === 'navaid' && waypoint.frequency) {
             freqHTML = `<span class="wpt-freq-item">${formatNavaidFrequency(waypoint.frequency, waypoint.type)}</span>`;
@@ -603,16 +611,24 @@ function displayResults(waypoints, legs, totalDistance) {
 
         // Get runway information for airports
         let runwayHTML = '';
-        if (waypoint.waypointType === 'airport' && waypoint.id) {
-            const runways = runwaysData.get(waypoint.id);
-            if (runways && runways.length > 0) {
-                const runwayInfo = runways.map(r => {
-                    const idents = r.leIdent && r.heIdent ? `${r.leIdent}/${r.heIdent}` : (r.leIdent || r.heIdent || 'N/A');
-                    const length = r.length ? `${r.length}FT` : '';
-                    const surface = r.surface || '';
-                    return `${idents} ${length} ${surface}`.trim();
-                }).join(', ');
-                runwayHTML = `<div class="wpt-info">RWY ${runwayInfo}</div>`;
+        if (waypoint.waypointType === 'airport') {
+            if (waypoint.id) {
+                const runways = runwaysData.get(waypoint.id);
+                if (runways && runways.length > 0) {
+                    const runwayInfo = runways.map(r => {
+                        const idents = r.leIdent && r.heIdent ? `${r.leIdent}/${r.heIdent}` : (r.leIdent || r.heIdent || 'N/A');
+                        const length = r.length ? `${r.length}FT` : '';
+                        const surface = r.surface || '';
+                        return `${idents} ${length} ${surface}`.trim();
+                    }).join(', ');
+                    runwayHTML = `<div class="wpt-info">RWY ${runwayInfo}</div>`;
+                } else {
+                    // Airport exists but no runway data in database
+                    runwayHTML = `<div class="wpt-info wpt-info-none">RWY NO DATA</div>`;
+                }
+            } else {
+                // Airport has no ID (shouldn't happen, but handle it)
+                runwayHTML = `<div class="wpt-info wpt-info-none">RWY NO DATA</div>`;
             }
         }
 

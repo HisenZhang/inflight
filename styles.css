@@ -407,6 +407,11 @@ header h1 {
     line-height: 1.4;
 }
 
+.wpt-info.wpt-info-none {
+    font-style: italic;
+    opacity: 0.6;
+}
+
 .wpt-freqs {
     font-size: 0.7rem;
     color: var(--color-metric); /* Green for frequencies */
@@ -419,6 +424,11 @@ header h1 {
     margin-right: 8px;
     white-space: nowrap;
     color: var(--color-metric); /* Green for frequencies */
+}
+
+.wpt-freq-item.wpt-freq-none {
+    color: var(--text-secondary); /* Dimmed for missing data */
+    font-style: italic;
 }
 
 /* Distance and Track (magenta for destination/distance/time) */
