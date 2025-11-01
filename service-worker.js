@@ -1,10 +1,10 @@
 // Flight Planning Tool - Service Worker for Offline Support
-const CACHE_NAME = 'flight-planning-v6';
+const CACHE_NAME = 'flight-planning-v7';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
     './app.js',
-    './geodesy.js',
+    './geodesy.js',  // WMM2025 with spherical harmonics
     './styles.css',
     './manifest.json'
 ];
@@ -43,16 +43,15 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
     const url = new URL(event.request.url);
 
-    // Handle same-origin requests and CDN libraries (jsdelivr.net)
+    // Handle same-origin requests only (no external CDN dependencies)
     const isSameOrigin = url.origin === location.origin;
-    const isJsDelivrCDN = url.hostname === 'cdn.jsdelivr.net';
 
-    if (!isSameOrigin && !isJsDelivrCDN) {
-        // Let the browser handle other cross-origin requests (CORS proxy, Google Fonts)
+    if (!isSameOrigin) {
+        // Let the browser handle cross-origin requests (CORS proxy, Google Fonts)
         return;
     }
 
-    // For same-origin and CDN requests, use cache-first strategy
+    // For same-origin requests, use cache-first strategy
     event.respondWith(
         caches.match(event.request).then((cachedResponse) => {
             if (cachedResponse) {
