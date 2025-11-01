@@ -6,7 +6,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
-    <title>Flight Planning Tool</title>
+    <title>InFlight</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -17,7 +17,6 @@
     <div class="container">
         <header>
             <h1>FLIGHT PLANNING SYSTEM</h1>
-            <p class="subtitle">FMS ROUTE CALCULATOR v2.0</p>
         </header>
 
         <div class="data-status">
@@ -33,22 +32,22 @@
         <div class="input-section">
             <h2>ROUTE ENTRY</h2>
             <div class="route-input">
-                <label for="routeInput">WAYPOINTS (SPACE SEPARATED):</label>
+                <!-- <label for="routeInput"></label> -->
                 <div class="input-wrapper">
                     <input
                         type="text"
                         id="routeInput"
-                        placeholder="e.g. KJFK ALB KBOS or NY1 MERIT"
+                        placeholder="WAYPOINTS (SPACE SEPARATED)"
                         autocomplete="off"
                         disabled
                     >
                     <div id="autocompleteDropdown" class="autocomplete-dropdown"></div>
                 </div>
-                <button id="calculateBtn" class="btn btn-primary" disabled>COMPUTE</button>
+                <button id="calculateBtn" class="btn btn-primary" disabled>ENTER</button>
                 <button id="clearRouteBtn" class="btn btn-secondary">CLEAR</button>
             </div>
             <p class="help-text">
-                ENTER WAYPOINT(S): AIRPORTS (ICAO/IATA) OR NAVAIDS (VOR/NDB). AUTOCOMPLETE SHOWS MAGENTA FOR ALL WAYPOINTS.
+                ENTER WAYPOINT(S): AIRPORTS (ICAO/IATA) OR NAVAIDS (VOR/NDB).
             </p>
         </div>
 

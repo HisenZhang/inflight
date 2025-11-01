@@ -1,7 +1,7 @@
 {
-  "name": "Flight Planning System",
-  "short_name": "FPS",
-  "description": "FMS Route Calculator - Flight planning tool for pilots",
+  "name": "InFlight",
+  "short_name": "InFlight",
+  "description": "Flight planning tool for pilots - Offline-capable route calculator",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#000000",

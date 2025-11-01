@@ -575,7 +575,7 @@ function displayResults(waypoints, legs, totalDistance) {
 
         // Elevation
         const elev = waypoint.elevation !== null && !isNaN(waypoint.elevation)
-            ? `${Math.round(waypoint.elevation)}FT`
+            ? `${Math.round(waypoint.elevation)} FT`
             : 'N/A';
 
         // Get frequencies (grouped by type for airports)
@@ -666,10 +666,9 @@ function displayResults(waypoints, legs, totalDistance) {
                 <tr class="leg-row">
                     <td></td>
                     <td colspan="3" class="leg-info">
-                        <span class="leg-arrow">→</span>
                         <span class="leg-item">LEG: <span class="metric-value">${legDist}</span> NM</span>
-                        <span class="leg-item">HDG: <span class="metric-value">${track}°</span> ${cardinal}</span>
-                        <span class="leg-item">CUM: <span class="metric-value">${cumulativeDistance.toFixed(1)}</span> NM</span>
+                        <span class="leg-item">TRK: <span class="metric-value">${track}°</span> ${cardinal}</span>
+                        <span class="leg-item">SUM: <span class="metric-value">${cumulativeDistance.toFixed(1)}</span> NM</span>
                     </td>
                 </tr>
             `;
