@@ -536,6 +536,11 @@ function calculateRoute() {
         return;
     }
 
+    // Calculate magnetic declination for each waypoint
+    waypoints.forEach(waypoint => {
+        waypoint.magVar = calculateMagneticDeclination(waypoint.lat, waypoint.lon);
+    });
+
     // Calculate legs
     const legs = [];
     let totalDistance = 0;
@@ -545,13 +550,18 @@ function calculateRoute() {
         const to = waypoints[i + 1];
 
         const distance = calculateDistance(from.lat, from.lon, to.lat, to.lon);
-        const bearing = calculateBearing(from.lat, from.lon, to.lat, to.lon);
+        const trueBearing = calculateBearing(from.lat, from.lon, to.lat, to.lon);
+
+        // Calculate magnetic bearing at departure point
+        const magBearing = trueToMagnetic(trueBearing, from.magVar);
 
         legs.push({
             from,
             to,
             distance,
-            bearing
+            trueBearing,
+            magBearing,
+            magVar: from.magVar
         });
 
         totalDistance += distance;
@@ -563,34 +573,67 @@ function calculateRoute() {
     saveQueryHistory(routeInput.value.trim().toUpperCase());
 }
 
-// Calculate distance using Haversine formula (in nautical miles)
+// Calculate distance using WGS84 ellipsoid (Vincenty's formulae) - in nautical miles
 function calculateDistance(lat1, lon1, lat2, lon2) {
-    const R = 3440.065; // Earth's radius in nautical miles
-    const dLat = toRadians(lat2 - lat1);
-    const dLon = toRadians(lon2 - lon1);
-
-    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-              Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) *
-              Math.sin(dLon / 2) * Math.sin(dLon / 2);
-
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const distance = R * c;
-
-    return distance;
+    try {
+        const point1 = new LatLonEllipsoidal(lat1, lon1);
+        const point2 = new LatLonEllipsoidal(lat2, lon2);
+        const distanceMeters = point1.distanceTo(point2);
+        const distanceNM = distanceMeters / 1852; // Convert meters to nautical miles
+        return distanceNM;
+    } catch (error) {
+        console.error('Error calculating distance:', error);
+        // Fallback to simple spherical calculation if geodesy fails
+        const R = 3440.065;
+        const dLat = toRadians(lat2 - lat1);
+        const dLon = toRadians(lon2 - lon1);
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                  Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) *
+                  Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+    }
 }
 
-// Calculate bearing (initial heading) between two points
+// Calculate true bearing (geodetic azimuth) between two points
 function calculateBearing(lat1, lon1, lat2, lon2) {
-    const dLon = toRadians(lon2 - lon1);
-    const y = Math.sin(dLon) * Math.cos(toRadians(lat2));
-    const x = Math.cos(toRadians(lat1)) * Math.sin(toRadians(lat2)) -
-              Math.sin(toRadians(lat1)) * Math.cos(toRadians(lat2)) * Math.cos(dLon);
+    try {
+        const point1 = new LatLonEllipsoidal(lat1, lon1);
+        const point2 = new LatLonEllipsoidal(lat2, lon2);
+        const bearingDegrees = point1.initialBearingTo(point2);
+        return (bearingDegrees + 360) % 360; // Normalize to 0-360
+    } catch (error) {
+        console.error('Error calculating bearing:', error);
+        // Fallback to simple spherical calculation
+        const dLon = toRadians(lon2 - lon1);
+        const y = Math.sin(dLon) * Math.cos(toRadians(lat2));
+        const x = Math.cos(toRadians(lat1)) * Math.sin(toRadians(lat2)) -
+                  Math.sin(toRadians(lat1)) * Math.cos(toRadians(lat2)) * Math.cos(dLon);
+        let bearing = Math.atan2(y, x);
+        bearing = toDegrees(bearing);
+        return (bearing + 360) % 360;
+    }
+}
 
-    let bearing = Math.atan2(y, x);
-    bearing = toDegrees(bearing);
-    bearing = (bearing + 360) % 360; // Normalize to 0-360
+// Calculate magnetic declination (variation) for a location
+function calculateMagneticDeclination(lat, lon) {
+    try {
+        // geomag library calculates declination for current date
+        const geoMag = geoMagFactory();
+        const result = geoMag(lat, lon);
+        return result.dec; // Returns declination in degrees (positive = East, negative = West)
+    } catch (error) {
+        console.error('Error calculating magnetic declination:', error);
+        return 0; // Fallback to 0 if calculation fails
+    }
+}
 
-    return bearing;
+// Convert true heading to magnetic heading
+function trueToMagnetic(trueHeading, declination) {
+    // Magnetic heading = True heading - Declination
+    // (East declination is positive, so we subtract)
+    let magHeading = trueHeading - declination;
+    return (magHeading + 360) % 360; // Normalize to 0-360
 }
 
 // Display results
@@ -643,6 +686,11 @@ function displayResults(waypoints, legs, totalDistance) {
         const elev = waypoint.elevation !== null && !isNaN(waypoint.elevation)
             ? `${Math.round(waypoint.elevation)} FT`
             : 'N/A';
+
+        // Magnetic variation
+        const magVarValue = Math.abs(waypoint.magVar).toFixed(1);
+        const magVarDir = waypoint.magVar >= 0 ? 'E' : 'W';
+        const magVarDisplay = `VAR ${magVarValue}°${magVarDir}`;
 
         // Get frequencies (grouped by type for airports)
         let freqHTML = '';
@@ -713,7 +761,7 @@ function displayResults(waypoints, legs, totalDistance) {
                 </td>
                 <td colspan="2">
                     <div class="wpt-info">${pos}</div>
-                    <div class="wpt-info wpt-elevation">ELEV ${elev}</div>
+                    <div class="wpt-info wpt-elevation">ELEV ${elev} | ${magVarDisplay}</div>
                     ${runwayHTML}
                     ${freqHTML ? `<div class="wpt-freqs">${freqHTML}</div>` : ''}
                 </td>
@@ -725,16 +773,19 @@ function displayResults(waypoints, legs, totalDistance) {
             const leg = legs[index];
             cumulativeDistance += leg.distance;
             const legDist = leg.distance.toFixed(1);
-            const track = String(Math.round(leg.bearing)).padStart(3, '0');
-            const cardinal = getCardinalDirection(leg.bearing);
+            const trueTrack = String(Math.round(leg.trueBearing)).padStart(3, '0');
+            const magTrack = String(Math.round(leg.magBearing)).padStart(3, '0');
+            const cardinal = getCardinalDirection(leg.trueBearing);
 
             tableHTML += `
                 <tr class="leg-row">
                     <td></td>
                     <td colspan="3" class="leg-info">
+                        <span class="leg-arrow">→</span>
                         <span class="leg-item">LEG: <span class="metric-value">${legDist}</span> NM</span>
-                        <span class="leg-item">TRK: <span class="metric-value">${track}°</span> ${cardinal}</span>
-                        <span class="leg-item">SUM: <span class="metric-value">${cumulativeDistance.toFixed(1)}</span> NM</span>
+                        <span class="leg-item">TRUE: <span class="metric-value">${trueTrack}°</span> ${cardinal}</span>
+                        <span class="leg-item">MAG: <span class="mag-heading">${magTrack}°</span></span>
+                        <span class="leg-item">CUM: <span class="metric-value">${cumulativeDistance.toFixed(1)}</span> NM</span>
                     </td>
                 </tr>
             `;

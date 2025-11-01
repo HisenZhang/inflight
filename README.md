@@ -154,48 +154,111 @@ The app features a professional navigation log interface:
 
 ## Technical Details
 
-### Distance Calculation
-Uses the Haversine formula to calculate great circle distances:
-```
-a = sin²(Δlat/2) + cos(lat1) * cos(lat2) * sin²(Δlon/2)
-c = 2 * atan2(√a, √(1−a))
-d = R * c
-```
-Where R is Earth's radius in nautical miles (3440.065 NM).
+### Geodetic Calculations
+The app uses **WGS84 ellipsoid geodesy** for accurate distance and bearing calculations:
 
-### Bearing Calculation
-Calculates initial bearing (forward azimuth):
-```
-y = sin(Δlon) * cos(lat2)
-x = cos(lat1) * sin(lat2) − sin(lat1) * cos(lat2) * cos(Δlon)
-bearing = atan2(y, x)
-```
+**Distance Calculation:**
+- Uses Vincenty's inverse formulae (via geodesy library)
+- Calculates distances on WGS84 ellipsoid (not simple sphere)
+- Accuracy: < 0.01% error (few meters over thousands of NM)
+- Results in nautical miles (1 NM = 1852 meters)
 
-### Data Source
-Flight data is sourced from the [OurAirports GitHub mirror](https://github.com/davidmegginson/ourairports-data), which provides comprehensive aviation information including:
+**Bearing Calculation:**
+- Geodetic azimuth (initial bearing) on WGS84 ellipsoid
+- More accurate than spherical calculations, especially for long distances
+- Accounts for Earth's oblateness
 
-**Airports Data:**
-- ICAO and IATA codes
-- Airport names and locations
-- Latitude, longitude, and elevation
-- Airport type and country information
+**Library:** `geodesy@2.4.0` by Chris Veness
+- Source: https://www.npmjs.com/package/geodesy
+- CDN: https://cdn.jsdelivr.net/npm/geodesy@2.4.0/
+- Works offline after initial load (cached by Service Worker)
 
-**Navaids Data:**
-- Radio navigation aid identifiers
-- Navaid types (VOR, NDB, DME, etc.)
-- Frequencies (VHF for VOR, LF/MF for NDB)
-- Latitude, longitude, and elevation
+### Magnetic Variation
+The app calculates **magnetic declination** (variation) at each waypoint:
 
-**Frequencies Data:**
-- Airport communication frequencies
-- Tower, Ground, ATIS, Approach, Departure, etc.
-- Frequency descriptions
+**World Magnetic Model (WMM):**
+- Current model: WMM2025 (valid 2025-2030)
+- Calculates magnetic declination for any location worldwide
+- Converts true headings to magnetic headings for compass navigation
 
-Data URLs (raw from GitHub, updated daily):
-- Airports: `https://raw.githubusercontent.com/davidmegginson/ourairports-data/refs/heads/main/airports.csv`
-- Navaids: `https://raw.githubusercontent.com/davidmegginson/ourairports-data/refs/heads/main/navaids.csv`
-- Frequencies: `https://raw.githubusercontent.com/davidmegginson/ourairports-data/refs/heads/main/airport-frequencies.csv`
-- Runways: `https://raw.githubusercontent.com/davidmegginson/ourairports-data/refs/heads/main/runways.csv`
+**Library:** `geomag@1.0.2` (JavaScript implementation of NOAA's WMM)
+- Source: https://www.npmjs.com/package/geomag
+- CDN: https://cdn.jsdelivr.net/npm/geomag@1.0.2/
+- Works offline after initial load (cached by Service Worker)
+
+**Display:**
+- Each waypoint shows magnetic variation (e.g., "VAR 12.3°E" or "VAR 8.5°W")
+- Leg rows show both TRUE and MAG headings
+- Magnetic headings displayed in cyan for easy identification
+- Variation calculated for current date using WMM2025
+
+### Aviation Data Sources
+
+**Publishing Authority:** OurAirports (https://ourairports.com/)
+- Community-maintained open aviation database
+- Data compiled from official sources (ICAO, FAA, national aviation authorities)
+- Updated regularly by volunteer contributors worldwide
+- Public domain data
+
+**Data Source:** GitHub Mirror by David Megginson
+- Repository: https://github.com/davidmegginson/ourairports-data
+- Mirror of OurAirports database in CSV format
+- Updated daily from OurAirports.com
+- Reliable CDN delivery via GitHub Pages / raw.githubusercontent.com
+
+**Data Files Used:**
+
+1. **Airports** (`airports.csv`)
+   - URL: `https://raw.githubusercontent.com/davidmegginson/ourairports-data/refs/heads/main/airports.csv`
+   - Contains: ICAO/IATA codes, names, coordinates (WGS84), elevation, airport type
+   - ~70,000 airports worldwide
+
+2. **Navaids** (`navaids.csv`)
+   - URL: `https://raw.githubusercontent.com/davidmegginson/ourairports-data/refs/heads/main/navaids.csv`
+   - Contains: VOR, NDB, DME, TACAN identifiers, frequencies, coordinates (WGS84)
+   - ~10,000 navigation aids worldwide
+
+3. **Frequencies** (`airport-frequencies.csv`)
+   - URL: `https://raw.githubusercontent.com/davidmegginson/ourairports-data/refs/heads/main/airport-frequencies.csv`
+   - Contains: Tower, Ground, ATIS, Approach, Departure frequencies
+   - Communication frequencies for airports worldwide
+
+4. **Runways** (`runways.csv`)
+   - URL: `https://raw.githubusercontent.com/davidmegginson/ourairports-data/refs/heads/main/runways.csv`
+   - Contains: Runway identifiers, length, width, surface type
+   - Physical runway data for airports worldwide
+
+**CORS Proxy:** User-provided proxy at `cors.hisenz.com`
+- Required for cross-origin data fetching
+- Proxies requests to GitHub raw content
+
+### External Dependencies
+
+**All dependencies are cached by Service Worker for offline use:**
+
+1. **Geodesy Library**
+   - Package: `geodesy@2.4.0`
+   - Author: Chris Veness
+   - Source: https://www.npmjs.com/package/geodesy
+   - CDN: https://cdn.jsdelivr.net/npm/geodesy@2.4.0/latlon-ellipsoidal-vincenty.min.js
+   - Purpose: WGS84 ellipsoid distance/bearing calculations (Vincenty's formulae)
+   - License: MIT
+
+2. **Magnetic Model Library**
+   - Package: `geomag@1.0.2`
+   - Implements: NOAA World Magnetic Model (WMM2025)
+   - Authority: NOAA National Centers for Environmental Information
+   - Source: https://www.npmjs.com/package/geomag
+   - CDN: https://cdn.jsdelivr.net/npm/geomag@1.0.2/geomag.min.js
+   - Purpose: Calculate magnetic declination worldwide
+   - Model Valid: 2025-2030
+   - License: Public Domain (US Government work)
+
+3. **Font**
+   - Font: Roboto Mono
+   - Source: Google Fonts
+   - URL: https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;700&display=swap
+   - License: Apache License 2.0
 
 ### Storage
 - **Technology**: IndexedDB (for large data storage)
@@ -204,7 +267,7 @@ Data URLs (raw from GitHub, updated daily):
 - **Storage Size**: Handles large datasets (30+ MB) without browser storage limits
 - **Stored Data**: Airports CSV, Navaids CSV, Frequencies CSV, Runways CSV, and timestamp
 - **Update Tracking**: Shows last update date/time and days since update
-- **Offline Support**: Service Worker caches app shell for offline use
+- **Offline Support**: Service Worker caches app shell and external libraries
 
 ## Code Resolution Priority
 

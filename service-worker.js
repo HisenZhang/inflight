@@ -1,11 +1,14 @@
 // Flight Planning Tool - Service Worker for Offline Support
-const CACHE_NAME = 'flight-planning-v3';
+const CACHE_NAME = 'flight-planning-v4';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
     './app.js',
     './styles.css',
-    './manifest.json'
+    './manifest.json',
+    // Geodesy and Magnetic Variation Libraries
+    'https://cdn.jsdelivr.net/npm/geodesy@2.4.0/latlon-ellipsoidal-vincenty.min.js',
+    'https://cdn.jsdelivr.net/npm/geomag@1.0.2/geomag.min.js'
 ];
 
 // Install event - cache assets
@@ -42,13 +45,16 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
     const url = new URL(event.request.url);
 
-    // Only handle same-origin requests (skip CORS proxy and Google Fonts)
-    if (url.origin !== location.origin) {
-        // Let the browser handle cross-origin requests
+    // Handle same-origin requests and CDN libraries (jsdelivr.net)
+    const isSameOrigin = url.origin === location.origin;
+    const isJsDelivrCDN = url.hostname === 'cdn.jsdelivr.net';
+
+    if (!isSameOrigin && !isJsDelivrCDN) {
+        // Let the browser handle other cross-origin requests (CORS proxy, Google Fonts)
         return;
     }
 
-    // For same-origin requests, use cache-first strategy
+    // For same-origin and CDN requests, use cache-first strategy
     event.respondWith(
         caches.match(event.request).then((cachedResponse) => {
             if (cachedResponse) {

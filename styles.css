@@ -448,6 +448,11 @@ header h1 {
     color: var(--text-secondary);
 }
 
+.mag-heading {
+    color: var(--color-airport); /* Cyan for magnetic headings */
+    font-weight: 700;
+}
+
 /* Waypoint Identifier */
 .wpt-ident {
     font-weight: 700;
