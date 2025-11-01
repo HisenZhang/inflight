@@ -4,7 +4,16 @@ A lightweight web application for flight planning with a professional navigation
 
 ## Features
 
-- **Comprehensive Database**: Caches airports, navaids, and frequency data from [OurAirports GitHub mirror](https://github.com/davidmegginson/ourairports-data) using IndexedDB
+- **Offline Support**: Full Progressive Web App (PWA) with Service Worker
+  - Works completely offline after first load
+  - Install to home screen on mobile devices
+  - App shell cached for instant loading
+  - Database never expires (warns if > 7 days old)
+- **Mobile Optimized**:
+  - Prevents accidental zoom with locked viewport
+  - Touch-friendly interface
+  - Responsive layout for all screen sizes
+- **Comprehensive Database**: Caches airports, navaids, runway, and frequency data from [OurAirports GitHub mirror](https://github.com/davidmegginson/ourairports-data) using IndexedDB
 - **Navaid Support**: Supports radio navigation aids as waypoints:
   - VOR (VHF Omnidirectional Range)
   - VOR-DME (VOR with Distance Measuring Equipment)
@@ -14,27 +23,34 @@ A lightweight web application for flight planning with a professional navigation
   - NDB-DME (NDB with DME)
   - DME (Distance Measuring Equipment)
 - **Detailed Waypoint Information**:
-  - Field elevation (in feet and meters)
-  - Airport communication frequencies (Tower, Ground, ATIS, etc.)
+  - Field elevation in feet (cyan color-coded)
+  - Airport runway information (identifiers, length, surface)
+  - Airport communication frequencies grouped by type (green color-coded)
   - Navaid frequencies (properly formatted for VOR/NDB)
   - Waypoint type badges
   - Full coordinates in degrees/minutes
-- **Smart Caching**: Stores data locally for 7 days to minimize network requests
-- **Route Planning**: Input multiple waypoints (airports or navaids) to plan your route
+  - Graceful handling of missing data (e.g., "NO FREQ DATA" if not in database)
+- **Smart Caching**: Stores data locally indefinitely, warns if > 7 days old
+- **Route Planning**: Input one or more waypoints (airports or navaids) to plan your route
+  - Single waypoint: View detailed information
+  - Multiple waypoints: Calculate distances and bearings between each leg
 - **Distance Calculation**: Uses the Haversine formula to calculate great circle distances in nautical miles
 - **Bearing Calculation**: Computes initial bearing for each leg with cardinal direction
 - **Dual Code Support**: Accepts both ICAO (e.g., KJFK) and IATA (e.g., JFK) airport codes
 - **Database Timestamp**: Shows when data was last updated and how many days ago
 - **Autocomplete Search**: Smart waypoint search with dropdown suggestions
   - Search by ICAO, IATA, navaid identifier, or name
-  - Color-coded results (Cyan=Airport, Magenta=Navaid)
+  - Prioritized ordering: exact matches first, then partial, then name matches
+  - All waypoints shown in magenta
   - Keyboard navigation (↑↓ arrows, Enter, Esc)
   - Shows type, full name, and location
 - **Navigation Log Table**: Professional airline-style navlog display
+  - Numbered waypoints (1, 2, 3...)
+  - Distance/heading rows between waypoints
   - Compact table format with all info inline
-  - Leg distance (to next waypoint) and cumulative distance
-  - All frequencies displayed (no truncation)
-  - Color-coded waypoints
+  - All frequencies grouped by type (e.g., "APP 118.250/120.600")
+  - Runway information for airports
+  - Color-coded information (magenta waypoints, cyan elevation, green frequencies)
 - **Modern UI**: Clean professional interface
   - Roboto Mono font
   - Black background with white borders
@@ -47,38 +63,43 @@ A lightweight web application for flight planning with a professional navigation
 
 1. **Load Flight Data**
    - Open `index.html` in your web browser
-   - Click "Load Flight Data" to fetch and cache airports, navaids, and frequency information
-   - The data will be stored in your browser's IndexedDB for 7 days
+   - Click "LOAD DATA" to fetch and cache airports, navaids, runway, and frequency information
+   - The data will be stored in your browser's IndexedDB permanently
+   - After 7 days, a warning appears recommending update, but data still works
    - You'll see the count of loaded airports and navaids, plus the last update timestamp
+   - **Offline**: After first load, the app works completely offline
 
 2. **Plan Your Route**
    - Start typing a waypoint code or name
    - Autocomplete dropdown will show suggestions:
-     - **Cyan** entries are airports
-     - **Magenta** entries are navaids
+     - All waypoints displayed in **magenta**
      - Shows code, type, full name, and location
+     - Exact matches appear first, then partial, then name matches
    - Use arrow keys (↑↓) to navigate, Enter to select
    - Or click on a suggestion to add it
-   - Repeat for each waypoint (separated by spaces)
-   - Example routes: `KJFK MERIT EGLL` or `KSFO OAK SFO`
+   - Enter one or more waypoints (separated by spaces)
+   - Example routes: `KJFK MERIT EGLL` or `NY1` (single waypoint) or `KSFO OAK`
    - Click "COMPUTE" or press Enter when ready
 
 3. **View Results**
    - Navigation log displayed in professional table format
-   - **Summary Bar**: Route, total distance, waypoint count, leg count
-   - **Navlog Table** with columns:
-     - **Waypoint**: Identifier (color-coded) and type badge
-     - **Position/Elevation/Frequencies**: All info displayed inline
-       - Coordinates in degrees/minutes
-       - Elevation in feet
-       - ALL frequencies (Tower, Ground, ATIS, Approach, etc.)
-     - **Leg Dist**: Distance TO the next waypoint
-     - **Cum Dist**: Cumulative distance from origin
-     - **Track**: Bearing and cardinal direction to next waypoint
+   - **Summary Bar**: Route (space-separated), total distance, waypoint count, leg count (all in magenta)
+   - **Navlog Table** layout:
+     - **Waypoint rows** (numbered 1, 2, 3...):
+       - Identifier (magenta) and type badge
+       - Position (coordinates in degrees/minutes)
+       - Elevation in feet (cyan)
+       - Runway information (identifiers, length, surface)
+       - Frequencies grouped by type (green) - e.g., "APP 118.250/120.600"
+     - **Leg rows** (between waypoints):
+       - Distance to next waypoint (magenta)
+       - Heading and cardinal direction (magenta)
+       - Cumulative distance (magenta)
    - **Color coding**:
-     - Airports in CYAN
-     - Navaids in MAGENTA
-     - Distances/metrics in GREEN
+     - All waypoints in MAGENTA
+     - Elevation in CYAN
+     - Frequencies in GREEN
+     - Distances/headings in MAGENTA
 
 ## Example Routes
 
@@ -101,10 +122,11 @@ The app features a professional navigation log interface:
 - **Color Scheme**:
   - Background: Black (#000000)
   - Borders: White (#ffffff)
-  - Text: White for labels
-  - Airports: Cyan (#00ffff)
-  - Navaids: Magenta (#ff00ff)
-  - Metrics: Green (#00ff00)
+  - Text: White for labels, Gray for secondary info
+  - All Waypoints: Magenta (#ff00ff)
+  - Elevation: Cyan (#00ffff)
+  - Frequencies: Green (#00ff00)
+  - Distances/Headings: Magenta (#ff00ff)
   - Warnings: Yellow (#ffff00)
   - Errors: Red (#ff0000)
 - **Typography**: Roboto Mono (from Google Fonts)
@@ -112,12 +134,15 @@ The app features a professional navigation log interface:
 - **Formatting**: Clean, professional airline-style presentation
 
 ### Navigation Log Table
-- One row per waypoint
+- Numbered waypoint rows (1, 2, 3...)
+- Distance/heading rows between waypoints
 - All information displayed inline (no expanding rows)
 - White borders with hover effects
 - Horizontal scroll on smaller screens
-- Frequencies grouped with type labels (TOWER, GROUND, ATIS, etc.)
+- Frequencies grouped by type with slashes (e.g., "APP 118.250/120.600")
+- Runway information for airports (e.g., "09/27 8000FT ASPH")
 - Zero-padded track bearings (001°, 090°, 270°)
+- Graceful missing data indicators ("NO FREQ DATA", "RWY NO DATA")
 
 ### Autocomplete Features
 - Dropdown appears below input field
@@ -166,28 +191,32 @@ Flight data is sourced from the [OurAirports GitHub mirror](https://github.com/d
 - Tower, Ground, ATIS, Approach, Departure, etc.
 - Frequency descriptions
 
-Data URLs (updated daily):
-- Airports: `https://davidmegginson.github.io/ourairports-data/airports.csv`
-- Navaids: `https://davidmegginson.github.io/ourairports-data/navaids.csv`
-- Frequencies: `https://davidmegginson.github.io/ourairports-data/airport-frequencies.csv`
+Data URLs (raw from GitHub, updated daily):
+- Airports: `https://raw.githubusercontent.com/davidmegginson/ourairports-data/refs/heads/main/airports.csv`
+- Navaids: `https://raw.githubusercontent.com/davidmegginson/ourairports-data/refs/heads/main/navaids.csv`
+- Frequencies: `https://raw.githubusercontent.com/davidmegginson/ourairports-data/refs/heads/main/airport-frequencies.csv`
+- Runways: `https://raw.githubusercontent.com/davidmegginson/ourairports-data/refs/heads/main/runways.csv`
 
 ### Storage
 - **Technology**: IndexedDB (for large data storage)
-- **Cache Duration**: 7 days
-- **Database**: `FlightPlanningDB` (version 2)
-- **Storage Size**: Handles large datasets (20+ MB) without browser storage limits
-- **Stored Data**: Airports CSV, Navaids CSV, Frequencies CSV, and timestamp
+- **Cache Duration**: Never expires (warns if > 7 days old)
+- **Database**: `FlightPlanningDB` (version 3)
+- **Storage Size**: Handles large datasets (30+ MB) without browser storage limits
+- **Stored Data**: Airports CSV, Navaids CSV, Frequencies CSV, Runways CSV, and timestamp
 - **Update Tracking**: Shows last update date/time and days since update
+- **Offline Support**: Service Worker caches app shell for offline use
 
 ## Code Resolution Priority
 
 To avoid conflicts between IATA codes and navaid identifiers, the app uses smart lookup priority:
 
 1. **4+ characters**: Try ICAO code first (most specific, e.g., KJFK)
-2. **Any length**: Try navaid identifier (e.g., MERIT, OAK)
-3. **3 characters**: Try IATA code last (e.g., JFK) - least specific
+2. **Any length**: Try navaid identifier (e.g., MERIT, NY1, OAK)
+3. **3 characters**: Try IATA code via mapping to ICAO (e.g., JFK → KJFK)
 
 **Best Practice**: Use ICAO codes (4 letters) for airports to ensure unambiguous waypoint resolution.
+
+**Indexing**: All airport ICAO/IATA codes and navaid identifiers are stored in uppercase for consistent lookup.
 
 ## Browser Compatibility
 
@@ -195,13 +224,23 @@ To avoid conflicts between IATA codes and navaid identifiers, the app uses smart
 - Firefox
 - Safari
 - Opera
+- Mobile browsers (iOS Safari, Chrome Mobile, Samsung Internet)
 
 Requires a modern browser with support for:
+- Service Workers (for offline support)
 - IndexedDB API (for large data storage)
 - Fetch API
 - ES6 JavaScript features (Map, Set, async/await, arrow functions)
 - CSS Grid and Flexbox
 - Google Fonts (Roboto Mono)
+
+## Progressive Web App (PWA)
+
+This app can be installed on your device:
+- **Desktop**: Click the install icon in the browser address bar
+- **Mobile**: Use "Add to Home Screen" from the browser menu
+- **Offline**: Works completely offline after first load
+- **Updates**: Service Worker automatically updates when new version available
 
 ## Privacy
 
@@ -209,7 +248,12 @@ All data processing happens in your browser. No data is sent to any server excep
 
 ## Offline Usage
 
-After loading the flight data once, the app can work offline for up to 7 days using the cached data. All route calculations are performed locally in your browser.
+After loading the flight data once, the app works completely offline:
+- **App Shell**: HTML, CSS, and JavaScript cached by Service Worker
+- **Data**: Airports, navaids, runways, and frequencies stored in IndexedDB
+- **No Expiration**: Data never expires but warns if > 7 days old
+- **Calculations**: All route calculations performed locally in your browser
+- **Updates**: Reconnect to internet and click "LOAD DATA" to refresh database
 
 ## Clearing Cache
 

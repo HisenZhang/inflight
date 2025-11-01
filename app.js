@@ -1060,3 +1060,16 @@ function toRadians(degrees) {
 function toDegrees(radians) {
     return radians * 180 / Math.PI;
 }
+
+// Register Service Worker for offline support
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js')
+            .then((registration) => {
+                console.log('[App] ServiceWorker registration successful:', registration.scope);
+            })
+            .catch((error) => {
+                console.log('[App] ServiceWorker registration failed:', error);
+            });
+    });
+}
