@@ -140,15 +140,20 @@ async function checkCachedData() {
 
         if (cachedData && cachedData.airportsCSV && cachedData.timestamp) {
             const age = Date.now() - cachedData.timestamp;
-            if (age < CACHE_DURATION) {
-                loadFromCache(cachedData.airportsCSV, cachedData.navaidsCSV, cachedData.frequenciesCSV, cachedData.runwaysCSV, cachedData.timestamp);
-                const daysOld = Math.floor(age / (24 * 60 * 60 * 1000));
-                updateStatus(`[OK] DATABASE LOADED FROM CACHE (${daysOld}D OLD)`, 'success');
-                showDataInfo();
-                return;
+            const daysOld = Math.floor(age / (24 * 60 * 60 * 1000));
+
+            // Always load from cache (never expire)
+            loadFromCache(cachedData.airportsCSV, cachedData.navaidsCSV, cachedData.frequenciesCSV, cachedData.runwaysCSV, cachedData.timestamp);
+
+            // Show warning if > 7 days old
+            if (age >= CACHE_DURATION) {
+                updateStatus(`[!] DATABASE LOADED (${daysOld}D OLD - UPDATE RECOMMENDED)`, 'warning');
             } else {
-                updateStatus('[!] CACHE EXPIRED - RELOAD REQUIRED', 'warning');
+                updateStatus(`[OK] DATABASE LOADED FROM CACHE (${daysOld}D OLD)`, 'success');
             }
+
+            showDataInfo();
+            return;
         }
     } catch (error) {
         console.error('Error loading cached data:', error);
@@ -254,13 +259,13 @@ function parseAirportData(csvText) {
 
         const airport = {
             id: values[idIdx],
-            icao: values[identIdx],
+            icao: values[identIdx]?.toUpperCase(), // Store ICAO in uppercase
             type: values[typeIdx],
             name: values[nameIdx],
             lat: parseFloat(values[latIdx]),
             lon: parseFloat(values[lonIdx]),
             elevation: values[elevIdx] ? parseFloat(values[elevIdx]) : null,
-            iata: values[iataIdx],
+            iata: values[iataIdx]?.toUpperCase(), // Store IATA in uppercase
             municipality: values[municipalityIdx],
             country: values[isoCountryIdx],
             waypointType: 'airport'
@@ -268,14 +273,12 @@ function parseAirportData(csvText) {
 
         // Only store airports with valid coordinates and ICAO code
         if (!isNaN(airport.lat) && !isNaN(airport.lon) && airport.icao) {
-            const icaoUpper = airport.icao.toUpperCase();
             // Store by ICAO code (primary storage - only once per airport)
-            airportsData.set(icaoUpper, airport);
+            airportsData.set(airport.icao, airport);
 
             // If IATA code exists, create a mapping for lookup
             if (airport.iata && airport.iata.trim()) {
-                const iataUpper = airport.iata.toUpperCase();
-                iataToIcao.set(iataUpper, icaoUpper);
+                iataToIcao.set(airport.iata, airport.icao);
             }
         }
     }
@@ -306,7 +309,7 @@ function parseNavaidData(csvText) {
 
         const navaid = {
             id: values[idIdx],
-            ident: values[identIdx],
+            ident: values[identIdx]?.toUpperCase(), // Store ident in uppercase
             name: values[nameIdx],
             type: values[typeIdx],
             frequency: values[freqIdx] ? parseFloat(values[freqIdx]) : null,
@@ -317,9 +320,9 @@ function parseNavaidData(csvText) {
             waypointType: 'navaid'
         };
 
-        // Only store navaids with valid coordinates
+        // Only store navaids with valid coordinates and ident
         if (!isNaN(navaid.lat) && !isNaN(navaid.lon) && navaid.ident) {
-            navaidsData.set(navaid.ident.toUpperCase(), navaid);
+            navaidsData.set(navaid.ident, navaid); // Key and ident are both uppercase now
         }
     }
 }
@@ -421,10 +424,10 @@ function parseCSVLine(line) {
 
 // Calculate route
 function calculateRoute() {
-    const route = routeInput.value.trim().toUpperCase().split(/\s+/);
+    const route = routeInput.value.trim().toUpperCase().split(/\s+/).filter(w => w.length > 0);
 
-    if (route.length < 2) {
-        alert('ERROR: MINIMUM 2 WAYPOINTS REQUIRED');
+    if (route.length < 1) {
+        alert('ERROR: ENTER AT LEAST ONE WAYPOINT');
         return;
     }
 
@@ -527,7 +530,7 @@ function calculateBearing(lat1, lon1, lat2, lon2) {
 // Display results
 function displayResults(waypoints, legs, totalDistance) {
     // Route summary
-    const routeCodes = waypoints.map(w => getWaypointCode(w)).join('-');
+    const routeCodes = waypoints.map(w => getWaypointCode(w)).join(' '); // Space-separated, no dashes
     routeSummary.innerHTML = `
         <div class="summary-item">
             <span class="summary-label">ROUTE</span>
@@ -552,11 +555,9 @@ function displayResults(waypoints, legs, totalDistance) {
         <table>
             <thead>
                 <tr>
-                    <th>WAYPOINT</th>
-                    <th>POSITION / ELEVATION / FREQUENCIES</th>
-                    <th>LEG DIST</th>
-                    <th>CUM DIST</th>
-                    <th>TRACK</th>
+                    <th>WPT</th>
+                    <th>IDENT / TYPE</th>
+                    <th colspan="2">POSITION / ELEVATION / FREQUENCIES</th>
                 </tr>
             </thead>
             <tbody>
@@ -567,6 +568,7 @@ function displayResults(waypoints, legs, totalDistance) {
     waypoints.forEach((waypoint, index) => {
         const code = getWaypointCode(waypoint);
         const colorClass = waypoint.waypointType === 'airport' ? 'airport' : 'navaid';
+        const waypointNumber = index + 1;
 
         // Position
         const pos = `${formatCoordinate(waypoint.lat, 'lat')} ${formatCoordinate(waypoint.lon, 'lon')}`;
@@ -632,41 +634,46 @@ function displayResults(waypoints, legs, totalDistance) {
             }
         }
 
-        // Calculate leg distance and track (to NEXT waypoint)
-        let legDist = '---';
-        let track = '---';
-
-        if (index < waypoints.length - 1) {
-            const leg = legs[index];
-            legDist = `<span class="metric-value">${leg.distance.toFixed(1)}</span><span class="metric-sub">NM</span>`;
-            cumulativeDistance += leg.distance;
-            track = `<span class="metric-value">${String(Math.round(leg.bearing)).padStart(3, '0')}°</span><span class="metric-sub">${getCardinalDirection(leg.bearing)}</span>`;
-        }
-
-        const cumDist = index === 0
-            ? '---'
-            : `<span class="metric-value">${cumulativeDistance.toFixed(1)}</span><span class="metric-sub">NM</span>`;
-
         // Simplify type display: just "AIRPORT" for all airports, navaid type for navaids
         const typeDisplay = waypoint.waypointType === 'airport' ? 'AIRPORT' : waypoint.type;
 
+        // Waypoint row
         tableHTML += `
-            <tr>
+            <tr class="wpt-row">
+                <td class="wpt-num"><span class="metric-value">${waypointNumber}</span></td>
                 <td>
                     <div class="wpt-ident ${colorClass}">${code}</div>
                     <div class="wpt-type">${typeDisplay}</div>
                 </td>
-                <td>
+                <td colspan="2">
                     <div class="wpt-info">${pos}</div>
-                    <div class="wpt-info">ELEV ${elev}</div>
+                    <div class="wpt-info wpt-elevation">ELEV ${elev}</div>
                     ${runwayHTML}
                     ${freqHTML ? `<div class="wpt-freqs">${freqHTML}</div>` : ''}
                 </td>
-                <td>${legDist}</td>
-                <td>${cumDist}</td>
-                <td>${track}</td>
             </tr>
         `;
+
+        // Add distance/track row between waypoints (if not last waypoint)
+        if (index < waypoints.length - 1) {
+            const leg = legs[index];
+            cumulativeDistance += leg.distance;
+            const legDist = leg.distance.toFixed(1);
+            const track = String(Math.round(leg.bearing)).padStart(3, '0');
+            const cardinal = getCardinalDirection(leg.bearing);
+
+            tableHTML += `
+                <tr class="leg-row">
+                    <td></td>
+                    <td colspan="3" class="leg-info">
+                        <span class="leg-arrow">→</span>
+                        <span class="leg-item">LEG: <span class="metric-value">${legDist}</span> NM</span>
+                        <span class="leg-item">HDG: <span class="metric-value">${track}°</span> ${cardinal}</span>
+                        <span class="leg-item">CUM: <span class="metric-value">${cumulativeDistance.toFixed(1)}</span> NM</span>
+                    </td>
+                </tr>
+            `;
+        }
     });
 
     tableHTML += `
@@ -808,8 +815,8 @@ function searchWaypoints(query) {
 
     // Search airports
     for (const [code, airport] of airportsData) {
-        const icao = airport.icao?.toUpperCase() || '';
-        const iata = airport.iata?.toUpperCase() || '';
+        const icao = airport.icao || ''; // Already uppercase
+        const iata = airport.iata || ''; // Already uppercase
         const name = airport.name?.toUpperCase() || '';
 
         const result = {
@@ -838,7 +845,7 @@ function searchWaypoints(query) {
 
     // Search navaids
     for (const [ident, navaid] of navaidsData) {
-        const identUpper = ident.toUpperCase();
+        const identUpper = ident; // Already uppercase
         const name = navaid.name?.toUpperCase() || '';
 
         const result = {

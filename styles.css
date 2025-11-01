@@ -260,14 +260,15 @@ header h1 {
 .autocomplete-code {
     font-weight: 700;
     min-width: 60px;
+    color: var(--color-navaid); /* All waypoints in magenta */
 }
 
 .autocomplete-code.airport {
-    color: var(--color-airport);
+    color: var(--color-navaid); /* Magenta for airports */
 }
 
 .autocomplete-code.navaid {
-    color: var(--color-navaid);
+    color: var(--color-navaid); /* Magenta for navaids */
 }
 
 .autocomplete-type {
@@ -338,7 +339,7 @@ header h1 {
 .summary-value {
     font-size: 1.1rem;
     font-weight: 700;
-    color: var(--color-metric);
+    color: var(--color-navaid); /* Magenta for route summary values */
     letter-spacing: 1px;
 }
 
@@ -371,8 +372,39 @@ header h1 {
     vertical-align: top;
 }
 
-.navlog-table tr:hover {
+.navlog-table tr.wpt-row:hover {
     background: #0a0a0a;
+}
+
+.navlog-table tr.leg-row {
+    background: #0a0a0a;
+    border-top: none;
+}
+
+.navlog-table tr.leg-row td {
+    border-top: none;
+    padding: 4px 6px;
+}
+
+.wpt-num {
+    text-align: center;
+    font-weight: 700;
+}
+
+.leg-info {
+    font-size: 0.75rem;
+    padding: 4px 10px !important;
+}
+
+.leg-arrow {
+    color: var(--color-navaid);
+    font-size: 1rem;
+    margin-right: 10px;
+}
+
+.leg-item {
+    margin-right: 15px;
+    color: var(--text-secondary);
 }
 
 /* Waypoint Identifier */
@@ -380,14 +412,15 @@ header h1 {
     font-weight: 700;
     font-size: 0.95rem;
     letter-spacing: 1px;
+    color: var(--color-navaid); /* All waypoints in magenta */
 }
 
 .wpt-ident.airport {
-    color: var(--color-airport);
+    color: var(--color-navaid); /* Magenta for airports */
 }
 
 .wpt-ident.navaid {
-    color: var(--color-navaid);
+    color: var(--color-navaid); /* Magenta for navaids */
 }
 
 /* Type Badge */
@@ -405,6 +438,10 @@ header h1 {
     font-size: 0.75rem;
     color: var(--text-secondary);
     line-height: 1.4;
+}
+
+.wpt-info.wpt-elevation {
+    color: var(--color-airport); /* Cyan for elevation */
 }
 
 .wpt-info.wpt-info-none {
