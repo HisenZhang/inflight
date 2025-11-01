@@ -1,5 +1,5 @@
 // Flight Planning Tool - Service Worker for Offline Support
-const CACHE_NAME = 'flight-planning-v2';
+const CACHE_NAME = 'flight-planning-v3';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
@@ -42,34 +42,41 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
     const url = new URL(event.request.url);
 
-    // Skip cross-origin requests (like CORS proxy)
+    // Only handle same-origin requests (skip CORS proxy and Google Fonts)
     if (url.origin !== location.origin) {
-        // Let network requests through for data fetching
+        // Let the browser handle cross-origin requests
         return;
     }
 
+    // For same-origin requests, use cache-first strategy
     event.respondWith(
-        caches.match(event.request).then((response) => {
-            if (response) {
+        caches.match(event.request).then((cachedResponse) => {
+            if (cachedResponse) {
                 console.log('[ServiceWorker] Serving from cache:', event.request.url);
-                return response;
+                return cachedResponse;
             }
 
             console.log('[ServiceWorker] Fetching from network:', event.request.url);
-            return fetch(event.request).then((response) => {
-                // Don't cache non-successful responses
-                if (!response || response.status !== 200 || response.type === 'error') {
-                    return response;
+
+            return fetch(event.request).then((networkResponse) => {
+                // Check if we received a valid response
+                if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
+                    // Don't cache invalid, error, or opaque responses
+                    return networkResponse;
                 }
 
-                // Clone the response
-                const responseToCache = response.clone();
+                // Clone the response (can only be consumed once)
+                const responseToCache = networkResponse.clone();
 
                 caches.open(CACHE_NAME).then((cache) => {
                     cache.put(event.request, responseToCache);
                 });
 
-                return response;
+                return networkResponse;
+            }).catch((error) => {
+                console.error('[ServiceWorker] Fetch failed:', error);
+                // If fetch fails and we don't have cache, let it fail naturally
+                throw error;
             });
         })
     );

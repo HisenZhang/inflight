@@ -238,9 +238,20 @@ Requires a modern browser with support for:
 
 This app can be installed on your device:
 - **Desktop**: Click the install icon in the browser address bar
-- **Mobile**: Use "Add to Home Screen" from the browser menu
+- **Mobile Android**: Use "Add to Home Screen" from Chrome menu
+- **iOS Safari**:
+  1. Tap the Share button (square with arrow)
+  2. Scroll down and tap "Add to Home Screen"
+  3. Name it "InFlight" and tap "Add"
+  4. Launch from home screen icon (works offline)
 - **Offline**: Works completely offline after first load
 - **Updates**: Service Worker automatically updates when new version available
+
+### iOS Safari Notes
+- First launch requires internet to load app files
+- After initial load, works completely offline
+- Database persists across sessions
+- Service Worker caches app shell for instant loading
 
 ## Privacy
 
