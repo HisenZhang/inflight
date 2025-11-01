@@ -1,14 +1,12 @@
 // Flight Planning Tool - Service Worker for Offline Support
-const CACHE_NAME = 'flight-planning-v5';
+const CACHE_NAME = 'flight-planning-v6';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
     './app.js',
+    './geodesy.js',
     './styles.css',
-    './manifest.json',
-    // Geodesy and Magnetic Variation Libraries
-    'https://cdn.jsdelivr.net/npm/geodesy@2.4.0/latlon-ellipsoidal-vincenty.min.js',
-    'https://cdn.jsdelivr.net/npm/geomag@1.0.2/geomag.min.js'
+    './manifest.json'
 ];
 
 // Install event - cache assets

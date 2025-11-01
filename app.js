@@ -177,16 +177,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
-// Check if external libraries are loaded
+// Check if geodesy functions are loaded
 function checkLibraries() {
-    const geodesyAvailable = typeof LatLonEllipsoidal_Vincenty !== 'undefined';
-    const geomagAvailable = typeof geomag !== 'undefined';
+    const vincentyAvailable = typeof vincentyInverse === 'function';
+    const magVarAvailable = typeof calculateMagneticDeclination === 'function';
 
-    console.log('[Libraries] Geodesy (WGS84):', geodesyAvailable ? '✓ Loaded' : '✗ Not loaded (using fallback)');
-    console.log('[Libraries] GeoMag (WMM2025):', geomagAvailable ? '✓ Loaded' : '✗ Not loaded (mag var = 0)');
+    console.log('[Geodesy] Vincenty (WGS84):', vincentyAvailable ? '✓ Loaded' : '✗ Not loaded (using spherical fallback)');
+    console.log('[Geodesy] Magnetic Variation:', magVarAvailable ? '✓ Loaded' : '✗ Not loaded (will show "-")');
 
-    if (!geodesyAvailable || !geomagAvailable) {
-        console.warn('[Libraries] Some libraries failed to load. App will use fallback calculations.');
+    if (!vincentyAvailable) {
+        console.warn('[Geodesy] Vincenty not available. Using spherical calculations (slightly less accurate).');
+    }
+    if (!magVarAvailable) {
+        console.warn('[Geodesy] Magnetic variation unavailable. Magnetic headings will show "-".');
     }
 }
 
@@ -554,7 +557,7 @@ function calculateRoute() {
 
     // Calculate magnetic declination for each waypoint
     waypoints.forEach(waypoint => {
-        waypoint.magVar = calculateMagneticDeclination(waypoint.lat, waypoint.lon);
+        waypoint.magVar = getMagneticDeclination(waypoint.lat, waypoint.lon);
     });
 
     // Calculate legs
@@ -592,20 +595,17 @@ function calculateRoute() {
 // Calculate distance using WGS84 ellipsoid (Vincenty's formulae) - in nautical miles
 function calculateDistance(lat1, lon1, lat2, lon2) {
     try {
-        // Check if geodesy library is loaded
-        if (typeof LatLonEllipsoidal_Vincenty !== 'undefined') {
-            const point1 = new LatLonEllipsoidal_Vincenty(lat1, lon1);
-            const point2 = new LatLonEllipsoidal_Vincenty(lat2, lon2);
-            const distanceMeters = point1.distanceTo(point2);
-            const distanceNM = distanceMeters / 1852; // Convert meters to nautical miles
-            return distanceNM;
+        // Use our embedded Vincenty implementation
+        if (typeof vincentyInverse === 'function') {
+            const result = vincentyInverse(lat1, lon1, lat2, lon2);
+            return result.distance / 1852; // Convert meters to nautical miles
         }
     } catch (error) {
-        console.error('Error calculating distance with geodesy:', error);
+        console.error('Error calculating distance with Vincenty:', error);
     }
 
     // Fallback to simple spherical calculation
-    console.log('Using fallback spherical calculation for distance');
+    console.warn('Using fallback spherical calculation for distance');
     const R = 3440.065;
     const dLat = toRadians(lat2 - lat1);
     const dLon = toRadians(lon2 - lon1);
@@ -619,19 +619,17 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 // Calculate true bearing (geodetic azimuth) between two points
 function calculateBearing(lat1, lon1, lat2, lon2) {
     try {
-        // Check if geodesy library is loaded
-        if (typeof LatLonEllipsoidal_Vincenty !== 'undefined') {
-            const point1 = new LatLonEllipsoidal_Vincenty(lat1, lon1);
-            const point2 = new LatLonEllipsoidal_Vincenty(lat2, lon2);
-            const bearingDegrees = point1.initialBearingTo(point2);
-            return (bearingDegrees + 360) % 360; // Normalize to 0-360
+        // Use our embedded Vincenty implementation
+        if (typeof vincentyInverse === 'function') {
+            const result = vincentyInverse(lat1, lon1, lat2, lon2);
+            return result.initialBearing;
         }
     } catch (error) {
-        console.error('Error calculating bearing with geodesy:', error);
+        console.error('Error calculating bearing with Vincenty:', error);
     }
 
     // Fallback to simple spherical calculation
-    console.log('Using fallback spherical calculation for bearing');
+    console.warn('Using fallback spherical calculation for bearing');
     const dLon = toRadians(lon2 - lon1);
     const y = Math.sin(dLon) * Math.cos(toRadians(lat2));
     const x = Math.cos(toRadians(lat1)) * Math.sin(toRadians(lat2)) -
@@ -642,23 +640,26 @@ function calculateBearing(lat1, lon1, lat2, lon2) {
 }
 
 // Calculate magnetic declination (variation) for a location
-function calculateMagneticDeclination(lat, lon) {
+// Returns null if unavailable
+function getMagneticDeclination(lat, lon) {
     try {
-        // Check if geomag library is loaded (it exports as 'geomag' function)
-        if (typeof geomag !== 'undefined') {
-            const result = geomag(lat, lon);
-            return result.dec; // Returns declination in degrees (positive = East, negative = West)
+        // Use our embedded magnetic declination calculator
+        if (typeof calculateMagneticDeclination === 'function') {
+            return calculateMagneticDeclination(lat, lon);
         }
     } catch (error) {
         console.error('Error calculating magnetic declination:', error);
     }
 
-    console.log('Geomag library not available, using declination = 0');
-    return 0; // Fallback to 0 if calculation fails
+    return null; // Return null if unavailable
 }
 
 // Convert true heading to magnetic heading
+// Returns null if declination is unavailable
 function trueToMagnetic(trueHeading, declination) {
+    if (declination === null || declination === undefined) {
+        return null;
+    }
     // Magnetic heading = True heading - Declination
     // (East declination is positive, so we subtract)
     let magHeading = trueHeading - declination;
@@ -717,9 +718,14 @@ function displayResults(waypoints, legs, totalDistance) {
             : 'N/A';
 
         // Magnetic variation
-        const magVarValue = Math.abs(waypoint.magVar).toFixed(1);
-        const magVarDir = waypoint.magVar >= 0 ? 'E' : 'W';
-        const magVarDisplay = `VAR ${magVarValue}°${magVarDir}`;
+        let magVarDisplay;
+        if (waypoint.magVar === null || waypoint.magVar === undefined) {
+            magVarDisplay = 'VAR -';
+        } else {
+            const magVarValue = Math.abs(waypoint.magVar).toFixed(1);
+            const magVarDir = waypoint.magVar >= 0 ? 'E' : 'W';
+            magVarDisplay = `VAR ${magVarValue}°${magVarDir}`;
+        }
 
         // Get frequencies (grouped by type for airports)
         let freqHTML = '';
@@ -803,8 +809,12 @@ function displayResults(waypoints, legs, totalDistance) {
             cumulativeDistance += leg.distance;
             const legDist = leg.distance.toFixed(1);
             const trueTrack = String(Math.round(leg.trueBearing)).padStart(3, '0');
-            const magTrack = String(Math.round(leg.magBearing)).padStart(3, '0');
             const cardinal = getCardinalDirection(leg.trueBearing);
+
+            // Magnetic track - show "-" if unavailable
+            const magTrackDisplay = leg.magBearing !== null
+                ? String(Math.round(leg.magBearing)).padStart(3, '0') + '°'
+                : '-';
 
             tableHTML += `
                 <tr class="leg-row">
@@ -813,7 +823,7 @@ function displayResults(waypoints, legs, totalDistance) {
                         <span class="leg-arrow">→</span>
                         <span class="leg-item">LEG: <span class="metric-value">${legDist}</span> NM</span>
                         <span class="leg-item">TRUE: <span class="metric-value">${trueTrack}°</span> ${cardinal}</span>
-                        <span class="leg-item">MAG: <span class="mag-heading">${magTrack}°</span></span>
+                        <span class="leg-item">MAG: <span class="mag-heading">${magTrackDisplay}</span></span>
                         <span class="leg-item">CUM: <span class="metric-value">${cumulativeDistance.toFixed(1)}</span> NM</span>
                     </td>
                 </tr>
