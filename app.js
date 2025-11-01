@@ -3,14 +3,16 @@
 const AIRPORTS_CSV_URL = 'https://cors.hisenz.com/?url=https://davidmegginson.github.io/ourairports-data/airports.csv';
 const NAVAIDS_CSV_URL = 'https://cors.hisenz.com/?url=https://davidmegginson.github.io/ourairports-data/navaids.csv';
 const FREQUENCIES_CSV_URL = 'https://cors.hisenz.com/?url=https://davidmegginson.github.io/ourairports-data/airport-frequencies.csv';
+const RUNWAYS_CSV_URL = 'https://cors.hisenz.com/?url=https://davidmegginson.github.io/ourairports-data/runways.csv';
 const DB_NAME = 'FlightPlanningDB';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const STORE_NAME = 'flightdata';
 const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
 
 let airportsData = new Map(); // Map of airport code -> airport object
 let navaidsData = new Map(); // Map of navaid ident -> navaid object
 let frequenciesData = new Map(); // Map of airport_id -> frequencies array
+let runwaysData = new Map(); // Map of airport_id -> runways array
 let db = null; // IndexedDB database
 let dataTimestamp = null; // Last update timestamp
 
@@ -52,7 +54,7 @@ function initDB() {
 }
 
 // Save data to IndexedDB
-function saveToCache(airportsCSV, navaidsCSV, frequenciesCSV) {
+function saveToCache(airportsCSV, navaidsCSV, frequenciesCSV, runwaysCSV) {
     return new Promise((resolve, reject) => {
         const transaction = db.transaction([STORE_NAME], 'readwrite');
         const store = transaction.objectStore(STORE_NAME);
@@ -62,6 +64,7 @@ function saveToCache(airportsCSV, navaidsCSV, frequenciesCSV) {
             airportsCSV: airportsCSV,
             navaidsCSV: navaidsCSV,
             frequenciesCSV: frequenciesCSV,
+            runwaysCSV: runwaysCSV,
             timestamp: Date.now()
         };
 
@@ -137,7 +140,7 @@ async function checkCachedData() {
         if (cachedData && cachedData.airportsCSV && cachedData.timestamp) {
             const age = Date.now() - cachedData.timestamp;
             if (age < CACHE_DURATION) {
-                loadFromCache(cachedData.airportsCSV, cachedData.navaidsCSV, cachedData.frequenciesCSV, cachedData.timestamp);
+                loadFromCache(cachedData.airportsCSV, cachedData.navaidsCSV, cachedData.frequenciesCSV, cachedData.runwaysCSV, cachedData.timestamp);
                 const daysOld = Math.floor(age / (24 * 60 * 60 * 1000));
                 updateStatus(`[OK] DATABASE LOADED FROM CACHE (${daysOld}D OLD)`, 'success');
                 showDataInfo();
@@ -182,17 +185,26 @@ async function loadAirportData() {
         }
         const frequenciesCSV = await frequenciesResponse.text();
 
+        // Fetch runways
+        updateStatus('[...] DOWNLOADING RUNWAYS DATA', 'loading');
+        const runwaysResponse = await fetch(RUNWAYS_CSV_URL);
+        if (!runwaysResponse.ok) {
+            throw new Error(`HTTP ${runwaysResponse.status}`);
+        }
+        const runwaysCSV = await runwaysResponse.text();
+
         // Parse all data
         updateStatus('[...] PARSING DATABASE', 'loading');
         const timestamp = Date.now();
         parseAirportData(airportsCSV);
         parseNavaidData(navaidsCSV);
         parseFrequencyData(frequenciesCSV);
+        parseRunwayData(runwaysCSV);
         dataTimestamp = timestamp;
 
         // Cache the data in IndexedDB
         updateStatus('[...] CACHING TO INDEXEDDB', 'loading');
-        await saveToCache(airportsCSV, navaidsCSV, frequenciesCSV);
+        await saveToCache(airportsCSV, navaidsCSV, frequenciesCSV, runwaysCSV);
 
         updateStatus('[OK] DATABASE READY - ALL SYSTEMS OPERATIONAL', 'success');
         showDataInfo();
@@ -205,10 +217,11 @@ async function loadAirportData() {
 }
 
 // Load data from IndexedDB cache
-function loadFromCache(airportsCSV, navaidsCSV, frequenciesCSV, timestamp) {
+function loadFromCache(airportsCSV, navaidsCSV, frequenciesCSV, runwaysCSV, timestamp) {
     parseAirportData(airportsCSV);
     parseNavaidData(navaidsCSV);
     parseFrequencyData(frequenciesCSV);
+    parseRunwayData(runwaysCSV);
     dataTimestamp = timestamp;
     enableRouteInput();
 }
@@ -339,6 +352,44 @@ function parseFrequencyData(csvText) {
             frequenciesData.set(airportId, []);
         }
         frequenciesData.get(airportId).push(frequency);
+    }
+}
+
+// Parse runway data
+function parseRunwayData(csvText) {
+    const lines = csvText.split('\n');
+    const headers = parseCSVLine(lines[0]);
+
+    // Find column indices
+    const airportIdIdx = headers.indexOf('airport_ref');
+    const lengthIdx = headers.indexOf('length_ft');
+    const widthIdx = headers.indexOf('width_ft');
+    const surfaceIdx = headers.indexOf('surface');
+    const leIdentIdx = headers.indexOf('le_ident');
+    const heIdentIdx = headers.indexOf('he_ident');
+
+    runwaysData.clear();
+
+    for (let i = 1; i < lines.length; i++) {
+        if (!lines[i].trim()) continue;
+
+        const values = parseCSVLine(lines[i]);
+        const airportId = values[airportIdIdx];
+
+        if (!airportId) continue;
+
+        const runway = {
+            length: values[lengthIdx] ? parseInt(values[lengthIdx]) : null,
+            width: values[widthIdx] ? parseInt(values[widthIdx]) : null,
+            surface: values[surfaceIdx],
+            leIdent: values[leIdentIdx],
+            heIdent: values[heIdentIdx]
+        };
+
+        if (!runwaysData.has(airportId)) {
+            runwaysData.set(airportId, []);
+        }
+        runwaysData.get(airportId).push(runway);
     }
 }
 
@@ -519,17 +570,44 @@ function displayResults(waypoints, legs, totalDistance) {
             ? `${Math.round(waypoint.elevation)}FT`
             : 'N/A';
 
-        // Get primary frequency
+        // Get frequencies (grouped by type for airports)
         let freqHTML = '';
         if (waypoint.waypointType === 'airport' && waypoint.id) {
             const frequencies = frequenciesData.get(waypoint.id);
             if (frequencies && frequencies.length > 0) {
-                freqHTML = frequencies.map(f =>
-                    `<span class="wpt-freq-item">${f.type.toUpperCase()} ${f.frequency.toFixed(3)}</span>`
-                ).join(' ');
+                // Group frequencies by type
+                const grouped = {};
+                frequencies.forEach(f => {
+                    const type = f.type.toUpperCase();
+                    if (!grouped[type]) {
+                        grouped[type] = [];
+                    }
+                    grouped[type].push(f.frequency.toFixed(3));
+                });
+
+                // Format as "TYPE freq1/freq2/freq3"
+                const freqItems = Object.entries(grouped).map(([type, freqs]) =>
+                    `<span class="wpt-freq-item">${type} ${freqs.join('/')}</span>`
+                );
+                freqHTML = freqItems.join(' ');
             }
         } else if (waypoint.waypointType === 'navaid' && waypoint.frequency) {
             freqHTML = `<span class="wpt-freq-item">${formatNavaidFrequency(waypoint.frequency, waypoint.type)}</span>`;
+        }
+
+        // Get runway information for airports
+        let runwayHTML = '';
+        if (waypoint.waypointType === 'airport' && waypoint.id) {
+            const runways = runwaysData.get(waypoint.id);
+            if (runways && runways.length > 0) {
+                const runwayInfo = runways.map(r => {
+                    const idents = r.leIdent && r.heIdent ? `${r.leIdent}/${r.heIdent}` : (r.leIdent || r.heIdent || 'N/A');
+                    const length = r.length ? `${r.length}FT` : '';
+                    const surface = r.surface || '';
+                    return `${idents} ${length} ${surface}`.trim();
+                }).join(', ');
+                runwayHTML = `<div class="wpt-info">RWY ${runwayInfo}</div>`;
+            }
         }
 
         // Calculate leg distance and track (to NEXT waypoint)
@@ -556,6 +634,7 @@ function displayResults(waypoints, legs, totalDistance) {
                 <td>
                     <div class="wpt-info">${pos}</div>
                     <div class="wpt-info">ELEV ${elev}</div>
+                    ${runwayHTML}
                     ${freqHTML ? `<div class="wpt-freqs">${freqHTML}</div>` : ''}
                 </td>
                 <td>${legDist}</td>
@@ -695,49 +774,81 @@ function handleAutocompleteInput(e) {
 
 // Autocomplete: Search waypoints
 function searchWaypoints(query) {
-    const results = [];
-    const maxResults = 10;
+    const exactAirports = [];
+    const exactNavaids = [];
+    const partialAirports = [];
+    const partialNavaids = [];
+    const nameAirports = [];
+    const nameNavaids = [];
 
     // Search airports
     for (const [code, airport] of airportsData) {
-        if (results.length >= maxResults) break;
-
         const icao = airport.icao?.toUpperCase() || '';
         const iata = airport.iata?.toUpperCase() || '';
         const name = airport.name?.toUpperCase() || '';
 
-        if (icao.includes(query) || iata.includes(query) || name.includes(query)) {
-            results.push({
-                code: iata || icao,
-                fullCode: icao,
-                type: 'AIRPORT',
-                waypointType: 'airport',
-                name: airport.name,
-                location: `${airport.municipality || ''}, ${airport.country}`.trim(),
-                data: airport
-            });
+        const result = {
+            code: iata || icao,
+            fullCode: icao,
+            type: 'AIRPORT',
+            waypointType: 'airport',
+            name: airport.name,
+            location: `${airport.municipality || ''}, ${airport.country}`.trim(),
+            data: airport
+        };
+
+        // Exact match on code
+        if (icao === query || iata === query) {
+            exactAirports.push(result);
+        }
+        // Partial match on code (starts with or contains)
+        else if (icao.startsWith(query) || iata.startsWith(query) || icao.includes(query) || iata.includes(query)) {
+            partialAirports.push(result);
+        }
+        // Name match
+        else if (name.includes(query)) {
+            nameAirports.push(result);
         }
     }
 
     // Search navaids
     for (const [ident, navaid] of navaidsData) {
-        if (results.length >= maxResults) break;
-
         const identUpper = ident.toUpperCase();
         const name = navaid.name?.toUpperCase() || '';
 
-        if (identUpper.includes(query) || name.includes(query)) {
-            results.push({
-                code: navaid.ident,
-                fullCode: navaid.ident,
-                type: navaid.type,
-                waypointType: 'navaid',
-                name: navaid.name,
-                location: navaid.country,
-                data: navaid
-            });
+        const result = {
+            code: navaid.ident,
+            fullCode: navaid.ident,
+            type: navaid.type,
+            waypointType: 'navaid',
+            name: navaid.name,
+            location: navaid.country,
+            data: navaid
+        };
+
+        // Exact match on ident
+        if (identUpper === query) {
+            exactNavaids.push(result);
+        }
+        // Partial match on ident
+        else if (identUpper.startsWith(query) || identUpper.includes(query)) {
+            partialNavaids.push(result);
+        }
+        // Name match
+        else if (name.includes(query)) {
+            nameNavaids.push(result);
         }
     }
+
+    // Combine results in priority order: exact (airports then navaids), partial (airports then navaids), name (airports then navaids)
+    const results = [
+        ...exactAirports,
+        ...exactNavaids,
+        ...partialAirports,
+        ...partialNavaids,
+        ...nameAirports,
+        ...nameNavaids
+    ].slice(0, 10); // Limit to 10 results
 
     autocompleteResults = results;
     displayAutocomplete(results);
