@@ -215,7 +215,7 @@ header h1 {
     color: var(--text-secondary);
     font-size: 0.75rem;
     line-height: 1.4;
-    /* border-left: 2px solid var(--border-color); */
+    border-left: 2px solid var(--border-color);
     padding-left: 8px;
 }
 
@@ -223,7 +223,7 @@ header h1 {
 .query-history {
     margin-top: 10px;
     padding: 8px;
-    border: 1px solid var(--border-color);
+    /* border: 1px solid var(--border-color); */
     background: var(--bg-primary);
 }
 
