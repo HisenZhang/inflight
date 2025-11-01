@@ -1,15 +1,16 @@
 // Flight Planning Tool - Main Application
 
-const AIRPORTS_CSV_URL = 'https://cors.hisenz.com/?url=https://davidmegginson.github.io/ourairports-data/airports.csv';
-const NAVAIDS_CSV_URL = 'https://cors.hisenz.com/?url=https://davidmegginson.github.io/ourairports-data/navaids.csv';
-const FREQUENCIES_CSV_URL = 'https://cors.hisenz.com/?url=https://davidmegginson.github.io/ourairports-data/airport-frequencies.csv';
-const RUNWAYS_CSV_URL = 'https://cors.hisenz.com/?url=https://davidmegginson.github.io/ourairports-data/runways.csv';
+const AIRPORTS_CSV_URL = 'https://cors.hisenz.com/?url=https://raw.githubusercontent.com/davidmegginson/ourairports-data/refs/heads/main/airports.csv';
+const NAVAIDS_CSV_URL = 'https://cors.hisenz.com/?url=https://raw.githubusercontent.com/davidmegginson/ourairports-data/refs/heads/main/navaids.csv';
+const FREQUENCIES_CSV_URL = 'https://cors.hisenz.com/?url=https://raw.githubusercontent.com/davidmegginson/ourairports-data/refs/heads/main/airport-frequencies.csv';
+const RUNWAYS_CSV_URL = 'https://cors.hisenz.com/?url=https://raw.githubusercontent.com/davidmegginson/ourairports-data/refs/heads/main/runways.csv';
 const DB_NAME = 'FlightPlanningDB';
 const DB_VERSION = 3;
 const STORE_NAME = 'flightdata';
 const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
 
-let airportsData = new Map(); // Map of airport code -> airport object
+let airportsData = new Map(); // Map of ICAO code -> airport object (primary storage)
+let iataToIcao = new Map(); // Map of IATA code -> ICAO code (for lookups)
 let navaidsData = new Map(); // Map of navaid ident -> navaid object
 let frequenciesData = new Map(); // Map of airport_id -> frequencies array
 let runwaysData = new Map(); // Map of airport_id -> runways array
@@ -244,6 +245,7 @@ function parseAirportData(csvText) {
     const isoCountryIdx = headers.indexOf('iso_country');
 
     airportsData.clear();
+    iataToIcao.clear();
 
     for (let i = 1; i < lines.length; i++) {
         if (!lines[i].trim()) continue;
@@ -264,15 +266,16 @@ function parseAirportData(csvText) {
             waypointType: 'airport'
         };
 
-        // Only store airports with valid coordinates
-        if (!isNaN(airport.lat) && !isNaN(airport.lon)) {
-            // Store by ICAO code
-            if (airport.icao) {
-                airportsData.set(airport.icao.toUpperCase(), airport);
-            }
-            // Also store by IATA code if available
-            if (airport.iata) {
-                airportsData.set(airport.iata.toUpperCase(), airport);
+        // Only store airports with valid coordinates and ICAO code
+        if (!isNaN(airport.lat) && !isNaN(airport.lon) && airport.icao) {
+            const icaoUpper = airport.icao.toUpperCase();
+            // Store by ICAO code (primary storage - only once per airport)
+            airportsData.set(icaoUpper, airport);
+
+            // If IATA code exists, create a mapping for lookup
+            if (airport.iata && airport.iata.trim()) {
+                const iataUpper = airport.iata.toUpperCase();
+                iataToIcao.set(iataUpper, icaoUpper);
             }
         }
     }
@@ -447,9 +450,12 @@ function calculateRoute() {
             waypoint = navaidsData.get(code);
         }
 
-        // If still not found and 3 letters, try IATA
+        // If still not found and 3 letters, try IATA lookup
         if (!waypoint && code.length === 3) {
-            waypoint = airportsData.get(code);
+            const icaoCode = iataToIcao.get(code);
+            if (icaoCode) {
+                waypoint = airportsData.get(icaoCode);
+            }
         }
 
         if (waypoint) {
@@ -625,11 +631,14 @@ function displayResults(waypoints, legs, totalDistance) {
             ? '---'
             : `<span class="metric-value">${cumulativeDistance.toFixed(1)}</span><span class="metric-sub">NM</span>`;
 
+        // Simplify type display: just "AIRPORT" for all airports, navaid type for navaids
+        const typeDisplay = waypoint.waypointType === 'airport' ? 'AIRPORT' : waypoint.type;
+
         tableHTML += `
             <tr>
                 <td>
                     <div class="wpt-ident ${colorClass}">${code}</div>
-                    <div class="wpt-type">${waypoint.type}</div>
+                    <div class="wpt-type">${typeDisplay}</div>
                 </td>
                 <td>
                     <div class="wpt-info">${pos}</div>
@@ -656,7 +665,7 @@ function displayResults(waypoints, legs, totalDistance) {
 // Get waypoint code
 function getWaypointCode(waypoint) {
     if (waypoint.waypointType === 'airport') {
-        return waypoint.iata || waypoint.icao;
+        return waypoint.icao; // Always use ICAO for airports
     } else {
         return waypoint.ident;
     }
@@ -788,7 +797,7 @@ function searchWaypoints(query) {
         const name = airport.name?.toUpperCase() || '';
 
         const result = {
-            code: iata || icao,
+            code: icao, // Always display ICAO for airports
             fullCode: icao,
             type: 'AIRPORT',
             waypointType: 'airport',
