@@ -164,6 +164,9 @@ function displayQueryHistory() {
 // Initialize app
 document.addEventListener('DOMContentLoaded', async () => {
     try {
+        // Check library availability
+        checkLibraries();
+
         await initDB();
         await checkCachedData();
         setupEventListeners();
@@ -173,6 +176,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateStatus('[ERR] INDEXEDDB INITIALIZATION FAILED', 'error');
     }
 });
+
+// Check if external libraries are loaded
+function checkLibraries() {
+    const geodesyAvailable = typeof LatLonEllipsoidal_Vincenty !== 'undefined';
+    const geomagAvailable = typeof geomag !== 'undefined';
+
+    console.log('[Libraries] Geodesy (WGS84):', geodesyAvailable ? '✓ Loaded' : '✗ Not loaded (using fallback)');
+    console.log('[Libraries] GeoMag (WMM2025):', geomagAvailable ? '✓ Loaded' : '✗ Not loaded (mag var = 0)');
+
+    if (!geodesyAvailable || !geomagAvailable) {
+        console.warn('[Libraries] Some libraries failed to load. App will use fallback calculations.');
+    }
+}
 
 function setupEventListeners() {
     loadDataBtn.addEventListener('click', loadAirportData);
@@ -576,56 +592,69 @@ function calculateRoute() {
 // Calculate distance using WGS84 ellipsoid (Vincenty's formulae) - in nautical miles
 function calculateDistance(lat1, lon1, lat2, lon2) {
     try {
-        const point1 = new LatLonEllipsoidal(lat1, lon1);
-        const point2 = new LatLonEllipsoidal(lat2, lon2);
-        const distanceMeters = point1.distanceTo(point2);
-        const distanceNM = distanceMeters / 1852; // Convert meters to nautical miles
-        return distanceNM;
+        // Check if geodesy library is loaded
+        if (typeof LatLonEllipsoidal_Vincenty !== 'undefined') {
+            const point1 = new LatLonEllipsoidal_Vincenty(lat1, lon1);
+            const point2 = new LatLonEllipsoidal_Vincenty(lat2, lon2);
+            const distanceMeters = point1.distanceTo(point2);
+            const distanceNM = distanceMeters / 1852; // Convert meters to nautical miles
+            return distanceNM;
+        }
     } catch (error) {
-        console.error('Error calculating distance:', error);
-        // Fallback to simple spherical calculation if geodesy fails
-        const R = 3440.065;
-        const dLat = toRadians(lat2 - lat1);
-        const dLon = toRadians(lon2 - lon1);
-        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                  Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) *
-                  Math.sin(dLon / 2) * Math.sin(dLon / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return R * c;
+        console.error('Error calculating distance with geodesy:', error);
     }
+
+    // Fallback to simple spherical calculation
+    console.log('Using fallback spherical calculation for distance');
+    const R = 3440.065;
+    const dLat = toRadians(lat2 - lat1);
+    const dLon = toRadians(lon2 - lon1);
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) *
+              Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
 }
 
 // Calculate true bearing (geodetic azimuth) between two points
 function calculateBearing(lat1, lon1, lat2, lon2) {
     try {
-        const point1 = new LatLonEllipsoidal(lat1, lon1);
-        const point2 = new LatLonEllipsoidal(lat2, lon2);
-        const bearingDegrees = point1.initialBearingTo(point2);
-        return (bearingDegrees + 360) % 360; // Normalize to 0-360
+        // Check if geodesy library is loaded
+        if (typeof LatLonEllipsoidal_Vincenty !== 'undefined') {
+            const point1 = new LatLonEllipsoidal_Vincenty(lat1, lon1);
+            const point2 = new LatLonEllipsoidal_Vincenty(lat2, lon2);
+            const bearingDegrees = point1.initialBearingTo(point2);
+            return (bearingDegrees + 360) % 360; // Normalize to 0-360
+        }
     } catch (error) {
-        console.error('Error calculating bearing:', error);
-        // Fallback to simple spherical calculation
-        const dLon = toRadians(lon2 - lon1);
-        const y = Math.sin(dLon) * Math.cos(toRadians(lat2));
-        const x = Math.cos(toRadians(lat1)) * Math.sin(toRadians(lat2)) -
-                  Math.sin(toRadians(lat1)) * Math.cos(toRadians(lat2)) * Math.cos(dLon);
-        let bearing = Math.atan2(y, x);
-        bearing = toDegrees(bearing);
-        return (bearing + 360) % 360;
+        console.error('Error calculating bearing with geodesy:', error);
     }
+
+    // Fallback to simple spherical calculation
+    console.log('Using fallback spherical calculation for bearing');
+    const dLon = toRadians(lon2 - lon1);
+    const y = Math.sin(dLon) * Math.cos(toRadians(lat2));
+    const x = Math.cos(toRadians(lat1)) * Math.sin(toRadians(lat2)) -
+              Math.sin(toRadians(lat1)) * Math.cos(toRadians(lat2)) * Math.cos(dLon);
+    let bearing = Math.atan2(y, x);
+    bearing = toDegrees(bearing);
+    return (bearing + 360) % 360;
 }
 
 // Calculate magnetic declination (variation) for a location
 function calculateMagneticDeclination(lat, lon) {
     try {
-        // geomag library calculates declination for current date
-        const geoMag = geoMagFactory();
-        const result = geoMag(lat, lon);
-        return result.dec; // Returns declination in degrees (positive = East, negative = West)
+        // Check if geomag library is loaded (it exports as 'geomag' function)
+        if (typeof geomag !== 'undefined') {
+            const result = geomag(lat, lon);
+            return result.dec; // Returns declination in degrees (positive = East, negative = West)
+        }
     } catch (error) {
         console.error('Error calculating magnetic declination:', error);
-        return 0; // Fallback to 0 if calculation fails
     }
+
+    console.log('Geomag library not available, using declination = 0');
+    return 0; // Fallback to 0 if calculation fails
 }
 
 // Convert true heading to magnetic heading
