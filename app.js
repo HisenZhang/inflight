@@ -29,10 +29,16 @@ const resultsSection = document.getElementById('resultsSection');
 const routeSummary = document.getElementById('routeSummary');
 const navlogTable = document.getElementById('navlogTable');
 const autocompleteDropdown = document.getElementById('autocompleteDropdown');
+const queryHistoryDiv = document.getElementById('queryHistory');
+const historyList = document.getElementById('historyList');
 
 // Autocomplete state
 let selectedAutocompleteIndex = -1;
 let autocompleteResults = [];
+
+// Query history settings
+const HISTORY_KEY = 'flightplan_query_history';
+const MAX_HISTORY = 5;
 
 // Initialize IndexedDB
 function initDB() {
@@ -99,12 +105,69 @@ function clearCacheDB() {
     });
 }
 
+// Query History Functions
+function saveQueryHistory(query) {
+    try {
+        let history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+
+        // Remove if already exists (to move to top)
+        history = history.filter(item => item !== query);
+
+        // Add to beginning
+        history.unshift(query);
+
+        // Keep only last MAX_HISTORY items
+        if (history.length > MAX_HISTORY) {
+            history = history.slice(0, MAX_HISTORY);
+        }
+
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+        displayQueryHistory();
+    } catch (error) {
+        console.error('Error saving query history:', error);
+    }
+}
+
+function loadQueryHistory() {
+    try {
+        const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+        return history;
+    } catch (error) {
+        console.error('Error loading query history:', error);
+        return [];
+    }
+}
+
+function displayQueryHistory() {
+    const history = loadQueryHistory();
+
+    if (history.length === 0) {
+        queryHistoryDiv.style.display = 'none';
+        return;
+    }
+
+    queryHistoryDiv.style.display = 'block';
+    historyList.innerHTML = '';
+
+    history.forEach(query => {
+        const item = document.createElement('div');
+        item.className = 'history-item';
+        item.textContent = query;
+        item.addEventListener('click', () => {
+            routeInput.value = query;
+            routeInput.focus();
+        });
+        historyList.appendChild(item);
+    });
+}
+
 // Initialize app
 document.addEventListener('DOMContentLoaded', async () => {
     try {
         await initDB();
         await checkCachedData();
         setupEventListeners();
+        displayQueryHistory();
     } catch (error) {
         console.error('Failed to initialize database:', error);
         updateStatus('[ERR] INDEXEDDB INITIALIZATION FAILED', 'error');
@@ -495,6 +558,9 @@ function calculateRoute() {
     }
 
     displayResults(waypoints, legs, totalDistance);
+
+    // Save to query history
+    saveQueryHistory(routeInput.value.trim().toUpperCase());
 }
 
 // Calculate distance using Haversine formula (in nautical miles)
