@@ -219,6 +219,51 @@ header h1 {
     padding-left: 8px;
 }
 
+.help-text-inline {
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    margin-left: 8px;
+}
+
+/* Altitude Input */
+.altitude-input {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.altitude-input label {
+    font-weight: 500;
+    color: var(--text-primary);
+    letter-spacing: 1px;
+    font-size: 0.8rem;
+}
+
+.altitude-input input[type="number"] {
+    width: 120px;
+    padding: 6px 8px;
+    border: 2px solid var(--border-color);
+    background: var(--bg-primary);
+    color: var(--color-airport);
+    font-size: 0.95rem;
+    font-family: inherit;
+    letter-spacing: 1px;
+    font-weight: 500;
+}
+
+.altitude-input input:focus {
+    outline: none;
+    border-color: var(--color-metric);
+}
+
+.altitude-input input:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
 /* Query History */
 .query-history {
     margin-top: 10px;

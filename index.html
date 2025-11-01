@@ -52,6 +52,20 @@
             <p class="help-text">
                 Airports (ICAO/IATA) or NavAids (VOR/NDB)
             </p>
+            <div class="altitude-input">
+                <label for="altitudeInput">CRUISE ALT (FT MSL)</label>
+                <input
+                    type="number"
+                    id="altitudeInput"
+                    placeholder="e.g. 5500"
+                    min="0"
+                    max="45000"
+                    step="100"
+                    value="5500"
+                    disabled
+                >
+                <span class="help-text-inline">for winds aloft</span>
+            </div>
             <div id="queryHistory" class="query-history" style="display: none;">
                 <div class="history-label">RECENT</div>
                 <div id="historyList" class="history-list"></div>

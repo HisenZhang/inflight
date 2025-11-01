@@ -5,6 +5,7 @@ const ASSETS_TO_CACHE = [
     './index.html',
     './app.js',
     './geodesy.js',  // WMM2025 with spherical harmonics
+    './wind-stations.csv',  // Winds aloft station locations
     './styles.css',
     './manifest.json'
 ];
