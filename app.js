@@ -687,7 +687,7 @@ function displayResults(waypoints, legs, totalDistance) {
                         const idents = r.leIdent && r.heIdent ? `${r.leIdent}/${r.heIdent}` : (r.leIdent || r.heIdent || 'N/A');
                         const length = r.length ? `${r.length}FT` : '';
                         const surface = r.surface || '';
-                        return `${idents} ${length} ${surface}`.trim();
+                        return `<strong>${idents}</strong> ${length} ${surface}`.trim();
                     }).join(', ');
                     runwayHTML = `<div class="wpt-info">RWY ${runwayInfo}</div>`;
                 } else {

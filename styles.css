@@ -399,14 +399,16 @@ header h1 {
     font-weight: 700;
     padding: 8px 6px;
     text-align: left;
-    border: 1px solid var(--border-color);
+    border-top: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
     letter-spacing: 1px;
     font-size: 0.75rem;
 }
 
 .navlog-table td {
     padding: 8px 6px;
-    border: 1px solid var(--border-color);
+    border-top: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
     vertical-align: top;
 }
 
@@ -427,6 +429,7 @@ header h1 {
 .wpt-num {
     text-align: center;
     font-weight: 700;
+    color: var(--text-primary); /* White for waypoint numbers */
 }
 
 .leg-info {
