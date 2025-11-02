@@ -1,0 +1,243 @@
+// Route Calculator Module - Handles all navigation calculations
+
+// ============================================
+// WAYPOINT RESOLUTION
+// ============================================
+
+function resolveWaypoints(routeString) {
+    const route = routeString.trim().toUpperCase().split(/\s+/).filter(w => w.length > 0);
+
+    if (route.length < 1) {
+        return { error: 'ERROR: ENTER AT LEAST ONE WAYPOINT' };
+    }
+
+    const waypoints = [];
+    const notFound = [];
+
+    for (const code of route) {
+        let waypoint = null;
+
+        // Priority: ICAO (4+ chars) → Navaid → IATA (3 chars)
+        if (code.length >= 4) {
+            waypoint = DataManager.getAirport(code);
+        }
+
+        if (!waypoint) {
+            waypoint = DataManager.getNavaid(code);
+        }
+
+        if (!waypoint && code.length === 3) {
+            waypoint = DataManager.getAirportByIATA(code);
+        }
+
+        if (waypoint) {
+            waypoints.push(waypoint);
+        } else {
+            notFound.push(code);
+        }
+    }
+
+    if (notFound.length > 0) {
+        return {
+            error: `ERROR: WAYPOINT(S) NOT IN DATABASE\n\n${notFound.join(', ')}\n\nVERIFY WAYPOINT IDENTIFIERS`
+        };
+    }
+
+    return { waypoints };
+}
+
+// ============================================
+// NAVIGATION CALCULATIONS
+// ============================================
+
+function calculateRoute(waypoints) {
+    // Calculate magnetic declination for each waypoint
+    waypoints.forEach(waypoint => {
+        waypoint.magVar = getMagneticDeclination(waypoint.lat, waypoint.lon);
+    });
+
+    // Calculate legs
+    const legs = [];
+    let totalDistance = 0;
+
+    for (let i = 0; i < waypoints.length - 1; i++) {
+        const from = waypoints[i];
+        const to = waypoints[i + 1];
+
+        const distance = calculateDistance(from.lat, from.lon, to.lat, to.lon);
+        const trueBearing = calculateBearing(from.lat, from.lon, to.lat, to.lon);
+        const magBearing = trueToMagnetic(trueBearing, from.magVar);
+
+        legs.push({
+            from,
+            to,
+            distance,
+            trueBearing,
+            magBearing,
+            magVar: from.magVar
+        });
+
+        totalDistance += distance;
+    }
+
+    return {
+        waypoints,
+        legs,
+        totalDistance
+    };
+}
+
+// ============================================
+// DISTANCE & BEARING
+// ============================================
+
+function calculateDistance(lat1, lon1, lat2, lon2) {
+    try {
+        if (typeof vincentyInverse === 'function') {
+            const result = vincentyInverse(lat1, lon1, lat2, lon2);
+            return result.distance / 1852; // meters to nautical miles
+        }
+    } catch (error) {
+        console.error('Error calculating distance with Vincenty:', error);
+    }
+
+    // Fallback to spherical calculation
+    console.warn('Using fallback spherical calculation for distance');
+    const R = 3440.065; // Earth radius in nautical miles
+    const dLat = toRadians(lat2 - lat1);
+    const dLon = toRadians(lon2 - lon1);
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) *
+              Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+}
+
+function calculateBearing(lat1, lon1, lat2, lon2) {
+    try {
+        if (typeof vincentyInverse === 'function') {
+            const result = vincentyInverse(lat1, lon1, lat2, lon2);
+            return result.initialBearing;
+        }
+    } catch (error) {
+        console.error('Error calculating bearing with Vincenty:', error);
+    }
+
+    // Fallback to spherical calculation
+    console.warn('Using fallback spherical calculation for bearing');
+    const dLon = toRadians(lon2 - lon1);
+    const y = Math.sin(dLon) * Math.cos(toRadians(lat2));
+    const x = Math.cos(toRadians(lat1)) * Math.sin(toRadians(lat2)) -
+              Math.sin(toRadians(lat1)) * Math.cos(toRadians(lat2)) * Math.cos(dLon);
+    let bearing = Math.atan2(y, x);
+    bearing = toDegrees(bearing);
+    return (bearing + 360) % 360;
+}
+
+// ============================================
+// MAGNETIC VARIATION
+// ============================================
+
+function getMagneticDeclination(lat, lon) {
+    try {
+        if (typeof calculateMagneticDeclination === 'function') {
+            return calculateMagneticDeclination(lat, lon);
+        }
+    } catch (error) {
+        console.error('Error calculating magnetic declination:', error);
+    }
+    return null;
+}
+
+function trueToMagnetic(trueHeading, declination) {
+    if (declination === null || declination === undefined) {
+        return null;
+    }
+    // Magnetic heading = True heading - Declination
+    let magHeading = trueHeading - declination;
+    return (magHeading + 360) % 360;
+}
+
+// ============================================
+// FORMATTING UTILITIES
+// ============================================
+
+function getWaypointCode(waypoint) {
+    if (waypoint.waypointType === 'airport') {
+        return waypoint.icao;
+    } else {
+        return waypoint.ident;
+    }
+}
+
+function formatCoordinate(value, type) {
+    const abs = Math.abs(value);
+    const degrees = Math.floor(abs);
+    const minutes = ((abs - degrees) * 60).toFixed(3);
+    const direction = type === 'lat' ? (value >= 0 ? 'N' : 'S') : (value >= 0 ? 'E' : 'W');
+    return `${degrees}°${minutes}'${direction}`;
+}
+
+function formatNavaidFrequency(freqKhz, type) {
+    if (type === 'VOR' || type === 'VOR-DME' || type === 'VORTAC') {
+        const freqMhz = freqKhz / 1000;
+        return `${freqMhz.toFixed(2)} MHz`;
+    } else if (type === 'NDB' || type === 'NDB-DME') {
+        return `${freqKhz} kHz`;
+    } else {
+        return `${freqKhz} kHz`;
+    }
+}
+
+function getCardinalDirection(bearing) {
+    const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE',
+                       'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+    const index = Math.round(bearing / 22.5) % 16;
+    return directions[index];
+}
+
+// ============================================
+// HELPER FUNCTIONS
+// ============================================
+
+function toRadians(degrees) {
+    return degrees * Math.PI / 180;
+}
+
+function toDegrees(radians) {
+    return radians * 180 / Math.PI;
+}
+
+function checkLibraries() {
+    const vincentyAvailable = typeof vincentyInverse === 'function';
+    const magVarAvailable = typeof calculateMagneticDeclination === 'function';
+
+    console.log('[Geodesy] Vincenty (WGS84):', vincentyAvailable ? '✓ Loaded' : '✗ Not loaded (using spherical fallback)');
+    console.log('[Geodesy] Magnetic Variation:', magVarAvailable ? '✓ Loaded' : '✗ Not loaded (will show "-")');
+
+    if (!vincentyAvailable) {
+        console.warn('[Geodesy] Vincenty not available. Using spherical calculations (slightly less accurate).');
+    }
+    if (!magVarAvailable) {
+        console.warn('[Geodesy] Magnetic variation unavailable. Magnetic headings will show "-".');
+    }
+}
+
+// ============================================
+// EXPORTS
+// ============================================
+
+window.RouteCalculator = {
+    // Waypoint resolution
+    resolveWaypoints,
+
+    // Route calculation
+    calculateRoute,
+
+    // Utilities
+    getWaypointCode,
+    formatCoordinate,
+    formatNavaidFrequency,
+    getCardinalDirection,
+    checkLibraries
+};

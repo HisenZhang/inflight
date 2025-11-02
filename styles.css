@@ -1,6 +1,10 @@
-/* Flight Planning Tool - Navlog Style */
+/* Flight Planning Tool - Organized Styles with Utilities */
 
+/* ============================================
+   DESIGN TOKENS
+   ============================================ */
 :root {
+    /* Colors */
     --bg-primary: #000000;
     --bg-panel: #0a0a0a;
     --border-color: #ffffff;
@@ -11,8 +15,18 @@
     --color-metric: #00ff00;
     --color-warning: #ffff00;
     --color-error: #ff0000;
+
+    /* Spacing */
+    --space-xs: 4px;
+    --space-sm: 8px;
+    --space-md: 10px;
+    --space-lg: 16px;
+    --space-xl: 20px;
 }
 
+/* ============================================
+   RESET & BASE
+   ============================================ */
 * {
     margin: 0;
     padding: 0;
@@ -25,7 +39,7 @@ body {
     color: var(--text-primary);
     line-height: 1.5;
     font-size: 13px;
-    padding: 10px;
+    padding: var(--space-md);
 }
 
 .container {
@@ -33,94 +47,109 @@ body {
     margin: 0 auto;
 }
 
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+
+/* Typography */
+.text-xs { font-size: 0.75rem; }
+.text-sm { font-size: 0.85rem; }
+.text-base { font-size: 0.95rem; }
+.text-lg { font-size: 1.1rem; }
+.text-xl { font-size: 1.4rem; }
+
+/* Font Weight */
+.font-normal { font-weight: 400; }
+.font-medium { font-weight: 500; }
+.font-bold { font-weight: 700; }
+
+/* Colors */
+.text-primary { color: var(--text-primary); }
+.text-secondary { color: var(--text-secondary); }
+.text-airport { color: var(--color-airport); }
+.text-navaid { color: var(--color-navaid); }
+.text-metric { color: var(--color-metric); }
+.text-warning { color: var(--color-warning); }
+.text-error { color: var(--color-error); }
+
+/* Spacing */
+.mb-xs { margin-bottom: var(--space-xs); }
+.mb-sm { margin-bottom: var(--space-sm); }
+.mb-md { margin-bottom: var(--space-md); }
+.mb-lg { margin-bottom: var(--space-lg); }
+.mt-sm { margin-top: var(--space-sm); }
+.mt-md { margin-top: var(--space-md); }
+
+/* Display */
+.hidden { display: none; }
+.block { display: block; }
+.flex { display: flex; }
+.inline-flex { display: inline-flex; }
+
+/* Flex */
+.flex-col { flex-direction: column; }
+.flex-wrap { flex-wrap: wrap; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.gap-sm { gap: var(--space-sm); }
+.gap-md { gap: var(--space-md); }
+
+/* ============================================
+   COMPONENTS
+   ============================================ */
+
 /* Header */
 header {
     text-align: center;
     border: 2px solid var(--border-color);
     background: var(--bg-primary);
     padding: 12px;
-    margin-bottom: 10px;
+    margin-bottom: var(--space-md);
 }
 
 header h1 {
-    font-size: 1.4rem;
     letter-spacing: 4px;
-    color: var(--text-primary);
-    font-weight: 700;
-}
-
-.subtitle {
-    font-size: 0.85rem;
-    color: var(--text-secondary);
-    letter-spacing: 2px;
-    margin-top: 4px;
-    font-weight: 400;
 }
 
 /* Status Box */
 .data-status {
     background: var(--bg-primary);
     border: 2px solid var(--border-color);
-    padding: 10px;
-    margin-bottom: 10px;
+    padding: var(--space-md);
+    margin-bottom: var(--space-md);
 }
 
 .status-box {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 8px;
+    gap: var(--space-md);
+    padding: var(--space-sm);
     border: 1px solid var(--border-color);
-    margin-bottom: 8px;
+    margin-bottom: var(--space-sm);
 }
 
-.status-box.status-success {
-    border-color: var(--color-metric);
-}
-
-.status-box.status-warning {
-    border-color: var(--color-warning);
-    color: var(--color-warning);
-}
-
-.status-box.status-error {
-    border-color: var(--color-error);
-    color: var(--color-error);
-}
-
-.status-box.status-loading {
-    border-color: var(--color-warning);
-    color: var(--color-warning);
-}
-
-.status-indicator {
-    font-size: 1rem;
-}
+.status-box.status-success { border-color: var(--color-metric); }
+.status-box.status-warning { border-color: var(--color-warning); color: var(--color-warning); }
+.status-box.status-error { border-color: var(--color-error); color: var(--color-error); }
+.status-box.status-loading { border-color: var(--color-warning); color: var(--color-warning); }
 
 #statusText {
     flex: 1;
-    font-weight: 500;
     letter-spacing: 1px;
 }
 
 .data-info {
     color: var(--text-secondary);
-    font-size: 0.85rem;
     line-height: 1.6;
-}
-
-.data-info strong {
-    color: var(--text-primary);
 }
 
 /* Buttons */
 .btn {
-    padding: 8px 16px;
+    padding: var(--space-sm) var(--space-lg);
     border: 2px solid var(--border-color);
     background: var(--bg-primary);
     color: var(--text-primary);
     font-size: 0.85rem;
-    font-weight: 700;
     cursor: pointer;
     font-family: inherit;
     letter-spacing: 1px;
@@ -156,34 +185,24 @@ header h1 {
 .input-section {
     background: var(--bg-primary);
     border: 2px solid var(--border-color);
-    padding: 10px;
-    margin-bottom: 10px;
+    padding: var(--space-md);
+    margin-bottom: var(--space-md);
 }
 
 .input-section h2 {
-    margin-bottom: 10px;
-    color: var(--text-primary);
+    margin-bottom: var(--space-md);
     font-size: 1rem;
     letter-spacing: 2px;
-    font-weight: 700;
     border-bottom: 1px solid var(--border-color);
     padding-bottom: 5px;
 }
 
+/* Route Input */
 .route-input {
     display: grid;
     grid-template-columns: 1fr auto auto;
-    gap: 8px;
-    margin-bottom: 8px;
-}
-
-.route-input label {
-    grid-column: 1 / -1;
-    font-weight: 500;
-    margin-bottom: 3px;
-    color: var(--text-primary);
-    letter-spacing: 1px;
-    font-size: 0.8rem;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-sm);
 }
 
 .input-wrapper {
@@ -192,7 +211,7 @@ header h1 {
 
 .route-input input {
     width: 100%;
-    padding: 8px;
+    padding: var(--space-sm);
     border: 2px solid var(--border-color);
     background: var(--bg-primary);
     color: var(--text-primary);
@@ -211,105 +230,96 @@ header h1 {
     cursor: not-allowed;
 }
 
+/* Optional Features */
+.optional-features {
+    margin-top: var(--space-lg);
+    padding-top: var(--space-md);
+    border-top: 1px solid var(--border-color);
+}
+
+.feature-toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-sm);
+    cursor: pointer;
+}
+
+.feature-toggle input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.feature-toggle label {
+    cursor: pointer;
+    letter-spacing: 1px;
+    user-select: none;
+}
+
+.feature-inputs {
+    margin-left: var(--space-xl);
+    padding: var(--space-md);
+    border-left: 2px solid var(--border-color);
+    margin-bottom: var(--space-md);
+}
+
+.feature-inputs .input-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    margin-bottom: var(--space-sm);
+}
+
+.feature-inputs label {
+    min-width: 150px;
+    letter-spacing: 1px;
+}
+
+.feature-inputs input {
+    padding: 6px var(--space-sm);
+    border: 2px solid var(--border-color);
+    background: var(--bg-primary);
+    color: var(--color-airport);
+    font-size: 0.95rem;
+    font-family: inherit;
+    letter-spacing: 1px;
+}
+
+.feature-inputs input[type="number"],
+.feature-inputs input[type="time"] {
+    width: 120px;
+}
+
+.feature-inputs input:focus {
+    outline: none;
+    border-color: var(--color-metric);
+}
+
+.feature-inputs input:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+/* Help Text */
 .help-text {
     color: var(--text-secondary);
     font-size: 0.75rem;
     line-height: 1.4;
     border-left: 2px solid var(--border-color);
-    padding-left: 8px;
+    padding-left: var(--space-sm);
 }
 
 .help-text-inline {
     color: var(--text-secondary);
     font-size: 0.75rem;
-    margin-left: 8px;
-}
-
-/* Altitude Input */
-.altitude-input {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-top: 10px;
-    padding: 8px;
-    border: 1px solid var(--border-color);
-}
-
-.altitude-input label {
-    font-weight: 500;
-    color: var(--text-primary);
-    letter-spacing: 1px;
-    font-size: 0.8rem;
-}
-
-.altitude-input input[type="number"] {
-    width: 120px;
-    padding: 6px 8px;
-    border: 2px solid var(--border-color);
-    background: var(--bg-primary);
-    color: var(--color-airport);
-    font-size: 0.95rem;
-    font-family: inherit;
-    letter-spacing: 1px;
-    font-weight: 500;
-}
-
-.altitude-input input:focus {
-    outline: none;
-    border-color: var(--color-metric);
-}
-
-.altitude-input input:disabled {
-    opacity: 0.3;
-    cursor: not-allowed;
-}
-
-/* TAS and Departure Time Input */
-.tas-input {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-top: 5px;
-    padding: 8px;
-    border: 1px solid var(--border-color);
-}
-
-.tas-input label {
-    font-weight: 500;
-    color: var(--text-primary);
-    letter-spacing: 1px;
-    font-size: 0.8rem;
-}
-
-.tas-input input[type="number"],
-.tas-input input[type="time"] {
-    width: 120px;
-    padding: 6px 8px;
-    border: 2px solid var(--border-color);
-    background: var(--bg-primary);
-    color: var(--color-airport);
-    font-size: 0.95rem;
-    font-family: inherit;
-    letter-spacing: 1px;
-    font-weight: 500;
-}
-
-.tas-input input:focus {
-    outline: none;
-    border-color: var(--color-metric);
-}
-
-.tas-input input:disabled {
-    opacity: 0.3;
-    cursor: not-allowed;
+    margin-left: var(--space-sm);
 }
 
 /* Query History */
 .query-history {
-    margin-top: 10px;
-    padding: 8px;
-    /* border: 1px solid var(--border-color); */
-    background: var(--bg-primary);
+    margin-top: var(--space-md);
+    padding: var(--space-sm);
 }
 
 .history-label {
@@ -326,14 +336,13 @@ header h1 {
 }
 
 .history-item {
-    padding: 4px 10px;
+    padding: 4px var(--space-md);
     border: 1px solid var(--border-color);
     background: var(--bg-primary);
     color: var(--color-navaid);
     font-size: 0.75rem;
     cursor: pointer;
     transition: all 0.1s;
-    font-family: inherit;
     letter-spacing: 1px;
 }
 
@@ -342,20 +351,18 @@ header h1 {
     color: var(--bg-primary);
 }
 
-/* Autocomplete Dropdown */
+/* Autocomplete */
 .autocomplete-dropdown {
-    display: none;
     position: absolute;
     top: 100%;
     left: 0;
     right: 0;
+    background: var(--bg-primary);
+    border: 2px solid var(--color-metric);
     max-height: 300px;
     overflow-y: auto;
-    background: var(--bg-primary);
-    border: 2px solid var(--border-color);
-    border-top: none;
     z-index: 1000;
-    margin-top: -2px;
+    display: none;
 }
 
 .autocomplete-dropdown.show {
@@ -363,169 +370,91 @@ header h1 {
 }
 
 .autocomplete-item {
-    padding: 8px 10px;
+    padding: var(--space-sm);
     cursor: pointer;
-    border-bottom: 1px solid #333;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.autocomplete-item:last-child {
-    border-bottom: none;
+    border-bottom: 1px solid var(--border-color);
 }
 
 .autocomplete-item:hover,
 .autocomplete-item.selected {
-    background: #1a1a1a;
+    background: var(--border-color);
+    color: var(--bg-primary);
 }
 
-.autocomplete-code {
+.autocomplete-item .code {
     font-weight: 700;
-    min-width: 60px;
-    color: var(--color-navaid); /* All waypoints in magenta */
+    letter-spacing: 1px;
 }
 
-.autocomplete-code.airport {
-    color: var(--color-navaid); /* Magenta for airports */
-}
-
-.autocomplete-code.navaid {
-    color: var(--color-navaid); /* Magenta for navaids */
-}
-
-.autocomplete-type {
-    font-size: 0.7rem;
-    padding: 2px 6px;
-    border: 1px solid var(--border-color);
-    background: var(--bg-primary);
-    min-width: 70px;
-    text-align: center;
-}
-
-.autocomplete-name {
-    flex: 1;
-    color: var(--text-secondary);
+.autocomplete-item .name {
     font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-left: var(--space-sm);
 }
 
-.autocomplete-location {
-    color: var(--text-secondary);
-    font-size: 0.75rem;
-}
-
-.autocomplete-empty {
-    padding: 8px 10px;
-    color: var(--text-secondary);
-    text-align: center;
-}
+.autocomplete-item.type-airport .code { color: var(--color-airport); }
+.autocomplete-item.type-navaid .code { color: var(--color-navaid); }
 
 /* Results Section */
 .results-section {
     background: var(--bg-primary);
     border: 2px solid var(--border-color);
-    padding: 10px;
+    padding: var(--space-md);
 }
 
 .results-section h2 {
-    margin-bottom: 10px;
-    color: var(--text-primary);
+    margin-bottom: var(--space-md);
     font-size: 1rem;
     letter-spacing: 2px;
-    font-weight: 700;
     border-bottom: 1px solid var(--border-color);
     padding-bottom: 5px;
 }
 
-/* Summary Card */
 .route-summary {
+    padding: var(--space-md);
     border: 1px solid var(--border-color);
-    padding: 10px;
-    margin-bottom: 10px;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 15px;
+    margin-bottom: var(--space-md);
 }
 
 .summary-item {
     display: flex;
-    flex-direction: column;
-    gap: 3px;
-}
-
-.summary-label {
-    font-size: 0.75rem;
-    color: var(--text-secondary);
-    letter-spacing: 1px;
-}
-
-.summary-value {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: var(--color-navaid); /* Magenta for route summary values */
-    letter-spacing: 1px;
+    justify-content: space-between;
+    margin-bottom: var(--space-sm);
 }
 
 /* Navigation Log Table */
 .navlog-table {
-    border: 2px solid var(--border-color);
-    overflow-x: auto;
+    width: 100%;
 }
 
 .navlog-table table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.8rem;
 }
 
 .navlog-table th {
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    font-weight: 700;
-    padding: 8px 6px;
     text-align: left;
+    padding: var(--space-sm);
     border-top: 1px solid var(--border-color);
     border-bottom: 1px solid var(--border-color);
     letter-spacing: 1px;
-    font-size: 0.75rem;
 }
 
 .navlog-table td {
-    padding: 8px 6px;
-    border-top: 1px solid var(--border-color);
-    border-bottom: 1px solid var(--border-color);
-    vertical-align: top;
-}
-
-.navlog-table tr.wpt-row:hover {
-    background: #0a0a0a;
-}
-
-.navlog-table tr.leg-row {
-    background: #0a0a0a;
-    border-top: none;
-}
-
-.navlog-table tr.leg-row td {
-    border-top: none;
-    padding: 4px 6px;
+    padding: var(--space-sm);
 }
 
 .wpt-num {
-    text-align: center;
-    font-weight: 700;
-    color: var(--text-primary); /* White for waypoint numbers */
+    width: 40px;
+}
+
+.wpt-info {
+    width: auto;
 }
 
 .leg-info {
     font-size: 0.75rem;
-    padding: 4px 10px !important;
-}
-
-.leg-arrow {
-    color: var(--color-navaid);
-    font-size: 1rem;
-    margin-right: 10px;
+    padding: 4px var(--space-md) !important;
 }
 
 .leg-item {
@@ -533,146 +462,18 @@ header h1 {
     color: var(--text-secondary);
 }
 
-.mag-heading {
-    color: var(--color-airport); /* Cyan for magnetic headings */
-    font-weight: 700;
-}
-
-/* Waypoint Identifier */
-.wpt-ident {
-    font-weight: 700;
-    font-size: 0.95rem;
-    letter-spacing: 1px;
-    color: var(--color-navaid); /* All waypoints in magenta */
-}
-
-.wpt-ident.airport {
-    color: var(--color-navaid); /* Magenta for airports */
-}
-
-.wpt-ident.navaid {
-    color: var(--color-navaid); /* Magenta for navaids */
-}
-
-/* Type Badge */
-.wpt-type {
-    display: inline-block;
-    font-size: 0.65rem;
-    padding: 2px 6px;
-    border: 1px solid var(--border-color);
-    background: var(--bg-primary);
-    margin-top: 2px;
-}
-
-/* Position, Elevation, Frequencies */
-.wpt-info {
-    font-size: 0.75rem;
-    color: var(--text-secondary);
-    line-height: 1.4;
-}
-
-.wpt-info.wpt-elevation {
-    color: var(--color-airport); /* Cyan for elevation */
-}
-
-.wpt-info.wpt-info-none {
-    font-style: italic;
-    opacity: 0.6;
-}
-
-.wpt-freqs {
-    font-size: 0.7rem;
-    color: var(--color-metric); /* Green for frequencies */
-    line-height: 1.3;
-    margin-top: 3px;
-}
-
-.wpt-freq-item {
-    display: inline-block;
-    margin-right: 8px;
-    white-space: nowrap;
-    color: var(--color-metric); /* Green for frequencies */
-}
-
-.wpt-freq-item.wpt-freq-none {
-    color: var(--text-secondary); /* Dimmed for missing data */
-    font-style: italic;
-}
-
-/* Distance and Track (magenta for destination/distance/time) */
-.metric-value {
-    color: var(--color-navaid); /* Magenta for distance/time */
-    font-weight: 700;
-    font-size: 0.85rem;
-}
-
-.metric-sub {
-    color: var(--text-secondary);
-    font-size: 0.7rem;
-    display: block;
-}
-
-/* Responsive Design */
-@media (max-width: 1200px) {
-    .navlog-table {
-        font-size: 0.75rem;
-    }
-
-    .navlog-table th,
-    .navlog-table td {
-        padding: 6px 4px;
-    }
-}
-
+/* Responsive */
 @media (max-width: 768px) {
-    body {
-        font-size: 12px;
-    }
-
     .route-input {
         grid-template-columns: 1fr;
     }
 
-    .summary-value {
-        font-size: 1rem;
+    .feature-inputs .input-row {
+        flex-direction: column;
+        align-items: flex-start;
     }
 
-    .navlog-table {
-        font-size: 0.7rem;
+    .feature-inputs label {
+        min-width: auto;
     }
-}
-
-@media (max-width: 480px) {
-    body {
-        padding: 5px;
-        font-size: 11px;
-    }
-
-    header h1 {
-        font-size: 1.1rem;
-        letter-spacing: 2px;
-    }
-
-    .navlog-table th,
-    .navlog-table td {
-        padding: 4px 3px;
-        font-size: 0.65rem;
-    }
-}
-
-/* Scrollbar Styling */
-.autocomplete-dropdown::-webkit-scrollbar,
-.navlog-table::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-}
-
-.autocomplete-dropdown::-webkit-scrollbar-track,
-.navlog-table::-webkit-scrollbar-track {
-    background: var(--bg-primary);
-}
-
-.autocomplete-dropdown::-webkit-scrollbar-thumb,
-.navlog-table::-webkit-scrollbar-thumb {
-    background: var(--border-color);
 }

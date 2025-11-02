@@ -10,97 +10,136 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles-new.css">
     <link rel="manifest" href="manifest.json">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>FLIGHT PLANNING SYSTEM</h1>
+            <h1 class="text-xl font-bold text-primary">FLIGHT PLANNING SYSTEM</h1>
         </header>
 
+        <!-- Database Status -->
         <div class="data-status">
             <div id="dataStatus" class="status-box">
                 <span class="status-indicator">[!]</span>
-                <span id="statusText">DATABASE NOT LOADED</span>
-                <button id="loadDataBtn" class="btn btn-primary">LOAD DATA</button>
+                <span id="statusText" class="font-medium">DATABASE NOT LOADED</span>
+                <button id="loadDataBtn" class="btn btn-primary font-bold">LOAD DATA</button>
                 <button id="clearCacheBtn" class="btn btn-secondary" style="display: none;">CLEAR CACHE</button>
             </div>
-            <div id="dataInfo" class="data-info"></div>
+            <div id="dataInfo" class="data-info text-sm"></div>
             <p class="help-text">
-                Source: <a>ourairports.com</a>
+                Source: <span class="text-secondary">ourairports.com</span>
             </p>
         </div>
 
+        <!-- Input Section -->
         <div class="input-section">
-            <h2>ROUTE ENTRY</h2>
+            <h2 class="font-bold text-primary">ROUTE ENTRY</h2>
+
+            <!-- Basic Route Input (Required) -->
             <div class="route-input">
-                <!-- <label for="routeInput"></label> -->
                 <div class="input-wrapper">
                     <input
                         type="text"
                         id="routeInput"
+                        class="font-medium"
                         placeholder="Waypoints (space separated)"
                         autocomplete="off"
                         disabled
                     >
                     <div id="autocompleteDropdown" class="autocomplete-dropdown"></div>
                 </div>
-                <button id="calculateBtn" class="btn btn-primary" disabled>ENTER</button>
+                <button id="calculateBtn" class="btn btn-primary font-bold" disabled>CALCULATE</button>
                 <button id="clearRouteBtn" class="btn btn-secondary">CLEAR</button>
             </div>
-            <p class="help-text">
-                Airports (ICAO/IATA) or NavAids (VOR/NDB)
+            <p class="help-text mb-md">
+                Enter airports (ICAO/IATA) or navaids (VOR/NDB/DME) separated by spaces
             </p>
-            <div class="altitude-input">
-                <label for="altitudeInput">CRUISE ALT (FT MSL)</label>
-                <input
-                    type="number"
-                    id="altitudeInput"
-                    placeholder="e.g. 5500"
-                    min="0"
-                    max="45000"
-                    step="100"
-                    value="5500"
-                    disabled
-                >
-                <span class="help-text-inline">for winds aloft</span>
+
+            <!-- Optional Features -->
+            <div class="optional-features">
+                <p class="text-secondary text-sm mb-sm">OPTIONAL FEATURES:</p>
+
+                <!-- Wind Correction -->
+                <div class="feature-toggle">
+                    <input type="checkbox" id="enableWinds">
+                    <label for="enableWinds" class="font-medium">WIND CORRECTION</label>
+                    <span class="help-text-inline">- adjust track for winds aloft</span>
+                </div>
+                <div id="windInputs" class="feature-inputs hidden">
+                    <div class="input-row">
+                        <label class="text-sm font-medium">CRUISE ALTITUDE (FT MSL):</label>
+                        <input
+                            type="number"
+                            id="altitudeInput"
+                            class="font-medium"
+                            placeholder="e.g. 5500"
+                            min="0"
+                            max="45000"
+                            step="100"
+                            value="5500"
+                            disabled
+                        >
+                    </div>
+                    <div class="input-row">
+                        <label class="text-sm font-medium">DEPARTURE TIME:</label>
+                        <input
+                            type="time"
+                            id="departureInput"
+                            class="font-medium"
+                            disabled
+                        >
+                        <span class="help-text-inline">optional - for forecast selection (6/12/24hr)</span>
+                    </div>
+                </div>
+
+                <!-- Time Estimation -->
+                <div class="feature-toggle">
+                    <input type="checkbox" id="enableTime">
+                    <label for="enableTime" class="font-medium">TIME ESTIMATION</label>
+                    <span class="help-text-inline">- calculate leg times and ETA</span>
+                </div>
+                <div id="timeInputs" class="feature-inputs hidden">
+                    <div class="input-row">
+                        <label class="text-sm font-medium">TRUE AIRSPEED (KT):</label>
+                        <input
+                            type="number"
+                            id="tasInput"
+                            class="font-medium"
+                            placeholder="e.g. 120"
+                            min="0"
+                            max="500"
+                            step="5"
+                            disabled
+                        >
+                        <span class="help-text-inline">required for time/ground speed</span>
+                    </div>
+                </div>
             </div>
-            <div class="tas-input">
-                <label for="tasInput">TRUE AIRSPEED (KT)</label>
-                <input
-                    type="number"
-                    id="tasInput"
-                    placeholder="e.g. 120"
-                    min="0"
-                    max="500"
-                    step="5"
-                    disabled
-                >
-                <label for="departureInput" style="margin-left: 20px;">DEPARTURE TIME</label>
-                <input
-                    type="time"
-                    id="departureInput"
-                    disabled
-                >
-                <span class="help-text-inline">optional</span>
-            </div>
+
+            <!-- Query History -->
             <div id="queryHistory" class="query-history" style="display: none;">
-                <div class="history-label">RECENT</div>
+                <div class="history-label font-medium">RECENT ROUTES:</div>
                 <div id="historyList" class="history-list"></div>
             </div>
         </div>
 
+        <!-- Results Section -->
         <div id="resultsSection" class="results-section" style="display: none;">
-            <h2>NAVIGATION LOG</h2>
+            <h2 class="font-bold text-primary">NAVIGATION LOG</h2>
             <div id="routeSummary" class="route-summary"></div>
             <div id="navlogTable" class="navlog-table"></div>
         </div>
     </div>
 
-    <script src="geodesy.js"></script>
-    <script src="wind-stations.js"></script>
-    <script src="winds-aloft.js"></script>
-    <script src="app.js"></script>
+    <!-- Scripts - Load modules in order -->
+    <script src="geodesy.js"></script>           <!-- WGS84 + WMM2025 library -->
+    <script src="wind-stations.js"></script>     <!-- Wind station data -->
+    <script src="winds-aloft.js"></script>       <!-- Wind calculation module -->
+    <script src="data-manager.js"></script>      <!-- Data loading & caching module -->
+    <script src="route-calculator.js"></script>  <!-- Navigation calculations module -->
+    <script src="ui-controller.js"></script>     <!-- UI interactions module -->
+    <script src="app.js"></script>               <!-- Main coordinator -->
 </body>
 </html>
