@@ -444,6 +444,14 @@ header h1 {
     padding: var(--space-sm);
 }
 
+.navlog-table .wpt-row {
+    border-top: 2px solid var(--border-color);
+}
+
+.navlog-table .leg-row {
+    background: var(--bg-panel);
+}
+
 .wpt-num {
     width: 40px;
 }

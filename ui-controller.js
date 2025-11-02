@@ -358,6 +358,7 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, option
     `;
 
     let cumulativeDistance = 0;
+    let cumulativeTime = 0;
 
     waypoints.forEach((waypoint, index) => {
         const code = RouteCalculator.getWaypointCode(waypoint);
@@ -481,14 +482,20 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, option
                 const minutes = Math.round(leg.legTime % 60);
                 const timeDisplay = hours > 0 ? `${hours}H ${minutes}M` : `${minutes}M`;
 
+                cumulativeTime += leg.legTime;
+                const cumHours = Math.floor(cumulativeTime / 60);
+                const cumMinutes = Math.round(cumulativeTime % 60);
+                const cumTimeDisplay = cumHours > 0 ? `${cumHours}H ${cumMinutes}M` : `${cumMinutes}M`;
+
                 legInfoHTML += `
                 <span class="leg-item">GS: <span class="text-metric font-bold">${gs}</span> KT</span>
-                <span class="leg-item">TIME: <span class="text-metric font-bold">${timeDisplay}</span></span>
+                <span class="leg-item">ETE: <span class="text-metric font-bold">${timeDisplay}</span></span>
+                <span class="leg-item">CUM TIME: <span class="text-metric font-bold">${cumTimeDisplay}</span></span>
                 `;
             }
 
             legInfoHTML += `
-                <span class="leg-item">CUM: <span class="text-navaid font-bold">${cumulativeDistance.toFixed(1)}</span> NM</span>
+                <span class="leg-item">CUM DIST: <span class="text-navaid font-bold">${cumulativeDistance.toFixed(1)}</span> NM</span>
             `;
 
             tableHTML += `

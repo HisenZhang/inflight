@@ -115,34 +115,48 @@ async function handleClearCache() {
 }
 
 async function handleCalculateRoute() {
-    const elements = UIController.getElements();
-    const routeValue = elements.routeInput.value;
+    try {
+        const elements = UIController.getElements();
+        const routeValue = elements.routeInput.value;
 
-    // Resolve waypoints
-    const resolutionResult = RouteCalculator.resolveWaypoints(routeValue);
-    if (resolutionResult.error) {
-        alert(resolutionResult.error);
-        return;
+        // Resolve waypoints
+        const resolutionResult = RouteCalculator.resolveWaypoints(routeValue);
+        if (resolutionResult.error) {
+            alert(resolutionResult.error);
+            return;
+        }
+
+        // Gather options from UI
+        const tasValue = parseFloat(elements.tasInput.value);
+        const altitudeValue = parseFloat(elements.altitudeInput.value);
+
+        // Validate TAS if time estimation is enabled
+        if (elements.enableTime.checked && (isNaN(tasValue) || tasValue <= 0)) {
+            alert('ERROR: TRUE AIRSPEED REQUIRED FOR TIME ESTIMATION\n\nEnter TAS in knots (e.g., 120)');
+            return;
+        }
+
+        const options = {
+            enableWinds: elements.enableWinds.checked,
+            altitude: elements.enableWinds.checked ? altitudeValue : null,
+            departureTime: elements.enableWinds.checked ? elements.departureInput.value : null,
+            enableTime: elements.enableTime.checked,
+            tas: elements.enableTime.checked ? tasValue : null
+        };
+
+        // Calculate route (async now to support wind fetching)
+        const { waypoints, legs, totalDistance, totalTime } = await RouteCalculator.calculateRoute(resolutionResult.waypoints, options);
+
+        // Display results
+        UIController.displayResults(waypoints, legs, totalDistance, totalTime, options);
+
+        // Save to history
+        DataManager.saveQueryHistory(routeValue.trim().toUpperCase());
+        UIController.displayQueryHistory();
+    } catch (error) {
+        console.error('Error calculating route:', error);
+        alert(`ERROR: ROUTE CALCULATION FAILED\n\n${error.message}`);
     }
-
-    // Gather options from UI
-    const options = {
-        enableWinds: elements.enableWinds.checked,
-        altitude: elements.enableWinds.checked ? parseFloat(elements.altitudeInput.value) : null,
-        departureTime: elements.enableWinds.checked ? elements.departureInput.value : null,
-        enableTime: elements.enableTime.checked,
-        tas: elements.enableTime.checked ? parseFloat(elements.tasInput.value) : null
-    };
-
-    // Calculate route (async now to support wind fetching)
-    const { waypoints, legs, totalDistance, totalTime } = await RouteCalculator.calculateRoute(resolutionResult.waypoints, options);
-
-    // Display results
-    UIController.displayResults(waypoints, legs, totalDistance, totalTime, options);
-
-    // Save to history
-    DataManager.saveQueryHistory(routeValue.trim().toUpperCase());
-    UIController.displayQueryHistory();
 }
 
 function handleClearRoute() {
