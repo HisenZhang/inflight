@@ -38,6 +38,7 @@ function init() {
         // Results elements
         resultsSection: document.getElementById('resultsSection'),
         routeSummary: document.getElementById('routeSummary'),
+        windAltitudeTable: document.getElementById('windAltitudeTable'),
         navlogTable: document.getElementById('navlogTable'),
 
         // Autocomplete elements
@@ -367,6 +368,13 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, option
 
     elements.routeSummary.innerHTML = summaryHTML;
 
+    // Display wind altitude table if wind correction enabled
+    if (options.enableWinds && legs.some(leg => leg.windsAtAltitudes)) {
+        displayWindAltitudeTable(legs, options.altitude);
+    } else {
+        elements.windAltitudeTable.style.display = 'none';
+    }
+
     // Build navlog table
     let tableHTML = `
         <table>
@@ -560,6 +568,71 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, option
 
     elements.navlogTable.innerHTML = tableHTML;
     elements.resultsSection.style.display = 'block';
+}
+
+// ============================================
+// WIND ALTITUDE TABLE
+// ============================================
+
+function displayWindAltitudeTable(legs, filedAltitude) {
+    const altitudes = [
+        filedAltitude - 2000,
+        filedAltitude - 1000,
+        filedAltitude,
+        filedAltitude + 1000,
+        filedAltitude + 2000
+    ];
+
+    let tableHTML = `
+        <h3 class="text-primary">WINDS ALOFT AT ALTITUDE</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th class="altitude-col">ALTITUDE</th>
+    `;
+
+    // Add column for each leg
+    legs.forEach((leg, index) => {
+        const from = RouteCalculator.getWaypointCode(leg.from);
+        const to = RouteCalculator.getWaypointCode(leg.to);
+        tableHTML += `<th class="wind-cell">LEG ${index + 1}<br><span class="text-xs text-secondary">${from}→${to}</span></th>`;
+    });
+
+    tableHTML += `
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    // Add row for each altitude
+    altitudes.forEach((alt, altIndex) => {
+        const isFiledAlt = alt === filedAltitude;
+        const rowClass = isFiledAlt ? 'filed-altitude' : '';
+
+        tableHTML += `<tr class="${rowClass}">`;
+        tableHTML += `<td class="altitude-col ${isFiledAlt ? 'text-metric font-bold' : 'text-secondary'}">${(alt / 1000).toFixed(1)}K FT</td>`;
+
+        legs.forEach(leg => {
+            if (leg.windsAtAltitudes && leg.windsAtAltitudes[alt]) {
+                const wind = leg.windsAtAltitudes[alt];
+                const dir = String(Math.round(wind.direction)).padStart(3, '0');
+                const spd = Math.round(wind.speed);
+                tableHTML += `<td class="wind-cell ${isFiledAlt ? 'text-metric font-bold' : 'text-secondary'}">${dir}°/${spd}KT</td>`;
+            } else {
+                tableHTML += `<td class="wind-cell text-secondary">-</td>`;
+            }
+        });
+
+        tableHTML += `</tr>`;
+    });
+
+    tableHTML += `
+            </tbody>
+        </table>
+    `;
+
+    elements.windAltitudeTable.innerHTML = tableHTML;
+    elements.windAltitudeTable.style.display = 'block';
 }
 
 // ============================================

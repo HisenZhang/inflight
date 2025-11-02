@@ -98,6 +98,7 @@ async function calculateRoute(waypoints, options = {}) {
                 const midLat = (from.lat + to.lat) / 2;
                 const midLon = (from.lon + to.lon) / 2;
 
+                // Calculate winds at filed altitude
                 const windData = interpolateWind(midLat, midLon, altitude, windsData);
                 if (windData) {
                     leg.windDir = windData.direction;
@@ -118,6 +119,25 @@ async function calculateRoute(waypoints, options = {}) {
                     console.log(`[Winds] Leg ${from.icao || from.ident} → ${to.icao || to.ident}: Wind ${windData.direction}°/${windData.speed}kt, HW: ${components.headwind.toFixed(1)}, XW: ${components.crosswind.toFixed(1)}`);
                 } else {
                     console.warn('[Winds] No wind data returned for leg');
+                }
+
+                // Calculate winds at multiple altitudes for wind table
+                const altitudes = [
+                    altitude - 2000,
+                    altitude - 1000,
+                    altitude,
+                    altitude + 1000,
+                    altitude + 2000
+                ];
+
+                leg.windsAtAltitudes = {};
+                for (const alt of altitudes) {
+                    if (alt > 0) { // Only calculate for positive altitudes
+                        const altWind = interpolateWind(midLat, midLon, alt, windsData);
+                        if (altWind) {
+                            leg.windsAtAltitudes[alt] = altWind;
+                        }
+                    }
                 }
             } catch (error) {
                 console.error('[Winds] Error calculating wind for leg:', error);

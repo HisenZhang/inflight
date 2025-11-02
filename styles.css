@@ -486,6 +486,55 @@ header h1 {
     margin-bottom: var(--space-sm);
 }
 
+/* Wind Altitude Table */
+.wind-altitude-table {
+    margin-bottom: var(--space-md);
+    padding: var(--space-md);
+    border: 1px solid var(--border-color);
+}
+
+.wind-altitude-table h3 {
+    font-size: 0.85rem;
+    letter-spacing: 2px;
+    margin-bottom: var(--space-sm);
+    color: var(--text-primary);
+    font-weight: 700;
+}
+
+.wind-altitude-table table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.75rem;
+}
+
+.wind-altitude-table th {
+    text-align: left;
+    padding: var(--space-sm);
+    border-bottom: 1px solid var(--border-color);
+    letter-spacing: 1px;
+    font-weight: 500;
+}
+
+.wind-altitude-table td {
+    padding: var(--space-sm);
+    border-bottom: 1px solid #333;
+}
+
+.wind-altitude-table .altitude-col {
+    width: 80px;
+    font-weight: 500;
+}
+
+.wind-altitude-table .wind-cell {
+    text-align: center;
+}
+
+.wind-altitude-table .filed-altitude {
+    background: #0a0a0a;
+    border-left: 2px solid var(--color-metric);
+    border-right: 2px solid var(--color-metric);
+}
+
 /* Navigation Log Table */
 .navlog-table {
     width: 100%;
