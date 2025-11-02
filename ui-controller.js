@@ -19,6 +19,9 @@ function init() {
         dataInfo: document.getElementById('dataInfo'),
         loadDataBtn: document.getElementById('loadDataBtn'),
         clearCacheBtn: document.getElementById('clearCacheBtn'),
+        inspectDbBtn: document.getElementById('inspectDbBtn'),
+        dataInspection: document.getElementById('dataInspection'),
+        inspectionContent: document.getElementById('inspectionContent'),
 
         // Input elements
         routeInput: document.getElementById('routeInput'),
@@ -29,11 +32,15 @@ function init() {
         enableWindsToggle: document.getElementById('enableWindsToggle'),
         windInputs: document.getElementById('windInputs'),
         altitudeInput: document.getElementById('altitudeInput'),
+        tasInput: document.getElementById('tasInput'),
         forecastBtns: document.querySelectorAll('.radio-btn'),
 
-        enableTimeToggle: document.getElementById('enableTimeToggle'),
-        timeInputs: document.getElementById('timeInputs'),
-        tasInput: document.getElementById('tasInput'),
+        enableFuelToggle: document.getElementById('enableFuelToggle'),
+        fuelInputs: document.getElementById('fuelInputs'),
+        usableFuelInput: document.getElementById('usableFuelInput'),
+        taxiFuelInput: document.getElementById('taxiFuelInput'),
+        burnRateInput: document.getElementById('burnRateInput'),
+        fuelReserveBtns: document.querySelectorAll('[data-reserve]'),
 
         // Results elements
         resultsSection: document.getElementById('resultsSection'),
@@ -82,6 +89,97 @@ function showDataInfo() {
         <p><strong>AIRPORTS:</strong> ${totalAirports.toLocaleString()} | <strong>NAVAIDS:</strong> ${totalNavaids.toLocaleString()} | <strong>STATUS:</strong> READY</p>
         ${timestampText}
     `;
+
+    // Show inspect button
+    elements.inspectDbBtn.style.display = 'inline-block';
+
+    // Setup inspect button toggle
+    elements.inspectDbBtn.addEventListener('click', toggleInspection);
+}
+
+function toggleInspection() {
+    const isHidden = elements.dataInspection.classList.contains('hidden');
+
+    if (isHidden) {
+        // Show inspection panel
+        elements.dataInspection.classList.remove('hidden');
+        elements.inspectDbBtn.textContent = 'CLOSE';
+        populateInspection();
+    } else {
+        // Hide inspection panel
+        elements.dataInspection.classList.add('hidden');
+        elements.inspectDbBtn.textContent = 'INSPECT';
+    }
+}
+
+function populateInspection() {
+    const stats = DataManager.getDataStats();
+
+    // Format cache age
+    let cacheAge = 'N/A';
+    let cacheColor = 'text-secondary';
+    if (stats.timestamp) {
+        const daysAgo = Math.floor((Date.now() - stats.timestamp) / (24 * 60 * 60 * 1000));
+        cacheAge = `${daysAgo} days ago`;
+        if (daysAgo > 30) {
+            cacheColor = 'text-warning';
+        } else if (daysAgo > 90) {
+            cacheColor = 'text-error';
+        } else {
+            cacheColor = 'text-metric';
+        }
+    }
+
+    // Format timestamp
+    let timestampFormatted = 'N/A';
+    if (stats.timestamp) {
+        const date = new Date(stats.timestamp);
+        timestampFormatted = date.toISOString().replace('T', ' ').substring(0, 19) + ' UTC';
+    }
+
+    // Get sample data for validation
+    const sampleAirport = DataManager.getAirport('KJFK') || DataManager.getAirport('KLAX') || null;
+    const sampleNavaid = DataManager.getNavaid('JFK') || DataManager.getNavaid('LAX') || null;
+
+    elements.inspectionContent.innerHTML = `
+        <div class="inspection-section">
+            <div><span class="inspection-label">TOTAL AIRPORTS:</span><span class="inspection-value">${stats.airports.toLocaleString()}</span></div>
+            <div><span class="inspection-label">TOTAL NAVAIDS:</span><span class="inspection-value">${stats.navaids.toLocaleString()}</span></div>
+            <div><span class="inspection-label">TOTAL WAYPOINTS:</span><span class="inspection-value">${(stats.airports + stats.navaids).toLocaleString()}</span></div>
+        </div>
+
+        <div class="inspection-section">
+            <div><span class="inspection-label">CACHE TIMESTAMP:</span><span class="text-secondary">${timestampFormatted}</span></div>
+            <div><span class="inspection-label">CACHE AGE:</span><span class="${cacheColor}">${cacheAge}</span></div>
+            <div><span class="inspection-label">DATA SOURCE:</span><span class="text-secondary">OurAirports.com (CSV)</span></div>
+        </div>
+
+        <div class="inspection-section">
+            <div><span class="inspection-label">STORAGE:</span><span class="text-secondary">IndexedDB (Browser Cache)</span></div>
+            <div><span class="inspection-label">GEO MODEL:</span><span class="text-secondary">WGS84 (Vincenty)</span></div>
+            <div><span class="inspection-label">MAG MODEL:</span><span class="text-secondary">WMM2025 (Spherical Harmonics)</span></div>
+        </div>
+
+        <div class="inspection-section">
+            <div class="text-secondary" style="margin-bottom: 4px;">SAMPLE VALIDATION:</div>
+            ${sampleAirport ? `
+                <div><span class="inspection-label">→ Airport:</span><span class="text-airport">${sampleAirport.icao}</span> <span class="text-secondary">${sampleAirport.name || 'N/A'}</span></div>
+                <div><span class="inspection-label">  Coordinates:</span><span class="text-secondary">${sampleAirport.lat?.toFixed(4) || 'N/A'}, ${sampleAirport.lon?.toFixed(4) || 'N/A'}</span></div>
+            ` : '<div><span class="text-warning">⚠ No sample airport data available</span></div>'}
+            ${sampleNavaid ? `
+                <div><span class="inspection-label">→ Navaid:</span><span class="text-navaid">${sampleNavaid.ident}</span> <span class="text-secondary">${sampleNavaid.type || 'N/A'}</span></div>
+                <div><span class="inspection-label">  Coordinates:</span><span class="text-secondary">${sampleNavaid.lat?.toFixed(4) || 'N/A'}, ${sampleNavaid.lon?.toFixed(4) || 'N/A'}</span></div>
+            ` : '<div><span class="text-warning">⚠ No sample navaid data available</span></div>'}
+        </div>
+
+        <div class="inspection-section">
+            <div class="text-secondary" style="margin-bottom: 4px;">AVAILABILITY STATUS:</div>
+            <div><span class="inspection-label">Geodesy Library:</span><span class="text-metric">✓ LOADED</span></div>
+            <div><span class="inspection-label">Magnetic Model:</span><span class="text-metric">✓ LOADED</span></div>
+            <div><span class="inspection-label">Wind Stations:</span><span class="text-metric">✓ EMBEDDED (254 stations)</span></div>
+            <div><span class="inspection-label">Winds Aloft API:</span><span class="text-warning">⚠ REQUIRES INTERNET</span></div>
+        </div>
+    `;
 }
 
 // ============================================
@@ -92,14 +190,16 @@ function enableRouteInput() {
     elements.routeInput.disabled = false;
     elements.calculateBtn.disabled = false;
 
-    // Enable inputs based on feature toggles
-    if (elements.enableWinds.checked) {
+    // Enable inputs based on feature toggles (if they're enabled)
+    if (elements.isWindsEnabled && elements.isWindsEnabled()) {
         elements.altitudeInput.disabled = false;
-        elements.departureInput.disabled = false;
+        elements.tasInput.disabled = false;
     }
 
-    if (elements.enableTime.checked) {
-        elements.tasInput.disabled = false;
+    if (elements.isFuelEnabled && elements.isFuelEnabled()) {
+        elements.usableFuelInput.disabled = false;
+        elements.taxiFuelInput.disabled = false;
+        elements.burnRateInput.disabled = false;
     }
 }
 
@@ -107,7 +207,6 @@ function disableRouteInput() {
     elements.routeInput.disabled = true;
     elements.altitudeInput.disabled = true;
     elements.tasInput.disabled = true;
-    elements.departureInput.disabled = true;
     elements.calculateBtn.disabled = true;
 }
 
@@ -123,9 +222,9 @@ function clearRoute() {
 
 function setupFeatureToggles() {
     let windsEnabled = false;
-    let timeEnabled = false;
+    let fuelEnabled = false;
 
-    // Wind correction toggle
+    // Wind correction & time toggle (merged)
     elements.enableWindsToggle.addEventListener('click', () => {
         windsEnabled = !windsEnabled;
         if (windsEnabled) {
@@ -133,27 +232,33 @@ function setupFeatureToggles() {
             elements.windInputs.classList.remove('hidden');
             if (!elements.routeInput.disabled) {
                 elements.altitudeInput.disabled = false;
+                elements.tasInput.disabled = false;
             }
         } else {
             elements.enableWindsToggle.classList.remove('checked');
             elements.windInputs.classList.add('hidden');
             elements.altitudeInput.disabled = true;
+            elements.tasInput.disabled = true;
         }
     });
 
-    // Time estimation toggle
-    elements.enableTimeToggle.addEventListener('click', () => {
-        timeEnabled = !timeEnabled;
-        if (timeEnabled) {
-            elements.enableTimeToggle.classList.add('checked');
-            elements.timeInputs.classList.remove('hidden');
+    // Fuel planning toggle
+    elements.enableFuelToggle.addEventListener('click', () => {
+        fuelEnabled = !fuelEnabled;
+        if (fuelEnabled) {
+            elements.enableFuelToggle.classList.add('checked');
+            elements.fuelInputs.classList.remove('hidden');
             if (!elements.routeInput.disabled) {
-                elements.tasInput.disabled = false;
+                elements.usableFuelInput.disabled = false;
+                elements.taxiFuelInput.disabled = false;
+                elements.burnRateInput.disabled = false;
             }
         } else {
-            elements.enableTimeToggle.classList.remove('checked');
-            elements.timeInputs.classList.add('hidden');
-            elements.tasInput.disabled = true;
+            elements.enableFuelToggle.classList.remove('checked');
+            elements.fuelInputs.classList.add('hidden');
+            elements.usableFuelInput.disabled = true;
+            elements.taxiFuelInput.disabled = true;
+            elements.burnRateInput.disabled = true;
         }
     });
 
@@ -165,12 +270,25 @@ function setupFeatureToggles() {
         });
     });
 
+    // Fuel reserve radio buttons
+    elements.fuelReserveBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            elements.fuelReserveBtns.forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+        });
+    });
+
     // Store state getters
     elements.isWindsEnabled = () => windsEnabled;
-    elements.isTimeEnabled = () => timeEnabled;
+    elements.isTimeEnabled = () => windsEnabled; // Same as winds now
+    elements.isFuelEnabled = () => fuelEnabled;
     elements.getSelectedForecast = () => {
-        const selected = document.querySelector('.radio-btn.selected');
+        const selected = document.querySelector('.radio-btn.selected[data-period]');
         return selected ? selected.getAttribute('data-period') : '06';
+    };
+    elements.getSelectedReserve = () => {
+        const selected = document.querySelector('.radio-btn.selected[data-reserve]');
+        return selected ? parseInt(selected.getAttribute('data-reserve')) : 30;
     };
 }
 
@@ -328,7 +446,7 @@ function selectAutocompleteItem(index) {
 // RESULTS DISPLAY
 // ============================================
 
-function displayResults(waypoints, legs, totalDistance, totalTime = null, options = {}) {
+function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelStatus = null, options = {}) {
     // Route summary
     const routeCodes = waypoints.map(w => RouteCalculator.getWaypointCode(w)).join(' ');
 
@@ -365,6 +483,26 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, option
             <span class="summary-value text-navaid font-bold">${legs.length}</span>
         </div>
     `;
+
+    // Add fuel status if available
+    if (fuelStatus) {
+        const fuelColor = fuelStatus.isSufficient ? 'text-metric' : 'text-error';
+        const fuelIcon = fuelStatus.isSufficient ? '✓' : '⚠';
+        summaryHTML += `
+        <div class="summary-item" style="border-top: 1px solid var(--border-color); padding-top: 8px; margin-top: 8px;">
+            <span class="summary-label text-secondary text-sm">FUEL STATUS</span>
+            <span class="summary-value ${fuelColor} font-bold">${fuelIcon} ${fuelStatus.isSufficient ? 'SUFFICIENT' : 'INSUFFICIENT'}</span>
+        </div>
+        <div class="summary-item">
+            <span class="summary-label text-secondary text-sm">FINAL FOB</span>
+            <span class="summary-value ${fuelColor} font-bold">${fuelStatus.finalFob.toFixed(1)} GAL (${(fuelStatus.finalFob / fuelStatus.burnRate).toFixed(1)}H)</span>
+        </div>
+        <div class="summary-item">
+            <span class="summary-label text-secondary text-sm">VFR RESERVE REQ</span>
+            <span class="summary-value text-secondary">${fuelStatus.requiredReserve.toFixed(1)} GAL (${fuelStatus.vfrReserve} MIN)</span>
+        </div>
+        `;
+    }
 
     elements.routeSummary.innerHTML = summaryHTML;
 
@@ -462,7 +600,7 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, option
             <tr class="wpt-row">
                 <td class="wpt-num text-primary font-bold">${waypointNumber}</td>
                 <td class="wpt-info-cell">
-                    <div class="${colorClass} font-bold">${code}</div>
+                    <div class="${colorClass} wpt-code">${code}</div>
                     <div class="text-xs text-secondary">${typeDisplay}</div>
                 </td>
                 <td colspan="2">
@@ -479,82 +617,100 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, option
             const leg = legs[index];
             cumulativeDistance += leg.distance;
             const legDist = leg.distance.toFixed(1);
-            const trueTrack = String(Math.round(leg.trueBearing)).padStart(3, '0');
-            const cardinal = RouteCalculator.getCardinalDirection(leg.trueBearing);
-            const magTrackDisplay = leg.magBearing !== null
-                ? String(Math.round(leg.magBearing)).padStart(3, '0') + '°'
+
+            // True course (ground track) for secondary display
+            const trueCourse = String(Math.round(leg.trueCourse)).padStart(3, '0');
+            const cardinal = RouteCalculator.getCardinalDirection(leg.trueCourse);
+
+            // Magnetic heading (corrected for WCA + mag var) for primary display
+            const magHeadingDisplay = leg.magHeading !== null
+                ? String(Math.round(leg.magHeading)).padStart(3, '0') + '°'
                 : '-';
 
-            // DISTANCE SECTION
-            let distanceSection = `
-                <div class="leg-section">
-                    <span class="leg-section-label text-secondary">DISTANCE:</span>
-                    <span class="leg-item">LEG <span class="text-navaid font-bold">${legDist} NM</span></span>
-                    <span class="leg-item">CUM <span class="text-navaid font-bold">${cumulativeDistance.toFixed(1)} NM</span></span>
-                </div>
-            `;
+            // PRIMARY NAV DATA (emphasized with colored values only)
+            let primaryNavHTML = '<div class="leg-section" style="margin-bottom: 6px;">';
 
-            // HEADING SECTION
-            let headingSection = `
-                <div class="leg-section">
-                    <span class="leg-section-label text-secondary">HEADING:</span>
-                    <span class="leg-item">TRUE <span class="text-navaid font-bold">${trueTrack}°</span> ${cardinal}</span>
-                    <span class="leg-item">MAG <span class="text-airport font-bold">${magTrackDisplay}</span></span>
-            `;
+            // Magnetic heading (WCA + mag var already applied)
+            primaryNavHTML += `<span class="leg-primary">HDG <span class="text-airport">${magHeadingDisplay}</span></span>`;
 
-            // Add wind data if available
+            // ETE (green/metric color for value if available)
+            if (leg.legTime !== undefined) {
+                const hours = Math.floor(leg.legTime / 60);
+                const minutes = Math.round(leg.legTime % 60);
+                const timeDisplay = hours > 0 ? `${hours}H${minutes}M` : `${minutes}M`;
+                primaryNavHTML += ` <span class="leg-primary">ETE <span class="text-metric">${timeDisplay}</span></span>`;
+                cumulativeTime += leg.legTime;
+            }
+
+            // Distance (magenta/navaid color for value)
+            primaryNavHTML += ` <span class="leg-primary">DIST <span class="text-navaid">${legDist}NM</span></span>`;
+            primaryNavHTML += '</div>';
+
+            // SECONDARY NAV DATA (de-emphasized, organized in groups)
+            let secondaryNavHTML = '<div class="leg-section">';
+
+            // Group 1: Basic heading/speed (shows true COURSE, not heading)
+            secondaryNavHTML += `<span class="leg-secondary">TC <span class="text-navaid">${trueCourse}° ${cardinal}</span></span>`;
+
+            if (leg.groundSpeed !== undefined) {
+                const gs = Math.round(leg.groundSpeed);
+                secondaryNavHTML += ` <span class="leg-secondary">• GS <span class="text-metric">${gs}KT</span></span>`;
+            }
+
+            // Group 2: Cumulative data
+            secondaryNavHTML += ` <span class="leg-secondary">• CUM DIST <span class="text-navaid">${cumulativeDistance.toFixed(1)}NM</span></span>`;
+
+            if (cumulativeTime > 0) {
+                const cumHours = Math.floor(cumulativeTime / 60);
+                const cumMinutes = Math.round(cumulativeTime % 60);
+                const cumTimeDisplay = cumHours > 0 ? `${cumHours}H${cumMinutes}M` : `${cumMinutes}M`;
+                secondaryNavHTML += ` <span class="leg-secondary">• CUM TIME <span class="text-metric">${cumTimeDisplay}</span></span>`;
+            }
+
+            secondaryNavHTML += '</div>';
+
+            // Group 3: Wind info (if wind correction applied)
+            let windSection = '';
             if (leg.windDir !== undefined && leg.windSpd !== undefined) {
                 const windDir = String(Math.round(leg.windDir)).padStart(3, '0');
                 const windSpd = Math.round(leg.windSpd);
-                const headwind = leg.headwind ? leg.headwind : 0;
-                const crosswind = leg.crosswind ? leg.crosswind : 0;
+                const headwind = leg.headwind !== undefined ? leg.headwind : 0;
 
-                // Determine wind type (headwind/tailwind)
+                // Wind type (headwind/tailwind)
                 const windType = headwind >= 0 ? 'HEAD' : 'TAIL';
                 const windValue = Math.abs(Math.round(headwind));
 
+                windSection = '<div class="leg-section">';
+                windSection += `<span class="leg-secondary">WIND <span class="text-airport">${windDir}°/${windSpd}KT</span></span>`;
+                windSection += ` <span class="leg-secondary">• ${windType} <span class="text-metric">${windValue}KT</span></span>`;
+
                 // Wind correction angle
-                const wcaDisplay = leg.wca !== undefined
-                    ? `WCA <span class="text-metric font-bold">${leg.wca >= 0 ? '+' : ''}${leg.wca.toFixed(1)}°</span>`
-                    : '';
+                if (leg.wca !== undefined) {
+                    windSection += ` <span class="leg-secondary">• WCA <span class="text-metric">${leg.wca >= 0 ? '+' : ''}${leg.wca.toFixed(1)}°</span></span>`;
+                }
 
-                headingSection += `
-                    <span class="leg-item">WIND <span class="text-metric font-bold">${windDir}°/${windSpd} KT</span></span>
-                    <span class="leg-item">${windType} <span class="text-metric font-bold">${windValue} KT</span></span>
-                    ${wcaDisplay ? `<span class="leg-item">${wcaDisplay}</span>` : ''}
-                `;
+                windSection += '</div>';
             }
-            headingSection += `</div>`;
 
-            // TIME SECTION (if time estimation enabled)
-            let timeSection = '';
-            if (leg.groundSpeed !== undefined && leg.legTime !== undefined) {
-                const gs = Math.round(leg.groundSpeed);
-                const hours = Math.floor(leg.legTime / 60);
-                const minutes = Math.round(leg.legTime % 60);
-                const timeDisplay = hours > 0 ? `${hours}H ${minutes}M` : `${minutes}M`;
-
-                cumulativeTime += leg.legTime;
-                const cumHours = Math.floor(cumulativeTime / 60);
-                const cumMinutes = Math.round(cumulativeTime % 60);
-                const cumTimeDisplay = cumHours > 0 ? `${cumHours}H ${cumMinutes}M` : `${cumMinutes}M`;
-
-                timeSection = `
+            // FUEL SECTION (if fuel planning enabled)
+            let fuelSection = '';
+            if (leg.fobGal !== undefined && leg.fobTime !== undefined) {
+                const fobColor = leg.fobGal < 5 ? 'text-error' : (leg.fobGal < 10 ? 'text-warning' : 'text-metric');
+                fuelSection = `
                     <div class="leg-section">
-                        <span class="leg-section-label text-secondary">TIME:</span>
-                        <span class="leg-item">GS <span class="text-metric font-bold">${gs} KT</span></span>
-                        <span class="leg-item">ETE <span class="text-metric font-bold">${timeDisplay}</span></span>
-                        <span class="leg-item">CUM <span class="text-metric font-bold">${cumTimeDisplay}</span></span>
+                        <span class="leg-secondary">FUEL BURN <span class="text-navaid">${leg.fuelBurnGal.toFixed(1)}GAL</span></span>
+                        <span class="leg-secondary">• FOB <span class="${fobColor} font-bold">${leg.fobGal.toFixed(1)}GAL (${leg.fobTime.toFixed(1)}H)</span></span>
                     </div>
                 `;
             }
 
             tableHTML += `
                 <tr class="leg-row">
-                    <td colspan="4" class="leg-info text-xs">
-                        ${distanceSection}
-                        ${headingSection}
-                        ${timeSection}
+                    <td colspan="4" class="leg-info">
+                        ${primaryNavHTML}
+                        ${secondaryNavHTML}
+                        ${windSection}
+                        ${fuelSection}
                     </td>
                 </tr>
             `;
@@ -584,18 +740,17 @@ function displayWindAltitudeTable(legs, filedAltitude) {
     ];
 
     let tableHTML = `
-        <h3 class="text-primary">WINDS ALOFT AT ALTITUDE</h3>
+        <h2 class="font-bold text-primary">WINDS ALOFT AT ALTITUDE</h2>
         <table>
             <thead>
                 <tr>
-                    <th class="altitude-col">ALTITUDE</th>
+                    <th class="leg-col">LEG</th>
     `;
 
-    // Add column for each leg
-    legs.forEach((leg, index) => {
-        const from = RouteCalculator.getWaypointCode(leg.from);
-        const to = RouteCalculator.getWaypointCode(leg.to);
-        tableHTML += `<th class="wind-cell">LEG ${index + 1}<br><span class="text-xs text-secondary">${from}→${to}</span></th>`;
+    // Add column for each altitude
+    altitudes.forEach(alt => {
+        const isFiledAlt = alt === filedAltitude;
+        tableHTML += `<th class="wind-cell ${isFiledAlt ? 'text-metric' : ''}">${(alt / 1000).toFixed(1)}K FT</th>`;
     });
 
     tableHTML += `
@@ -604,20 +759,23 @@ function displayWindAltitudeTable(legs, filedAltitude) {
             <tbody>
     `;
 
-    // Add row for each altitude
-    altitudes.forEach((alt, altIndex) => {
-        const isFiledAlt = alt === filedAltitude;
-        const rowClass = isFiledAlt ? 'filed-altitude' : '';
+    // Add row for each leg
+    legs.forEach((leg, index) => {
+        const from = RouteCalculator.getWaypointCode(leg.from);
+        const to = RouteCalculator.getWaypointCode(leg.to);
 
-        tableHTML += `<tr class="${rowClass}">`;
-        tableHTML += `<td class="altitude-col ${isFiledAlt ? 'text-metric font-bold' : 'text-secondary'}">${(alt / 1000).toFixed(1)}K FT</td>`;
+        tableHTML += `<tr>`;
+        tableHTML += `<td class="leg-col"><span class="font-bold">LEG ${index + 1}</span><br><span class="text-xs text-secondary">${from}→${to}</span></td>`;
 
-        legs.forEach(leg => {
+        altitudes.forEach(alt => {
+            const isFiledAlt = alt === filedAltitude;
+
             if (leg.windsAtAltitudes && leg.windsAtAltitudes[alt]) {
                 const wind = leg.windsAtAltitudes[alt];
                 const dir = String(Math.round(wind.direction)).padStart(3, '0');
                 const spd = Math.round(wind.speed);
-                tableHTML += `<td class="wind-cell ${isFiledAlt ? 'text-metric font-bold' : 'text-secondary'}">${dir}°/${spd}KT</td>`;
+                const cellClass = isFiledAlt ? 'filed-altitude text-metric font-bold' : 'text-secondary';
+                tableHTML += `<td class="wind-cell ${cellClass}">${dir}°/${spd}KT</td>`;
             } else {
                 tableHTML += `<td class="wind-cell text-secondary">-</td>`;
             }

@@ -1,5 +1,5 @@
 // Flight Planning Tool - Service Worker for Offline Support
-const CACHE_NAME = 'flight-planning-v9';
+const CACHE_NAME = 'flight-planning-v18';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',

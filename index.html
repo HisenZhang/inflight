@@ -26,8 +26,15 @@
                 <span id="statusText" class="font-medium">DATABASE NOT LOADED</span>
                 <button id="loadDataBtn" class="btn btn-primary font-bold">LOAD DATA</button>
                 <button id="clearCacheBtn" class="btn btn-secondary" style="display: none;">CLEAR CACHE</button>
+                <button id="inspectDbBtn" class="btn btn-secondary" style="display: none;">INSPECT</button>
             </div>
             <div id="dataInfo" class="data-info text-sm"></div>
+            <div id="dataInspection" class="data-inspection hidden">
+                <div class="inspection-header">
+                    <span class="text-metric font-bold">DATABASE INSPECTION</span>
+                </div>
+                <div id="inspectionContent" class="inspection-content"></div>
+            </div>
             <p class="help-text">
                 Source: <span class="text-secondary">ourairports.com</span>
             </p>
@@ -61,11 +68,11 @@
             <div class="optional-features">
                 <p class="text-secondary text-sm mb-sm">OPTIONAL FEATURES:</p>
 
-                <!-- Wind Correction -->
+                <!-- Wind Correction & Time Estimation -->
                 <div class="feature-toggle">
                     <div class="checkbox-toggle" id="enableWindsToggle"></div>
-                    <label class="font-medium" style="cursor: pointer;">WIND CORRECTION</label>
-                    <span class="help-text-inline">- adjust track for winds aloft</span>
+                    <label class="font-medium" style="cursor: pointer;">WIND CORRECTION & TIME</label>
+                    <span class="help-text-inline">- winds aloft, WCA, ground speed, ETA</span>
                 </div>
                 <div id="windInputs" class="feature-inputs hidden">
                     <div class="input-row">
@@ -83,6 +90,19 @@
                         >
                     </div>
                     <div class="input-row">
+                        <label class="text-sm font-medium">TRUE AIRSPEED (KT):</label>
+                        <input
+                            type="number"
+                            id="tasInput"
+                            class="font-medium"
+                            placeholder="e.g. 120"
+                            min="0"
+                            max="500"
+                            step="5"
+                            disabled
+                        >
+                    </div>
+                    <div class="input-row">
                         <label class="text-sm font-medium">FORECAST PERIOD:</label>
                         <div class="radio-group">
                             <div class="radio-btn selected" data-period="06">6 HR</div>
@@ -95,27 +115,65 @@
                     </p>
                 </div>
 
-                <!-- Time Estimation -->
+                <!-- Fuel Planning -->
                 <div class="feature-toggle">
-                    <div class="checkbox-toggle" id="enableTimeToggle"></div>
-                    <label class="font-medium" style="cursor: pointer;">TIME ESTIMATION</label>
-                    <span class="help-text-inline">- calculate leg times and ETA</span>
+                    <div class="checkbox-toggle" id="enableFuelToggle"></div>
+                    <label class="font-medium" style="cursor: pointer;">FUEL PLANNING</label>
+                    <span class="help-text-inline">- calculate fuel burn and reserves</span>
                 </div>
-                <div id="timeInputs" class="feature-inputs hidden">
+                <div id="fuelInputs" class="feature-inputs hidden">
                     <div class="input-row">
-                        <label class="text-sm font-medium">TRUE AIRSPEED (KT):</label>
+                        <label class="text-sm font-medium">USABLE FUEL (GAL):</label>
                         <input
                             type="number"
-                            id="tasInput"
+                            id="usableFuelInput"
                             class="font-medium"
-                            placeholder="e.g. 120"
+                            placeholder="e.g. 32"
                             min="0"
                             max="500"
-                            step="5"
+                            step="1"
+                            value="32"
                             disabled
                         >
-                        <span class="help-text-inline">required for time/ground speed</span>
                     </div>
+                    <div class="input-row">
+                        <label class="text-sm font-medium">TAXI FUEL (GAL):</label>
+                        <input
+                            type="number"
+                            id="taxiFuelInput"
+                            class="font-medium"
+                            placeholder="e.g. 1"
+                            min="0"
+                            max="10"
+                            step="0.1"
+                            value="1"
+                            disabled
+                        >
+                    </div>
+                    <div class="input-row">
+                        <label class="text-sm font-medium">BURN RATE (GAL/HR):</label>
+                        <input
+                            type="number"
+                            id="burnRateInput"
+                            class="font-medium"
+                            placeholder="e.g. 10"
+                            min="0"
+                            max="50"
+                            step="0.5"
+                            value="10"
+                            disabled
+                        >
+                    </div>
+                    <div class="input-row">
+                        <label class="text-sm font-medium">VFR RESERVE:</label>
+                        <div class="radio-group">
+                            <div class="radio-btn selected" data-reserve="30">DAY (30 MIN)</div>
+                            <div class="radio-btn" data-reserve="45">NIGHT (45 MIN)</div>
+                        </div>
+                    </div>
+                    <p class="help-text mt-sm">
+                        Requires WIND CORRECTION & TIME to be enabled
+                    </p>
                 </div>
             </div>
 

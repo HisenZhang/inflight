@@ -51,7 +51,7 @@ function resolveWaypoints(routeString) {
 // ============================================
 
 async function calculateRoute(waypoints, options = {}) {
-    const { enableWinds = false, altitude = null, forecastPeriod = '06', enableTime = false, tas = null } = options;
+    const { enableWinds = false, altitude = null, forecastPeriod = '06', enableTime = false, tas = null, enableFuel = false, usableFuel = null, taxiFuel = null, burnRate = null, vfrReserve = 30 } = options;
 
     // Calculate magnetic declination for each waypoint
     waypoints.forEach(waypoint => {
@@ -79,19 +79,20 @@ async function calculateRoute(waypoints, options = {}) {
         const to = waypoints[i + 1];
 
         const distance = calculateDistance(from.lat, from.lon, to.lat, to.lon);
-        const trueBearing = calculateBearing(from.lat, from.lon, to.lat, to.lon);
-        const magBearing = trueToMagnetic(trueBearing, from.magVar);
+        const trueCourse = calculateBearing(from.lat, from.lon, to.lat, to.lon);
 
         const leg = {
             from,
             to,
             distance,
-            trueBearing,
-            magBearing,
+            trueCourse,  // TC: true course (ground track)
             magVar: from.magVar
         };
 
-        // Add wind data if enabled
+        // Calculate wind data if enabled (independent of TAS)
+        let trueHeading = trueCourse;  // TH starts as TC
+        let wca = 0;
+
         if (enableWinds && windsData && altitude) {
             try {
                 // Calculate midpoint of leg for wind interpolation
@@ -105,18 +106,24 @@ async function calculateRoute(waypoints, options = {}) {
                     leg.windSpd = windData.speed;
 
                     // Calculate wind components (headwind/crosswind)
-                    const components = calculateWindComponents(windData.direction, windData.speed, trueBearing);
+                    const components = calculateWindComponents(windData.direction, windData.speed, trueCourse);
                     leg.headwind = components.headwind;
                     leg.crosswind = components.crosswind;
 
-                    // Calculate wind correction angle (WCA)
-                    // WCA = arcsin(crosswind / TAS) when TAS is available
+                    // Calculate WCA only if TAS is available (from time estimation)
                     if (tas && tas > 0) {
+                        // WCA = arcsin(crosswind / TAS)
                         const wcaRadians = Math.asin(Math.min(Math.abs(leg.crosswind) / tas, 1));
-                        leg.wca = (wcaRadians * 180 / Math.PI) * (leg.crosswind > 0 ? 1 : -1);
-                    }
+                        wca = (wcaRadians * 180 / Math.PI) * (leg.crosswind > 0 ? 1 : -1);
+                        leg.wca = wca;
 
-                    console.log(`[Winds] Leg ${from.icao || from.ident} → ${to.icao || to.ident}: Wind ${windData.direction}°/${windData.speed}kt, HW: ${components.headwind.toFixed(1)}, XW: ${components.crosswind.toFixed(1)}`);
+                        // Apply WCA to get true heading: TH = TC + WCA
+                        trueHeading = trueCourse + wca;
+
+                        console.log(`[Winds] Leg ${from.icao || from.ident} → ${to.icao || to.ident}: Wind ${windData.direction}°/${windData.speed}kt, HW: ${components.headwind.toFixed(1)}, XW: ${components.crosswind.toFixed(1)}, WCA: ${wca.toFixed(1)}°`);
+                    } else {
+                        console.log(`[Winds] Leg ${from.icao || from.ident} → ${to.icao || to.ident}: Wind ${windData.direction}°/${windData.speed}kt, HW: ${components.headwind.toFixed(1)}, XW: ${components.crosswind.toFixed(1)} (no TAS - WCA not calculated)`);
+                    }
                 } else {
                     console.warn('[Winds] No wind data returned for leg');
                 }
@@ -144,6 +151,12 @@ async function calculateRoute(waypoints, options = {}) {
             }
         }
 
+        // Store headings and apply magnetic variation
+        // TH = TC + WCA (wind correction applied above if winds enabled)
+        // MH = TH - Mag Var
+        leg.trueHeading = trueHeading;
+        leg.magHeading = trueToMagnetic(trueHeading, from.magVar);
+
         // Add time/ground speed if enabled
         if (enableTime && tas) {
             const headwind = leg.headwind || 0;
@@ -159,11 +172,44 @@ async function calculateRoute(waypoints, options = {}) {
         totalDistance += distance;
     }
 
+    // Calculate fuel on board for each leg (if fuel planning enabled)
+    let fuelStatus = null;
+    if (enableFuel && enableTime && usableFuel && taxiFuel && burnRate) {
+        let fob = usableFuel - taxiFuel; // Fuel on board after taxi
+        const requiredReserve = (vfrReserve / 60) * burnRate; // Reserve in gallons
+
+        legs.forEach(leg => {
+            const legTimeHours = (leg.legTime || 0) / 60;
+            const fuelBurn = legTimeHours * burnRate;
+
+            leg.fuelBurnGal = fuelBurn;
+            leg.fobGal = fob - fuelBurn; // FOB at destination
+            leg.fobTime = leg.fobGal / burnRate; // FOB in hours
+
+            fob = leg.fobGal;
+        });
+
+        // Check if final FOB is sufficient
+        const finalFob = legs[legs.length - 1]?.fobGal || 0;
+        const isSufficient = finalFob >= requiredReserve;
+
+        fuelStatus = {
+            usableFuel,
+            taxiFuel,
+            burnRate,
+            vfrReserve,
+            requiredReserve,
+            finalFob,
+            isSufficient
+        };
+    }
+
     return {
         waypoints,
         legs,
         totalDistance,
-        totalTime: enableTime ? totalTime : null
+        totalTime: enableTime ? totalTime : null,
+        fuelStatus
     };
 }
 

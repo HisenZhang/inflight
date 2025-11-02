@@ -17,6 +17,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Initialize database
         await DataManager.initDB();
 
+        // Setup feature toggles (must be before enableRouteInput)
+        UIController.setupFeatureToggles();
+
         // Check for cached data
         const cacheResult = await DataManager.checkCachedData();
         if (cacheResult.loaded) {
@@ -27,9 +30,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Setup event listeners
         setupEventListeners();
-
-        // Setup feature toggles
-        UIController.setupFeatureToggles();
 
         // Display query history
         UIController.displayQueryHistory();
@@ -130,12 +130,28 @@ async function handleCalculateRoute() {
         const tasValue = parseFloat(elements.tasInput.value);
         const altitudeValue = parseFloat(elements.altitudeInput.value);
         const windsEnabled = elements.isWindsEnabled();
-        const timeEnabled = elements.isTimeEnabled();
+        const fuelEnabled = elements.isFuelEnabled();
         const forecastPeriod = elements.getSelectedForecast();
 
-        // Validate TAS if time estimation is enabled
-        if (timeEnabled && (isNaN(tasValue) || tasValue <= 0)) {
-            alert('ERROR: TRUE AIRSPEED REQUIRED FOR TIME ESTIMATION\n\nEnter TAS in knots (e.g., 120)');
+        const usableFuelValue = parseFloat(elements.usableFuelInput.value);
+        const taxiFuelValue = parseFloat(elements.taxiFuelInput.value);
+        const burnRateValue = parseFloat(elements.burnRateInput.value);
+        const vfrReserve = elements.getSelectedReserve();
+
+        // Validate TAS if wind correction is enabled
+        if (windsEnabled && (isNaN(tasValue) || tasValue <= 0)) {
+            alert('ERROR: TRUE AIRSPEED REQUIRED FOR WIND CORRECTION\n\nEnter TAS in knots (e.g., 120)');
+            return;
+        }
+
+        // Validate fuel inputs if fuel planning is enabled
+        if (fuelEnabled && !windsEnabled) {
+            alert('ERROR: FUEL PLANNING REQUIRES WIND CORRECTION & TIME\n\nEnable WIND CORRECTION & TIME first');
+            return;
+        }
+
+        if (fuelEnabled && (isNaN(usableFuelValue) || usableFuelValue <= 0 || isNaN(burnRateValue) || burnRateValue <= 0)) {
+            alert('ERROR: FUEL PLANNING REQUIRES VALID INPUTS\n\nEnter usable fuel and burn rate');
             return;
         }
 
@@ -143,15 +159,20 @@ async function handleCalculateRoute() {
             enableWinds: windsEnabled,
             altitude: windsEnabled ? altitudeValue : null,
             forecastPeriod: windsEnabled ? forecastPeriod : '06',
-            enableTime: timeEnabled,
-            tas: timeEnabled ? tasValue : null
+            enableTime: windsEnabled, // Same as winds now
+            tas: windsEnabled ? tasValue : null,
+            enableFuel: fuelEnabled,
+            usableFuel: fuelEnabled ? usableFuelValue : null,
+            taxiFuel: fuelEnabled ? taxiFuelValue : null,
+            burnRate: fuelEnabled ? burnRateValue : null,
+            vfrReserve: fuelEnabled ? vfrReserve : 30
         };
 
         // Calculate route (async now to support wind fetching)
-        const { waypoints, legs, totalDistance, totalTime } = await RouteCalculator.calculateRoute(resolutionResult.waypoints, options);
+        const { waypoints, legs, totalDistance, totalTime, fuelStatus } = await RouteCalculator.calculateRoute(resolutionResult.waypoints, options);
 
         // Display results
-        UIController.displayResults(waypoints, legs, totalDistance, totalTime, options);
+        UIController.displayResults(waypoints, legs, totalDistance, totalTime, fuelStatus, options);
 
         // Save to history
         DataManager.saveQueryHistory(routeValue.trim().toUpperCase());
