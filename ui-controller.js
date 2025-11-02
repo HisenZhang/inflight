@@ -561,8 +561,9 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelSt
         // Frequencies
         let freqHTML = '';
         if (waypoint.waypointType === 'airport') {
-            if (waypoint.id) {
-                const frequencies = DataManager.getFrequencies(waypoint.id);
+            const code = waypoint.icao || waypoint.ident;
+            if (code) {
+                const frequencies = DataManager.getFrequencies(code);
                 if (frequencies.length > 0) {
                     const grouped = {};
                     frequencies.forEach(f => {
@@ -584,18 +585,21 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelSt
 
         // Runways
         let runwayHTML = '';
-        if (waypoint.waypointType === 'airport' && waypoint.id) {
-            const runways = DataManager.getRunways(waypoint.id);
-            if (runways.length > 0) {
-                const runwayInfo = runways.map(r => {
-                    const idents = r.leIdent && r.heIdent ? `${r.leIdent}/${r.heIdent}` : (r.leIdent || r.heIdent || 'N/A');
-                    const length = r.length ? `${r.length}FT` : '';
-                    const surface = r.surface || '';
-                    return `<strong>${idents}</strong> ${length} ${surface}`.trim();
-                }).join(', ');
-                runwayHTML = `<div class="text-secondary text-xs">RWY ${runwayInfo}</div>`;
-            } else {
-                runwayHTML = `<div class="text-secondary text-xs">RWY NO DATA</div>`;
+        if (waypoint.waypointType === 'airport') {
+            const code = waypoint.icao || waypoint.ident;
+            if (code) {
+                const runways = DataManager.getRunways(code);
+                if (runways.length > 0) {
+                    const runwayInfo = runways.map(r => {
+                        const idents = r.leIdent && r.heIdent ? `${r.leIdent}/${r.heIdent}` : (r.leIdent || r.heIdent || 'N/A');
+                        const length = r.length ? `${r.length}FT` : '';
+                        const surface = r.surface || '';
+                        return `<strong>${idents}</strong> ${length} ${surface}`.trim();
+                    }).join(', ');
+                    runwayHTML = `<div class="text-secondary text-xs">RWY ${runwayInfo}</div>`;
+                } else {
+                    runwayHTML = `<div class="text-secondary text-xs">RWY NO DATA</div>`;
+                }
             }
         }
 

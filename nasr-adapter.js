@@ -262,15 +262,14 @@ function parseNASRFixes(csvText) {
     return fixes;
 }
 
-// Parse COM.csv - Communication frequencies
+// Parse FRQ.csv - Airport frequencies
 function parseNASRFrequencies(csvText) {
     const lines = csvText.split('\n');
     const headers = parseNASRCSVLine(lines[0]);
 
-    const commLocIdx = headers.indexOf('COMM_LOC_ID');
-    const typeIdx = headers.indexOf('COMM_TYPE');
-    const nameIdx = headers.indexOf('COMM_OUTLET_NAME');
-    const facilityIdIdx = headers.indexOf('FACILITY_ID');
+    const facilityIdx = headers.indexOf('SERVICED_FACILITY');
+    const freqIdx = headers.indexOf('FREQ');
+    const useIdx = headers.indexOf('FREQ_USE');
 
     const frequencies = new Map();
 
@@ -279,20 +278,21 @@ function parseNASRFrequencies(csvText) {
 
         try {
             const values = parseNASRCSVLine(lines[i]);
-            const locId = values[commLocIdx]?.trim().toUpperCase();
+            const arptId = values[facilityIdx]?.trim().toUpperCase();
+            const freqValue = values[freqIdx]?.trim();
 
-            if (!locId) continue;
+            if (!arptId || !freqValue) continue;
 
             const freq = {
-                type: values[typeIdx]?.trim() || '',
-                description: values[nameIdx]?.trim() || '',
-                facility: values[facilityIdIdx]?.trim() || ''
+                type: values[useIdx]?.trim() || 'COMM',
+                description: values[useIdx]?.trim() || '',
+                frequency: parseFloat(freqValue) // Already in MHz
             };
 
-            if (!frequencies.has(locId)) {
-                frequencies.set(locId, []);
+            if (!frequencies.has(arptId)) {
+                frequencies.set(arptId, []);
             }
-            frequencies.get(locId).push(freq);
+            frequencies.get(arptId).push(freq);
         } catch (error) {
             continue;
         }
@@ -328,7 +328,7 @@ async function loadNASRData(onStatusUpdate) {
         const fixesCSV = await fetchNASRFile('FIX_BASE.csv');
 
         onStatusUpdate('[...] DOWNLOADING NASR FREQUENCIES', 'loading');
-        const frequenciesCSV = await fetchNASRFile('COM.csv');
+        const frequenciesCSV = await fetchNASRFile('FRQ.csv');
 
         // Parse data
         onStatusUpdate('[...] PARSING NASR DATA', 'loading');

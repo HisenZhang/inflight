@@ -2,10 +2,9 @@
 
 // Database configuration
 const DB_NAME = 'FlightPlanningDB';
-const DB_VERSION = 4; // Updated for multi-source support
+const DB_VERSION = 6; // Updated for FRQ.csv frequencies + indexed cache
 const STORE_NAME = 'flightdata';
-const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days for OurAirports
-const NASR_CACHE_DURATION = 30 * 24 * 60 * 60 * 1000; // 30 days for NASR
+const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 // Query history
 const HISTORY_KEY = 'flightplan_query_history';
@@ -43,17 +42,25 @@ function initDB() {
     });
 }
 
-function saveToCache(nasrData, ourairportsData) {
+function saveToCache() {
     return new Promise((resolve, reject) => {
         const transaction = db.transaction([STORE_NAME], 'readwrite');
         const store = transaction.objectStore(STORE_NAME);
+
+        // Serialize Maps to arrays for storage
         const data = {
-            id: 'flightdata_cache_v4',
-            nasr: nasrData,
-            ourairports: ourairportsData,
+            id: 'flightdata_cache_v6',
+            airports: Array.from(airportsData.entries()),
+            iataToIcao: Array.from(iataToIcao.entries()),
+            navaids: Array.from(navaidsData.entries()),
+            fixes: Array.from(fixesData.entries()),
+            frequencies: Array.from(frequenciesData.entries()),
+            runways: Array.from(runwaysData.entries()),
+            dataSources: dataSources,
             timestamp: Date.now(),
-            version: 4
+            version: 6
         };
+
         const request = store.put(data);
         request.onsuccess = () => resolve();
         request.onerror = () => reject(request.error);
@@ -64,7 +71,7 @@ function loadFromCacheDB() {
     return new Promise((resolve, reject) => {
         const transaction = db.transaction([STORE_NAME], 'readonly');
         const store = transaction.objectStore(STORE_NAME);
-        const request = store.get('flightdata_cache_v4');
+        const request = store.get('flightdata_cache_v6');
         request.onsuccess = () => resolve(request.result);
         request.onerror = () => reject(request.error);
     });
@@ -74,10 +81,12 @@ function clearCacheDB() {
     return new Promise((resolve, reject) => {
         const transaction = db.transaction([STORE_NAME], 'readwrite');
         const store = transaction.objectStore(STORE_NAME);
-        // Clear all old cache versions
+        // Clear all cache versions
         const requests = [
             store.delete('flightdata_cache'),
-            store.delete('flightdata_cache_v4')
+            store.delete('flightdata_cache_v4'),
+            store.delete('flightdata_cache_v5'),
+            store.delete('flightdata_cache_v6')
         ];
         Promise.all(requests.map(r => new Promise((res) => {
             r.onsuccess = () => res();
@@ -97,23 +106,27 @@ async function loadData(onStatusUpdate) {
     let ourairportsData = null;
 
     try {
-        // Try NASR first (primary source for US data + fixes)
-        onStatusUpdate('[...] ATTEMPTING NASR DATA LOAD', 'loading');
-        try {
-            nasrData = await window.NASRAdapter.loadNASRData(onStatusUpdate);
+        // Load NASR and OurAirports in parallel for better performance
+        onStatusUpdate('[...] LOADING DATA SOURCES IN PARALLEL', 'loading');
+
+        const results = await Promise.allSettled([
+            window.NASRAdapter.loadNASRData(onStatusUpdate),
+            window.OurAirportsAdapter.loadOurAirportsData(onStatusUpdate)
+        ]);
+
+        if (results[0].status === 'fulfilled') {
+            nasrData = results[0].value;
             dataSources.push('NASR');
-        } catch (nasrError) {
-            console.warn('NASR loading failed:', nasrError);
+        } else {
+            console.warn('NASR loading failed:', results[0].reason);
             onStatusUpdate('[!] NASR UNAVAILABLE - USING FALLBACK', 'warning');
         }
 
-        // Load OurAirports (international + fallback)
-        onStatusUpdate('[...] LOADING OURAIRPORTS DATA', 'loading');
-        try {
-            ourairportsData = await window.OurAirportsAdapter.loadOurAirportsData(onStatusUpdate);
+        if (results[1].status === 'fulfilled') {
+            ourairportsData = results[1].value;
             dataSources.push('OurAirports');
-        } catch (oaError) {
-            console.warn('OurAirports loading failed:', oaError);
+        } else {
+            console.warn('OurAirports loading failed:', results[1].reason);
             if (!nasrData) {
                 throw new Error('Both NASR and OurAirports failed to load');
             }
@@ -122,14 +135,11 @@ async function loadData(onStatusUpdate) {
 
         // Merge data sources
         onStatusUpdate('[...] MERGING WORLDWIDE DATABASE', 'loading');
-        mergeDataSources(nasrData, ourairportsData);
+        mergeDataSources(nasrData, ourairportsData, onStatusUpdate);
 
-        // Cache the data
-        onStatusUpdate('[...] CACHING TO INDEXEDDB', 'loading');
-        await saveToCache(
-            nasrData ? nasrData.rawCSV : null,
-            ourairportsData ? ourairportsData.rawCSV : null
-        );
+        // Cache the indexed data (not raw CSV - saves re-indexing on reload)
+        onStatusUpdate('[...] CACHING INDEXED DATABASE', 'loading');
+        await saveToCache();
 
         const stats = getDataStats();
         const sourceStr = dataSources.join(' + ');
@@ -147,7 +157,7 @@ async function loadData(onStatusUpdate) {
     }
 }
 
-function mergeDataSources(nasrData, ourairportsData) {
+function mergeDataSources(nasrData, ourairportsData, onStatusUpdate = null) {
     // Clear existing data
     airportsData.clear();
     iataToIcao.clear();
@@ -159,27 +169,27 @@ function mergeDataSources(nasrData, ourairportsData) {
 
     // Add NASR data first (priority)
     if (nasrData) {
-        // NASR Airports
+        if (onStatusUpdate) onStatusUpdate('[...] INDEXING NASR AIRPORTS', 'loading');
         for (const [code, airport] of nasrData.data.airports) {
             airportsData.set(code, airport);
         }
 
-        // NASR Navaids
+        if (onStatusUpdate) onStatusUpdate('[...] INDEXING NASR NAVAIDS', 'loading');
         for (const [ident, navaid] of nasrData.data.navaids) {
             navaidsData.set(ident, navaid);
         }
 
-        // NASR Fixes (unique to NASR)
+        if (onStatusUpdate) onStatusUpdate('[...] INDEXING NASR FIXES', 'loading');
         for (const [ident, fix] of nasrData.data.fixes) {
             fixesData.set(ident, fix);
         }
 
-        // NASR Runways (indexed by airport code)
+        if (onStatusUpdate) onStatusUpdate('[...] INDEXING NASR RUNWAYS', 'loading');
         for (const [code, runways] of nasrData.data.runways) {
             runwaysData.set(code, runways);
         }
 
-        // NASR Frequencies (indexed by airport code)
+        if (onStatusUpdate) onStatusUpdate('[...] INDEXING NASR FREQUENCIES', 'loading');
         for (const [code, freqs] of nasrData.data.frequencies) {
             frequenciesData.set(code, freqs);
         }
@@ -187,13 +197,21 @@ function mergeDataSources(nasrData, ourairportsData) {
 
     // Add OurAirports data (fills gaps, doesn't override NASR)
     if (ourairportsData) {
+        if (onStatusUpdate) onStatusUpdate('[...] BUILDING AIRPORT INDEX', 'loading');
+        // Build reverse lookup: airport ID -> code (for O(1) frequency/runway mapping)
+        const idToCode = new Map();
+
         // OurAirports Airports (only add if not already present)
         for (const [code, airport] of ourairportsData.data.airports) {
+            if (airport.id) {
+                idToCode.set(airport.id, code);
+            }
             if (!airportsData.has(code)) {
                 airportsData.set(code, airport);
             }
         }
 
+        if (onStatusUpdate) onStatusUpdate('[...] INDEXING IATA CODES', 'loading');
         // Build IATA lookup
         for (const [iata, icao] of ourairportsData.data.iataToIcao) {
             if (!iataToIcao.has(iata)) {
@@ -201,6 +219,7 @@ function mergeDataSources(nasrData, ourairportsData) {
             }
         }
 
+        if (onStatusUpdate) onStatusUpdate('[...] INDEXING NAVAIDS', 'loading');
         // OurAirports Navaids (only add if not already present)
         for (const [ident, navaid] of ourairportsData.data.navaids) {
             if (!navaidsData.has(ident)) {
@@ -208,25 +227,21 @@ function mergeDataSources(nasrData, ourairportsData) {
             }
         }
 
-        // OurAirports Frequencies (indexed by airport internal ID)
+        if (onStatusUpdate) onStatusUpdate('[...] INDEXING FREQUENCIES', 'loading');
+        // OurAirports Frequencies (use O(1) lookup instead of O(n) search)
         for (const [id, freqs] of ourairportsData.data.frequencies) {
-            // Find the airport by ID and index by code
-            for (const [code, airport] of airportsData) {
-                if (airport.id === id && !frequenciesData.has(code)) {
-                    frequenciesData.set(code, freqs);
-                    break;
-                }
+            const code = idToCode.get(id);
+            if (code && !frequenciesData.has(code)) {
+                frequenciesData.set(code, freqs);
             }
         }
 
-        // OurAirports Runways (indexed by airport internal ID)
+        if (onStatusUpdate) onStatusUpdate('[...] INDEXING RUNWAYS', 'loading');
+        // OurAirports Runways (use O(1) lookup instead of O(n) search)
         for (const [id, runways] of ourairportsData.data.runways) {
-            // Find the airport by ID and index by code
-            for (const [code, airport] of airportsData) {
-                if (airport.id === id && !runwaysData.has(code)) {
-                    runwaysData.set(code, runways);
-                    break;
-                }
+            const code = idToCode.get(id);
+            if (code && !runwaysData.has(code)) {
+                runwaysData.set(code, runways);
             }
         }
     }
@@ -235,19 +250,17 @@ function mergeDataSources(nasrData, ourairportsData) {
 async function checkCachedData() {
     try {
         const cachedData = await loadFromCacheDB();
-        if (cachedData && cachedData.version === 4 && cachedData.timestamp) {
+        if (cachedData && cachedData.version === 6 && cachedData.timestamp) {
             const age = Date.now() - cachedData.timestamp;
             const daysOld = Math.floor(age / (24 * 60 * 60 * 1000));
 
-            // Load from cache
-            loadFromCache(cachedData.nasr, cachedData.ourairports);
+            // Load from indexed cache (fast - no re-indexing needed)
+            loadFromCache(cachedData);
 
-            // Determine cache status
-            const nasrAge = cachedData.nasr ? age : null;
-            const nasrExpired = nasrAge && nasrAge >= NASR_CACHE_DURATION;
-            const oaExpired = age >= CACHE_DURATION;
+            // Determine cache status (conservative: use 7-day expiry)
+            const cacheExpired = age >= CACHE_DURATION;
 
-            if (nasrExpired || oaExpired) {
+            if (cacheExpired) {
                 return {
                     loaded: true,
                     status: `[!] DATABASE LOADED (${daysOld}D OLD - UPDATE RECOMMENDED)`,
@@ -257,7 +270,7 @@ async function checkCachedData() {
                 const sources = dataSources.join(' + ');
                 return {
                     loaded: true,
-                    status: `[OK] DATABASE LOADED FROM CACHE (${daysOld}D OLD - ${sources})`,
+                    status: `[OK] INDEXED DATABASE LOADED (${daysOld}D OLD - ${sources})`,
                     type: 'success'
                 };
             }
@@ -268,51 +281,16 @@ async function checkCachedData() {
     return { loaded: false };
 }
 
-function loadFromCache(nasrRawCSV, ourairportsRawCSV) {
-    dataSources = [];
-
-    let nasrData = null;
-    let ourairportsData = null;
-
-    // Parse NASR cache
-    if (nasrRawCSV) {
-        try {
-            nasrData = {
-                data: {
-                    airports: window.NASRAdapter.parseNASRAirports(nasrRawCSV.airportsCSV),
-                    runways: window.NASRAdapter.parseNASRRunways(nasrRawCSV.runwaysCSV),
-                    navaids: window.NASRAdapter.parseNASRNavaids(nasrRawCSV.navaidsCSV),
-                    fixes: window.NASRAdapter.parseNASRFixes(nasrRawCSV.fixesCSV),
-                    frequencies: window.NASRAdapter.parseNASRFrequencies(nasrRawCSV.frequenciesCSV)
-                }
-            };
-            dataSources.push('NASR');
-        } catch (error) {
-            console.error('Error parsing cached NASR data:', error);
-        }
-    }
-
-    // Parse OurAirports cache
-    if (ourairportsRawCSV) {
-        try {
-            const { airports, iataToIcao } = window.OurAirportsAdapter.parseOAAirports(ourairportsRawCSV.airportsCSV);
-            ourairportsData = {
-                data: {
-                    airports,
-                    iataToIcao,
-                    navaids: window.OurAirportsAdapter.parseOANavaids(ourairportsRawCSV.navaidsCSV),
-                    frequencies: window.OurAirportsAdapter.parseOAFrequencies(ourairportsRawCSV.frequenciesCSV),
-                    runways: window.OurAirportsAdapter.parseOARunways(ourairportsRawCSV.runwaysCSV)
-                }
-            };
-            dataSources.push('OurAirports');
-        } catch (error) {
-            console.error('Error parsing cached OurAirports data:', error);
-        }
-    }
-
-    // Merge
-    mergeDataSources(nasrData, ourairportsData);
+function loadFromCache(cachedData) {
+    // Deserialize arrays back to Maps (instant - no parsing/indexing needed!)
+    airportsData = new Map(cachedData.airports || []);
+    iataToIcao = new Map(cachedData.iataToIcao || []);
+    navaidsData = new Map(cachedData.navaids || []);
+    fixesData = new Map(cachedData.fixes || []);
+    frequenciesData = new Map(cachedData.frequencies || []);
+    runwaysData = new Map(cachedData.runways || []);
+    dataSources = cachedData.dataSources || [];
+    dataTimestamp = cachedData.timestamp;
 }
 
 async function clearCache() {
