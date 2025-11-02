@@ -108,6 +108,17 @@ async function calculateRoute(waypoints, options = {}) {
                     const components = calculateWindComponents(windData.direction, windData.speed, trueBearing);
                     leg.headwind = components.headwind;
                     leg.crosswind = components.crosswind;
+
+                    // Calculate wind correction angle (WCA)
+                    // WCA = arcsin(crosswind / TAS) when TAS is available
+                    if (tas && tas > 0) {
+                        const wcaRadians = Math.asin(Math.min(Math.abs(leg.crosswind) / tas, 1));
+                        leg.wca = (wcaRadians * 180 / Math.PI) * (leg.crosswind > 0 ? 1 : -1);
+                    }
+
+                    console.log(`[Winds] Leg ${from.icao || from.ident} → ${to.icao || to.ident}: Wind ${windData.direction}°/${windData.speed}kt, HW: ${components.headwind.toFixed(1)}, XW: ${components.crosswind.toFixed(1)}`);
+                } else {
+                    console.warn('[Winds] No wind data returned for leg');
                 }
             } catch (error) {
                 console.error('[Winds] Error calculating wind for leg:', error);

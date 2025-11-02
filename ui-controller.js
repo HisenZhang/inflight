@@ -430,7 +430,7 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, option
         tableHTML += `
             <tr class="wpt-row">
                 <td class="wpt-num text-primary font-bold">${waypointNumber}</td>
-                <td>
+                <td class="wpt-info-cell">
                     <div class="${colorClass} font-bold">${code}</div>
                     <div class="text-xs text-secondary">${typeDisplay}</div>
                 </td>
@@ -454,28 +454,49 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, option
                 ? String(Math.round(leg.magBearing)).padStart(3, '0') + '°'
                 : '-';
 
-            // Build leg info line
-            let legInfoHTML = `
-                <span class="leg-item">LEG: <span class="text-navaid font-bold">${legDist}</span> NM</span>
-                <span class="leg-item">TRUE: <span class="text-navaid font-bold">${trueTrack}°</span> ${cardinal}</span>
-                <span class="leg-item">MAG: <span class="text-airport font-bold">${magTrackDisplay}</span></span>
+            // DISTANCE SECTION
+            let distanceSection = `
+                <div class="leg-section">
+                    <span class="leg-section-label text-secondary">DISTANCE:</span>
+                    <span class="leg-item">LEG <span class="text-navaid font-bold">${legDist} NM</span></span>
+                    <span class="leg-item">CUM <span class="text-navaid font-bold">${cumulativeDistance.toFixed(1)} NM</span></span>
+                </div>
+            `;
+
+            // HEADING SECTION
+            let headingSection = `
+                <div class="leg-section">
+                    <span class="leg-section-label text-secondary">HEADING:</span>
+                    <span class="leg-item">TRUE <span class="text-navaid font-bold">${trueTrack}°</span> ${cardinal}</span>
+                    <span class="leg-item">MAG <span class="text-airport font-bold">${magTrackDisplay}</span></span>
             `;
 
             // Add wind data if available
             if (leg.windDir !== undefined && leg.windSpd !== undefined) {
                 const windDir = String(Math.round(leg.windDir)).padStart(3, '0');
                 const windSpd = Math.round(leg.windSpd);
-                const headwind = leg.headwind ? Math.round(leg.headwind) : 0;
-                const crosswind = leg.crosswind ? Math.round(Math.abs(leg.crosswind)) : 0;
-                const crosswindDir = leg.crosswind > 0 ? 'R' : 'L';
+                const headwind = leg.headwind ? leg.headwind : 0;
+                const crosswind = leg.crosswind ? leg.crosswind : 0;
 
-                legInfoHTML += `
-                <span class="leg-item">WIND: <span class="text-metric font-bold">${windDir}°/${windSpd}</span> KT</span>
-                <span class="leg-item">HW: <span class="text-metric font-bold">${headwind >= 0 ? '+' : ''}${headwind}</span> | XW: <span class="text-metric font-bold">${crosswind}${crosswindDir}</span></span>
+                // Determine wind type (headwind/tailwind)
+                const windType = headwind >= 0 ? 'HEAD' : 'TAIL';
+                const windValue = Math.abs(Math.round(headwind));
+
+                // Wind correction angle
+                const wcaDisplay = leg.wca !== undefined
+                    ? `WCA <span class="text-metric font-bold">${leg.wca >= 0 ? '+' : ''}${leg.wca.toFixed(1)}°</span>`
+                    : '';
+
+                headingSection += `
+                    <span class="leg-item">WIND <span class="text-metric font-bold">${windDir}°/${windSpd} KT</span></span>
+                    <span class="leg-item">${windType} <span class="text-metric font-bold">${windValue} KT</span></span>
+                    ${wcaDisplay ? `<span class="leg-item">${wcaDisplay}</span>` : ''}
                 `;
             }
+            headingSection += `</div>`;
 
-            // Add ground speed and time if available
+            // TIME SECTION (if time estimation enabled)
+            let timeSection = '';
             if (leg.groundSpeed !== undefined && leg.legTime !== undefined) {
                 const gs = Math.round(leg.groundSpeed);
                 const hours = Math.floor(leg.legTime / 60);
@@ -487,21 +508,22 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, option
                 const cumMinutes = Math.round(cumulativeTime % 60);
                 const cumTimeDisplay = cumHours > 0 ? `${cumHours}H ${cumMinutes}M` : `${cumMinutes}M`;
 
-                legInfoHTML += `
-                <span class="leg-item">GS: <span class="text-metric font-bold">${gs}</span> KT</span>
-                <span class="leg-item">ETE: <span class="text-metric font-bold">${timeDisplay}</span></span>
-                <span class="leg-item">CUM TIME: <span class="text-metric font-bold">${cumTimeDisplay}</span></span>
+                timeSection = `
+                    <div class="leg-section">
+                        <span class="leg-section-label text-secondary">TIME:</span>
+                        <span class="leg-item">GS <span class="text-metric font-bold">${gs} KT</span></span>
+                        <span class="leg-item">ETE <span class="text-metric font-bold">${timeDisplay}</span></span>
+                        <span class="leg-item">CUM <span class="text-metric font-bold">${cumTimeDisplay}</span></span>
+                    </div>
                 `;
             }
-
-            legInfoHTML += `
-                <span class="leg-item">CUM DIST: <span class="text-navaid font-bold">${cumulativeDistance.toFixed(1)}</span> NM</span>
-            `;
 
             tableHTML += `
                 <tr class="leg-row">
                     <td colspan="4" class="leg-info text-xs">
-                        ${legInfoHTML}
+                        ${distanceSection}
+                        ${headingSection}
+                        ${timeSection}
                     </td>
                 </tr>
             `;

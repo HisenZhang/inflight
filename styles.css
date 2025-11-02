@@ -448,8 +448,34 @@ header h1 {
     border-top: 2px solid var(--border-color);
 }
 
+.navlog-table .wpt-row td {
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: var(--space-md);
+}
+
 .navlog-table .leg-row {
     background: var(--bg-panel);
+}
+
+.navlog-table .leg-row td {
+    padding-top: var(--space-md);
+    padding-bottom: var(--space-md);
+}
+
+.leg-section {
+    margin-bottom: var(--space-sm);
+    line-height: 1.8;
+}
+
+.leg-section:last-child {
+    margin-bottom: 0;
+}
+
+.leg-section-label {
+    display: inline-block;
+    min-width: 80px;
+    font-weight: 500;
+    letter-spacing: 1px;
 }
 
 .wpt-num {
