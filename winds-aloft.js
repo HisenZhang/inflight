@@ -237,20 +237,29 @@ function interpolateWind(lat, lon, altitude, windsData) {
     // Find nearest stations with data
     const nearStations = findNearestStations(lat, lon, 4);
 
+    console.log(`[Winds] Interpolating for (${lat.toFixed(2)}, ${lon.toFixed(2)}) at ${altitude}ft`);
+    console.log(`[Winds] Nearest stations:`, nearStations.map(s => `${s.code} (${s.distance.toFixed(1)}nm)`).join(', '));
+    console.log(`[Winds] Available wind data stations:`, Object.keys(windsData).slice(0, 10).join(', '), `... (${Object.keys(windsData).length} total)`);
+
     // Collect wind data from nearby stations
     const stationWinds = [];
     for (const {code, distance, station} of nearStations) {
         const stationData = windsData[code];
-        if (!stationData) continue;
+        if (!stationData) {
+            console.log(`[Winds] No data for station ${code}`);
+            continue;
+        }
 
         // Interpolate altitude for this station
         const wind = interpolateAltitude(altitude, stationData);
         if (wind) {
             stationWinds.push({...wind, distance});
+            console.log(`[Winds] Station ${code}: Wind ${wind.dir}°/${wind.spd}kt at ${altitude}ft`);
         }
     }
 
     if (stationWinds.length === 0) {
+        console.warn(`[Winds] No wind data found for any nearby stations`);
         return null;
     }
 
@@ -284,9 +293,9 @@ function interpolateWind(lat, lon, altitude, windsData) {
     const avgTemp = tempCount > 0 ? weightedTemp / tempCount : null;
 
     return {
-        dir: Math.round(avgDir),
-        spd: Math.round(avgSpd),
-        temp: avgTemp !== null ? Math.round(avgTemp) : null
+        direction: Math.round(avgDir),
+        speed: Math.round(avgSpd),
+        temperature: avgTemp !== null ? Math.round(avgTemp) : null
     };
 }
 
