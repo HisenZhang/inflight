@@ -1,11 +1,12 @@
 // Flight Planning Tool - Service Worker for Offline Support
-const CACHE_NAME = 'flight-planning-v7';
+const CACHE_NAME = 'flight-planning-v8';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
     './app.js',
-    './geodesy.js',  // WMM2025 with spherical harmonics
-    './wind-stations.csv',  // Winds aloft station locations
+    './geodesy.js',  // WGS84 + WMM2025
+    './wind-stations.js',  // Wind station locations (embedded)
+    './winds-aloft.js',  // Winds aloft module
     './styles.css',
     './manifest.json'
 ];

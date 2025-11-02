@@ -4,8 +4,6 @@ const AIRPORTS_CSV_URL = 'https://cors.hisenz.com/?url=https://raw.githubusercon
 const NAVAIDS_CSV_URL = 'https://cors.hisenz.com/?url=https://raw.githubusercontent.com/davidmegginson/ourairports-data/refs/heads/main/navaids.csv';
 const FREQUENCIES_CSV_URL = 'https://cors.hisenz.com/?url=https://raw.githubusercontent.com/davidmegginson/ourairports-data/refs/heads/main/airport-frequencies.csv';
 const RUNWAYS_CSV_URL = 'https://cors.hisenz.com/?url=https://raw.githubusercontent.com/davidmegginson/ourairports-data/refs/heads/main/runways.csv';
-const WIND_STATIONS_CSV_URL = './wind-stations.csv'; // Local file, no CORS needed
-const WINDS_ALOFT_API_URL = 'https://cors.hisenz.com/?url=https://aviationweather.gov/api/data/windtemp?region=us&level=low&fcst=06';
 const DB_NAME = 'FlightPlanningDB';
 const DB_VERSION = 3;
 const STORE_NAME = 'flightdata';
@@ -16,8 +14,6 @@ let iataToIcao = new Map(); // Map of IATA code -> ICAO code (for lookups)
 let navaidsData = new Map(); // Map of navaid ident -> navaid object
 let frequenciesData = new Map(); // Map of airport_id -> frequencies array
 let runwaysData = new Map(); // Map of airport_id -> runways array
-let windStationsData = new Map(); // Map of station ID -> wind station object
-let windsAloftData = null; // Cached winds aloft data {timestamp, data}
 let db = null; // IndexedDB database
 let dataTimestamp = null; // Last update timestamp
 
@@ -28,6 +24,8 @@ const statusText = document.getElementById('statusText');
 const dataInfo = document.getElementById('dataInfo');
 const routeInput = document.getElementById('routeInput');
 const altitudeInput = document.getElementById('altitudeInput');
+const tasInput = document.getElementById('tasInput');
+const departureInput = document.getElementById('departureInput');
 const calculateBtn = document.getElementById('calculateBtn');
 const clearRouteBtn = document.getElementById('clearRouteBtn');
 const resultsSection = document.getElementById('resultsSection');
@@ -286,14 +284,6 @@ async function loadAirportData() {
         }
         const runwaysCSV = await runwaysResponse.text();
 
-        // Fetch wind stations
-        updateStatus('[...] LOADING WIND STATIONS', 'loading');
-        const windStationsResponse = await fetch(WIND_STATIONS_CSV_URL);
-        if (!windStationsResponse.ok) {
-            throw new Error(`HTTP ${windStationsResponse.status}`);
-        }
-        const windStationsCSV = await windStationsResponse.text();
-
         // Parse all data
         updateStatus('[...] PARSING DATABASE', 'loading');
         const timestamp = Date.now();
@@ -301,7 +291,6 @@ async function loadAirportData() {
         parseNavaidData(navaidsCSV);
         parseFrequencyData(frequenciesCSV);
         parseRunwayData(runwaysCSV);
-        parseWindStationsData(windStationsCSV);
         dataTimestamp = timestamp;
 
         // Cache the data in IndexedDB
@@ -493,56 +482,6 @@ function parseRunwayData(csvText) {
         }
         runwaysData.get(airportId).push(runway);
     }
-}
-
-// Parse wind stations CSV data
-function parseWindStationsData(csvText) {
-    const lines = csvText.split('\n');
-    const headers = parseCSVLine(lines[0]);
-
-    // Find column indices
-    const identIdx = headers.indexOf('Identifier');
-    const locationIdx = headers.indexOf('Location');
-    const latDegIdx = headers.indexOf('LatitudeDeg');
-    const latMinIdx = headers.indexOf('LatitudeMin');
-    const lonDegIdx = headers.indexOf('LongitudeDeg');
-    const lonMinIdx = headers.indexOf('LongitudeMin');
-    const elevationIdx = headers.indexOf('Elevation');
-    const stateIdx = headers.indexOf('State');
-
-    windStationsData.clear();
-
-    for (let i = 1; i < lines.length; i++) {
-        if (!lines[i].trim()) continue;
-
-        const values = parseCSVLine(lines[i]);
-        const ident = values[identIdx];
-
-        if (!ident) continue;
-
-        // Convert degrees + minutes to decimal degrees
-        const latDeg = parseInt(values[latDegIdx]) || 0;
-        const latMin = parseFloat(values[latMinIdx]) || 0;
-        const lonDeg = parseInt(values[lonDegIdx]) || 0;
-        const lonMin = parseFloat(values[lonMinIdx]) || 0;
-
-        // Calculate decimal degrees (handle negative longitudes for West)
-        const lat = latDeg + (latMin / 60);
-        const lon = lonDeg + (lonMin / 60);
-
-        const station = {
-            ident: ident,
-            location: values[locationIdx],
-            lat: lat,
-            lon: lon,
-            elevation: parseInt(values[elevationIdx]) || 0,
-            state: values[stateIdx]
-        };
-
-        windStationsData.set(ident, station);
-    }
-
-    console.log(`[Wind Stations] Loaded ${windStationsData.size} stations`);
 }
 
 // Simple CSV parser (handles quoted fields)
@@ -1269,6 +1208,8 @@ function showDataInfo() {
 function enableRouteInput() {
     routeInput.disabled = false;
     altitudeInput.disabled = false;
+    tasInput.disabled = false;
+    departureInput.disabled = false;
     calculateBtn.disabled = false;
 }
 

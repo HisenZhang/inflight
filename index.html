@@ -66,6 +66,25 @@
                 >
                 <span class="help-text-inline">for winds aloft</span>
             </div>
+            <div class="tas-input">
+                <label for="tasInput">TRUE AIRSPEED (KT)</label>
+                <input
+                    type="number"
+                    id="tasInput"
+                    placeholder="e.g. 120"
+                    min="0"
+                    max="500"
+                    step="5"
+                    disabled
+                >
+                <label for="departureInput" style="margin-left: 20px;">DEPARTURE TIME</label>
+                <input
+                    type="time"
+                    id="departureInput"
+                    disabled
+                >
+                <span class="help-text-inline">optional</span>
+            </div>
             <div id="queryHistory" class="query-history" style="display: none;">
                 <div class="history-label">RECENT</div>
                 <div id="historyList" class="history-list"></div>
@@ -80,6 +99,8 @@
     </div>
 
     <script src="geodesy.js"></script>
+    <script src="wind-stations.js"></script>
+    <script src="winds-aloft.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

@@ -264,6 +264,46 @@ header h1 {
     cursor: not-allowed;
 }
 
+/* TAS and Departure Time Input */
+.tas-input {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 5px;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.tas-input label {
+    font-weight: 500;
+    color: var(--text-primary);
+    letter-spacing: 1px;
+    font-size: 0.8rem;
+}
+
+.tas-input input[type="number"],
+.tas-input input[type="time"] {
+    width: 120px;
+    padding: 6px 8px;
+    border: 2px solid var(--border-color);
+    background: var(--bg-primary);
+    color: var(--color-airport);
+    font-size: 0.95rem;
+    font-family: inherit;
+    letter-spacing: 1px;
+    font-weight: 500;
+}
+
+.tas-input input:focus {
+    outline: none;
+    border-color: var(--color-metric);
+}
+
+.tas-input input:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
 /* Query History */
 .query-history {
     margin-top: 10px;
