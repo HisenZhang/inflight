@@ -50,15 +50,30 @@ function resolveWaypoints(routeString) {
 // NAVIGATION CALCULATIONS
 // ============================================
 
-function calculateRoute(waypoints) {
+async function calculateRoute(waypoints, options = {}) {
+    const { enableWinds = false, altitude = null, departureTime = null, enableTime = false, tas = null } = options;
+
     // Calculate magnetic declination for each waypoint
     waypoints.forEach(waypoint => {
         waypoint.magVar = getMagneticDeclination(waypoint.lat, waypoint.lon);
     });
 
+    // Fetch winds aloft if wind correction is enabled
+    let windsData = null;
+    if (enableWinds && altitude && typeof fetchWindsAloft === 'function') {
+        try {
+            const forecastPeriod = departureTime ? getForecastPeriod(departureTime) : '06';
+            windsData = await fetchWindsAloft(forecastPeriod);
+            console.log(`[Winds] Loaded ${forecastPeriod}hr forecast`);
+        } catch (error) {
+            console.error('[Winds] Failed to fetch winds aloft:', error);
+        }
+    }
+
     // Calculate legs
     const legs = [];
     let totalDistance = 0;
+    let totalTime = 0;
 
     for (let i = 0; i < waypoints.length - 1; i++) {
         const from = waypoints[i];
@@ -68,22 +83,57 @@ function calculateRoute(waypoints) {
         const trueBearing = calculateBearing(from.lat, from.lon, to.lat, to.lon);
         const magBearing = trueToMagnetic(trueBearing, from.magVar);
 
-        legs.push({
+        const leg = {
             from,
             to,
             distance,
             trueBearing,
             magBearing,
             magVar: from.magVar
-        });
+        };
 
+        // Add wind data if enabled
+        if (enableWinds && windsData && altitude) {
+            try {
+                // Calculate midpoint of leg for wind interpolation
+                const midLat = (from.lat + to.lat) / 2;
+                const midLon = (from.lon + to.lon) / 2;
+
+                const windData = interpolateWind(midLat, midLon, altitude, windsData);
+                if (windData) {
+                    leg.windDir = windData.direction;
+                    leg.windSpd = windData.speed;
+
+                    // Calculate wind components (headwind/crosswind)
+                    const components = calculateWindComponents(windData.direction, windData.speed, trueBearing);
+                    leg.headwind = components.headwind;
+                    leg.crosswind = components.crosswind;
+                }
+            } catch (error) {
+                console.error('[Winds] Error calculating wind for leg:', error);
+            }
+        }
+
+        // Add time/ground speed if enabled
+        if (enableTime && tas) {
+            const headwind = leg.headwind || 0;
+            const groundSpeed = tas - headwind;
+            const legTime = (distance / groundSpeed) * 60; // minutes
+
+            leg.groundSpeed = groundSpeed > 0 ? groundSpeed : 0;
+            leg.legTime = groundSpeed > 0 ? legTime : 0;
+            totalTime += leg.legTime || 0;
+        }
+
+        legs.push(leg);
         totalDistance += distance;
     }
 
     return {
         waypoints,
         legs,
-        totalDistance
+        totalDistance,
+        totalTime: enableTime ? totalTime : null
     };
 }
 

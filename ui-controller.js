@@ -304,10 +304,11 @@ function selectAutocompleteItem(index) {
 // RESULTS DISPLAY
 // ============================================
 
-function displayResults(waypoints, legs, totalDistance) {
+function displayResults(waypoints, legs, totalDistance, totalTime = null, options = {}) {
     // Route summary
     const routeCodes = waypoints.map(w => RouteCalculator.getWaypointCode(w)).join(' ');
-    elements.routeSummary.innerHTML = `
+
+    let summaryHTML = `
         <div class="summary-item">
             <span class="summary-label text-secondary text-sm">ROUTE</span>
             <span class="summary-value text-navaid font-bold">${routeCodes}</span>
@@ -316,6 +317,21 @@ function displayResults(waypoints, legs, totalDistance) {
             <span class="summary-label text-secondary text-sm">TOTAL DISTANCE</span>
             <span class="summary-value text-navaid font-bold">${totalDistance.toFixed(1)} NM</span>
         </div>
+    `;
+
+    // Add total time if available
+    if (totalTime !== null && options.enableTime) {
+        const hours = Math.floor(totalTime / 60);
+        const minutes = Math.round(totalTime % 60);
+        summaryHTML += `
+        <div class="summary-item">
+            <span class="summary-label text-secondary text-sm">TOTAL TIME</span>
+            <span class="summary-value text-navaid font-bold">${hours}H ${minutes}M</span>
+        </div>
+        `;
+    }
+
+    summaryHTML += `
         <div class="summary-item">
             <span class="summary-label text-secondary text-sm">WAYPOINTS</span>
             <span class="summary-value text-navaid font-bold">${waypoints.length}</span>
@@ -325,6 +341,8 @@ function displayResults(waypoints, legs, totalDistance) {
             <span class="summary-value text-navaid font-bold">${legs.length}</span>
         </div>
     `;
+
+    elements.routeSummary.innerHTML = summaryHTML;
 
     // Build navlog table
     let tableHTML = `
@@ -435,13 +453,48 @@ function displayResults(waypoints, legs, totalDistance) {
                 ? String(Math.round(leg.magBearing)).padStart(3, '0') + '°'
                 : '-';
 
+            // Build leg info line
+            let legInfoHTML = `
+                <span class="leg-item">LEG: <span class="text-navaid font-bold">${legDist}</span> NM</span>
+                <span class="leg-item">TRUE: <span class="text-navaid font-bold">${trueTrack}°</span> ${cardinal}</span>
+                <span class="leg-item">MAG: <span class="text-airport font-bold">${magTrackDisplay}</span></span>
+            `;
+
+            // Add wind data if available
+            if (leg.windDir !== undefined && leg.windSpd !== undefined) {
+                const windDir = String(Math.round(leg.windDir)).padStart(3, '0');
+                const windSpd = Math.round(leg.windSpd);
+                const headwind = leg.headwind ? Math.round(leg.headwind) : 0;
+                const crosswind = leg.crosswind ? Math.round(Math.abs(leg.crosswind)) : 0;
+                const crosswindDir = leg.crosswind > 0 ? 'R' : 'L';
+
+                legInfoHTML += `
+                <span class="leg-item">WIND: <span class="text-metric font-bold">${windDir}°/${windSpd}</span> KT</span>
+                <span class="leg-item">HW: <span class="text-metric font-bold">${headwind >= 0 ? '+' : ''}${headwind}</span> | XW: <span class="text-metric font-bold">${crosswind}${crosswindDir}</span></span>
+                `;
+            }
+
+            // Add ground speed and time if available
+            if (leg.groundSpeed !== undefined && leg.legTime !== undefined) {
+                const gs = Math.round(leg.groundSpeed);
+                const hours = Math.floor(leg.legTime / 60);
+                const minutes = Math.round(leg.legTime % 60);
+                const timeDisplay = hours > 0 ? `${hours}H ${minutes}M` : `${minutes}M`;
+
+                legInfoHTML += `
+                <span class="leg-item">GS: <span class="text-metric font-bold">${gs}</span> KT</span>
+                <span class="leg-item">TIME: <span class="text-metric font-bold">${timeDisplay}</span></span>
+                `;
+            }
+
+            legInfoHTML += `
+                <span class="leg-item">CUM: <span class="text-navaid font-bold">${cumulativeDistance.toFixed(1)}</span> NM</span>
+            `;
+
             tableHTML += `
                 <tr class="leg-row">
                     <td colspan="4" class="leg-info text-xs">
-                        <span class="leg-item">LEG: <span class="text-navaid font-bold">${legDist}</span> NM</span>
-                        <span class="leg-item">TRUE: <span class="text-navaid font-bold">${trueTrack}°</span> ${cardinal}</span>
-                        <span class="leg-item">MAG: <span class="text-airport font-bold">${magTrackDisplay}</span></span>
-                        <span class="leg-item">CUM: <span class="text-navaid font-bold">${cumulativeDistance.toFixed(1)}</span> NM</span>
+                        ${legInfoHTML}
                     </td>
                 </tr>
             `;

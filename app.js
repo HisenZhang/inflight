@@ -114,7 +114,7 @@ async function handleClearCache() {
     }
 }
 
-function handleCalculateRoute() {
+async function handleCalculateRoute() {
     const elements = UIController.getElements();
     const routeValue = elements.routeInput.value;
 
@@ -125,11 +125,20 @@ function handleCalculateRoute() {
         return;
     }
 
-    // Calculate route
-    const { waypoints, legs, totalDistance } = RouteCalculator.calculateRoute(resolutionResult.waypoints);
+    // Gather options from UI
+    const options = {
+        enableWinds: elements.enableWinds.checked,
+        altitude: elements.enableWinds.checked ? parseFloat(elements.altitudeInput.value) : null,
+        departureTime: elements.enableWinds.checked ? elements.departureInput.value : null,
+        enableTime: elements.enableTime.checked,
+        tas: elements.enableTime.checked ? parseFloat(elements.tasInput.value) : null
+    };
+
+    // Calculate route (async now to support wind fetching)
+    const { waypoints, legs, totalDistance, totalTime } = await RouteCalculator.calculateRoute(resolutionResult.waypoints, options);
 
     // Display results
-    UIController.displayResults(waypoints, legs, totalDistance);
+    UIController.displayResults(waypoints, legs, totalDistance, totalTime, options);
 
     // Save to history
     DataManager.saveQueryHistory(routeValue.trim().toUpperCase());
