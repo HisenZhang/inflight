@@ -129,19 +129,22 @@ async function handleCalculateRoute() {
         // Gather options from UI
         const tasValue = parseFloat(elements.tasInput.value);
         const altitudeValue = parseFloat(elements.altitudeInput.value);
+        const windsEnabled = elements.isWindsEnabled();
+        const timeEnabled = elements.isTimeEnabled();
+        const forecastPeriod = elements.getSelectedForecast();
 
         // Validate TAS if time estimation is enabled
-        if (elements.enableTime.checked && (isNaN(tasValue) || tasValue <= 0)) {
+        if (timeEnabled && (isNaN(tasValue) || tasValue <= 0)) {
             alert('ERROR: TRUE AIRSPEED REQUIRED FOR TIME ESTIMATION\n\nEnter TAS in knots (e.g., 120)');
             return;
         }
 
         const options = {
-            enableWinds: elements.enableWinds.checked,
-            altitude: elements.enableWinds.checked ? altitudeValue : null,
-            departureTime: elements.enableWinds.checked ? elements.departureInput.value : null,
-            enableTime: elements.enableTime.checked,
-            tas: elements.enableTime.checked ? tasValue : null
+            enableWinds: windsEnabled,
+            altitude: windsEnabled ? altitudeValue : null,
+            forecastPeriod: windsEnabled ? forecastPeriod : '06',
+            enableTime: timeEnabled,
+            tas: timeEnabled ? tasValue : null
         };
 
         // Calculate route (async now to support wind fetching)

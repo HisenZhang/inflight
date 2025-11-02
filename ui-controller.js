@@ -26,12 +26,12 @@ function init() {
         clearRouteBtn: document.getElementById('clearRouteBtn'),
 
         // Optional feature elements
-        enableWinds: document.getElementById('enableWinds'),
+        enableWindsToggle: document.getElementById('enableWindsToggle'),
         windInputs: document.getElementById('windInputs'),
         altitudeInput: document.getElementById('altitudeInput'),
-        departureInput: document.getElementById('departureInput'),
+        forecastBtns: document.querySelectorAll('.radio-btn'),
 
-        enableTime: document.getElementById('enableTime'),
+        enableTimeToggle: document.getElementById('enableTimeToggle'),
         timeInputs: document.getElementById('timeInputs'),
         tasInput: document.getElementById('tasInput'),
 
@@ -121,33 +121,56 @@ function clearRoute() {
 // ============================================
 
 function setupFeatureToggles() {
+    let windsEnabled = false;
+    let timeEnabled = false;
+
     // Wind correction toggle
-    elements.enableWinds.addEventListener('change', () => {
-        if (elements.enableWinds.checked) {
+    elements.enableWindsToggle.addEventListener('click', () => {
+        windsEnabled = !windsEnabled;
+        if (windsEnabled) {
+            elements.enableWindsToggle.classList.add('checked');
             elements.windInputs.classList.remove('hidden');
             if (!elements.routeInput.disabled) {
                 elements.altitudeInput.disabled = false;
-                elements.departureInput.disabled = false;
             }
         } else {
+            elements.enableWindsToggle.classList.remove('checked');
             elements.windInputs.classList.add('hidden');
             elements.altitudeInput.disabled = true;
-            elements.departureInput.disabled = true;
         }
     });
 
     // Time estimation toggle
-    elements.enableTime.addEventListener('change', () => {
-        if (elements.enableTime.checked) {
+    elements.enableTimeToggle.addEventListener('click', () => {
+        timeEnabled = !timeEnabled;
+        if (timeEnabled) {
+            elements.enableTimeToggle.classList.add('checked');
             elements.timeInputs.classList.remove('hidden');
             if (!elements.routeInput.disabled) {
                 elements.tasInput.disabled = false;
             }
         } else {
+            elements.enableTimeToggle.classList.remove('checked');
             elements.timeInputs.classList.add('hidden');
             elements.tasInput.disabled = true;
         }
     });
+
+    // Forecast period radio buttons
+    elements.forecastBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            elements.forecastBtns.forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+        });
+    });
+
+    // Store state getters
+    elements.isWindsEnabled = () => windsEnabled;
+    elements.isTimeEnabled = () => timeEnabled;
+    elements.getSelectedForecast = () => {
+        const selected = document.querySelector('.radio-btn.selected');
+        return selected ? selected.getAttribute('data-period') : '06';
+    };
 }
 
 // ============================================

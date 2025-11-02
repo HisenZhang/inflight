@@ -63,8 +63,8 @@
 
                 <!-- Wind Correction -->
                 <div class="feature-toggle">
-                    <input type="checkbox" id="enableWinds">
-                    <label for="enableWinds" class="font-medium">WIND CORRECTION</label>
+                    <div class="checkbox-toggle" id="enableWindsToggle"></div>
+                    <label class="font-medium" style="cursor: pointer;">WIND CORRECTION</label>
                     <span class="help-text-inline">- adjust track for winds aloft</span>
                 </div>
                 <div id="windInputs" class="feature-inputs hidden">
@@ -83,21 +83,22 @@
                         >
                     </div>
                     <div class="input-row">
-                        <label class="text-sm font-medium">DEPARTURE TIME:</label>
-                        <input
-                            type="time"
-                            id="departureInput"
-                            class="font-medium"
-                            disabled
-                        >
-                        <span class="help-text-inline">optional - for forecast selection (6/12/24hr)</span>
+                        <label class="text-sm font-medium">FORECAST PERIOD:</label>
+                        <div class="radio-group">
+                            <div class="radio-btn selected" data-period="06">6 HR</div>
+                            <div class="radio-btn" data-period="12">12 HR</div>
+                            <div class="radio-btn" data-period="24">24 HR</div>
+                        </div>
                     </div>
+                    <p class="help-text mt-sm">
+                        <span class="text-warning">⚠</span> Wind data requires internet access
+                    </p>
                 </div>
 
                 <!-- Time Estimation -->
                 <div class="feature-toggle">
-                    <input type="checkbox" id="enableTime">
-                    <label for="enableTime" class="font-medium">TIME ESTIMATION</label>
+                    <div class="checkbox-toggle" id="enableTimeToggle"></div>
+                    <label class="font-medium" style="cursor: pointer;">TIME ESTIMATION</label>
                     <span class="help-text-inline">- calculate leg times and ETA</span>
                 </div>
                 <div id="timeInputs" class="feature-inputs hidden">

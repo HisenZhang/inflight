@@ -51,7 +51,7 @@ function resolveWaypoints(routeString) {
 // ============================================
 
 async function calculateRoute(waypoints, options = {}) {
-    const { enableWinds = false, altitude = null, departureTime = null, enableTime = false, tas = null } = options;
+    const { enableWinds = false, altitude = null, forecastPeriod = '06', enableTime = false, tas = null } = options;
 
     // Calculate magnetic declination for each waypoint
     waypoints.forEach(waypoint => {
@@ -62,7 +62,6 @@ async function calculateRoute(waypoints, options = {}) {
     let windsData = null;
     if (enableWinds && altitude && typeof fetchWindsAloft === 'function') {
         try {
-            const forecastPeriod = departureTime ? getForecastPeriod(departureTime) : '06';
             windsData = await fetchWindsAloft(forecastPeriod);
             console.log(`[Winds] Loaded ${forecastPeriod}hr forecast`);
         } catch (error) {
