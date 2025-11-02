@@ -56,7 +56,16 @@ function setupEventListeners() {
     elements.clearRouteBtn.addEventListener('click', handleClearRoute);
 
     // Autocomplete
-    elements.routeInput.addEventListener('input', UIController.handleAutocompleteInput);
+    elements.routeInput.addEventListener('input', (e) => {
+        // Force uppercase
+        const start = e.target.selectionStart;
+        const end = e.target.selectionEnd;
+        e.target.value = e.target.value.toUpperCase();
+        e.target.setSelectionRange(start, end);
+
+        // Trigger autocomplete
+        UIController.handleAutocompleteInput(e);
+    });
     elements.routeInput.addEventListener('keydown', (e) => {
         UIController.handleAutocompleteKeydown(e);
         // Handle Enter key for calculation

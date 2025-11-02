@@ -36,7 +36,7 @@
                 <div id="inspectionContent" class="inspection-content"></div>
             </div>
             <p class="help-text">
-                Source: <span class="text-secondary">ourairports.com</span>
+                Sources: <span class="text-secondary">FAA NASR (US) + OurAirports (Worldwide)</span>
             </p>
         </div>
 
@@ -61,7 +61,7 @@
                 <button id="clearRouteBtn" class="btn btn-secondary">CLEAR</button>
             </div>
             <p class="help-text mb-md">
-                Enter airports (ICAO/IATA) or navaids (VOR/NDB/DME) separated by spaces
+                Enter airports (ICAO/IATA), navaids (VOR/NDB/DME), or fixes separated by spaces
             </p>
 
             <!-- Optional Features -->
@@ -197,12 +197,14 @@
     </div>
 
     <!-- Scripts - Load modules in order -->
-    <script src="geodesy.js"></script>           <!-- WGS84 + WMM2025 library -->
-    <script src="wind-stations.js"></script>     <!-- Wind station data -->
-    <script src="winds-aloft.js"></script>       <!-- Wind calculation module -->
-    <script src="data-manager.js"></script>      <!-- Data loading & caching module -->
-    <script src="route-calculator.js"></script>  <!-- Navigation calculations module -->
-    <script src="ui-controller.js"></script>     <!-- UI interactions module -->
-    <script src="app.js"></script>               <!-- Main coordinator -->
+    <script src="geodesy.js"></script>              <!-- WGS84 + WMM2025 library -->
+    <script src="wind-stations.js"></script>        <!-- Wind station data -->
+    <script src="winds-aloft.js"></script>          <!-- Wind calculation module -->
+    <script src="nasr-adapter.js"></script>         <!-- NASR data adapter (primary) -->
+    <script src="ourairports-adapter.js"></script>  <!-- OurAirports adapter (fallback) -->
+    <script src="data-manager.js"></script>         <!-- Data loading & caching orchestrator -->
+    <script src="route-calculator.js"></script>     <!-- Navigation calculations module -->
+    <script src="ui-controller.js"></script>        <!-- UI interactions module -->
+    <script src="app.js"></script>                  <!-- Main coordinator -->
 </body>
 </html>

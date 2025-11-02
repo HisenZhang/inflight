@@ -75,6 +75,7 @@ function showDataInfo() {
     const stats = DataManager.getDataStats();
     const totalAirports = stats.airports;
     const totalNavaids = stats.navaids;
+    const totalFixes = stats.fixes || 0;
 
     let timestampText = '';
     if (stats.timestamp) {
@@ -86,7 +87,7 @@ function showDataInfo() {
     }
 
     elements.dataInfo.innerHTML = `
-        <p><strong>AIRPORTS:</strong> ${totalAirports.toLocaleString()} | <strong>NAVAIDS:</strong> ${totalNavaids.toLocaleString()} | <strong>STATUS:</strong> READY</p>
+        <p><strong>AIRPORTS:</strong> ${totalAirports.toLocaleString()} | <strong>NAVAIDS:</strong> ${totalNavaids.toLocaleString()} | <strong>FIXES:</strong> ${totalFixes.toLocaleString()} | <strong>STATUS:</strong> READY</p>
         ${timestampText}
     `;
 
@@ -145,13 +146,14 @@ function populateInspection() {
         <div class="inspection-section">
             <div><span class="inspection-label">TOTAL AIRPORTS:</span><span class="inspection-value">${stats.airports.toLocaleString()}</span></div>
             <div><span class="inspection-label">TOTAL NAVAIDS:</span><span class="inspection-value">${stats.navaids.toLocaleString()}</span></div>
-            <div><span class="inspection-label">TOTAL WAYPOINTS:</span><span class="inspection-value">${(stats.airports + stats.navaids).toLocaleString()}</span></div>
+            <div><span class="inspection-label">TOTAL FIXES:</span><span class="inspection-value">${(stats.fixes || 0).toLocaleString()}</span></div>
+            <div><span class="inspection-label">TOTAL WAYPOINTS:</span><span class="inspection-value">${(stats.airports + stats.navaids + (stats.fixes || 0)).toLocaleString()}</span></div>
         </div>
 
         <div class="inspection-section">
             <div><span class="inspection-label">CACHE TIMESTAMP:</span><span class="text-secondary">${timestampFormatted}</span></div>
             <div><span class="inspection-label">CACHE AGE:</span><span class="${cacheColor}">${cacheAge}</span></div>
-            <div><span class="inspection-label">DATA SOURCE:</span><span class="text-secondary">OurAirports.com (CSV)</span></div>
+            <div><span class="inspection-label">DATA SOURCES:</span><span class="text-secondary">${stats.sources || 'Unknown'}</span></div>
         </div>
 
         <div class="inspection-section">
@@ -351,11 +353,15 @@ function displayAutocomplete(results) {
 
     let html = '';
     results.forEach((result, index) => {
-        const colorClass = result.waypointType === 'airport' ? 'type-airport' : 'type-navaid';
+        let colorClass = 'type-navaid';
+        if (result.waypointType === 'airport') colorClass = 'type-airport';
+        else if (result.waypointType === 'fix') colorClass = 'type-fix';
+
         html += `
             <div class="autocomplete-item ${colorClass}" data-index="${index}">
                 <span class="code">${result.code}</span>
                 <span class="name">${result.type} - ${result.name}</span>
+                <span class="location">${result.location || ''}</span>
             </div>
         `;
     });

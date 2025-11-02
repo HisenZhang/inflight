@@ -17,13 +17,17 @@ function resolveWaypoints(routeString) {
     for (const code of route) {
         let waypoint = null;
 
-        // Priority: ICAO (4+ chars) → Navaid → IATA (3 chars)
+        // Priority: ICAO (4+ chars) → Navaid → Fix → IATA (3 chars)
         if (code.length >= 4) {
             waypoint = DataManager.getAirport(code);
         }
 
         if (!waypoint) {
             waypoint = DataManager.getNavaid(code);
+        }
+
+        if (!waypoint) {
+            waypoint = DataManager.getFix(code);
         }
 
         if (!waypoint && code.length === 3) {

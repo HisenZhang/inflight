@@ -1,5 +1,5 @@
 // Flight Planning Tool - Service Worker for Offline Support
-const CACHE_NAME = 'flight-planning-v18';
+const CACHE_NAME = 'flight-planning-v20';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
@@ -7,7 +7,9 @@ const ASSETS_TO_CACHE = [
     './geodesy.js',  // WGS84 + WMM2025
     './wind-stations.js',  // Wind station locations (embedded)
     './winds-aloft.js',  // Winds aloft module
-    './data-manager.js',  // Data loading and caching
+    './nasr-adapter.js',  // NASR data adapter (primary)
+    './ourairports-adapter.js',  // OurAirports adapter (fallback)
+    './data-manager.js',  // Data loading orchestrator
     './route-calculator.js',  // Navigation calculations
     './ui-controller.js',  // UI updates and interactions
     './styles.css',
