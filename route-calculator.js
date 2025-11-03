@@ -311,11 +311,11 @@ function formatCoordinate(value, type) {
 function formatNavaidFrequency(freqKhz, type) {
     if (type === 'VOR' || type === 'VOR-DME' || type === 'VORTAC') {
         const freqMhz = freqKhz / 1000;
-        return `${freqMhz.toFixed(2)} MHz`;
+        return `${freqMhz.toFixed(2)}`;
     } else if (type === 'NDB' || type === 'NDB-DME') {
-        return `${freqKhz} kHz`;
+        return `${freqKhz}`;
     } else {
-        return `${freqKhz} kHz`;
+        return `${freqKhz}`;
     }
 }
 
