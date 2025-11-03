@@ -145,9 +145,14 @@ body {
 }
 
 .radio-btn.selected {
-    border-color: var(--color-metric);
-    color: var(--color-metric);
+    border-color: var(--color-metric) !important;
+    color: var(--color-metric) !important;
+    background: rgba(102, 255, 255, 0.1) !important;
     font-weight: 700;
+}
+
+.radio-btn.selected:hover {
+    color: var(--color-metric) !important;
 }
 
 /* Flex */

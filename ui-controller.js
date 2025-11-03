@@ -33,14 +33,14 @@ function init() {
         windInputs: document.getElementById('windInputs'),
         altitudeInput: document.getElementById('altitudeInput'),
         tasInput: document.getElementById('tasInput'),
-        forecastBtns: document.querySelectorAll('.radio-btn'),
+        forecastBtns: document.querySelectorAll('.radio-btn[data-period]'),
 
         enableFuelToggle: document.getElementById('enableFuelToggle'),
         fuelInputs: document.getElementById('fuelInputs'),
         usableFuelInput: document.getElementById('usableFuelInput'),
         taxiFuelInput: document.getElementById('taxiFuelInput'),
         burnRateInput: document.getElementById('burnRateInput'),
-        fuelReserveBtns: document.querySelectorAll('[data-reserve]'),
+        fuelReserveBtns: document.querySelectorAll('.radio-btn[data-reserve]'),
 
         // Results elements
         resultsSection: document.getElementById('resultsSection'),
