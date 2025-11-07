@@ -5,7 +5,17 @@
 // ============================================
 
 function resolveWaypoints(routeString) {
-    const route = routeString.trim().toUpperCase().split(/\s+/).filter(w => w.length > 0);
+    // First, expand airways and procedures if available
+    let expandedRoute = routeString;
+    if (typeof RouteExpander !== 'undefined') {
+        const expansion = RouteExpander.expandRoute(routeString);
+        if (expansion.expanded.length > 0) {
+            expandedRoute = expansion.expandedString;
+            console.log(`[Route] Expanded: ${routeString} → ${expandedRoute}`);
+        }
+    }
+
+    const route = expandedRoute.trim().toUpperCase().split(/\s+/).filter(w => w.length > 0);
 
     if (route.length < 1) {
         return { error: 'ERROR: ENTER AT LEAST ONE WAYPOINT' };
@@ -47,7 +57,10 @@ function resolveWaypoints(routeString) {
         };
     }
 
-    return { waypoints };
+    return {
+        waypoints,
+        expandedRoute: expandedRoute !== routeString ? expandedRoute : null
+    };
 }
 
 // ============================================

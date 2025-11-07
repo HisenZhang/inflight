@@ -301,6 +301,127 @@ function parseNASRFrequencies(csvText) {
     return frequencies;
 }
 
+// Parse AWY_BASE.csv - Airways
+function parseNASRAirways(csvText) {
+    const lines = csvText.split('\n');
+    const headers = parseNASRCSVLine(lines[0]);
+
+    const awyIdIdx = headers.indexOf('AWY_ID');
+    const awyStringIdx = headers.indexOf('AIRWAY_STRING');
+
+    const airways = new Map();
+
+    for (let i = 1; i < lines.length; i++) {
+        if (!lines[i].trim()) continue;
+
+        try {
+            const values = parseNASRCSVLine(lines[i]);
+            const awyId = values[awyIdIdx]?.trim().toUpperCase();
+            const awyString = values[awyStringIdx]?.trim();
+
+            if (!awyId || !awyString) continue;
+
+            // Parse airway string into array of fixes
+            const fixes = awyString.split(/\s+/).filter(f => f.length > 0);
+
+            airways.set(awyId, {
+                id: awyId,
+                fixes: fixes
+            });
+        } catch (error) {
+            continue;
+        }
+    }
+
+    return airways;
+}
+
+// Parse STAR_RTE.csv - STAR procedures
+function parseNASRSTARs(csvText) {
+    const lines = csvText.split('\n');
+    const headers = parseNASRCSVLine(lines[0]);
+
+    const starCodeIdx = headers.indexOf('STAR_COMPUTER_CODE');
+    const routeTypeIdx = headers.indexOf('ROUTE_PORTION_TYPE');
+    const pointSeqIdx = headers.indexOf('POINT_SEQ');
+    const pointIdx = headers.indexOf('POINT');
+
+    const stars = new Map();
+
+    for (let i = 1; i < lines.length; i++) {
+        if (!lines[i].trim()) continue;
+
+        try {
+            const values = parseNASRCSVLine(lines[i]);
+            const starCode = values[starCodeIdx]?.trim();
+            const routeType = values[routeTypeIdx]?.trim();
+            const pointSeq = parseInt(values[pointSeqIdx]);
+            const point = values[pointIdx]?.trim().toUpperCase();
+
+            if (!starCode || routeType !== 'BODY' || !point) continue;
+
+            if (!stars.has(starCode)) {
+                stars.set(starCode, []);
+            }
+
+            stars.get(starCode).push({ seq: pointSeq, fix: point });
+        } catch (error) {
+            continue;
+        }
+    }
+
+    // Sort by sequence and extract fix names
+    for (const [code, fixes] of stars) {
+        fixes.sort((a, b) => a.seq - b.seq);
+        stars.set(code, fixes.map(f => f.fix));
+    }
+
+    return stars;
+}
+
+// Parse DP_RTE.csv - Departure procedures
+function parseNASRDPs(csvText) {
+    const lines = csvText.split('\n');
+    const headers = parseNASRCSVLine(lines[0]);
+
+    const dpCodeIdx = headers.indexOf('DP_COMPUTER_CODE');
+    const routeTypeIdx = headers.indexOf('ROUTE_PORTION_TYPE');
+    const pointSeqIdx = headers.indexOf('POINT_SEQ');
+    const pointIdx = headers.indexOf('POINT');
+
+    const dps = new Map();
+
+    for (let i = 1; i < lines.length; i++) {
+        if (!lines[i].trim()) continue;
+
+        try {
+            const values = parseNASRCSVLine(lines[i]);
+            const dpCode = values[dpCodeIdx]?.trim();
+            const routeType = values[routeTypeIdx]?.trim();
+            const pointSeq = parseInt(values[pointSeqIdx]);
+            const point = values[pointIdx]?.trim().toUpperCase();
+
+            if (!dpCode || routeType !== 'BODY' || !point) continue;
+
+            if (!dps.has(dpCode)) {
+                dps.set(dpCode, []);
+            }
+
+            dps.get(dpCode).push({ seq: pointSeq, fix: point });
+        } catch (error) {
+            continue;
+        }
+    }
+
+    // Sort by sequence and extract fix names
+    for (const [code, fixes] of dps) {
+        fixes.sort((a, b) => a.seq - b.seq);
+        dps.set(code, fixes.map(f => f.fix));
+    }
+
+    return dps;
+}
+
 // Load all NASR data
 async function loadNASRData(onStatusUpdate) {
     try {
@@ -330,6 +451,15 @@ async function loadNASRData(onStatusUpdate) {
         onStatusUpdate('[...] DOWNLOADING NASR FREQUENCIES', 'loading');
         const frequenciesCSV = await fetchNASRFile('FRQ.csv');
 
+        onStatusUpdate('[...] DOWNLOADING NASR AIRWAYS', 'loading');
+        const airwaysCSV = await fetchNASRFile('AWY_BASE.csv');
+
+        onStatusUpdate('[...] DOWNLOADING NASR STARs', 'loading');
+        const starsCSV = await fetchNASRFile('STAR_RTE.csv');
+
+        onStatusUpdate('[...] DOWNLOADING NASR DPs', 'loading');
+        const dpsCSV = await fetchNASRFile('DP_RTE.csv');
+
         // Parse data
         onStatusUpdate('[...] PARSING NASR DATA', 'loading');
         const airports = parseNASRAirports(airportsCSV);
@@ -337,6 +467,9 @@ async function loadNASRData(onStatusUpdate) {
         const navaids = parseNASRNavaids(navaidsCSV);
         const fixes = parseNASRFixes(fixesCSV);
         const frequencies = parseNASRFrequencies(frequenciesCSV);
+        const airways = parseNASRAirways(airwaysCSV);
+        const stars = parseNASRSTARs(starsCSV);
+        const dps = parseNASRDPs(dpsCSV);
 
         onStatusUpdate('[OK] NASR DATA LOADED', 'success');
 
@@ -348,14 +481,20 @@ async function loadNASRData(onStatusUpdate) {
                 runways,
                 navaids,
                 fixes,
-                frequencies
+                frequencies,
+                airways,
+                stars,
+                dps
             },
             rawCSV: {
                 airportsCSV,
                 runwaysCSV,
                 navaidsCSV,
                 fixesCSV,
-                frequenciesCSV
+                frequenciesCSV,
+                airwaysCSV,
+                starsCSV,
+                dpsCSV
             }
         };
     } catch (error) {
@@ -372,5 +511,8 @@ window.NASRAdapter = {
     parseNASRRunways,
     parseNASRNavaids,
     parseNASRFixes,
-    parseNASRFrequencies
+    parseNASRFrequencies,
+    parseNASRAirways,
+    parseNASRSTARs,
+    parseNASRDPs
 };

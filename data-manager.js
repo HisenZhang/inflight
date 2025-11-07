@@ -2,7 +2,7 @@
 
 // Database configuration
 const DB_NAME = 'FlightPlanningDB';
-const DB_VERSION = 6; // Updated for FRQ.csv frequencies + indexed cache
+const DB_VERSION = 7; // Updated for airways, STARs, and DPs
 const STORE_NAME = 'flightdata';
 const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days
 
@@ -17,6 +17,9 @@ let navaidsData = new Map();         // Merged navaids
 let fixesData = new Map();           // Waypoints/fixes (NASR only)
 let frequenciesData = new Map();     // Frequencies by airport ID
 let runwaysData = new Map();         // Runways by airport ID/code
+let airwaysData = new Map();         // Airways (NASR only)
+let starsData = new Map();           // STARs (NASR only)
+let dpsData = new Map();             // DPs (NASR only)
 let db = null;
 let dataTimestamp = null;
 let dataSources = [];                // Track which sources were loaded
@@ -49,16 +52,19 @@ function saveToCache() {
 
         // Serialize Maps to arrays for storage
         const data = {
-            id: 'flightdata_cache_v6',
+            id: 'flightdata_cache_v7',
             airports: Array.from(airportsData.entries()),
             iataToIcao: Array.from(iataToIcao.entries()),
             navaids: Array.from(navaidsData.entries()),
             fixes: Array.from(fixesData.entries()),
             frequencies: Array.from(frequenciesData.entries()),
             runways: Array.from(runwaysData.entries()),
+            airways: Array.from(airwaysData.entries()),
+            stars: Array.from(starsData.entries()),
+            dps: Array.from(dpsData.entries()),
             dataSources: dataSources,
             timestamp: Date.now(),
-            version: 6
+            version: 7
         };
 
         const request = store.put(data);
@@ -71,7 +77,7 @@ function loadFromCacheDB() {
     return new Promise((resolve, reject) => {
         const transaction = db.transaction([STORE_NAME], 'readonly');
         const store = transaction.objectStore(STORE_NAME);
-        const request = store.get('flightdata_cache_v6');
+        const request = store.get('flightdata_cache_v7');
         request.onsuccess = () => resolve(request.result);
         request.onerror = () => reject(request.error);
     });
@@ -86,7 +92,8 @@ function clearCacheDB() {
             store.delete('flightdata_cache'),
             store.delete('flightdata_cache_v4'),
             store.delete('flightdata_cache_v5'),
-            store.delete('flightdata_cache_v6')
+            store.delete('flightdata_cache_v6'),
+            store.delete('flightdata_cache_v7')
         ];
         Promise.all(requests.map(r => new Promise((res) => {
             r.onsuccess = () => res();
@@ -165,6 +172,9 @@ function mergeDataSources(nasrData, ourairportsData, onStatusUpdate = null) {
     fixesData.clear();
     frequenciesData.clear();
     runwaysData.clear();
+    airwaysData.clear();
+    starsData.clear();
+    dpsData.clear();
     dataSources = [];
 
     // Add NASR data first (priority)
@@ -192,6 +202,29 @@ function mergeDataSources(nasrData, ourairportsData, onStatusUpdate = null) {
         if (onStatusUpdate) onStatusUpdate('[...] INDEXING NASR FREQUENCIES', 'loading');
         for (const [code, freqs] of nasrData.data.frequencies) {
             frequenciesData.set(code, freqs);
+        }
+
+        if (onStatusUpdate) onStatusUpdate('[...] INDEXING NASR AIRWAYS', 'loading');
+        for (const [id, airway] of nasrData.data.airways) {
+            airwaysData.set(id, airway);
+        }
+
+        if (onStatusUpdate) onStatusUpdate('[...] INDEXING NASR STARS', 'loading');
+        for (const [id, star] of nasrData.data.stars) {
+            starsData.set(id, star);
+        }
+
+        if (onStatusUpdate) onStatusUpdate('[...] INDEXING NASR DPS', 'loading');
+        for (const [id, dp] of nasrData.data.dps) {
+            dpsData.set(id, dp);
+        }
+
+        // Initialize RouteExpander with data
+        if (typeof window.RouteExpander !== 'undefined') {
+            if (onStatusUpdate) onStatusUpdate('[...] INITIALIZING ROUTE EXPANDER', 'loading');
+            window.RouteExpander.setAirwaysData(airwaysData);
+            window.RouteExpander.setStarsData(starsData);
+            window.RouteExpander.setDpsData(dpsData);
         }
     }
 
@@ -250,7 +283,7 @@ function mergeDataSources(nasrData, ourairportsData, onStatusUpdate = null) {
 async function checkCachedData() {
     try {
         const cachedData = await loadFromCacheDB();
-        if (cachedData && cachedData.version === 6 && cachedData.timestamp) {
+        if (cachedData && cachedData.version === 7 && cachedData.timestamp) {
             const age = Date.now() - cachedData.timestamp;
             const daysOld = Math.floor(age / (24 * 60 * 60 * 1000));
 
@@ -289,8 +322,18 @@ function loadFromCache(cachedData) {
     fixesData = new Map(cachedData.fixes || []);
     frequenciesData = new Map(cachedData.frequencies || []);
     runwaysData = new Map(cachedData.runways || []);
+    airwaysData = new Map(cachedData.airways || []);
+    starsData = new Map(cachedData.stars || []);
+    dpsData = new Map(cachedData.dps || []);
     dataSources = cachedData.dataSources || [];
     dataTimestamp = cachedData.timestamp;
+
+    // Initialize RouteExpander with data
+    if (typeof window.RouteExpander !== 'undefined') {
+        window.RouteExpander.setAirwaysData(airwaysData);
+        window.RouteExpander.setStarsData(starsData);
+        window.RouteExpander.setDpsData(dpsData);
+    }
 }
 
 async function clearCache() {
@@ -301,6 +344,9 @@ async function clearCache() {
     fixesData.clear();
     frequenciesData.clear();
     runwaysData.clear();
+    airwaysData.clear();
+    starsData.clear();
+    dpsData.clear();
     dataTimestamp = null;
     dataSources = [];
 }
