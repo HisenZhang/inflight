@@ -54,8 +54,18 @@ function expandRoute(routeString) {
             if (/^[A-Z]\d+$/.test(airway)) {
                 const segment = expandAirway(fromFix, airway, toFix);
                 if (segment.expanded) {
-                    expanded.push(...segment.fixes);
-                    i += 3;
+                    // Check if fromFix is already the last element (for chained airways)
+                    const lastFix = expanded[expanded.length - 1];
+                    if (lastFix === fromFix) {
+                        // Don't duplicate the connecting fix
+                        expanded.push(...segment.fixes.slice(1));
+                    } else {
+                        expanded.push(...segment.fixes);
+                    }
+                    // Skip to toFix (i+2) instead of past it (i+3)
+                    // This allows chaining: PAYGE Q822 GONZZ Q822 FNT
+                    // After expanding PAYGE-GONZZ, we want to process GONZZ-FNT next
+                    i += 2;
                     continue;
                 }
             }
