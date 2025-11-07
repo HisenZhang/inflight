@@ -1,24 +1,25 @@
 // Route Expander Module - Handles airway and procedure expansion
 // Supports: Airways (V123, J45, Q822), STARs (WYNDE3), SIDs (ACCRA5)
 
-let airwaysData = new Map();
-let starsData = new Map();
-let dpsData = new Map();
+// Module-local references (set by DataManager)
+let localAirwaysData = new Map();
+let localStarsData = new Map();
+let localDpsData = new Map();
 
 // ============================================
 // INITIALIZATION
 // ============================================
 
 function setAirwaysData(airways) {
-    airwaysData = airways;
+    localAirwaysData = airways;
 }
 
 function setStarsData(stars) {
-    starsData = stars;
+    localStarsData = stars;
 }
 
 function setDpsData(dps) {
-    dpsData = dps;
+    localDpsData = dps;
 }
 
 // ============================================
@@ -77,7 +78,7 @@ function expandRoute(routeString) {
 // ============================================
 
 function expandAirway(fromFix, airwayId, toFix) {
-    const airway = airwaysData.get(airwayId);
+    const airway = localAirwaysData.get(airwayId);
 
     if (!airway || !airway.fixes) {
         return { expanded: false };
@@ -134,7 +135,7 @@ function expandProcedure(procedureName) {
 
     // Try STAR first
     for (const pattern of patterns) {
-        const star = starsData.get(pattern);
+        const star = localStarsData.get(pattern);
         if (star && star.length > 0) {
             return {
                 expanded: true,
@@ -147,7 +148,7 @@ function expandProcedure(procedureName) {
 
     // Try DP
     for (const pattern of patterns) {
-        const dp = dpsData.get(pattern);
+        const dp = localDpsData.get(pattern);
         if (dp && dp.length > 0) {
             return {
                 expanded: true,
@@ -166,22 +167,22 @@ function expandProcedure(procedureName) {
 // ============================================
 
 function getAirway(airwayId) {
-    return airwaysData.get(airwayId);
+    return localAirwaysData.get(airwayId);
 }
 
 function getStar(starName) {
-    return starsData.get(starName);
+    return localStarsData.get(starName);
 }
 
 function getDp(dpName) {
-    return dpsData.get(dpName);
+    return localDpsData.get(dpName);
 }
 
 function getStats() {
     return {
-        airways: airwaysData.size,
-        stars: starsData.size,
-        dps: dpsData.size
+        airways: localAirwaysData.size,
+        stars: localStarsData.size,
+        dps: localDpsData.size
     };
 }
 
