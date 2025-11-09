@@ -593,8 +593,10 @@ function generateMap(waypoints, legs) {
         const baseRightX = pos.x + (baseRightLocalX * cosH - baseRightLocalY * sinH);
         const baseRightY = pos.y + (baseRightLocalX * sinH + baseRightLocalY * cosH);
 
-        // Draw tall triangle without stroke (classic vector look)
-        svg += `<polygon points="${tipX},${tipY} ${baseLeftX},${baseLeftY} ${baseRightX},${baseRightY}" fill="#00ff00"/>`;
+        // Draw tall triangle with bright lime green fill and white outline for maximum visibility
+        const arrowStrokeWidth = isMobile ? 6 : 3;
+        svg += `<polygon points="${tipX},${tipY} ${baseLeftX},${baseLeftY} ${baseRightX},${baseRightY}"
+                fill="#00ff00" stroke="#ffffff" stroke-width="${arrowStrokeWidth}" stroke-linejoin="miter"/>`;
     }
 
     // Close the transform group
