@@ -127,16 +127,32 @@ function expandRoute(routeString) {
 function expandAirway(fromFix, airwayId, toFix) {
     const airway = localAirwaysData.get(airwayId);
 
-    if (!airway || !airway.fixes) {
-        return { expanded: false };
+    if (!airway) {
+        console.warn(`[RouteExpander] Airway ${airwayId} not found in database (${localAirwaysData.size} airways loaded)`);
+        return { expanded: false, error: 'Airway not found' };
+    }
+
+    if (!airway.fixes) {
+        console.warn(`[RouteExpander] Airway ${airwayId} has no fixes array`);
+        return { expanded: false, error: 'Airway has no fixes' };
     }
 
     const fixes = airway.fixes;
     const fromIdx = fixes.indexOf(fromFix);
     const toIdx = fixes.indexOf(toFix);
 
-    if (fromIdx === -1 || toIdx === -1) {
-        return { expanded: false };
+    if (fromIdx === -1) {
+        console.warn(`[RouteExpander] Fix ${fromFix} not found on airway ${airwayId} (has ${fixes.length} fixes)`);
+        console.debug(`[RouteExpander] First 10 fixes on ${airwayId}:`, fixes.slice(0, 10));
+        console.debug(`[RouteExpander] Last 10 fixes on ${airwayId}:`, fixes.slice(-10));
+        return { expanded: false, error: `${fromFix} not on ${airwayId}` };
+    }
+
+    if (toIdx === -1) {
+        console.warn(`[RouteExpander] Fix ${toFix} not found on airway ${airwayId} (has ${fixes.length} fixes)`);
+        console.debug(`[RouteExpander] First 10 fixes on ${airwayId}:`, fixes.slice(0, 10));
+        console.debug(`[RouteExpander] Last 10 fixes on ${airwayId}:`, fixes.slice(-10));
+        return { expanded: false, error: `${toFix} not on ${airwayId}` };
     }
 
     // Extract segment (inclusive)
