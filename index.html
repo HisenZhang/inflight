@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=7">
+    <link rel="stylesheet" href="styles.css?v=8">
     <link rel="manifest" href="manifest.json">
 </head>
 <body>
@@ -256,50 +256,46 @@
             <!-- Navigation Panel - Hidden when GPS is off -->
             <div id="navigationPanel" class="navigation-panel" style="display: none;">
                 <div id="navigationContent" class="navigation-content">
-                    <div class="instruction-details">
-                        <div class="detail-item">
-                            <div class="detail-label">WPT</div>
-                            <div class="detail-value next-wp"></div>
+                    <div class="nav-single-row">
+                        <div class="nav-item">
+                            <span class="nav-label">WPT</span>
+                            <span class="nav-value next-wp"></span>
                         </div>
-                        <div class="detail-item">
-                            <div class="detail-label">HDG</div>
-                            <div class="detail-value req-hdg"></div>
+                        <div class="nav-item">
+                            <span class="nav-label">HDG</span>
+                            <span class="nav-value req-hdg"></span>
                         </div>
-                        <div class="detail-item">
-                            <div class="detail-label">DIST</div>
-                            <div class="detail-value dist-nm"></div>
+                        <div class="nav-item">
+                            <span class="nav-label">DIST</span>
+                            <span class="nav-value dist-nm"></span>
                         </div>
-                        <div class="detail-item">
-                            <div class="detail-label">ETE</div>
-                            <div class="detail-value ete-value"></div>
+                        <div class="nav-item">
+                            <span class="nav-label">ETE</span>
+                            <span class="nav-value ete-value"></span>
                         </div>
-                        <div class="detail-item" style="grid-column: 1 / -1;">
-                            <div style="display: flex; gap: 0.25rem;">
-                                <button class="btn btn-secondary btn-sm" id="prevNavWptBtn" style="flex: 1; padding: 0.15rem 0.25rem; font-size: 0.7rem;">◄ PREV</button>
-                                <button class="btn btn-secondary btn-sm" id="nextNavWptBtn" style="flex: 1; padding: 0.15rem 0.25rem; font-size: 0.7rem;">NEXT ►</button>
-                            </div>
+                        <div class="nav-item">
+                            <span class="nav-label">GS</span>
+                            <span class="nav-value gs-value"></span>
                         </div>
-                    </div>
-                    <div class="instruction-secondary">
-                        <div class="secondary-item">
-                            <span class="secondary-label">GS</span>
-                            <span class="secondary-value gs-value"></span>
+                        <div class="nav-item">
+                            <span class="nav-label">ETA</span>
+                            <span class="nav-value eta-time"></span>
                         </div>
-                        <div class="secondary-item">
-                            <span class="secondary-label">ETA</span>
-                            <span class="secondary-value eta-time"></span>
+                        <div class="nav-item">
+                            <span class="nav-label">DEST</span>
+                            <span class="nav-value eta-dest-value">--:--</span>
                         </div>
-                        <div class="secondary-item">
-                            <span class="secondary-label">DEST</span>
-                            <span class="secondary-value eta-dest-value">--:--</span>
+                        <div class="nav-item">
+                            <span class="nav-label">H-ACC</span>
+                            <span class="nav-value gps-horiz-acc text-secondary">--</span>
                         </div>
-                        <div class="secondary-item">
-                            <span class="secondary-label">H-ACC</span>
-                            <span class="secondary-value gps-horiz-acc text-secondary">--</span>
+                        <div class="nav-item">
+                            <span class="nav-label">V-ACC</span>
+                            <span class="nav-value gps-vert-acc text-secondary">--</span>
                         </div>
-                        <div class="secondary-item">
-                            <span class="secondary-label">V-ACC</span>
-                            <span class="secondary-value gps-vert-acc text-secondary">--</span>
+                        <div class="nav-buttons">
+                            <button class="btn btn-secondary btn-sm" id="prevNavWptBtn">◄</button>
+                            <button class="btn btn-secondary btn-sm" id="nextNavWptBtn">►</button>
                         </div>
                     </div>
                 </div>
