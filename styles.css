@@ -1154,19 +1154,6 @@ header h1 {
         display: none;
     }
 
-    /* Compact button text on mobile */
-    #exportNavlogBtn::before { content: 'EXPORT'; }
-    #exportNavlogBtn { font-size: 0; }
-    #importNavlogBtn::before { content: 'IMPORT'; }
-    #importNavlogBtn { font-size: 0; }
-
-    /* Cleaner route entry on mobile - remove unnecessary borders */
-    .optional-features {
-        border-top: none;
-        padding-top: var(--space-sm);
-        margin-top: var(--space-md);
-    }
-
     .feature-inputs {
         border-left: none;
         margin-left: 0;
@@ -1234,8 +1221,33 @@ header h1 {
         font-size: 10px;
     }
 
+    /* Full screen map on mobile */
+    .tactical-display {
+        /* Make map panel full height minus tab navigation */
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        margin-bottom: 0;
+    }
+
+    .tactical-header {
+        flex-shrink: 0;
+    }
+
     .tactical-map {
-        height: 400px;
+        flex: 1;
+        height: auto;
+        min-height: 0; /* Allow flex to shrink if needed */
+    }
+
+    .map-status-bar {
+        flex-shrink: 0;
+        max-height: 30vh; /* Limit status bar height */
+        overflow-y: auto;
+    }
+
+    .navigation-panel {
+        flex-shrink: 0;
     }
 }
 
