@@ -506,6 +506,8 @@ window.RouteCalculator = {
 
     // Route calculation
     calculateRoute,
+    calculateDistance,
+    calculateBearing,
 
     // Utilities
     getWaypointCode,

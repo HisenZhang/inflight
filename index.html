@@ -17,10 +17,19 @@
     <div class="container">
         <header>
             <h1 class="text-xl font-bold text-primary">FLIGHT PLANNING SYSTEM</h1>
+
+            <!-- Tab Navigation -->
+            <div class="tab-navigation">
+                <button class="tab-btn active" data-tab="route">ROUTE & NAVLOG</button>
+                <button class="tab-btn" data-tab="map">TACTICAL MAP</button>
+                <button class="tab-btn" data-tab="data">DATA & CACHE</button>
+            </div>
         </header>
 
+        <!-- Tab: Route & Navlog -->
+        <div class="tab-content active" id="tab-route">
         <!-- Database Status -->
-        <div class="data-status">
+        <div class="data-status" style="display: none;">
             <div id="dataStatus" class="status-box">
                 <span class="status-indicator">[!]</span>
                 <span id="statusText" class="font-medium">DATABASE NOT LOADED</span>
@@ -187,6 +196,21 @@
             </div>
         </div>
 
+        <!-- Results Section -->
+        <div id="resultsSection" class="results-section" style="display: none;">
+            <h2 class="font-bold text-primary">NAVIGATION LOG</h2>
+            <div id="routeSummary" class="route-summary"></div>
+
+            <!-- Wind Altitude Table (shown when wind correction enabled) -->
+            <div id="windAltitudeTable" class="wind-altitude-table" style="display: none;"></div>
+
+            <div id="navlogTable" class="navlog-table"></div>
+        </div>
+        </div>
+        <!-- End Tab: Route & Navlog -->
+
+        <!-- Tab: Tactical Map -->
+        <div class="tab-content" id="tab-map">
         <!-- Tactical Navigation Display -->
         <div id="tacticalDisplay" class="tactical-display" style="display: none;">
             <div class="tactical-header">
@@ -234,17 +258,37 @@
                 <div class="info-content" style="display: none;"></div>
             </div>
         </div>
-
-        <!-- Results Section -->
-        <div id="resultsSection" class="results-section" style="display: none;">
-            <h2 class="font-bold text-primary">NAVIGATION LOG</h2>
-            <div id="routeSummary" class="route-summary"></div>
-
-            <!-- Wind Altitude Table (shown when wind correction enabled) -->
-            <div id="windAltitudeTable" class="wind-altitude-table" style="display: none;"></div>
-
-            <div id="navlogTable" class="navlog-table"></div>
         </div>
+        <!-- End Tab: Tactical Map -->
+
+        <!-- Tab: Data & Cache -->
+        <div class="tab-content" id="tab-data">
+        <!-- Database Status (visible in data tab) -->
+        <div class="data-status">
+            <div id="dataStatusData" class="status-box">
+                <span class="status-indicator">[!]</span>
+                <span id="statusTextData" class="font-medium">DATABASE NOT LOADED</span>
+                <button id="loadDataBtnData" class="btn btn-primary font-bold">LOAD DATA</button>
+                <button id="inspectDbBtnData" class="btn btn-secondary" style="display: none;">INSPECT</button>
+            </div>
+            <div id="dataInfoData" class="data-info text-sm"></div>
+            <div id="dataInspectionData" class="data-inspection hidden">
+                <div class="inspection-header">
+                    <span class="text-metric font-bold">DATABASE MANAGEMENT</span>
+                </div>
+                <div id="inspectionContentData" class="inspection-content"></div>
+                <div class="inspection-actions">
+                    <button id="reindexCacheBtnData" class="btn btn-secondary">REINDEX TOKEN MAP</button>
+                    <button id="clearDataBtnData" class="btn btn-warning">CLEAR ALL DATA</button>
+                </div>
+            </div>
+            <p class="help-text">
+                Sources: <span class="text-secondary">FAA NASR (US) + OurAirports (Worldwide)</span>
+            </p>
+        </div>
+        </div>
+        <!-- End Tab: Data & Cache -->
+
     </div>
 
     <!-- Scripts - Load modules in order -->

@@ -188,11 +188,34 @@ function generateMap(waypoints, legs) {
         svg += `</g>`;
     });
 
-    // Draw current position if available
+    // Draw current position if available (amber arrow)
     if (currentPosition) {
         const pos = project(currentPosition.lat, currentPosition.lon);
-        svg += `<circle cx="${pos.x}" cy="${pos.y}" r="8" fill="#00ff00" stroke="#ffffff" stroke-width="2"/>`;
-        svg += `<text x="${pos.x}" y="${pos.y - 15}" text-anchor="middle" fill="#00ff00" font-family="Roboto Mono" font-size="10" font-weight="700">YOU</text>`;
+        const heading = currentPosition.heading || 0; // GPS heading in degrees
+
+        // Draw amber vector arrow pointing in heading direction
+        // Arrow is 20 units long, points up when heading=0
+        const arrowLength = 20;
+        const arrowWidth = 8;
+
+        // Calculate arrow points (rotate based on heading)
+        const headingRad = (heading - 90) * Math.PI / 180; // -90 because SVG 0° is East
+        const tipX = pos.x + Math.cos(headingRad) * arrowLength;
+        const tipY = pos.y + Math.sin(headingRad) * arrowLength;
+
+        const perpRad = headingRad + Math.PI / 2;
+        const base1X = pos.x + Math.cos(perpRad) * arrowWidth;
+        const base1Y = pos.y + Math.sin(perpRad) * arrowWidth;
+        const base2X = pos.x - Math.cos(perpRad) * arrowWidth;
+        const base2Y = pos.y - Math.sin(perpRad) * arrowWidth;
+
+        // Draw arrow as triangle
+        svg += `<polygon points="${tipX},${tipY} ${base1X},${base1Y} ${base2X},${base2Y}" fill="#ffbf00" stroke="#ffffff" stroke-width="2"/>`;
+        svg += `<circle cx="${pos.x}" cy="${pos.y}" r="4" fill="#ffbf00" stroke="#ffffff" stroke-width="2"/>`;
+
+        // Label
+        const labelY = pos.y - 25;
+        svg += `<text x="${pos.x}" y="${labelY}" text-anchor="middle" fill="#ffbf00" font-family="Roboto Mono" font-size="12" font-weight="700">YOU</text>`;
     }
 
     svg += `</svg>`;
