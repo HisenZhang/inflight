@@ -1246,10 +1246,10 @@ header h1 {
     #tab-map.active {
         display: flex;
         flex-direction: column;
-        height: 100vh; /* Full viewport height */
+        height: calc(100vh - 28px); /* Full viewport height minus tab buttons */
         overflow: hidden;
         position: fixed;
-        top: 0;
+        top: 28px; /* Below tab buttons */
         left: 0;
         right: 0;
         bottom: 0;
