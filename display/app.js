@@ -391,6 +391,9 @@ async function handleCalculateRoute() {
         // Display vector map
         VectorMap.displayMap(waypoints, legs, options);
 
+        // Auto-switch to NAVLOG tab after calculation
+        switchTab('navlog');
+
         // Save to history - use FlightState instead of DataManager
         if (window.FlightState) {
             window.FlightState.saveToHistory(routeValue.trim().toUpperCase());
