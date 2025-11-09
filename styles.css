@@ -895,6 +895,17 @@ header h1 {
     transition: all 0.2s ease;
 }
 
+/* Blink animation for target waypoint */
+@keyframes blink-waypoint {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+.target-waypoint .waypoint-circle,
+.target-waypoint .waypoint-label {
+    animation: blink-waypoint 1.5s ease-in-out infinite;
+}
+
 .waypoint-label {
     font-family: 'Roboto Mono', monospace;
     font-size: clamp(10px, 2vw, 12px); /* Responsive font size */
@@ -1222,12 +1233,19 @@ header h1 {
     }
 
     /* Full screen map on mobile */
-    .tactical-display {
-        /* Make map panel full height minus tab navigation */
+    #tab-map {
+        height: calc(100vh - 32px); /* Full height minus tab buttons (padding 6px * 2 + font size ~20px) */
         display: flex;
         flex-direction: column;
-        height: 100vh;
+    }
+
+    .tactical-display {
+        /* Make map panel take full available height */
+        display: flex;
+        flex-direction: column;
+        flex: 1;
         margin-bottom: 0;
+        min-height: 0;
     }
 
     .tactical-header {

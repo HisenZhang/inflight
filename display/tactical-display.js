@@ -547,7 +547,11 @@ function generateMap(waypoints, legs) {
 
     // Draw waypoints (all get circles, but only non-colliding get labels)
     waypointData.forEach(({ waypoint, index, pos, code, color, labelY }) => {
-        svg += `<g class="map-waypoint" data-index="${index}">`;
+        // Check if this is the target waypoint (next waypoint we're heading to)
+        const isTargetWaypoint = (currentLegIndex >= 0 && index === currentLegIndex + 1);
+        const targetClass = isTargetWaypoint ? ' target-waypoint' : '';
+
+        svg += `<g class="map-waypoint${targetClass}" data-index="${index}">`;
         svg += `<circle class="waypoint-circle" cx="${pos.x}" cy="${pos.y}" r="${waypointRadius}" fill="${color}" stroke="${color}" stroke-width="${strokeWidth}"/>`;
 
         if (visibleLabels.has(index)) {
