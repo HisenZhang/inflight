@@ -44,6 +44,16 @@ body {
     padding: var(--space-md);
 }
 
+@media (max-width: 768px) {
+    body {
+        overflow: hidden;
+        height: 100vh;
+        position: fixed;
+        width: 100%;
+        padding: 0;
+    }
+}
+
 .container {
     max-width: 1600px;
     margin: 0 auto;
@@ -1236,8 +1246,13 @@ header h1 {
     #tab-map.active {
         display: flex;
         flex-direction: column;
-        height: calc(100vh - 32px); /* Full height minus tab buttons */
+        height: 100vh; /* Full viewport height */
         overflow: hidden;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
     }
 
     #tab-map.active .tactical-display {
@@ -1246,6 +1261,7 @@ header h1 {
         flex: 1;
         min-height: 0;
         margin-bottom: 0;
+        overflow: hidden;
     }
 
     #tab-map.active .tactical-header {
