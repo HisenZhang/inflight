@@ -836,9 +836,23 @@ header h1 {
     stroke-width: 3;
 }
 
+@media (max-width: 768px) {
+    .map-waypoint:hover .waypoint-circle {
+        r: 30;
+        stroke-width: 12;
+    }
+}
+
 .map-waypoint:hover .waypoint-label {
     font-size: 14px;
     font-weight: 700;
+}
+
+@media (max-width: 768px) {
+    .map-waypoint:hover .waypoint-label {
+        font-size: 65px;
+        font-weight: 700;
+    }
 }
 
 .waypoint-circle {
@@ -852,6 +866,13 @@ header h1 {
     pointer-events: none;
 }
 
+@media (max-width: 768px) {
+    .waypoint-label {
+        font-size: 36px; /* Match inline SVG size (12 * 3) */
+        font-weight: 700;
+    }
+}
+
 .route-line {
     fill: none;
     stroke: var(--color-metric);
@@ -859,8 +880,20 @@ header h1 {
     stroke-linecap: round;
 }
 
+@media (max-width: 768px) {
+    .route-line {
+        stroke-width: 10;
+    }
+}
+
 .route-line-dashed {
     stroke-dasharray: 8 4;
+}
+
+@media (max-width: 768px) {
+    .route-line-dashed {
+        stroke-dasharray: 30 15;
+    }
 }
 
 /* Selected point info */
@@ -1071,4 +1104,18 @@ header h1 {
     .tactical-map {
         height: 400px;
     }
+}
+
+/* ============================================ */
+/* Map Status Bar */
+/* ============================================ */
+
+.map-status-bar {
+    background: var(--bg-panel);
+    border-top: 2px solid var(--border-color);
+    padding: 0;
+}
+
+.map-status-bar.hidden {
+    display: none;
 }

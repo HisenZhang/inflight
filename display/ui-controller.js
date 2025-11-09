@@ -380,7 +380,7 @@ function handleAutocompleteInput(e) {
     }
 
     // Search for matches
-    const results = DataManager.searchWaypoints(currentWord);
+    const results = window.QueryEngine?.searchWaypoints(currentWord) || [];
     autocompleteResults = results;
     displayAutocomplete(results);
 }
@@ -478,7 +478,7 @@ function selectAutocompleteItem(index) {
     const afterCursor = value.substring(cursorPos);
 
     const words = beforeCursor.split(/\s+/);
-    words[words.length - 1] = result.fullCode;
+    words[words.length - 1] = result.code;
     const newBefore = words.join(' ');
 
     elements.routeInput.value = newBefore + ' ' + afterCursor;
@@ -582,7 +582,7 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelSt
         const waypointNumber = index + 1;
 
         // Position
-        const pos = `${RouteCalculator.formatCoordinate(waypoint.lat, 'lat')} ${RouteCalculator.formatCoordinate(waypoint.lon, 'lon')}`;
+        const pos = `${window.Utils?.formatCoordinate(waypoint.lat, 'lat')} ${window.Utils?.formatCoordinate(waypoint.lon, 'lon')}`;
 
         // Elevation (only show if available)
         const hasElevation = waypoint.elevation !== null && !isNaN(waypoint.elevation);
@@ -620,7 +620,7 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelSt
                 }
             }
         } else if (waypoint.waypointType === 'navaid' && waypoint.frequency) {
-            const formattedFreq = RouteCalculator.formatNavaidFrequency(waypoint.frequency, waypoint.type);
+            const formattedFreq = window.Utils?.formatNavaidFrequency(waypoint.frequency, waypoint.type);
             if (formattedFreq) {
                 freqHTML = `<span class="text-metric text-xs">${formattedFreq}</span>`;
             }
@@ -681,7 +681,7 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelSt
 
             // True course (ground track) for secondary display
             const trueCourse = String(Math.round(leg.trueCourse)).padStart(3, '0');
-            const cardinal = RouteCalculator.getCardinalDirection(leg.trueCourse);
+            const cardinal = window.Utils?.getCardinalDirection(leg.trueCourse);
 
             // Magnetic heading (corrected for WCA + mag var) for primary display
             const magHeadingDisplay = leg.magHeading !== null

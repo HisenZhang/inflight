@@ -140,18 +140,17 @@ console.error = (...args) => {
 
 // Load source files in order
 try {
-    // Load utilities
-    eval(files.utils);
+    // Execute code in the context of the window object
+    const script = `
+        ${files.utils}
+        ${files.state}
+        ${files.testFramework}
+        ${files.testUtils}
+        ${files.testState}
+    `;
 
-    // Load state management
-    eval(files.state);
-
-    // Load test framework
-    eval(files.testFramework);
-
-    // Load and run test suites
-    eval(files.testUtils);
-    eval(files.testState);
+    // Evaluate in window context
+    window.eval(script);
 
     // Run all tests
     console.log(''); // Blank line

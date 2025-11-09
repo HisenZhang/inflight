@@ -5,10 +5,10 @@
 // STATE (Data References)
 // ============================================
 
-let airportsData = null;
-let navaidsData = null;
-let fixesData = null;
-let tokenTypeMap = null;
+let qe_airportsData = null;
+let qe_navaidsData = null;
+let qe_fixesData = null;
+let qe_tokenTypeMap = null;
 
 // ============================================
 // INITIALIZATION
@@ -22,12 +22,12 @@ let tokenTypeMap = null;
  * @param {Map} tokenMap - Token type lookup map
  */
 function init(airports, navaids, fixes, tokenMap) {
-    airportsData = airports;
-    navaidsData = navaids;
-    fixesData = fixes;
-    tokenTypeMap = tokenMap;
+    qe_airportsData = airports;
+    qe_navaidsData = navaids;
+    qe_fixesData = fixes;
+    qe_tokenTypeMap = tokenMap;
 
-    console.log('[QueryEngine] Initialized with data references');
+    console.log(`[QueryEngine] Initialized with data references: ${tokenMap ? tokenMap.size : 0} tokens`);
 }
 
 // ============================================
@@ -47,8 +47,8 @@ function searchWaypoints(term, limit = 10) {
     const upperTerm = term.toUpperCase();
 
     // Search airports
-    if (airportsData) {
-        for (const [code, airport] of airportsData) {
+    if (qe_airportsData) {
+        for (const [code, airport] of qe_airportsData) {
             if (results.length >= limit) break;
 
             if (code.startsWith(upperTerm) ||
@@ -66,8 +66,8 @@ function searchWaypoints(term, limit = 10) {
     }
 
     // Search navaids
-    if (navaidsData && results.length < limit) {
-        for (const [ident, navaid] of navaidsData) {
+    if (qe_navaidsData && results.length < limit) {
+        for (const [ident, navaid] of qe_navaidsData) {
             if (results.length >= limit) break;
 
             if (ident.startsWith(upperTerm) ||
@@ -86,8 +86,8 @@ function searchWaypoints(term, limit = 10) {
     }
 
     // Search fixes
-    if (fixesData && results.length < limit) {
-        for (const [name, fix] of fixesData) {
+    if (qe_fixesData && results.length < limit) {
+        for (const [name, fix] of qe_fixesData) {
             if (results.length >= limit) break;
 
             if (name.startsWith(upperTerm)) {
@@ -112,8 +112,18 @@ function searchWaypoints(term, limit = 10) {
  * @returns {string|null} Token type ('airport', 'navaid', 'fix', 'airway', etc.) or null
  */
 function getTokenType(token) {
-    if (!tokenTypeMap) return null;
-    return tokenTypeMap.get(token.toUpperCase()) || null;
+    if (!qe_tokenTypeMap) {
+        console.warn('[QueryEngine] getTokenType called but qe_tokenTypeMap is null');
+        return null;
+    }
+    const upperToken = token.toUpperCase();
+    const result = qe_tokenTypeMap.get(upperToken);
+    if (!result) {
+        console.debug(`[QueryEngine] Token not found: ${upperToken} (map has ${qe_tokenTypeMap.size} entries)`);
+    } else {
+        console.debug(`[QueryEngine] Token found: ${upperToken} = ${result}`);
+    }
+    return result || null;
 }
 
 // ============================================
@@ -156,8 +166,8 @@ function getPointsNearRoute(legs, distanceNM = 45) {
     const calculateDistance = window.RouteCalculator.calculateDistance;
 
     // Check each airport
-    if (airportsData) {
-        for (const [code, airport] of airportsData) {
+    if (qe_airportsData) {
+        for (const [code, airport] of qe_airportsData) {
             if (!isToweredAirport(code)) continue;
 
             let minDistance = Infinity;
@@ -183,8 +193,8 @@ function getPointsNearRoute(legs, distanceNM = 45) {
     }
 
     // Check each navaid
-    if (navaidsData) {
-        for (const [ident, navaid] of navaidsData) {
+    if (qe_navaidsData) {
+        for (const [ident, navaid] of qe_navaidsData) {
             let minDistance = Infinity;
 
             // Check distance to each leg
@@ -241,8 +251,8 @@ function getPointsInBounds(bounds, legs = null) {
     };
 
     // Get towered airports within bounds only
-    if (airportsData) {
-        for (const [code, airport] of airportsData) {
+    if (qe_airportsData) {
+        for (const [code, airport] of qe_airportsData) {
             if (airport.lat >= bounds.minLat && airport.lat <= bounds.maxLat &&
                 airport.lon >= bounds.minLon && airport.lon <= bounds.maxLon &&
                 isToweredAirport(code)) {
@@ -252,8 +262,8 @@ function getPointsInBounds(bounds, legs = null) {
     }
 
     // Get navaids within bounds
-    if (navaidsData) {
-        for (const [ident, navaid] of navaidsData) {
+    if (qe_navaidsData) {
+        for (const [ident, navaid] of qe_navaidsData) {
             if (navaid.lat >= bounds.minLat && navaid.lat <= bounds.maxLat &&
                 navaid.lon >= bounds.minLon && navaid.lon <= bounds.maxLon) {
                 result.navaids.push({ ident, ...navaid });
@@ -272,13 +282,13 @@ function getPointsInBounds(bounds, legs = null) {
  * @returns {object|null} Nearest airport object with distance, or null
  */
 function findNearestAirport(lat, lon, maxDistanceNM = 100) {
-    if (!airportsData || !window.RouteCalculator) return null;
+    if (!qe_airportsData || !window.RouteCalculator) return null;
 
     const calculateDistance = window.RouteCalculator.calculateDistance;
     let nearest = null;
     let minDistance = Infinity;
 
-    for (const [code, airport] of airportsData) {
+    for (const [code, airport] of qe_airportsData) {
         const distance = calculateDistance(lat, lon, airport.lat, airport.lon);
 
         if (distance < minDistance && distance <= maxDistanceNM) {
@@ -313,8 +323,8 @@ function findWaypointsWithinRadius(lat, lon, radiusNM) {
     const calculateDistance = window.RouteCalculator.calculateDistance;
 
     // Search airports
-    if (airportsData) {
-        for (const [code, airport] of airportsData) {
+    if (qe_airportsData) {
+        for (const [code, airport] of qe_airportsData) {
             const distance = calculateDistance(lat, lon, airport.lat, airport.lon);
             if (distance <= radiusNM) {
                 result.airports.push({ code, ...airport, distance });
@@ -323,8 +333,8 @@ function findWaypointsWithinRadius(lat, lon, radiusNM) {
     }
 
     // Search navaids
-    if (navaidsData) {
-        for (const [ident, navaid] of navaidsData) {
+    if (qe_navaidsData) {
+        for (const [ident, navaid] of qe_navaidsData) {
             const distance = calculateDistance(lat, lon, navaid.lat, navaid.lon);
             if (distance <= radiusNM) {
                 result.navaids.push({ ident, ...navaid, distance });
@@ -333,8 +343,8 @@ function findWaypointsWithinRadius(lat, lon, radiusNM) {
     }
 
     // Search fixes
-    if (fixesData) {
-        for (const [name, fix] of fixesData) {
+    if (qe_fixesData) {
+        for (const [name, fix] of qe_fixesData) {
             const distance = calculateDistance(lat, lon, fix.lat, fix.lon);
             if (distance <= radiusNM) {
                 result.fixes.push({ name, ...fix, distance });

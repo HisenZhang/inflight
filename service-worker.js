@@ -1,20 +1,30 @@
 // Flight Planning Tool - Service Worker for Offline Support
-const CACHE_NAME = 'flight-planning-v28';
+const CACHE_NAME = 'flight-planning-v47';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
-    './app.js',
-    './geodesy.js',  // WGS84 + WMM2025
-    './wind-stations.js',  // Wind station locations (embedded)
-    './winds-aloft.js',  // Winds aloft module
-    './nasr-adapter.js',  // NASR data adapter (primary)
-    './ourairports-adapter.js',  // OurAirports adapter (fallback)
-    './route-expander.js',  // Airway/STAR/DP expansion
-    './data-manager.js',  // Data loading orchestrator
-    './route-calculator.js',  // Navigation calculations
-    './ui-controller.js',  // UI updates and interactions
     './styles.css',
-    './manifest.json'
+    './manifest.json',
+    // External Libraries
+    './lib/geodesy.js',
+    './lib/wind-stations.js',
+    // Utilities Layer
+    './utils/formatters.js',
+    // Data Engine
+    './data/nasr-adapter.js',
+    './data/ourairports-adapter.js',
+    './data/data-manager.js',
+    // Compute Engine
+    './compute/winds-aloft.js',
+    './compute/route-expander.js',
+    './compute/route-calculator.js',
+    './compute/query-engine.js',
+    // State Management
+    './state/flight-state.js',
+    // Display Layer
+    './display/ui-controller.js',
+    './display/tactical-display.js',
+    './display/app.js'
 ];
 
 // Install event - cache assets
@@ -47,7 +57,7 @@ self.addEventListener('activate', (event) => {
     );
 });
 
-// Fetch event - serve from cache, fallback to network
+// Fetch event - NETWORK FIRST (cache disabled during debugging)
 self.addEventListener('fetch', (event) => {
     const url = new URL(event.request.url);
 
@@ -59,34 +69,19 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // For same-origin requests, use cache-first strategy
+    // NETWORK FIRST - always fetch fresh content
     event.respondWith(
-        caches.match(event.request).then((cachedResponse) => {
-            if (cachedResponse) {
-                console.log('[ServiceWorker] Serving from cache:', event.request.url);
-                return cachedResponse;
-            }
-
-            console.log('[ServiceWorker] Fetching from network:', event.request.url);
-
-            return fetch(event.request).then((networkResponse) => {
-                // Check if we received a valid response
-                if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
-                    // Don't cache invalid, error, or opaque responses
-                    return networkResponse;
+        fetch(event.request).then((networkResponse) => {
+            console.log('[ServiceWorker] Fresh from network:', event.request.url);
+            return networkResponse;
+        }).catch((error) => {
+            console.error('[ServiceWorker] Fetch failed:', error);
+            // Try cache as fallback
+            return caches.match(event.request).then(cachedResponse => {
+                if (cachedResponse) {
+                    console.log('[ServiceWorker] Fallback to cache:', event.request.url);
+                    return cachedResponse;
                 }
-
-                // Clone the response (can only be consumed once)
-                const responseToCache = networkResponse.clone();
-
-                caches.open(CACHE_NAME).then((cache) => {
-                    cache.put(event.request, responseToCache);
-                });
-
-                return networkResponse;
-            }).catch((error) => {
-                console.error('[ServiceWorker] Fetch failed:', error);
-                // If fetch fails and we don't have cache, let it fail naturally
                 throw error;
             });
         })

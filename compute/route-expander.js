@@ -34,7 +34,7 @@ function expandRoute(routeString) {
 
     while (i < tokens.length) {
         const token = tokens[i];
-        const tokenType = window.DataManager?.getTokenType(token);
+        const tokenType = window.QueryEngine?.getTokenType(token);
 
         // Skip DCT keyword (handled by route calculator)
         if (token === 'DCT') {
@@ -77,12 +77,15 @@ function expandRoute(routeString) {
             const fromFix = tokens[i];
             const airwayToken = tokens[i + 1];
             const toFix = tokens[i + 2];
-            const airwayType = window.DataManager?.getTokenType(airwayToken);
+            const airwayType = window.QueryEngine?.getTokenType(airwayToken);
+
+            console.debug(`[RouteExpander] Checking airway pattern: ${fromFix} ${airwayToken} ${toFix} - type: ${airwayType}`);
 
             // Check if middle token is an airway
             if (airwayType === 'AIRWAY') {
                 const segment = expandAirway(fromFix, airwayToken, toFix);
                 if (segment.expanded) {
+                    console.log(`[RouteExpander] Expanded airway ${airwayToken}: ${fromFix} → ${toFix} (${segment.fixes.length} fixes)`);
                     // Check if fromFix is already the last element (for chained airways)
                     const lastFix = expanded[expanded.length - 1];
                     if (lastFix === fromFix) {
@@ -97,17 +100,14 @@ function expandRoute(routeString) {
                     i += 2;
                     continue;
                 } else {
+                    console.warn(`[RouteExpander] Airway expansion failed: ${fromFix} ${airwayToken} ${toFix}`);
                     errors.push(`Airway ${airwayToken} expansion failed: ${fromFix} to ${toFix}`);
                 }
             }
         }
 
-        // Validate token exists in database
-        if (!tokenType) {
-            errors.push(`Unknown token: ${token} (not found in database)`);
-        }
-
-        // Regular waypoint/airport/navaid/fix - add as-is
+        // Regular waypoint/airport/navaid/fix - pass through as-is
+        // Let RouteCalculator.resolveWaypoints() handle validation
         expanded.push(token);
         i++;
     }

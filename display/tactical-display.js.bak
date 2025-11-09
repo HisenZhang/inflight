@@ -155,11 +155,6 @@ function updateLiveNavigation() {
         horizontalAccuracy,
         verticalAccuracy
     });
-
-    // Redraw map if in destination or surrounding zoom mode (to update GPS position)
-    if (currentZoomMode === 'destination' || currentZoomMode === 'surrounding') {
-        generateMap(waypoints, legs);
-    }
 }
 
 // ============================================
@@ -215,11 +210,16 @@ function generateMap(waypoints, legs) {
             maxLon: currentPosition.lon + radiusDeg / Math.cos(currentPosition.lat * Math.PI / 180)
         };
     } else if (currentZoomMode === 'destination' && currentPosition && waypoints.length > 0) {
-        // Zoom to show current position and destination only
-        // As you get closer, the view zooms in dynamically
+        // From current position to destination
         const destination = waypoints[waypoints.length - 1];
         const lats = [currentPosition.lat, destination.lat];
         const lons = [currentPosition.lon, destination.lon];
+
+        // Add remaining waypoints to bounds
+        for (let i = currentLegIndex + 1; i < waypoints.length; i++) {
+            lats.push(waypoints[i].lat);
+            lons.push(waypoints[i].lon);
+        }
 
         const minLat = Math.min(...lats);
         const maxLat = Math.max(...lats);
@@ -228,18 +228,13 @@ function generateMap(waypoints, legs) {
 
         const latRange = maxLat - minLat;
         const lonRange = maxLon - minLon;
-
-        // Use larger padding for very short distances to avoid extreme zoom
-        const minRange = 0.02; // Minimum ~1.2nm range
-        const effectiveLatRange = Math.max(latRange, minRange);
-        const effectiveLonRange = Math.max(lonRange, minRange);
-        const padding = 0.15;
+        const padding = 0.05; // Reduced from 0.15
 
         bounds = {
-            minLat: minLat - effectiveLatRange * padding,
-            maxLat: maxLat + effectiveLatRange * padding,
-            minLon: minLon - effectiveLonRange * padding,
-            maxLon: maxLon + effectiveLonRange * padding
+            minLat: minLat - latRange * padding,
+            maxLat: maxLat + latRange * padding,
+            minLon: minLon - lonRange * padding,
+            maxLon: maxLon + lonRange * padding
         };
     } else {
         // Full route view (default)
@@ -280,14 +275,8 @@ function generateMap(waypoints, legs) {
     // Store dimensions for pan limit calculations
     svgDimensions = { width, height };
 
-    // Scaling factors for all SVG elements (mobile: larger text, 4x shapes, thicker lines)
-    const textScaleFactor = isMobile ? 2 : 1; // 12 * 4 = 48px (close to hover 45px)
-    const shapeScaleFactor = isMobile ? 2 : 1;
-    const waypointLabelSize = 12 * textScaleFactor;
-    const waypointRadius = 5 * shapeScaleFactor;
-    const nearbyRadius = waypointRadius; // Same size as route waypoints for consistency
-    const strokeWidth = isMobile ? 4 : 2;
-    const thinStrokeWidth = strokeWidth; // Same stroke width as route waypoints
+    const waypointLabelSize = isMobile ? 16 : 12;
+    const positionLabelSize = isMobile ? 18 : 12;
 
     // Calculate projection center (center of visible area)
     const centerLat = (bounds.minLat + bounds.maxLat) / 2;
@@ -365,8 +354,8 @@ function generateMap(waypoints, legs) {
 
             const pos = project(airport.lat, airport.lon);
             svg += `<g class="nearby-airport" data-nearby-index="${idx}">`;
-            svg += `<circle cx="${pos.x}" cy="${pos.y}" r="${nearbyRadius}"
-                    fill="none" stroke="#00ffff" stroke-width="${thinStrokeWidth}" opacity="0.3" style="cursor: pointer;"/>`;
+            svg += `<circle cx="${pos.x}" cy="${pos.y}" r="3"
+                    fill="none" stroke="#00ffff" stroke-width="1" opacity="0.3" style="cursor: pointer;"/>`;
             svg += `</g>`;
         });
     }
@@ -383,8 +372,8 @@ function generateMap(waypoints, legs) {
 
             const pos = project(navaid.lat, navaid.lon);
             svg += `<g class="nearby-navaid" data-nearby-index="${idx}">`;
-            svg += `<circle cx="${pos.x}" cy="${pos.y}" r="${nearbyRadius * 0.67}"
-                    fill="#ff00ff" stroke="#ff00ff" stroke-width="${thinStrokeWidth}" opacity="0.3" style="cursor: pointer;"/>`;
+            svg += `<circle cx="${pos.x}" cy="${pos.y}" r="2"
+                    fill="#ff00ff" stroke="#ff00ff" stroke-width="1" opacity="0.3" style="cursor: pointer;"/>`;
             svg += `</g>`;
         });
     }
@@ -415,14 +404,14 @@ function generateMap(waypoints, legs) {
             priority = 1;
         }
 
-        return { waypoint, index, pos, code, color, priority, labelY: pos.y - (12 * textScaleFactor) };
+        return { waypoint, index, pos, code, color, priority, labelY: pos.y - 12 };
     });
 
     // Label collision detection - hide labels that are too close
+    const minLabelDistance = 30; // pixels
     const visibleLabels = new Set();
 
-    // Larger minimum distance on mobile due to larger text (66px vs 12px)
-    const minLabelDistance = isMobile ? 100 : 30; // pixels
+    // Sort by priority (higher first) to preserve important labels
     const sorted = [...waypointData].sort((a, b) => b.priority - a.priority);
 
     for (const item of sorted) {
@@ -449,7 +438,7 @@ function generateMap(waypoints, legs) {
     // Draw waypoints (all get circles, but only non-colliding get labels)
     waypointData.forEach(({ waypoint, index, pos, code, color, labelY }) => {
         svg += `<g class="map-waypoint" data-index="${index}">`;
-        svg += `<circle class="waypoint-circle" cx="${pos.x}" cy="${pos.y}" r="${waypointRadius}" fill="${color}" stroke="${color}" stroke-width="${strokeWidth}"/>`;
+        svg += `<circle class="waypoint-circle" cx="${pos.x}" cy="${pos.y}" r="5" fill="${color}" stroke="${color}" stroke-width="2"/>`;
 
         if (visibleLabels.has(index)) {
             svg += `<text class="waypoint-label" x="${pos.x}" y="${labelY}" text-anchor="middle" fill="${color}" font-size="${waypointLabelSize}" font-family="Roboto Mono" font-weight="700">${code}</text>`;
@@ -458,43 +447,34 @@ function generateMap(waypoints, legs) {
         svg += `</g>`;
     });
 
-    // Draw current position if available (tall isosceles triangle, classic vector style)
+    // Draw current position if available (amber arrow)
     if (currentPosition) {
         const pos = project(currentPosition.lat, currentPosition.lon);
         const heading = currentPosition.heading || 0; // GPS heading in degrees
 
-        // Tall isosceles triangle (like old vector graphics)
-        const triangleHeight = isMobile ? 40 : 20; // Height from base to tip
-        const triangleBaseWidth = isMobile ? 20 : 10; // Width of base
+        // Draw amber vector arrow pointing in heading direction
+        // Arrow is 20 units long, points up when heading=0
+        const arrowLength = 20;
+        const arrowWidth = 8;
 
-        // Triangle vertices in local coordinates (tip points up)
-        // Tip vertex
-        const tipLocalX = 0;
-        const tipLocalY = -triangleHeight;
-
-        // Base vertices (left and right)
-        const baseLeftLocalX = -triangleBaseWidth / 2;
-        const baseLeftLocalY = 0;
-        const baseRightLocalX = triangleBaseWidth / 2;
-        const baseRightLocalY = 0;
-
-        // Rotate based on heading (convert to radians, adjust for SVG coordinate system)
+        // Calculate arrow points (rotate based on heading)
         const headingRad = (heading - 90) * Math.PI / 180; // -90 because SVG 0° is East
-        const cosH = Math.cos(headingRad);
-        const sinH = Math.sin(headingRad);
+        const tipX = pos.x + Math.cos(headingRad) * arrowLength;
+        const tipY = pos.y + Math.sin(headingRad) * arrowLength;
 
-        // Apply rotation and translate to position
-        const tipX = pos.x + (tipLocalX * cosH - tipLocalY * sinH);
-        const tipY = pos.y + (tipLocalX * sinH + tipLocalY * cosH);
+        const perpRad = headingRad + Math.PI / 2;
+        const base1X = pos.x + Math.cos(perpRad) * arrowWidth;
+        const base1Y = pos.y + Math.sin(perpRad) * arrowWidth;
+        const base2X = pos.x - Math.cos(perpRad) * arrowWidth;
+        const base2Y = pos.y - Math.sin(perpRad) * arrowWidth;
 
-        const baseLeftX = pos.x + (baseLeftLocalX * cosH - baseLeftLocalY * sinH);
-        const baseLeftY = pos.y + (baseLeftLocalX * sinH + baseLeftLocalY * cosH);
+        // Draw arrow as triangle
+        svg += `<polygon points="${tipX},${tipY} ${base1X},${base1Y} ${base2X},${base2Y}" fill="#ffbf00" stroke="#ffffff" stroke-width="2"/>`;
+        svg += `<circle cx="${pos.x}" cy="${pos.y}" r="4" fill="#ffbf00" stroke="#ffffff" stroke-width="2"/>`;
 
-        const baseRightX = pos.x + (baseRightLocalX * cosH - baseRightLocalY * sinH);
-        const baseRightY = pos.y + (baseRightLocalX * sinH + baseRightLocalY * cosH);
-
-        // Draw tall triangle without stroke (classic vector look)
-        svg += `<polygon points="${tipX},${tipY} ${baseLeftX},${baseLeftY} ${baseRightX},${baseRightY}" fill="#ffbf00"/>`;
+        // Label
+        const labelY = pos.y - 25;
+        svg += `<text x="${pos.x}" y="${labelY}" text-anchor="middle" fill="#ffbf00" font-family="Roboto Mono" font-size="${positionLabelSize}" font-weight="700">YOU</text>`;
     }
 
     // Close the transform group
@@ -691,90 +671,146 @@ function showNearbyPointPopup(point, type, elementIndex) {
     const lon = window.Utils?.formatCoordinate(point.lon, 'lon');
     const pos = `${lat} ${lon}`;
 
-    // Type display
-    let typeDisplay = 'NEARBY';
+    // Get specific type
+    let typeDisplay = type.toUpperCase();
     if (type === 'navaid' && point.type) {
-        typeDisplay = `${point.type} [NEARBY]`;
-    } else if (type === 'airport') {
-        typeDisplay = 'AIRPORT [NEARBY]';
+        typeDisplay = point.type; // Show VOR, DME, VORTAC, etc.
+    } else if (type === 'airport' && point.type) {
+        typeDisplay = point.type.replace(/_/g, ' ').toUpperCase(); // Show LARGE_AIRPORT, etc.
     }
-    const colorClass = 'text-warning';
 
-    // Elevation and magnetic variation
-    const elev = point.elevation !== null && !isNaN(point.elevation) ? `${Math.round(point.elevation)} FT` : null;
-    const magVarValue = point.magVar !== null && point.magVar !== undefined ? Math.abs(point.magVar).toFixed(1) : '-';
-    const magVarDir = point.magVar >= 0 ? 'E' : 'W';
-    const magVarDisplay = magVarValue !== '-' ? `VAR ${magVarValue}°${magVarDir}` : 'VAR -';
+    let lines = [
+        `${code} (${typeDisplay})`,
+        `${lat} ${lon}`
+    ];
 
-    let elevMagLine = '';
-    if (elev) {
-        elevMagLine = `<div class="text-airport text-xs">ELEV ${elev} | ${magVarDisplay}</div>`;
+    if (point.name) {
+        lines.push(`${point.name}`);
+    }
+
+    // Build elevation and magnetic variation line
+    let elevMagParts = [];
+    if (point.elevation !== null && !isNaN(point.elevation)) {
+        elevMagParts.push(`ELEV ${Math.round(point.elevation)}FT`);
+    }
+    if (point.magVar !== null && point.magVar !== undefined) {
+        const magVarValue = Math.abs(point.magVar).toFixed(1);
+        const magVarDir = point.magVar >= 0 ? 'E' : 'W';
+        elevMagParts.push(`VAR ${magVarValue}°${magVarDir}`);
     } else {
-        elevMagLine = `<div class="text-airport text-xs">${magVarDisplay}</div>`;
+        elevMagParts.push('VAR -');
+    }
+    if (elevMagParts.length > 0) {
+        lines.push(elevMagParts.join(' | '));
     }
 
-    // Runways
-    let runwayHTML = '';
+    // Add frequency info for navaids with proper formatting
+    if (type === 'navaid' && point.frequency) {
+        const freqFormatted = window.Utils?.formatNavaidFrequency(point.frequency);
+        lines.push(`FREQ: ${freqFormatted}`);
+    }
+
+    // Show frequencies for airports
     if (type === 'airport') {
         const airportCode = point.icao || point.iata || point.code || code;
-        if (airportCode) {
-            const runways = window.DataManager.getRunways(airportCode);
-            if (runways && runways.length > 0) {
-                const runwayInfo = runways.map(r => {
-                    const idents = r.leIdent && r.heIdent ? `${r.leIdent}/${r.heIdent}` : (r.leIdent || r.heIdent || 'N/A');
-                    const length = r.length ? `${r.length}FT` : '';
-                    const surface = r.surface || '';
-                    return `<strong>${idents}</strong> ${length} ${surface}`.trim();
-                }).join(', ');
-                runwayHTML = `<div class="text-secondary text-xs">RWY ${runwayInfo}</div>`;
-            }
+        const frequencies = window.DataManager.getFrequencies(airportCode);
+        if (frequencies && frequencies.length > 0) {
+            const grouped = {};
+            frequencies.forEach(f => {
+                const type = f.type.toUpperCase();
+                if (!grouped[type]) grouped[type] = [];
+                grouped[type].push(f.frequency.toFixed(3));
+            });
+            const freqItems = Object.entries(grouped).map(([type, freqs]) =>
+                `${type} ${freqs.join('/')}`
+            );
+            freqItems.forEach(item => lines.push(item));
         }
     }
 
-    // Frequencies
-    let freqHTML = '';
-    if (type === 'airport') {
-        const airportCode = point.icao || point.iata || point.code || code;
-        if (airportCode) {
-            const frequencies = window.DataManager.getFrequencies(airportCode);
-            if (frequencies && frequencies.length > 0) {
-                const grouped = {};
-                frequencies.forEach(f => {
-                    const ftype = f.type.toUpperCase();
-                    if (!grouped[ftype]) grouped[ftype] = [];
-                    grouped[ftype].push(f.frequency.toFixed(3));
-                });
-                const freqItems = Object.entries(grouped).map(([ftype, freqs]) =>
-                    `<span class="text-metric text-xs">${ftype} ${freqs.join('/')}</span>`
-                );
-                freqHTML = freqItems.join(' ');
-            }
-        }
-    } else if (type === 'navaid' && point.frequency) {
-        const formattedFreq = window.Utils?.formatNavaidFrequency(point.frequency, point.type);
-        if (formattedFreq) {
-            freqHTML = `<span class="text-metric text-xs">${formattedFreq}</span>`;
-        }
-    }
-
-    // Build waypoint row using exact navlog structure
+    // Build HTML for status bar
     let html = `
-        <tr class="wpt-row">
-            <td class="wpt-num text-warning font-bold">*</td>
-            <td class="wpt-info-cell">
-                <div class="${colorClass} wpt-code">${code}</div>
-                <div class="text-xs text-secondary">${typeDisplay}</div>
-            </td>
-            <td colspan="2">
-                <div class="text-secondary text-xs">${pos}</div>
-                ${elevMagLine}
-                ${runwayHTML}
-                ${freqHTML ? `<div class="mt-xs">${freqHTML}</div>` : ''}
-            </td>
-        </tr>
+        <div class="status-bar-code text-navaid">${code}</div>
+        <div class="status-bar-info">
     `;
 
-    statusBarContent.innerHTML = html;
+    // Name and type on first line
+    if (point.name) {
+        html += `<div class="status-bar-info-row">
+            <span class="text-primary">${point.name}</span>
+            <span class="text-secondary text-xs">${typeDisplay}</span>
+            <span class="text-warning text-xs">[NEARBY - NOT IN ROUTE]</span>
+        </div>`;
+    } else {
+        html += `<div class="status-bar-info-row">
+            <span class="text-secondary text-xs">${typeDisplay}</span>
+            <span class="text-warning text-xs">[NEARBY - NOT IN ROUTE]</span>
+        </div>`;
+    }
+
+    // Elevation and mag var on second line
+    let infoItems = [];
+    if (point.elevation !== null && !isNaN(point.elevation)) {
+        infoItems.push(`<span class="text-metric text-xs">ELEV ${Math.round(point.elevation)}FT</span>`);
+    }
+    if (point.magVar !== null && point.magVar !== undefined) {
+        const magVarValue = Math.abs(point.magVar).toFixed(1);
+        const magVarDir = point.magVar >= 0 ? 'E' : 'W';
+        infoItems.push(`<span class="text-metric text-xs">VAR ${magVarValue}°${magVarDir}</span>`);
+    } else {
+        infoItems.push(`<span class="text-secondary text-xs">VAR -</span>`);
+    }
+
+    // Frequencies for airports
+    if (type === 'airport') {
+        const airportCode = point.icao || point.iata || point.code || code;
+        const frequencies = window.DataManager.getFrequencies(airportCode);
+        if (frequencies && frequencies.length > 0) {
+            const grouped = {};
+            frequencies.forEach(f => {
+                const type = f.type.toUpperCase();
+                if (!grouped[type]) grouped[type] = [];
+                grouped[type].push(f.frequency.toFixed(3));
+            });
+            Object.entries(grouped).forEach(([type, freqs]) => {
+                infoItems.push(`<span class="text-metric text-xs">${type} ${freqs.join('/')}</span>`);
+            });
+        }
+    }
+
+    // Runways for airports
+    if (type === 'airport') {
+        const airportCode = point.icao || point.iata || point.code || code;
+        const runways = window.DataManager.getRunways(airportCode);
+        if (runways && runways.length > 0) {
+            const runwayList = runways.map(r => {
+                const idents = r.leIdent && r.heIdent ? `${r.leIdent}/${r.heIdent}` : (r.leIdent || r.heIdent || 'N/A');
+                const length = r.length ? ` ${r.length}FT` : '';
+                const surface = r.surface ? ` ${r.surface}` : '';
+                return `${idents}${length}${surface}`;
+            }).join(', ');
+            infoItems.push(`<span class="text-secondary text-xs">RWY: ${runwayList}</span>`);
+        }
+    }
+
+    if (infoItems.length > 0) {
+        html += `<div class="status-bar-info-row">${infoItems.join('')}</div>`;
+    }
+
+    html += `</div>`;
+
+    // Frequency column (for navaids)
+    if (type === 'navaid' && point.frequency) {
+        const freqFormatted = window.Utils?.formatNavaidFrequency(point.frequency);
+        html += `<div class="status-bar-freq text-metric">${freqFormatted}</div>`;
+    } else {
+        html += `<div class="status-bar-freq"></div>`;
+    }
+
+    // Position column
+    html += `<div class="status-bar-position text-secondary">${lat} ${lon}</div>`;
+
+    statusBar.querySelector('.status-bar-content').innerHTML = html;
     statusBar.classList.remove('hidden');
     currentStatusItem = `nearby_${type}_${code}`;
 }
@@ -1098,25 +1134,6 @@ function handlePanEnd(e) {
     isPanning = false;
     panStart = null;
 }
-
-// ============================================
-// WINDOW RESIZE HANDLER
-// ============================================
-
-// Regenerate map when window size changes (e.g., device rotation, browser resize)
-let resizeTimeout = null;
-window.addEventListener('resize', () => {
-    // Debounce resize events to avoid excessive regeneration
-    if (resizeTimeout) {
-        clearTimeout(resizeTimeout);
-    }
-    resizeTimeout = setTimeout(() => {
-        if (routeData) {
-            console.log('[VectorMap] Window resized, regenerating map');
-            generateMap(routeData.waypoints, routeData.legs);
-        }
-    }, 250); // Wait 250ms after last resize event
-});
 
 // ============================================
 // EXPORTS

@@ -4,8 +4,7 @@
   "description": "Lightweight web-based flight planning application with comprehensive navlog and tactical navigation display",
   "main": "index.html",
   "scripts": {
-    "test": "node tests/test-runner-simple.js",
-    "test:jsdom": "node tests/test-runner.js",
+    "test": "node tests/test-runner.js",
     "test:browser": "open tests/index.html",
     "start": "open index.html"
   },
