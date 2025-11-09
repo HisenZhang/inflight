@@ -563,8 +563,9 @@ function generateMap(waypoints, legs) {
         const heading = currentPosition.heading || 0; // GPS heading in degrees
 
         // Tall isosceles triangle (like old vector graphics)
-        const triangleHeight = isMobile ? 40 : 20; // Height from base to tip
-        const triangleBaseWidth = isMobile ? 20 : 10; // Width of base
+        // Mobile: 2x size (80x40 instead of 40x20)
+        const triangleHeight = isMobile ? 80 : 20; // Height from base to tip
+        const triangleBaseWidth = isMobile ? 40 : 10; // Width of base
 
         // Triangle vertices in local coordinates (tip points up)
         // Tip vertex
@@ -593,7 +594,7 @@ function generateMap(waypoints, legs) {
         const baseRightY = pos.y + (baseRightLocalX * sinH + baseRightLocalY * cosH);
 
         // Draw tall triangle without stroke (classic vector look)
-        svg += `<polygon points="${tipX},${tipY} ${baseLeftX},${baseLeftY} ${baseRightX},${baseRightY}" fill="#ffbf00"/>`;
+        svg += `<polygon points="${tipX},${tipY} ${baseLeftX},${baseLeftY} ${baseRightX},${baseRightY}" fill="#00ff00"/>`;
     }
 
     // Close the transform group

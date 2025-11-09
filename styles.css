@@ -908,7 +908,7 @@ header h1 {
 
 .route-line {
     fill: none;
-    stroke: var(--color-metric);
+    stroke: #cccccc;
     stroke-width: 2;
     stroke-linecap: round;
 }
