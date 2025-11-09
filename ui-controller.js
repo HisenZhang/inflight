@@ -109,24 +109,6 @@ function showDataInfo() {
     elements.inspectDbBtn.style.display = 'inline-block';
     const inspectDbBtnData = document.getElementById('inspectDbBtnData');
     if (inspectDbBtnData) inspectDbBtnData.style.display = 'inline-block';
-
-    // Setup inspect button toggle
-    elements.inspectDbBtn.addEventListener('click', toggleInspection);
-}
-
-function toggleInspection() {
-    const isHidden = elements.dataInspection.classList.contains('hidden');
-
-    if (isHidden) {
-        // Show inspection panel
-        elements.dataInspection.classList.remove('hidden');
-        elements.inspectDbBtn.textContent = 'CLOSE';
-        populateInspection();
-    } else {
-        // Hide inspection panel
-        elements.dataInspection.classList.add('hidden');
-        elements.inspectDbBtn.textContent = 'INSPECT';
-    }
 }
 
 function populateInspection() {
@@ -886,6 +868,7 @@ window.UIController = {
     // Status
     updateStatus,
     showDataInfo,
+    populateInspection,
 
     // Input controls
     enableRouteInput,

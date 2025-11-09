@@ -51,6 +51,17 @@ function setupEventListeners() {
     elements.loadDataBtn.addEventListener('click', handleLoadData);
     elements.reindexCacheBtn.addEventListener('click', handleReindexCache);
     elements.clearDataBtn.addEventListener('click', handleClearCache);
+    elements.inspectDbBtn.addEventListener('click', () => {
+        const isHidden = elements.dataInspection.classList.contains('hidden');
+        if (isHidden) {
+            elements.dataInspection.classList.remove('hidden');
+            elements.inspectDbBtn.textContent = 'CLOSE';
+            UIController.populateInspection();
+        } else {
+            elements.dataInspection.classList.add('hidden');
+            elements.inspectDbBtn.textContent = 'INSPECT';
+        }
+    });
 
     // Data management - Data tab buttons
     const loadDataBtnData = document.getElementById('loadDataBtnData');
@@ -64,7 +75,15 @@ function setupEventListeners() {
     if (inspectDbBtnData) inspectDbBtnData.addEventListener('click', () => {
         const dataInspectionData = document.getElementById('dataInspectionData');
         if (dataInspectionData) {
-            dataInspectionData.classList.toggle('hidden');
+            const isHidden = dataInspectionData.classList.contains('hidden');
+            if (isHidden) {
+                dataInspectionData.classList.remove('hidden');
+                inspectDbBtnData.textContent = 'CLOSE';
+                UIController.populateInspection();
+            } else {
+                dataInspectionData.classList.add('hidden');
+                inspectDbBtnData.textContent = 'INSPECT';
+            }
         }
     });
 
