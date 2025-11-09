@@ -79,6 +79,13 @@ A lightweight web application for flight planning with a professional navigation
    - Or click on a suggestion to add it
    - Enter one or more waypoints (separated by spaces)
    - Example routes: `KJFK MERIT EGLL` or `NY1` (single waypoint) or `KSFO OAK`
+   - **Supported Route Formats**:
+     - **Named waypoints**: `KJFK KORD KSFO` (airports, navaids, fixes)
+     - **Airways**: `KORD V44 SWANN V433 DQO` (Victor, Jet, Q routes)
+     - **Procedures**: `KBOS WYNDE3 KJFK` (STARs and DPs)
+     - **Direct (DCT)**: `KORD DCT IOW DCT KMSP` (explicit direct routing)
+     - **Lat/Long coordinates**: `3407/10615` (DDMM/DDDMM format) or `340730/1061530` (DDMMSS/DDDMMSS)
+     - **Mixed routes**: Combine any of the above formats
    - Click "COMPUTE" or press Enter when ready
 
 3. **View Results**
@@ -113,6 +120,20 @@ A lightweight web application for flight planning with a professional navigation
 - **VOR Navigation**: `KJFK MERIT EGLL` (New York → VOR → London)
 - **Mixed Waypoints**: `KSFO OAK SFO` (San Francisco → Oakland VOR → San Francisco Airport)
 - **NDB Navigation**: `KBOS PATSS CYYT` (Boston → NDB → St. John's)
+
+### IFR Routes with Airways and Procedures
+- **Airway Route**: `KORD V44 SWANN V433 DQO` (Chicago via Victor airways)
+- **Jet Route**: `KLAX J5 LKV J3 GEG` (Los Angeles via Jet routes)
+- **With STAR**: `KBOS MERIT WYNDE3 KJFK` (Boston to JFK with STAR)
+
+### Direct Routes (DCT keyword)
+- **Direct Flight**: `KORD DCT IOW DCT KMSP` (Chicago direct to Minneapolis)
+- **Mixed Direct**: `KJFK DCT MERIT DCT EGLL` (Direct to VOR, then direct to London)
+
+### RNAV Routes with Coordinates
+- **Lat/Long Format**: `KORD 4149/08736 3407/10615 KABQ` (Chicago to Albuquerque via coordinates)
+- **Random RNAV**: `3407/10615 3407/11546 KTUS` (High-altitude point-to-point navigation)
+- **Mixed Route**: `KDEN DCT 3950/10430 DCT KSLC` (Denver to Salt Lake City via coordinate)
 
 ## UI Design
 
@@ -269,13 +290,83 @@ The app calculates **magnetic declination** (variation) at each waypoint:
 - **Update Tracking**: Shows last update date/time and days since update
 - **Offline Support**: Service Worker caches app shell and external libraries
 
+## Route Format Reference
+
+### Supported Waypoint Types
+
+The app supports all standard IFR routing formats used in flight planning:
+
+1. **Named Waypoints** (Airports, Navaids, Fixes)
+   - **Airports**: Use ICAO codes (e.g., `KJFK`, `EGLL`, `RJAA`)
+   - **Navaids**: VOR, NDB, DME identifiers (e.g., `OAK`, `MERIT`, `LAX`)
+   - **Fixes**: Published waypoints including ARTCC fixes (e.g., `SWANN`, `KA03W`)
+
+2. **Airways**
+   - **Victor Airways**: Low altitude routes (e.g., `V44`, `V433`)
+   - **Jet Routes**: High altitude routes (e.g., `J5`, `J45`)
+   - **Q Routes**: RNAV routes (e.g., `Q822`)
+   - **Format**: `WAYPOINT AIRWAY WAYPOINT` (e.g., `KORD V44 SWANN V433 DQO`)
+
+3. **Procedures**
+   - **STARs**: Standard Terminal Arrival Routes (e.g., `WYNDE3`, `MIP4`)
+   - **DPs**: Departure Procedures/SIDs (e.g., `ACCRA5`)
+   - **Format**: Include in route string (e.g., `KBOS WYNDE3 KJFK`)
+
+4. **Direct Routes (DCT)**
+   - Explicit direct routing between waypoints
+   - **Format**: `WAYPOINT DCT WAYPOINT` (e.g., `KORD DCT IOW DCT KMSP`)
+   - **Note**: DCT is optional - direct routing is implied between waypoints
+
+5. **Latitude/Longitude Coordinates**
+   - **DDMM/DDDMM format**: Degrees + Minutes (e.g., `3407/10615` = 34°07'N 106°15'W)
+   - **DDMMSS/DDDMMSS format**: Degrees + Minutes + Seconds (e.g., `340730/1061530` = 34°07'30"N 106°15'30"W)
+   - **Hemispheres**: Assumes North/West for US operations (add N/S/E/W suffix if needed)
+   - **Use cases**: Random RNAV routes, high-altitude navigation (FL390+), point-to-point navigation
+   - **Examples**:
+     - `KORD 4149/08736 KABQ` (Chicago to Albuquerque via coordinate)
+     - `3407/10615 3407/11546 KTUS` (Coordinate-based RNAV route)
+
+### Route Format Examples
+
+**Simple Direct Route:**
+```
+KJFK KORD KSFO
+```
+
+**Airway Route:**
+```
+KORD V44 SWANN V433 DQO
+```
+
+**With STAR Arrival:**
+```
+KBOS MERIT WYNDE3 KJFK
+```
+
+**Explicit Direct (DCT):**
+```
+KORD DCT IOW DCT KMSP
+```
+
+**Random RNAV with Coordinates:**
+```
+KDEN 3950/10430 3920/11200 KSLC
+```
+
+**Complex IFR Route:**
+```
+KLAX J5 LKV J3 GEG YXC FL330 J500 VLR
+```
+
 ## Code Resolution Priority
 
 To avoid conflicts between IATA codes and navaid identifiers, the app uses smart lookup priority:
 
-1. **4+ characters**: Try ICAO code first (most specific, e.g., KJFK)
-2. **Any length**: Try navaid identifier (e.g., MERIT, NY1, OAK)
-3. **3 characters**: Try IATA code via mapping to ICAO (e.g., JFK → KJFK)
+1. **Lat/Long coordinates**: Checked first if format matches `DDMM/DDDMM` pattern
+2. **4+ characters**: Try ICAO airport code (e.g., KJFK)
+3. **Any length**: Try navaid identifier (e.g., MERIT, NY1, OAK)
+4. **Any length**: Try fix/waypoint (e.g., SWANN, KA03W)
+5. **3 characters**: Try IATA code via mapping to ICAO (e.g., JFK → KJFK)
 
 **Best Practice**: Use ICAO codes (4 letters) for airports to ensure unambiguous waypoint resolution.
 
@@ -349,6 +440,11 @@ The app displays detailed information for different navaid types:
 ### Distance Measuring
 - **TACAN**: Military TACAN (usable as DME by civilians)
 - **DME**: Standalone distance-measuring equipment
+
+### GPS Waypoint Types
+- **WP** (Waypoint): Standard GPS fix defined by latitude/longitude coordinates
+- **RP** (Reporting Point): Mandatory or non-mandatory position reporting point for ATC
+- **CN** (Computer Navigation Fix): RNAV waypoint defined for area navigation systems
 
 ## License
 

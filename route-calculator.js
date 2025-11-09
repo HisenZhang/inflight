@@ -9,26 +9,55 @@ function resolveWaypoints(routeString) {
     let expandedRoute = routeString;
     if (typeof RouteExpander !== 'undefined') {
         const expansion = RouteExpander.expandRoute(routeString);
+
+        // Check for expansion errors
+        if (expansion.errors && expansion.errors.length > 0) {
+            console.error('[Route] Expansion errors:', expansion.errors);
+            return { error: 'ERROR: ' + expansion.errors.join('; ') };
+        }
+
         if (expansion.expanded.length > 0) {
             expandedRoute = expansion.expandedString;
             console.log(`[Route] Expanded: ${routeString} → ${expandedRoute}`);
         }
     }
 
+    // Split route and remove consecutive duplicates
     const route = expandedRoute.trim().toUpperCase().split(/\s+/).filter(w => w.length > 0);
 
-    if (route.length < 1) {
+    // Filter out DCT keyword (it's implicit - direct routing between waypoints)
+    const filteredRoute = route.filter(w => w !== 'DCT');
+
+    const dedupedRoute = [];
+    for (let i = 0; i < filteredRoute.length; i++) {
+        if (i === 0 || filteredRoute[i] !== filteredRoute[i - 1]) {
+            dedupedRoute.push(filteredRoute[i]);
+        }
+    }
+    const finalRoute = dedupedRoute;
+
+    if (finalRoute.length < 1) {
         return { error: 'ERROR: ENTER AT LEAST ONE WAYPOINT' };
     }
 
     const waypoints = [];
     const notFound = [];
 
-    for (const code of route) {
+    for (const code of finalRoute) {
         let waypoint = null;
 
+        // Check if this is a lat/long coordinate (FAA format: DDMM/DDDMM or DDMMSS/DDDMMSS)
+        const latLonMatch = code.match(/^(\d{4,6})\/(\d{5,7})([NS])?([EW])?$/);
+        if (latLonMatch) {
+            waypoint = parseLatLonCoordinate(code, latLonMatch);
+            if (waypoint) {
+                waypoints.push(waypoint);
+                continue;
+            }
+        }
+
         // Priority: ICAO (4+ chars) → Navaid → Fix → IATA (3 chars)
-        if (code.length >= 4) {
+        if (code.length >= 4 && !latLonMatch) {
             waypoint = DataManager.getAirport(code);
         }
 
@@ -53,7 +82,7 @@ function resolveWaypoints(routeString) {
 
     if (notFound.length > 0) {
         return {
-            error: `ERROR: WAYPOINT(S) NOT IN DATABASE\n\n${notFound.join(', ')}\n\nVERIFY WAYPOINT IDENTIFIERS`
+            error: `ERROR: WAYPOINT(S) NOT IN DATABASE\n\n${notFound.join(', ')}\n\nVERIFY WAYPOINT IDENTIFIERS OR COORDINATE FORMAT`
         };
     }
 
@@ -61,6 +90,100 @@ function resolveWaypoints(routeString) {
         waypoints,
         expandedRoute: expandedRoute !== routeString ? expandedRoute : null
     };
+}
+
+// Parse FAA lat/long coordinate format
+// Supports: DDMM/DDDMM (degrees+minutes) and DDMMSS/DDDMMSS (degrees+minutes+seconds)
+// Examples: 3407/10615 → 34°07'N 106°15'W, 340730/1061530 → 34°07'30"N 106°15'30"W
+function parseLatLonCoordinate(code, match) {
+    try {
+        let latStr = match[1];
+        let lonStr = match[2];
+        const nsHemis = match[3] || null;
+        const ewHemis = match[4] || null;
+
+        // Parse latitude (DDMM or DDMMSS format)
+        let latDeg, latMin, latSec = 0;
+        if (latStr.length === 4) {
+            // DDMM format
+            latDeg = parseInt(latStr.substring(0, 2));
+            latMin = parseInt(latStr.substring(2, 4));
+        } else if (latStr.length === 6) {
+            // DDMMSS format
+            latDeg = parseInt(latStr.substring(0, 2));
+            latMin = parseInt(latStr.substring(2, 4));
+            latSec = parseInt(latStr.substring(4, 6));
+        } else {
+            console.error(`[Coordinate] Invalid latitude format: ${latStr}`);
+            return null;
+        }
+
+        // Parse longitude (DDDMM or DDDMMSS format)
+        let lonDeg, lonMin, lonSec = 0;
+        if (lonStr.length === 5) {
+            // DDDMM format
+            lonDeg = parseInt(lonStr.substring(0, 3));
+            lonMin = parseInt(lonStr.substring(3, 5));
+        } else if (lonStr.length === 7) {
+            // DDDMMSS format
+            lonDeg = parseInt(lonStr.substring(0, 3));
+            lonMin = parseInt(lonStr.substring(3, 5));
+            lonSec = parseInt(lonStr.substring(5, 7));
+        } else {
+            console.error(`[Coordinate] Invalid longitude format: ${lonStr}`);
+            return null;
+        }
+
+        // Validate ranges
+        if (latDeg < 0 || latDeg > 90 || latMin < 0 || latMin >= 60 || latSec < 0 || latSec >= 60) {
+            console.error(`[Coordinate] Latitude out of range: ${latDeg}°${latMin}'${latSec}"`);
+            return null;
+        }
+        if (lonDeg < 0 || lonDeg > 180 || lonMin < 0 || lonMin >= 60 || lonSec < 0 || lonSec >= 60) {
+            console.error(`[Coordinate] Longitude out of range: ${lonDeg}°${lonMin}'${lonSec}"`);
+            return null;
+        }
+
+        // Convert to decimal degrees
+        let lat = latDeg + (latMin / 60) + (latSec / 3600);
+        let lon = lonDeg + (lonMin / 60) + (lonSec / 3600);
+
+        // Apply hemisphere (if not specified, assume N/W for US-centric routing)
+        // US is Northern hemisphere (N) and Western hemisphere (W)
+        if (nsHemis === 'S') {
+            lat = -lat;
+        }
+        if (ewHemis === 'E') {
+            // Eastern hemisphere stays positive
+        } else {
+            // Western hemisphere (W) or default
+            lon = -lon;
+        }
+
+        // Format coordinate identifier for display
+        const latLabel = latSec > 0 ? `${latDeg}°${latMin}'${latSec}"` : `${latDeg}°${latMin}'`;
+        const lonLabel = lonSec > 0 ? `${lonDeg}°${lonMin}'${lonSec}"` : `${lonDeg}°${lonMin}'`;
+        const hemisLat = lat >= 0 ? 'N' : 'S';
+        const hemisLon = lon >= 0 ? 'E' : 'W';
+
+        console.log(`[Coordinate] Parsed ${code} → ${latLabel}${hemisLat} ${lonLabel}${hemisLon} (${lat.toFixed(5)}, ${lon.toFixed(5)})`);
+
+        return {
+            id: `coord_${code}`,
+            ident: code,
+            name: `${latLabel}${hemisLat} ${lonLabel}${hemisLon}`,
+            type: 'COORDINATE',
+            lat,
+            lon,
+            elevation: null,
+            waypointType: 'coordinate',
+            source: 'user-defined',
+            country: ''
+        };
+    } catch (error) {
+        console.error(`[Coordinate] Error parsing ${code}:`, error);
+        return null;
+    }
 }
 
 // ============================================
@@ -322,11 +445,18 @@ function formatCoordinate(value, type) {
 }
 
 function formatNavaidFrequency(freqKhz, type) {
-    if (type === 'VOR' || type === 'VOR-DME' || type === 'VORTAC') {
-        const freqMhz = freqKhz / 1000;
+    if (!freqKhz || freqKhz === 0) {
+        return '';
+    }
+
+    if (type === 'VOR' || type === 'VOR-DME' || type === 'VORTAC' || type === 'TACAN') {
+        // VOR frequencies are in MHz (108.00-117.95)
+        // If already in correct range, use as-is, otherwise divide by 1000
+        const freqMhz = freqKhz > 200 ? freqKhz / 1000 : freqKhz;
         return `${freqMhz.toFixed(2)}`;
     } else if (type === 'NDB' || type === 'NDB-DME') {
-        return `${freqKhz}`;
+        // NDB frequencies are in kHz
+        return `${Math.round(freqKhz)}`;
     } else {
         return `${freqKhz}`;
     }
