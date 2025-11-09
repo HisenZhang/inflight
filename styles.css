@@ -1233,11 +1233,18 @@ header h1 {
     }
 
     /* Full screen map on mobile - only when map tab is active */
-    #tab-map.active .tactical-display {
-        /* Make map panel full viewport height minus tabs */
+    #tab-map.active {
         display: flex;
         flex-direction: column;
         height: calc(100vh - 32px); /* Full height minus tab buttons */
+        overflow: hidden;
+    }
+
+    #tab-map.active .tactical-display {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-height: 0;
         margin-bottom: 0;
     }
 
