@@ -20,6 +20,8 @@ let runwaysData = new Map();         // Runways by airport ID/code
 let airwaysData = new Map();         // Airways (NASR only)
 let starsData = new Map();           // STARs (NASR only)
 let dpsData = new Map();             // DPs (NASR only)
+let tokenTypeMap = new Map();        // Fast lookup: token -> type (AIRPORT/NAVAID/FIX/AIRWAY/PROCEDURE)
+let fileMetadata = new Map();        // Track individual file load times and validity
 let db = null;
 let dataTimestamp = null;
 let dataSources = [];                // Track which sources were loaded
@@ -52,7 +54,7 @@ function saveToCache() {
 
         // Serialize Maps to arrays for storage
         const data = {
-            id: 'flightdata_cache_v7',
+            id: 'flightdata_cache_v8',
             airports: Array.from(airportsData.entries()),
             iataToIcao: Array.from(iataToIcao.entries()),
             navaids: Array.from(navaidsData.entries()),
@@ -64,7 +66,9 @@ function saveToCache() {
             dps: Array.from(dpsData.entries()),
             dataSources: dataSources,
             timestamp: Date.now(),
-            version: 7
+            version: 8,
+            // Track individual file metadata
+            fileMetadata: Object.fromEntries(fileMetadata)
         };
 
         const request = store.put(data);
@@ -77,7 +81,7 @@ function loadFromCacheDB() {
     return new Promise((resolve, reject) => {
         const transaction = db.transaction([STORE_NAME], 'readonly');
         const store = transaction.objectStore(STORE_NAME);
-        const request = store.get('flightdata_cache_v7');
+        const request = store.get('flightdata_cache_v8');
         request.onsuccess = () => resolve(request.result);
         request.onerror = () => reject(request.error);
     });
@@ -93,7 +97,8 @@ function clearCacheDB() {
             store.delete('flightdata_cache_v4'),
             store.delete('flightdata_cache_v5'),
             store.delete('flightdata_cache_v6'),
-            store.delete('flightdata_cache_v7')
+            store.delete('flightdata_cache_v7'),
+            store.delete('flightdata_cache_v8')
         ];
         Promise.all(requests.map(r => new Promise((res) => {
             r.onsuccess = () => res();
@@ -112,18 +117,31 @@ async function loadData(onStatusUpdate) {
     let nasrData = null;
     let ourairportsData = null;
 
+    // File loading callback
+    const onFileLoaded = (metadata) => {
+        fileMetadata.set(metadata.id, metadata);
+        console.log(`[DataManager] Loaded file: ${metadata.id} (${metadata.recordCount} records, ${(metadata.sizeBytes / 1024).toFixed(1)}KB)`);
+    };
+
     try {
         // Load NASR and OurAirports in parallel for better performance
         onStatusUpdate('[...] LOADING DATA SOURCES IN PARALLEL', 'loading');
 
         const results = await Promise.allSettled([
-            window.NASRAdapter.loadNASRData(onStatusUpdate),
-            window.OurAirportsAdapter.loadOurAirportsData(onStatusUpdate)
+            window.NASRAdapter.loadNASRData(onStatusUpdate, onFileLoaded),
+            window.OurAirportsAdapter.loadOurAirportsData(onStatusUpdate, onFileLoaded)
         ]);
 
         if (results[0].status === 'fulfilled') {
             nasrData = results[0].value;
             dataSources.push('NASR');
+
+            // Merge NASR file metadata
+            if (nasrData.fileMetadata) {
+                for (const [id, metadata] of nasrData.fileMetadata) {
+                    fileMetadata.set(id, metadata);
+                }
+            }
         } else {
             console.warn('NASR loading failed:', results[0].reason);
             onStatusUpdate('[!] NASR UNAVAILABLE - USING FALLBACK', 'warning');
@@ -132,6 +150,13 @@ async function loadData(onStatusUpdate) {
         if (results[1].status === 'fulfilled') {
             ourairportsData = results[1].value;
             dataSources.push('OurAirports');
+
+            // Merge OurAirports file metadata
+            if (ourairportsData.fileMetadata) {
+                for (const [id, metadata] of ourairportsData.fileMetadata) {
+                    fileMetadata.set(id, metadata);
+                }
+            }
         } else {
             console.warn('OurAirports loading failed:', results[1].reason);
             if (!nasrData) {
@@ -219,13 +244,7 @@ function mergeDataSources(nasrData, ourairportsData, onStatusUpdate = null) {
             dpsData.set(id, dp);
         }
 
-        // Initialize RouteExpander with data
-        if (typeof window.RouteExpander !== 'undefined') {
-            if (onStatusUpdate) onStatusUpdate('[...] INITIALIZING ROUTE EXPANDER', 'loading');
-            window.RouteExpander.setAirwaysData(airwaysData);
-            window.RouteExpander.setStarsData(starsData);
-            window.RouteExpander.setDpsData(dpsData);
-        }
+        dataSources.push('NASR');
     }
 
     // Add OurAirports data (fills gaps, doesn't override NASR)
@@ -277,13 +296,27 @@ function mergeDataSources(nasrData, ourairportsData, onStatusUpdate = null) {
                 runwaysData.set(code, runways);
             }
         }
+
+        dataSources.push('OurAirports');
+    }
+
+    // Build token type lookup map
+    if (onStatusUpdate) onStatusUpdate('[...] BUILDING TOKEN TYPE MAP', 'loading');
+    buildTokenTypeMap();
+
+    // Initialize RouteExpander with data
+    if (typeof window.RouteExpander !== 'undefined') {
+        if (onStatusUpdate) onStatusUpdate('[...] INITIALIZING ROUTE EXPANDER', 'loading');
+        window.RouteExpander.setAirwaysData(airwaysData);
+        window.RouteExpander.setStarsData(starsData);
+        window.RouteExpander.setDpsData(dpsData);
     }
 }
 
 async function checkCachedData() {
     try {
         const cachedData = await loadFromCacheDB();
-        if (cachedData && cachedData.version === 7 && cachedData.timestamp) {
+        if (cachedData && (cachedData.version === 8 || cachedData.version === 7) && cachedData.timestamp) {
             const age = Date.now() - cachedData.timestamp;
             const daysOld = Math.floor(age / (24 * 60 * 60 * 1000));
 
@@ -328,12 +361,132 @@ function loadFromCache(cachedData) {
     dataSources = cachedData.dataSources || [];
     dataTimestamp = cachedData.timestamp;
 
+    // Restore file metadata if available
+    if (cachedData.fileMetadata) {
+        fileMetadata = new Map(Object.entries(cachedData.fileMetadata));
+    }
+
+    // Build token type lookup map
+    buildTokenTypeMap();
+
     // Initialize RouteExpander with data
     if (typeof window.RouteExpander !== 'undefined') {
         window.RouteExpander.setAirwaysData(airwaysData);
         window.RouteExpander.setStarsData(starsData);
         window.RouteExpander.setDpsData(dpsData);
     }
+}
+
+// Build unified token type lookup map (NO IATA codes to avoid confusion)
+function buildTokenTypeMap() {
+    tokenTypeMap.clear();
+
+    // Index airports by ICAO code ONLY (NO IATA 3-letter codes to avoid confusion)
+    for (const [code, airport] of airportsData) {
+        if (code.length >= 4) {  // ICAO codes are 4+ characters
+            tokenTypeMap.set(code, 'AIRPORT');
+        }
+    }
+
+    // Index navaids
+    for (const [ident, navaid] of navaidsData) {
+        if (!tokenTypeMap.has(ident)) {
+            tokenTypeMap.set(ident, 'NAVAID');
+        }
+    }
+
+    // Index fixes/waypoints
+    for (const [ident, fix] of fixesData) {
+        if (!tokenTypeMap.has(ident)) {
+            tokenTypeMap.set(ident, 'FIX');
+        }
+    }
+
+    // Index airways
+    for (const [id, airway] of airwaysData) {
+        if (!tokenTypeMap.has(id)) {
+            tokenTypeMap.set(id, 'AIRWAY');
+        }
+    }
+
+    // Index STARs and DPs (both full name and short suffix)
+    for (const [id, star] of starsData) {
+        if (!tokenTypeMap.has(id)) {
+            tokenTypeMap.set(id, 'PROCEDURE');
+        }
+        // Also index short form: MIP.MIP4 -> also index MIP4
+        const match = id.match(/\.([A-Z]{3,}\d+)$/);
+        if (match && !tokenTypeMap.has(match[1])) {
+            tokenTypeMap.set(match[1], 'PROCEDURE');
+        }
+    }
+    for (const [id, dp] of dpsData) {
+        if (!tokenTypeMap.has(id)) {
+            tokenTypeMap.set(id, 'PROCEDURE');
+        }
+        // Also index short form: MIP.MIP4 -> also index MIP4
+        const match = id.match(/\.([A-Z]{3,}\d+)$/);
+        if (match && !tokenTypeMap.has(match[1])) {
+            tokenTypeMap.set(match[1], 'PROCEDURE');
+        }
+    }
+
+    console.log(`[DataManager] Token type map built: ${tokenTypeMap.size} entries`);
+}
+
+async function rebuildTokenTypeMap() {
+    console.log('[DataManager] Rebuilding token type map...');
+    buildTokenTypeMap();
+    console.log('[DataManager] Token type map rebuilt successfully');
+}
+
+function getFileStatus() {
+    const now = Date.now();
+    const status = [];
+
+    // Define expected files and their sources
+    const files = [
+        { id: 'nasr_airports', name: 'NASR Airports', source: 'NASR' },
+        { id: 'nasr_runways', name: 'NASR Runways', source: 'NASR' },
+        { id: 'nasr_navaids', name: 'NASR Navaids', source: 'NASR' },
+        { id: 'nasr_fixes', name: 'NASR Fixes', source: 'NASR' },
+        { id: 'nasr_airways', name: 'NASR Airways', source: 'NASR' },
+        { id: 'nasr_stars', name: 'NASR STARs', source: 'NASR' },
+        { id: 'nasr_dps', name: 'NASR DPs', source: 'NASR' },
+        { id: 'oa_airports', name: 'OurAirports Airports', source: 'OurAirports' },
+        { id: 'oa_frequencies', name: 'OurAirports Frequencies', source: 'OurAirports' },
+        { id: 'oa_runways', name: 'OurAirports Runways', source: 'OurAirports' },
+        { id: 'oa_navaids', name: 'OurAirports Navaids', source: 'OurAirports' }
+    ];
+
+    for (const file of files) {
+        const metadata = fileMetadata.get(file.id);
+        if (metadata) {
+            const age = now - metadata.timestamp;
+            const daysOld = Math.floor(age / (24 * 60 * 60 * 1000));
+            const expired = age >= CACHE_DURATION;
+
+            status.push({
+                ...file,
+                loaded: true,
+                timestamp: metadata.timestamp,
+                daysOld,
+                expired,
+                recordCount: metadata.recordCount || 0
+            });
+        } else {
+            status.push({
+                ...file,
+                loaded: false,
+                timestamp: null,
+                daysOld: null,
+                expired: false,
+                recordCount: 0
+            });
+        }
+    }
+
+    return status;
 }
 
 async function clearCache() {
@@ -347,6 +500,8 @@ async function clearCache() {
     airwaysData.clear();
     starsData.clear();
     dpsData.clear();
+    tokenTypeMap.clear();
+    fileMetadata.clear();
     dataTimestamp = null;
     dataSources = [];
 }
@@ -399,6 +554,28 @@ function getFix(ident) {
     return fixesData.get(ident);
 }
 
+function getFixCoordinates(ident) {
+    // Try fixes first
+    const fix = fixesData.get(ident);
+    if (fix && fix.lat !== undefined && fix.lon !== undefined) {
+        return { lat: fix.lat, lon: fix.lon };
+    }
+
+    // Try navaids
+    const navaid = navaidsData.get(ident);
+    if (navaid && navaid.lat !== undefined && navaid.lon !== undefined) {
+        return { lat: navaid.lat, lon: navaid.lon };
+    }
+
+    // Try airports
+    const airport = airportsData.get(ident);
+    if (airport && airport.lat !== undefined && airport.lon !== undefined) {
+        return { lat: airport.lat, lon: airport.lon };
+    }
+
+    return null;
+}
+
 function getFrequencies(airportCode) {
     return frequenciesData.get(airportCode) || [];
 }
@@ -412,6 +589,10 @@ function getDataStats() {
         airports: airportsData.size,
         navaids: navaidsData.size,
         fixes: fixesData.size,
+        airways: airwaysData.size,
+        stars: starsData.size,
+        dps: dpsData.size,
+        tokenTypes: tokenTypeMap.size,
         sources: dataSources.join(' + '),
         timestamp: dataTimestamp
     };
@@ -510,6 +691,11 @@ function searchWaypoints(query) {
     ].slice(0, 20); // Increased limit for more comprehensive results
 }
 
+// Get token type for route parsing
+function getTokenType(token) {
+    return tokenTypeMap.get(token) || null;
+}
+
 // ============================================
 // EXPORTS
 // ============================================
@@ -522,16 +708,20 @@ window.DataManager = {
     // Data loading
     loadData,
     clearCache,
+    rebuildTokenTypeMap,
+    getFileStatus,
 
     // Data access
     getAirport,
     getAirportByIATA,
     getNavaid,
     getFix,
+    getFixCoordinates,
     getFrequencies,
     getRunways,
     getDataStats,
     searchWaypoints,
+    getTokenType,
 
     // Query history
     saveQueryHistory,

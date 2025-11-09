@@ -18,8 +18,9 @@ function init() {
         statusBox: document.getElementById('dataStatus'),
         dataInfo: document.getElementById('dataInfo'),
         loadDataBtn: document.getElementById('loadDataBtn'),
-        clearCacheBtn: document.getElementById('clearCacheBtn'),
         inspectDbBtn: document.getElementById('inspectDbBtn'),
+        reindexCacheBtn: document.getElementById('reindexCacheBtn'),
+        clearDataBtn: document.getElementById('clearDataBtn'),
         dataInspection: document.getElementById('dataInspection'),
         inspectionContent: document.getElementById('inspectionContent'),
 
@@ -67,7 +68,6 @@ function updateStatus(message, type) {
 
     if (type === 'success') {
         elements.loadDataBtn.style.display = 'none';
-        elements.clearCacheBtn.style.display = 'inline-block';
     }
 }
 
@@ -115,13 +115,20 @@ function toggleInspection() {
 
 function populateInspection() {
     const stats = DataManager.getDataStats();
+    const fileStatus = DataManager.getFileStatus();
 
-    // Format cache age
+    // Format cache timestamp
+    let timestampFormatted = 'N/A';
     let cacheAge = 'N/A';
     let cacheColor = 'text-secondary';
+
     if (stats.timestamp) {
+        const date = new Date(stats.timestamp);
+        timestampFormatted = date.toISOString().replace('T', ' ').substring(0, 19) + ' UTC';
+
         const daysAgo = Math.floor((Date.now() - stats.timestamp) / (24 * 60 * 60 * 1000));
-        cacheAge = `${daysAgo} days ago`;
+        cacheAge = daysAgo === 0 ? 'TODAY' : `${daysAgo}D AGO`;
+
         if (daysAgo > 30) {
             cacheColor = 'text-warning';
         } else if (daysAgo > 90) {
@@ -131,55 +138,82 @@ function populateInspection() {
         }
     }
 
-    // Format timestamp
-    let timestampFormatted = 'N/A';
-    if (stats.timestamp) {
-        const date = new Date(stats.timestamp);
-        timestampFormatted = date.toISOString().replace('T', ' ').substring(0, 19) + ' UTC';
-    }
+    // Build file status table
+    let fileStatusHTML = '';
+    const nasrFiles = fileStatus.filter(f => f.source === 'NASR');
+    const oaFiles = fileStatus.filter(f => f.source === 'OurAirports');
 
-    // Get sample data for validation
-    const sampleAirport = DataManager.getAirport('KJFK') || DataManager.getAirport('KLAX') || null;
-    const sampleNavaid = DataManager.getNavaid('JFK') || DataManager.getNavaid('LAX') || null;
+    const buildFileTable = (files) => {
+        if (files.length === 0) return '<div class="text-secondary text-xs">No files loaded</div>';
+
+        let html = '<div style="font-size: 0.7rem; margin-top: 4px;">';
+        files.forEach(file => {
+            if (file.loaded) {
+                const ageColor = file.expired ? 'text-warning' : 'text-metric';
+                const sizeKB = (file.recordCount * 50 / 1024).toFixed(0); // Rough estimate
+                html += `
+                    <details style="margin-bottom: 4px;">
+                        <summary style="cursor: pointer; padding: 2px 0;">
+                            <span class="${ageColor}">✓</span> ${file.name}
+                            <span class="text-secondary">(${file.recordCount.toLocaleString()} records)</span>
+                        </summary>
+                        <div style="padding-left: 16px; margin-top: 2px; font-size: 0.65rem;">
+                            <div class="text-secondary">Age: ${file.daysOld}d | ~${sizeKB}KB cached</div>
+                        </div>
+                    </details>
+                `;
+            } else {
+                html += `<div class="text-error" style="padding: 2px 0;">✗ ${file.name} <span class="text-secondary">(not loaded)</span></div>`;
+            }
+        });
+        html += '</div>';
+        return html;
+    };
 
     elements.inspectionContent.innerHTML = `
         <div class="inspection-section">
-            <div><span class="inspection-label">TOTAL AIRPORTS:</span><span class="inspection-value">${stats.airports.toLocaleString()}</span></div>
-            <div><span class="inspection-label">TOTAL NAVAIDS:</span><span class="inspection-value">${stats.navaids.toLocaleString()}</span></div>
-            <div><span class="inspection-label">TOTAL FIXES:</span><span class="inspection-value">${(stats.fixes || 0).toLocaleString()}</span></div>
-            <div><span class="inspection-label">TOTAL WAYPOINTS:</span><span class="inspection-value">${(stats.airports + stats.navaids + (stats.fixes || 0)).toLocaleString()}</span></div>
+            <div class="text-secondary font-bold" style="margin-bottom: 8px;">INDEXED CACHE</div>
+            <div><span class="inspection-label">Airports:</span><span class="inspection-value">${stats.airports.toLocaleString()}</span></div>
+            <div><span class="inspection-label">Navaids:</span><span class="inspection-value">${stats.navaids.toLocaleString()}</span></div>
+            <div><span class="inspection-label">Fixes:</span><span class="inspection-value">${(stats.fixes || 0).toLocaleString()}</span></div>
+            <div><span class="inspection-label">Airways:</span><span class="inspection-value">${(stats.airways || 0).toLocaleString()}</span></div>
+            <div><span class="inspection-label">STARs:</span><span class="inspection-value">${(stats.stars || 0).toLocaleString()}</span></div>
+            <div><span class="inspection-label">DPs:</span><span class="inspection-value">${(stats.dps || 0).toLocaleString()}</span></div>
+            <div><span class="inspection-label">Token Map:</span><span class="inspection-value">${(stats.tokenTypes || 0).toLocaleString()} entries</span></div>
         </div>
 
         <div class="inspection-section">
-            <div><span class="inspection-label">CACHE TIMESTAMP:</span><span class="text-secondary">${timestampFormatted}</span></div>
-            <div><span class="inspection-label">CACHE AGE:</span><span class="${cacheColor}">${cacheAge}</span></div>
-            <div><span class="inspection-label">DATA SOURCES:</span><span class="text-secondary">${stats.sources || 'Unknown'}</span></div>
+            <div class="text-secondary font-bold" style="margin-bottom: 8px;">CACHE STATUS</div>
+            <div><span class="inspection-label">Last Indexed:</span><span class="text-secondary">${timestampFormatted}</span></div>
+            <div><span class="inspection-label">Cache Age:</span><span class="${cacheColor}">${cacheAge}</span></div>
+            <div><span class="inspection-label">Data Sources:</span><span class="text-secondary">${stats.sources || 'Unknown'}</span></div>
+            <div><span class="inspection-label">Storage:</span><span class="text-secondary">IndexedDB v8</span></div>
         </div>
 
         <div class="inspection-section">
-            <div><span class="inspection-label">STORAGE:</span><span class="text-secondary">IndexedDB (Browser Cache)</span></div>
-            <div><span class="inspection-label">GEO MODEL:</span><span class="text-secondary">WGS84 (Vincenty)</span></div>
-            <div><span class="inspection-label">MAG MODEL:</span><span class="text-secondary">WMM2025 (Spherical Harmonics)</span></div>
+            <details>
+                <summary style="cursor: pointer;">
+                    <span class="text-secondary font-bold">NASR DATA FILES (${nasrFiles.filter(f => f.loaded).length}/${nasrFiles.length})</span>
+                </summary>
+                ${buildFileTable(nasrFiles)}
+            </details>
         </div>
 
         <div class="inspection-section">
-            <div class="text-secondary" style="margin-bottom: 4px;">SAMPLE VALIDATION:</div>
-            ${sampleAirport ? `
-                <div><span class="inspection-label">→ Airport:</span><span class="text-airport">${sampleAirport.icao}</span> <span class="text-secondary">${sampleAirport.name || 'N/A'}</span></div>
-                <div><span class="inspection-label">  Coordinates:</span><span class="text-secondary">${sampleAirport.lat?.toFixed(4) || 'N/A'}, ${sampleAirport.lon?.toFixed(4) || 'N/A'}</span></div>
-            ` : '<div><span class="text-warning">⚠ No sample airport data available</span></div>'}
-            ${sampleNavaid ? `
-                <div><span class="inspection-label">→ Navaid:</span><span class="text-navaid">${sampleNavaid.ident}</span> <span class="text-secondary">${sampleNavaid.type || 'N/A'}</span></div>
-                <div><span class="inspection-label">  Coordinates:</span><span class="text-secondary">${sampleNavaid.lat?.toFixed(4) || 'N/A'}, ${sampleNavaid.lon?.toFixed(4) || 'N/A'}</span></div>
-            ` : '<div><span class="text-warning">⚠ No sample navaid data available</span></div>'}
+            <details>
+                <summary style="cursor: pointer;">
+                    <span class="text-secondary font-bold">OURAIRPORTS DATA FILES (${oaFiles.filter(f => f.loaded).length}/${oaFiles.length})</span>
+                </summary>
+                ${buildFileTable(oaFiles)}
+            </details>
         </div>
 
         <div class="inspection-section">
-            <div class="text-secondary" style="margin-bottom: 4px;">AVAILABILITY STATUS:</div>
-            <div><span class="inspection-label">Geodesy Library:</span><span class="text-metric">✓ LOADED</span></div>
-            <div><span class="inspection-label">Magnetic Model:</span><span class="text-metric">✓ LOADED</span></div>
-            <div><span class="inspection-label">Wind Stations:</span><span class="text-metric">✓ EMBEDDED (254 stations)</span></div>
-            <div><span class="inspection-label">Winds Aloft API:</span><span class="text-warning">⚠ REQUIRES INTERNET</span></div>
+            <div class="text-secondary font-bold" style="margin-bottom: 8px;">SYSTEM LIBRARIES</div>
+            <div><span class="inspection-label">Geo Model:</span><span class="text-metric">✓ WGS84 (Vincenty)</span></div>
+            <div><span class="inspection-label">Mag Model:</span><span class="text-metric">✓ WMM2025</span></div>
+            <div><span class="inspection-label">Wind Stations:</span><span class="text-metric">✓ 254 stations embedded</span></div>
+            <div><span class="inspection-label">Winds Aloft API:</span><span class="text-warning">⚠ Requires internet</span></div>
         </div>
     `;
 }
@@ -504,7 +538,7 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelSt
             <span class="summary-value ${fuelColor} font-bold">${fuelStatus.finalFob.toFixed(1)} GAL (${(fuelStatus.finalFob / fuelStatus.burnRate).toFixed(1)}H)</span>
         </div>
         <div class="summary-item">
-            <span class="summary-label text-secondary text-sm">VFR RESERVE REQ</span>
+            <span class="summary-label text-secondary text-sm">FUEL RESERVE REQ</span>
             <span class="summary-value text-secondary">${fuelStatus.requiredReserve.toFixed(1)} GAL (${fuelStatus.vfrReserve} MIN)</span>
         </div>
         `;
@@ -543,10 +577,9 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelSt
         // Position
         const pos = `${RouteCalculator.formatCoordinate(waypoint.lat, 'lat')} ${RouteCalculator.formatCoordinate(waypoint.lon, 'lon')}`;
 
-        // Elevation
-        const elev = waypoint.elevation !== null && !isNaN(waypoint.elevation)
-            ? `${Math.round(waypoint.elevation)} FT`
-            : 'N/A';
+        // Elevation (only show if available)
+        const hasElevation = waypoint.elevation !== null && !isNaN(waypoint.elevation);
+        const elev = hasElevation ? `${Math.round(waypoint.elevation)} FT` : null;
 
         // Magnetic variation
         let magVarDisplay;
@@ -580,7 +613,10 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelSt
                 }
             }
         } else if (waypoint.waypointType === 'navaid' && waypoint.frequency) {
-            freqHTML = `<span class="text-metric text-xs">${RouteCalculator.formatNavaidFrequency(waypoint.frequency, waypoint.type)}</span>`;
+            const formattedFreq = RouteCalculator.formatNavaidFrequency(waypoint.frequency, waypoint.type);
+            if (formattedFreq) {
+                freqHTML = `<span class="text-metric text-xs">${formattedFreq}</span>`;
+            }
         }
 
         // Runways
@@ -605,6 +641,14 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelSt
 
         const typeDisplay = waypoint.waypointType === 'airport' ? 'AIRPORT' : waypoint.type;
 
+        // Build elevation and magnetic variation line
+        let elevMagLine = '';
+        if (elev) {
+            elevMagLine = `<div class="text-airport text-xs">ELEV ${elev} | ${magVarDisplay}</div>`;
+        } else {
+            elevMagLine = `<div class="text-airport text-xs">${magVarDisplay}</div>`;
+        }
+
         // Waypoint row
         tableHTML += `
             <tr class="wpt-row">
@@ -615,7 +659,7 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelSt
                 </td>
                 <td colspan="2">
                     <div class="text-secondary text-xs">${pos}</div>
-                    <div class="text-airport text-xs">ELEV ${elev} | ${magVarDisplay}</div>
+                    ${elevMagLine}
                     ${runwayHTML}
                     ${freqHTML ? `<div class="mt-xs">${freqHTML}</div>` : ''}
                 </td>

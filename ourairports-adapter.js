@@ -219,57 +219,80 @@ function parseOARunways(csvText) {
     return runways;
 }
 
-// Load all OurAirports data
-async function loadOurAirportsData(onStatusUpdate) {
+// Load all OurAirports data with individual file tracking
+async function loadOurAirportsData(onStatusUpdate, onFileLoaded) {
     try {
-        // Fetch airports
-        onStatusUpdate('[...] DOWNLOADING OURAIRPORTS AIRPORTS', 'loading');
-        const airportsResponse = await fetch(AIRPORTS_CSV_URL);
-        if (!airportsResponse.ok) throw new Error(`HTTP ${airportsResponse.status}`);
-        const airportsCSV = await airportsResponse.text();
+        const fileMetadata = new Map();
 
-        // Fetch navaids
-        onStatusUpdate('[...] DOWNLOADING OURAIRPORTS NAVAIDS', 'loading');
-        const navaidsResponse = await fetch(NAVAIDS_CSV_URL);
-        if (!navaidsResponse.ok) throw new Error(`HTTP ${navaidsResponse.status}`);
-        const navaidsCSV = await navaidsResponse.text();
+        // Define files to download
+        const filesToDownload = [
+            { id: 'oa_airports', url: AIRPORTS_CSV_URL, label: 'AIRPORTS', parser: parseOAAirports },
+            { id: 'oa_navaids', url: NAVAIDS_CSV_URL, label: 'NAVAIDS', parser: parseOANavaids },
+            { id: 'oa_frequencies', url: FREQUENCIES_CSV_URL, label: 'FREQUENCIES', parser: parseOAFrequencies },
+            { id: 'oa_runways', url: RUNWAYS_CSV_URL, label: 'RUNWAYS', parser: parseOARunways }
+        ];
 
-        // Fetch frequencies
-        onStatusUpdate('[...] DOWNLOADING OURAIRPORTS FREQUENCIES', 'loading');
-        const frequenciesResponse = await fetch(FREQUENCIES_CSV_URL);
-        if (!frequenciesResponse.ok) throw new Error(`HTTP ${frequenciesResponse.status}`);
-        const frequenciesCSV = await frequenciesResponse.text();
+        const parsedData = {};
+        const rawCSV = {};
 
-        // Fetch runways
-        onStatusUpdate('[...] DOWNLOADING OURAIRPORTS RUNWAYS', 'loading');
-        const runwaysResponse = await fetch(RUNWAYS_CSV_URL);
-        if (!runwaysResponse.ok) throw new Error(`HTTP ${runwaysResponse.status}`);
-        const runwaysCSV = await runwaysResponse.text();
+        // Download and parse each file individually
+        for (const fileInfo of filesToDownload) {
+            const startTime = Date.now();
+            onStatusUpdate(`[...] DOWNLOADING OURAIRPORTS ${fileInfo.label}`, 'loading');
 
-        // Parse data
-        onStatusUpdate('[...] PARSING OURAIRPORTS DATA', 'loading');
-        const { airports, iataToIcao } = parseOAAirports(airportsCSV);
-        const navaids = parseOANavaids(navaidsCSV);
-        const frequencies = parseOAFrequencies(frequenciesCSV);
-        const runways = parseOARunways(runwaysCSV);
+            const response = await fetch(fileInfo.url);
+            if (!response.ok) throw new Error(`HTTP ${response.status} for ${fileInfo.label}`);
+            const csvData = await response.text();
+            const downloadTime = Date.now() - startTime;
+
+            onStatusUpdate(`[...] PARSING OURAIRPORTS ${fileInfo.label}`, 'loading');
+            const parseStartTime = Date.now();
+            const parsed = fileInfo.parser(csvData);
+            const parseTime = Date.now() - parseStartTime;
+
+            // Store parsed data
+            const dataKey = fileInfo.id.replace('oa_', '');
+
+            // Handle different parser return types
+            if (fileInfo.id === 'oa_airports') {
+                parsedData.airports = parsed.airports;
+                parsedData.iataToIcao = parsed.iataToIcao;
+                rawCSV.airportsCSV = csvData;
+            } else {
+                parsedData[dataKey] = parsed;
+                rawCSV[`${dataKey}CSV`] = csvData;
+            }
+
+            // Track file metadata
+            const recordCount = parsed.size || (parsed.airports ? parsed.airports.size : 0);
+            const metadata = {
+                id: fileInfo.id,
+                label: fileInfo.label,
+                timestamp: Date.now(),
+                downloadTime,
+                parseTime,
+                recordCount,
+                sizeBytes: csvData.length,
+                source: 'OurAirports'
+            };
+
+            fileMetadata.set(fileInfo.id, metadata);
+
+            // Notify about file completion
+            if (onFileLoaded) {
+                onFileLoaded(metadata);
+            }
+
+            onStatusUpdate(`[OK] OURAIRPORTS ${fileInfo.label} (${recordCount} RECORDS)`, 'success');
+        }
 
         onStatusUpdate('[OK] OURAIRPORTS DATA LOADED', 'success');
 
         return {
             source: 'ourairports',
-            data: {
-                airports,
-                iataToIcao,
-                navaids,
-                frequencies,
-                runways
-            },
-            rawCSV: {
-                airportsCSV,
-                navaidsCSV,
-                frequenciesCSV,
-                runwaysCSV
-            }
+            data: parsedData,
+            rawCSV,
+            fileMetadata
         };
     } catch (error) {
         console.error('OurAirports loading error:', error);

@@ -343,10 +343,14 @@ function parseNASRSTARs(csvText) {
 
     const starCodeIdx = headers.indexOf('STAR_COMPUTER_CODE');
     const routeTypeIdx = headers.indexOf('ROUTE_PORTION_TYPE');
+    const routeNameIdx = headers.indexOf('ROUTE_NAME');
+    const bodySeqIdx = headers.indexOf('BODY_SEQ');
     const pointSeqIdx = headers.indexOf('POINT_SEQ');
     const pointIdx = headers.indexOf('POINT');
 
     const stars = new Map();
+    const bodyRoutes = new Map(); // BODY portions
+    const transitionRoutes = new Map(); // TRANSITION portions
 
     for (let i = 1; i < lines.length; i++) {
         if (!lines[i].trim()) continue;
@@ -355,25 +359,68 @@ function parseNASRSTARs(csvText) {
             const values = parseNASRCSVLine(lines[i]);
             const starCode = values[starCodeIdx]?.trim();
             const routeType = values[routeTypeIdx]?.trim();
+            const routeName = values[routeNameIdx]?.trim();
+            const bodySeq = values[bodySeqIdx]?.trim();
             const pointSeq = parseInt(values[pointSeqIdx]);
             const point = values[pointIdx]?.trim().toUpperCase();
 
-            if (!starCode || routeType !== 'BODY' || !point) continue;
+            if (!starCode || !point || !routeName) continue;
+            if (routeType !== 'BODY' && routeType !== 'TRANSITION') continue;
 
-            if (!stars.has(starCode)) {
-                stars.set(starCode, []);
+            const key = `${starCode}|${routeType}|${routeName}|${bodySeq}`;
+
+            if (routeType === 'BODY') {
+                if (!bodyRoutes.has(key)) {
+                    bodyRoutes.set(key, []);
+                }
+                bodyRoutes.get(key).push({ seq: pointSeq, fix: point });
+            } else if (routeType === 'TRANSITION') {
+                if (!transitionRoutes.has(key)) {
+                    transitionRoutes.set(key, []);
+                }
+                transitionRoutes.get(key).push({ seq: pointSeq, fix: point });
             }
-
-            stars.get(starCode).push({ seq: pointSeq, fix: point });
         } catch (error) {
             continue;
         }
     }
 
-    // Sort by sequence and extract fix names
-    for (const [code, fixes] of stars) {
-        fixes.sort((a, b) => a.seq - b.seq);
-        stars.set(code, fixes.map(f => f.fix));
+    console.log(`[NASR] Processing ${bodyRoutes.size} STAR body routes, ${transitionRoutes.size} transitions`);
+
+    // Store STARs with their body and transitions
+    for (const [key, fixes] of bodyRoutes) {
+        const [starCode, routeType, routeName, bodySeq] = key.split('|');
+
+        // Only use the first BODY route per STAR
+        if (!stars.has(starCode)) {
+            fixes.sort((a, b) => a.seq - b.seq);
+            const fixNames = fixes.map(f => f.fix);
+            // REVERSE - NASR stores procedures from endpoint to startpoint
+            fixNames.reverse();
+
+            // Collect all transitions for this STAR
+            const transitions = [];
+            for (const [transKey, transFixes] of transitionRoutes) {
+                if (transKey.startsWith(`${starCode}|TRANSITION|`)) {
+                    transFixes.sort((a, b) => a.seq - b.seq);
+                    const transFixNames = transFixes.map(f => f.fix);
+                    // REVERSE - NASR stores transitions from endpoint to startpoint
+                    transFixNames.reverse();
+
+                    // After reversal, first fix is the external entry point
+                    transitions.push({
+                        name: transKey.split('|')[2],
+                        entryFix: transFixNames[0],
+                        fixes: transFixNames
+                    });
+                }
+            }
+
+            stars.set(starCode, {
+                body: fixNames,
+                transitions: transitions
+            });
+        }
     }
 
     return stars;
@@ -386,10 +433,13 @@ function parseNASRDPs(csvText) {
 
     const dpCodeIdx = headers.indexOf('DP_COMPUTER_CODE');
     const routeTypeIdx = headers.indexOf('ROUTE_PORTION_TYPE');
+    const routeNameIdx = headers.indexOf('ROUTE_NAME');
+    const bodySeqIdx = headers.indexOf('BODY_SEQ');
     const pointSeqIdx = headers.indexOf('POINT_SEQ');
     const pointIdx = headers.indexOf('POINT');
 
     const dps = new Map();
+    const bodyRoutes = new Map();
 
     for (let i = 1; i < lines.length; i++) {
         if (!lines[i].trim()) continue;
@@ -398,33 +448,47 @@ function parseNASRDPs(csvText) {
             const values = parseNASRCSVLine(lines[i]);
             const dpCode = values[dpCodeIdx]?.trim();
             const routeType = values[routeTypeIdx]?.trim();
+            const routeName = values[routeNameIdx]?.trim();
+            const bodySeq = values[bodySeqIdx]?.trim();
             const pointSeq = parseInt(values[pointSeqIdx]);
             const point = values[pointIdx]?.trim().toUpperCase();
 
-            if (!dpCode || routeType !== 'BODY' || !point) continue;
+            if (!dpCode || routeType !== 'BODY' || !point || !routeName) continue;
 
-            if (!dps.has(dpCode)) {
-                dps.set(dpCode, []);
+            // Key by DP_CODE, ROUTE_NAME, and BODY_SEQ (same as STARs)
+            const key = `${dpCode}|${routeType}|${routeName}|${bodySeq}`;
+
+            if (!bodyRoutes.has(key)) {
+                bodyRoutes.set(key, []);
             }
 
-            dps.get(dpCode).push({ seq: pointSeq, fix: point });
+            bodyRoutes.get(key).push({ seq: pointSeq, fix: point });
         } catch (error) {
             continue;
         }
     }
 
-    // Sort by sequence and extract fix names
-    for (const [code, fixes] of dps) {
-        fixes.sort((a, b) => a.seq - b.seq);
-        dps.set(code, fixes.map(f => f.fix));
+    // Pick the first transition for each DP
+    for (const [key, fixes] of bodyRoutes) {
+        const [dpCode] = key.split('|');
+
+        // Only use the first route per DP
+        if (!dps.has(dpCode)) {
+            fixes.sort((a, b) => a.seq - b.seq);
+            const fixNames = fixes.map(f => f.fix);
+
+            dps.set(dpCode, fixNames);
+        }
     }
 
     return dps;
 }
 
-// Load all NASR data
-async function loadNASRData(onStatusUpdate) {
+// Load all NASR data with individual file tracking
+async function loadNASRData(onStatusUpdate, onFileLoaded) {
     try {
+        const fileMetadata = new Map();
+
         // Check NASR validity
         onStatusUpdate('[...] CHECKING NASR DATA VALIDITY', 'loading');
         const info = await getNASRInfo();
@@ -435,67 +499,70 @@ async function loadNASRData(onStatusUpdate) {
 
         onStatusUpdate(`[...] NASR DATA VALID (${info.daysRemaining} DAYS REMAINING)`, 'loading');
 
-        // Download files
-        onStatusUpdate('[...] DOWNLOADING NASR AIRPORTS', 'loading');
-        const airportsCSV = await fetchNASRFile('APT_BASE.csv');
+        // Define files to download
+        const filesToDownload = [
+            { id: 'nasr_airports', filename: 'APT_BASE.csv', label: 'AIRPORTS', parser: parseNASRAirports },
+            { id: 'nasr_runways', filename: 'APT_RWY.csv', label: 'RUNWAYS', parser: parseNASRRunways },
+            { id: 'nasr_navaids', filename: 'NAV_BASE.csv', label: 'NAVAIDS', parser: parseNASRNavaids },
+            { id: 'nasr_fixes', filename: 'FIX_BASE.csv', label: 'FIXES', parser: parseNASRFixes },
+            { id: 'nasr_frequencies', filename: 'FRQ.csv', label: 'FREQUENCIES', parser: parseNASRFrequencies },
+            { id: 'nasr_airways', filename: 'AWY_BASE.csv', label: 'AIRWAYS', parser: parseNASRAirways },
+            { id: 'nasr_stars', filename: 'STAR_RTE.csv', label: 'STARs', parser: parseNASRSTARs },
+            { id: 'nasr_dps', filename: 'DP_RTE.csv', label: 'DPs', parser: parseNASRDPs }
+        ];
 
-        onStatusUpdate('[...] DOWNLOADING NASR RUNWAYS', 'loading');
-        const runwaysCSV = await fetchNASRFile('APT_RWY.csv');
+        const parsedData = {};
+        const rawCSV = {};
 
-        onStatusUpdate('[...] DOWNLOADING NASR NAVAIDS', 'loading');
-        const navaidsCSV = await fetchNASRFile('NAV_BASE.csv');
+        // Download and parse each file individually
+        for (const fileInfo of filesToDownload) {
+            const startTime = Date.now();
+            onStatusUpdate(`[...] DOWNLOADING NASR ${fileInfo.label}`, 'loading');
 
-        onStatusUpdate('[...] DOWNLOADING NASR FIXES', 'loading');
-        const fixesCSV = await fetchNASRFile('FIX_BASE.csv');
+            const csvData = await fetchNASRFile(fileInfo.filename);
+            const downloadTime = Date.now() - startTime;
 
-        onStatusUpdate('[...] DOWNLOADING NASR FREQUENCIES', 'loading');
-        const frequenciesCSV = await fetchNASRFile('FRQ.csv');
+            onStatusUpdate(`[...] PARSING NASR ${fileInfo.label}`, 'loading');
+            const parseStartTime = Date.now();
+            const parsed = fileInfo.parser(csvData);
+            const parseTime = Date.now() - parseStartTime;
 
-        onStatusUpdate('[...] DOWNLOADING NASR AIRWAYS', 'loading');
-        const airwaysCSV = await fetchNASRFile('AWY_BASE.csv');
+            // Store parsed data
+            const dataKey = fileInfo.id.replace('nasr_', '');
+            parsedData[dataKey] = parsed;
+            rawCSV[`${dataKey}CSV`] = csvData;
 
-        onStatusUpdate('[...] DOWNLOADING NASR STARs', 'loading');
-        const starsCSV = await fetchNASRFile('STAR_RTE.csv');
+            // Track file metadata
+            const metadata = {
+                id: fileInfo.id,
+                filename: fileInfo.filename,
+                label: fileInfo.label,
+                timestamp: Date.now(),
+                downloadTime,
+                parseTime,
+                recordCount: parsed.size || 0,
+                sizeBytes: csvData.length,
+                source: 'NASR'
+            };
 
-        onStatusUpdate('[...] DOWNLOADING NASR DPs', 'loading');
-        const dpsCSV = await fetchNASRFile('DP_RTE.csv');
+            fileMetadata.set(fileInfo.id, metadata);
 
-        // Parse data
-        onStatusUpdate('[...] PARSING NASR DATA', 'loading');
-        const airports = parseNASRAirports(airportsCSV);
-        const runways = parseNASRRunways(runwaysCSV);
-        const navaids = parseNASRNavaids(navaidsCSV);
-        const fixes = parseNASRFixes(fixesCSV);
-        const frequencies = parseNASRFrequencies(frequenciesCSV);
-        const airways = parseNASRAirways(airwaysCSV);
-        const stars = parseNASRSTARs(starsCSV);
-        const dps = parseNASRDPs(dpsCSV);
+            // Notify about file completion
+            if (onFileLoaded) {
+                onFileLoaded(metadata);
+            }
+
+            onStatusUpdate(`[OK] NASR ${fileInfo.label} (${metadata.recordCount} RECORDS)`, 'success');
+        }
 
         onStatusUpdate('[OK] NASR DATA LOADED', 'success');
 
         return {
             source: 'nasr',
             info,
-            data: {
-                airports,
-                runways,
-                navaids,
-                fixes,
-                frequencies,
-                airways,
-                stars,
-                dps
-            },
-            rawCSV: {
-                airportsCSV,
-                runwaysCSV,
-                navaidsCSV,
-                fixesCSV,
-                frequenciesCSV,
-                airwaysCSV,
-                starsCSV,
-                dpsCSV
-            }
+            data: parsedData,
+            rawCSV,
+            fileMetadata
         };
     } catch (error) {
         console.error('NASR loading error:', error);
