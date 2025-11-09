@@ -114,7 +114,7 @@ function setupEventListeners() {
     // GPS tracking
     const gpsBtn = document.getElementById('toggleGPSBtn');
     if (gpsBtn) {
-        gpsBtn.addEventListener('click', () => TacticalDisplay.toggleGPS());
+        gpsBtn.addEventListener('click', () => VectorMap.toggleGPS());
     }
 
     // Navlog export/import
@@ -330,8 +330,8 @@ async function handleCalculateRoute() {
         // Display results
         UIController.displayResults(waypoints, legs, totalDistance, totalTime, fuelStatus, options);
 
-        // Display tactical navigation
-        TacticalDisplay.displayTacticalNavigation(waypoints, legs, options);
+        // Display vector map
+        VectorMap.displayMap(waypoints, legs, options);
 
         // Save to history
         DataManager.saveQueryHistory(routeValue.trim().toUpperCase());

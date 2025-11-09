@@ -898,9 +898,9 @@ function restoreNavlog(navlogData) {
     // Display results
     displayResults(waypoints, legs, totalDistance, totalTime, fuelStatus, options);
 
-    // Display tactical navigation
-    if (typeof window.TacticalDisplay !== 'undefined') {
-        window.TacticalDisplay.displayTacticalNavigation(waypoints, legs, options);
+    // Display vector map
+    if (typeof window.VectorMap !== 'undefined') {
+        window.VectorMap.displayMap(waypoints, legs, options);
     }
 
     console.log('[UIController] Navlog restored:', routeString);

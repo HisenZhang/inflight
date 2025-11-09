@@ -1,5 +1,5 @@
-// Tactical Display Module - GPS Navigation-style interface
-// Shows current position, next waypoint, and turn-by-turn directions
+// Vector Map Display Module - GPS moving map navigation
+// Shows current position, next waypoint, and navigation data
 
 let currentPosition = null;
 let watchId = null;
@@ -12,7 +12,7 @@ let currentLegIndex = 0;
 
 function startGPSTracking() {
     if (!navigator.geolocation) {
-        console.warn('[TacticalDisplay] Geolocation not supported');
+        console.warn('[VectorMap] Geolocation not supported');
         return false;
     }
 
@@ -21,14 +21,16 @@ function startGPSTracking() {
             currentPosition = {
                 lat: position.coords.latitude,
                 lon: position.coords.longitude,
-                accuracy: position.coords.accuracy,
-                heading: position.coords.heading,
+                accuracy: position.coords.accuracy, // horizontal accuracy in meters
+                altitudeAccuracy: position.coords.altitudeAccuracy, // vertical accuracy in meters
+                altitude: position.coords.altitude, // meters MSL
+                heading: position.coords.heading, // true heading in degrees
                 speed: position.coords.speed // m/s
             };
             updateLiveNavigation();
         },
         (error) => {
-            console.error('[TacticalDisplay] GPS error:', error);
+            console.error('[VectorMap] GPS error:', error);
         },
         {
             enableHighAccuracy: true,
@@ -69,31 +71,63 @@ function updateLiveNavigation() {
         nextWaypoint.lon
     );
 
-    const bearing = window.RouteCalculator.calculateBearing(
+    // True bearing to next waypoint
+    const trueBearing = window.RouteCalculator.calculateBearing(
         currentPosition.lat,
         currentPosition.lon,
         nextWaypoint.lat,
         nextWaypoint.lon
     );
 
-    // Calculate ETA based on current ground speed
-    let eta = null;
-    let timeRemaining = null;
-    if (currentPosition.speed && currentPosition.speed > 0) {
-        const speedKt = currentPosition.speed * 1.94384; // m/s to knots
-        timeRemaining = (distToNext / speedKt) * 60; // minutes
-        const etaMs = Date.now() + timeRemaining * 60 * 1000;
-        eta = new Date(etaMs);
+    // Convert to magnetic heading
+    const magVariation = window.RouteCalculator.getMagneticVariation(
+        currentPosition.lat,
+        currentPosition.lon
+    );
+    const magHeading = (trueBearing - magVariation + 360) % 360;
+
+    // GPS ground speed in knots
+    const gpsGroundSpeed = currentPosition.speed ? currentPosition.speed * 1.94384 : null;
+
+    // Calculate ETE to next waypoint and ETA to destination based on GPS ground speed
+    let eteNextWP = null;
+    let etaNextWP = null;
+    let etaDestination = null;
+
+    if (gpsGroundSpeed && gpsGroundSpeed > 0) {
+        // ETE to next waypoint (minutes)
+        eteNextWP = (distToNext / gpsGroundSpeed) * 60;
+
+        // ETA to next waypoint
+        const etaNextMs = Date.now() + eteNextWP * 60 * 1000;
+        etaNextWP = new Date(etaNextMs);
+
+        // Calculate total distance to destination
+        let totalDistRemaining = distToNext;
+        for (let i = currentLegIndex + 1; i < legs.length; i++) {
+            totalDistRemaining += legs[i].distance;
+        }
+
+        // ETA to destination
+        const etaDestMs = Date.now() + (totalDistRemaining / gpsGroundSpeed) * 60 * 60 * 1000;
+        etaDestination = new Date(etaDestMs);
     }
+
+    // GPS accuracy assessment
+    const horizontalAccuracy = currentPosition.accuracy || null;
+    const verticalAccuracy = currentPosition.altitudeAccuracy || null;
 
     // Update display
     updateNavigationDisplay({
         nextWaypoint,
         distToNext,
-        bearing,
-        eta,
-        timeRemaining,
-        currentSpeed: currentPosition.speed ? currentPosition.speed * 1.94384 : null
+        magHeading,
+        eteNextWP,
+        etaNextWP,
+        etaDestination,
+        gpsGroundSpeed,
+        horizontalAccuracy,
+        verticalAccuracy
     });
 }
 
@@ -101,28 +135,28 @@ function updateLiveNavigation() {
 // DISPLAY FUNCTIONS
 // ============================================
 
-function displayTacticalNavigation(waypoints, legs, options = {}) {
+function displayMap(waypoints, legs, options = {}) {
     if (waypoints.length < 2) {
-        hideTacticalDisplay();
+        hideMap();
         return;
     }
 
     routeData = { waypoints, legs, options };
     currentLegIndex = 0;
 
-    showTacticalDisplay();
+    showMap();
     generateMap(waypoints, legs);
     updateCurrentInstruction(legs[0], options);
 }
 
-function showTacticalDisplay() {
+function showMap() {
     const display = document.getElementById('tacticalDisplay');
     if (display) {
         display.style.display = 'block';
     }
 }
 
-function hideTacticalDisplay() {
+function hideMap() {
     const display = document.getElementById('tacticalDisplay');
     if (display) {
         display.style.display = 'none';
@@ -329,32 +363,96 @@ function updateCurrentInstruction(firstLeg, options) {
 }
 
 function updateNavigationDisplay(navData) {
-    const { nextWaypoint, distToNext, bearing, eta, timeRemaining, currentSpeed } = navData;
+    const { nextWaypoint, distToNext, magHeading, eteNextWP, etaNextWP, etaDestination,
+            gpsGroundSpeed, horizontalAccuracy, verticalAccuracy } = navData;
 
-    // Update distance
+    // Update distance to next waypoint
     const distEl = document.querySelector('.dist-nm');
     if (distEl) {
         distEl.textContent = distToNext.toFixed(1);
     }
 
-    // Update heading
+    // Update magnetic heading
     const reqHdgEl = document.querySelector('.req-hdg');
     if (reqHdgEl) {
-        reqHdgEl.textContent = String(Math.round(bearing)).padStart(3, '0') + '°';
+        reqHdgEl.textContent = String(Math.round(magHeading)).padStart(3, '0') + '°';
     }
 
-    // Update ETA
+    // Update ETE to next waypoint
+    const eteEl = document.querySelector('.ete-value');
+    if (eteEl && eteNextWP !== null) {
+        const hours = Math.floor(eteNextWP / 60);
+        const minutes = Math.round(eteNextWP % 60);
+        eteEl.textContent = hours > 0 ? `${hours}H${minutes}M` : `${minutes}M`;
+    } else if (eteEl) {
+        eteEl.textContent = '--';
+    }
+
+    // Update ETA to next waypoint
     const etaEl = document.querySelector('.eta-time');
-    if (etaEl && eta) {
-        const hours = String(eta.getHours()).padStart(2, '0');
-        const minutes = String(eta.getMinutes()).padStart(2, '0');
+    if (etaEl && etaNextWP) {
+        const hours = String(etaNextWP.getHours()).padStart(2, '0');
+        const minutes = String(etaNextWP.getMinutes()).padStart(2, '0');
         etaEl.textContent = `${hours}:${minutes}`;
+    } else if (etaEl) {
+        etaEl.textContent = '--:--';
     }
 
-    // Update ground speed
+    // Update ETA to destination
+    const etaDestEl = document.querySelector('.eta-dest-value');
+    if (etaDestEl && etaDestination) {
+        const hours = String(etaDestination.getHours()).padStart(2, '0');
+        const minutes = String(etaDestination.getMinutes()).padStart(2, '0');
+        etaDestEl.textContent = `${hours}:${minutes}`;
+    } else if (etaDestEl) {
+        etaDestEl.textContent = '--:--';
+    }
+
+    // Update GPS ground speed
     const gsEl = document.querySelector('.gs-value');
-    if (gsEl && currentSpeed) {
-        gsEl.textContent = Math.round(currentSpeed);
+    if (gsEl && gpsGroundSpeed !== null) {
+        gsEl.textContent = Math.round(gpsGroundSpeed);
+    } else if (gsEl) {
+        gsEl.textContent = '--';
+    }
+
+    // Update GPS accuracy with color coding
+    const horizAccEl = document.querySelector('.gps-horiz-acc');
+    if (horizAccEl && horizontalAccuracy !== null) {
+        const accMeters = Math.round(horizontalAccuracy);
+        horizAccEl.textContent = `${accMeters}M`;
+
+        // Color code: green <50m, yellow 50-100m, red >100m
+        horizAccEl.className = 'gps-horiz-acc';
+        if (accMeters < 50) {
+            horizAccEl.classList.add('text-metric'); // green
+        } else if (accMeters < 100) {
+            horizAccEl.classList.add('text-warning'); // yellow
+        } else {
+            horizAccEl.classList.add('text-error'); // red
+        }
+    } else if (horizAccEl) {
+        horizAccEl.textContent = '--';
+        horizAccEl.className = 'gps-horiz-acc text-secondary';
+    }
+
+    const vertAccEl = document.querySelector('.gps-vert-acc');
+    if (vertAccEl && verticalAccuracy !== null) {
+        const accMeters = Math.round(verticalAccuracy);
+        vertAccEl.textContent = `${accMeters}M`;
+
+        // Color code: green <50m, yellow 50-100m, red >100m
+        vertAccEl.className = 'gps-vert-acc';
+        if (accMeters < 50) {
+            vertAccEl.classList.add('text-metric'); // green
+        } else if (accMeters < 100) {
+            vertAccEl.classList.add('text-warning'); // yellow
+        } else {
+            vertAccEl.classList.add('text-error'); // red
+        }
+    } else if (vertAccEl) {
+        vertAccEl.textContent = '--';
+        vertAccEl.className = 'gps-vert-acc text-secondary';
     }
 
     // Regenerate map with current position
@@ -391,9 +489,9 @@ function toggleGPS() {
 // EXPORTS
 // ============================================
 
-window.TacticalDisplay = {
-    displayTacticalNavigation,
-    hideTacticalDisplay,
+window.VectorMap = {
+    displayMap,
+    hideMap,
     toggleGPS,
     startGPSTracking,
     stopGPSTracking

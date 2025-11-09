@@ -21,7 +21,7 @@
             <!-- Tab Navigation -->
             <div class="tab-navigation">
                 <button class="tab-btn active" data-tab="route">ROUTE & NAVLOG</button>
-                <button class="tab-btn" data-tab="map">TACTICAL MAP</button>
+                <button class="tab-btn" data-tab="map">VECTOR MAP</button>
                 <button class="tab-btn" data-tab="data">DATA & CACHE</button>
             </div>
         </header>
@@ -216,19 +216,19 @@
         </div>
         <!-- End Tab: Route & Navlog -->
 
-        <!-- Tab: Tactical Map -->
+        <!-- Tab: Vector Map -->
         <div class="tab-content" id="tab-map">
-        <!-- Tactical Navigation Display -->
+        <!-- Vector Map Display -->
         <div id="tacticalDisplay" class="tactical-display" style="display: none;">
             <div class="tactical-header">
-                <h2 class="font-bold text-primary">TACTICAL NAVIGATION</h2>
+                <h2 class="font-bold text-primary">VECTOR MAP</h2>
                 <div class="tactical-route-info"></div>
             </div>
 
             <div id="tacticalMap" class="tactical-map"></div>
 
             <div id="currentInstruction" class="current-instruction">
-                <div class="instruction-header">CURRENT INSTRUCTION</div>
+                <div class="instruction-header">GPS NAVIGATION</div>
                 <div class="instruction-text"></div>
                 <div class="instruction-details">
                     <div class="detail-item">
@@ -236,7 +236,7 @@
                         <div class="detail-value next-wp"></div>
                     </div>
                     <div class="detail-item">
-                        <div class="detail-label">REQ HDG</div>
+                        <div class="detail-label">MAG HDG</div>
                         <div class="detail-value req-hdg"></div>
                     </div>
                     <div class="detail-item">
@@ -244,14 +244,30 @@
                         <div class="detail-value dist-nm"></div>
                     </div>
                     <div class="detail-item">
-                        <div class="detail-label">ETA (HH:MM)</div>
-                        <div class="detail-value eta-time"></div>
+                        <div class="detail-label">ETE</div>
+                        <div class="detail-value ete-value"></div>
                     </div>
                 </div>
                 <div class="instruction-secondary">
                     <div class="secondary-item">
-                        <span class="secondary-label">GROUND SPEED (KT)</span>
+                        <span class="secondary-label">GS (KT)</span>
                         <span class="secondary-value gs-value"></span>
+                    </div>
+                    <div class="secondary-item">
+                        <span class="secondary-label">ETA NEXT</span>
+                        <span class="secondary-value eta-time"></span>
+                    </div>
+                    <div class="secondary-item">
+                        <span class="secondary-label">ETA DEST</span>
+                        <span class="secondary-value eta-dest-value">--:--</span>
+                    </div>
+                    <div class="secondary-item">
+                        <span class="secondary-label">GPS H-ACC</span>
+                        <span class="secondary-value gps-horiz-acc text-secondary">--</span>
+                    </div>
+                    <div class="secondary-item">
+                        <span class="secondary-label">GPS V-ACC</span>
+                        <span class="secondary-value gps-vert-acc text-secondary">--</span>
                     </div>
                     <div class="secondary-item">
                         <button id="toggleGPSBtn" class="btn btn-secondary">START GPS TRACKING</button>
@@ -266,7 +282,7 @@
             </div>
         </div>
         </div>
-        <!-- End Tab: Tactical Map -->
+        <!-- End Tab: Vector Map -->
 
         <!-- Tab: Data & Cache -->
         <div class="tab-content" id="tab-data">
