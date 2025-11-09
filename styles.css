@@ -1233,19 +1233,12 @@ header h1 {
     }
 
     /* Full screen map on mobile - only when map tab is active */
-    #tab-map.active {
-        height: calc(100vh - 32px); /* Full height minus tab buttons (padding 6px * 2 + font size ~20px) */
-        display: flex;
-        flex-direction: column;
-    }
-
     #tab-map.active .tactical-display {
-        /* Make map panel take full available height */
+        /* Make map panel full viewport height minus tabs */
         display: flex;
         flex-direction: column;
-        flex: 1;
+        height: calc(100vh - 32px); /* Full height minus tab buttons */
         margin-bottom: 0;
-        min-height: 0;
     }
 
     #tab-map.active .tactical-header {
@@ -1254,13 +1247,13 @@ header h1 {
 
     #tab-map.active .tactical-map {
         flex: 1;
-        height: auto;
-        min-height: 0; /* Allow flex to shrink if needed */
+        min-height: 0; /* Allow flex to shrink */
+        overflow: hidden;
     }
 
     #tab-map.active .map-status-bar {
         flex-shrink: 0;
-        max-height: 30vh; /* Limit status bar height */
+        max-height: 30vh;
         overflow-y: auto;
     }
 
