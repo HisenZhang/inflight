@@ -117,18 +117,14 @@ function setupEventListeners() {
         gpsBtn.addEventListener('click', () => VectorMap.toggleGPS());
     }
 
-    // Navigation panel toggle
-    const navToggleBtn = document.getElementById('toggleNavigationBtn');
-    const navContent = document.getElementById('navigationContent');
-    if (navToggleBtn && navContent) {
-        navToggleBtn.addEventListener('click', () => {
-            const isHidden = navContent.style.display === 'none';
-            navContent.style.display = isHidden ? 'block' : 'none';
-            const indicator = navToggleBtn.querySelector('.toggle-indicator');
-            if (indicator) {
-                indicator.textContent = isHidden ? '▲' : '▼';
-            }
-        });
+    // Navigation waypoint selection
+    const prevNavWptBtn = document.getElementById('prevNavWptBtn');
+    const nextNavWptBtn = document.getElementById('nextNavWptBtn');
+    if (prevNavWptBtn) {
+        prevNavWptBtn.addEventListener('click', () => VectorMap.navigateToPrevWaypoint());
+    }
+    if (nextNavWptBtn) {
+        nextNavWptBtn.addEventListener('click', () => VectorMap.navigateToNextWaypoint());
     }
 
     // Zoom controls
@@ -198,9 +194,34 @@ function setupEventListeners() {
             handleCalculateRoute();
         }
     });
+    // Prevent input blur when clicking autocomplete (which would hide it)
+    let blurTimeout = null;
+
     elements.routeInput.addEventListener('blur', () => {
-        setTimeout(() => UIController.hideAutocomplete(), 200);
+        // Delay hiding to allow click events to process first
+        blurTimeout = setTimeout(() => {
+            UIController.hideAutocomplete();
+        }, 200);
     });
+
+    // Cancel blur timeout when clicking on autocomplete dropdown
+    elements.autocompleteDropdown.addEventListener('mousedown', (e) => {
+        // Prevent the input from losing focus
+        e.preventDefault();
+        // Clear any pending blur timeout
+        if (blurTimeout) {
+            clearTimeout(blurTimeout);
+            blurTimeout = null;
+        }
+    });
+
+    // Expose function to cancel blur timeout (called when showing new suggestions)
+    elements.cancelBlurTimeout = () => {
+        if (blurTimeout) {
+            clearTimeout(blurTimeout);
+            blurTimeout = null;
+        }
+    };
 
     // Click outside to close autocomplete
     document.addEventListener('click', (e) => {

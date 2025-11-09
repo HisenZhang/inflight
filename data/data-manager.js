@@ -307,7 +307,7 @@ function mergeDataSources(nasrData, ourairportsData, onStatusUpdate = null) {
     // Initialize QueryEngine with data references
     if (typeof window.QueryEngine !== 'undefined') {
         if (onStatusUpdate) onStatusUpdate('[...] INITIALIZING QUERY ENGINE', 'loading');
-        window.QueryEngine.init(airportsData, navaidsData, fixesData, tokenTypeMap);
+        window.QueryEngine.init(airportsData, navaidsData, fixesData, airwaysData, tokenTypeMap);
     }
 
     // Initialize RouteExpander with data
@@ -377,7 +377,7 @@ function loadFromCache(cachedData) {
 
     // Initialize QueryEngine with data references
     if (typeof window.QueryEngine !== 'undefined') {
-        window.QueryEngine.init(airportsData, navaidsData, fixesData, tokenTypeMap);
+        window.QueryEngine.init(airportsData, navaidsData, fixesData, airwaysData, tokenTypeMap);
     }
 
     // Initialize RouteExpander with data

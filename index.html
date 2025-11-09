@@ -221,11 +221,15 @@
         <!-- Vector Map Display -->
         <div id="tacticalDisplay" class="tactical-display" style="display: none;">
             <div class="tactical-header">
-                <h2 class="font-bold text-primary">VECTOR MAP</h2>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <h2 class="font-bold text-primary">MAP</h2>
+                    <button id="toggleGPSBtn" class="zoom-btn">GPS</button>
+                </div>
                 <div class="zoom-controls">
-                    <button class="zoom-btn active" data-zoom="full">FULL ROUTE</button>
-                    <button class="zoom-btn" data-zoom="destination">TO DEST</button>
-                    <button class="zoom-btn" data-zoom="surrounding">100NM</button>
+                    <button class="zoom-btn active" data-zoom="full">ROUTE</button>
+                    <button class="zoom-btn" data-zoom="destination">DEST</button>
+                    <button class="zoom-btn" data-zoom="surrounding-50">50NM</button>
+                    <button class="zoom-btn" data-zoom="surrounding-25">25NM</button>
                     <button class="zoom-btn" id="zoomOutBtn">−</button>
                     <button class="zoom-btn" id="zoomInBtn">+</button>
                 </div>
@@ -240,55 +244,53 @@
                 </table>
             </div>
 
-            <!-- Navigation Panel (Collapsible) -->
-            <div id="navigationPanel" class="navigation-panel">
-                <div class="navigation-toggle" id="toggleNavigationBtn">
-                    <span class="toggle-label">GPS NAVIGATION</span>
-                    <span class="toggle-indicator">▼</span>
-                </div>
-                <div id="navigationContent" class="navigation-content" style="display: none;">
-                    <div class="instruction-text"></div>
+            <!-- Navigation Panel - Hidden when GPS is off -->
+            <div id="navigationPanel" class="navigation-panel" style="display: none;">
+                <div id="navigationContent" class="navigation-content">
                     <div class="instruction-details">
                         <div class="detail-item">
-                            <div class="detail-label">NEXT WP</div>
+                            <div class="detail-label">WPT</div>
                             <div class="detail-value next-wp"></div>
                         </div>
                         <div class="detail-item">
-                            <div class="detail-label">MAG HDG</div>
+                            <div class="detail-label">HDG</div>
                             <div class="detail-value req-hdg"></div>
                         </div>
                         <div class="detail-item">
-                            <div class="detail-label">DIST (NM)</div>
+                            <div class="detail-label">DIST</div>
                             <div class="detail-value dist-nm"></div>
                         </div>
                         <div class="detail-item">
                             <div class="detail-label">ETE</div>
                             <div class="detail-value ete-value"></div>
                         </div>
+                        <div class="detail-item" style="grid-column: 1 / -1;">
+                            <div style="display: flex; gap: 0.25rem;">
+                                <button class="btn btn-secondary btn-sm" id="prevNavWptBtn" style="flex: 1; padding: 0.15rem 0.25rem; font-size: 0.7rem;">◄ PREV</button>
+                                <button class="btn btn-secondary btn-sm" id="nextNavWptBtn" style="flex: 1; padding: 0.15rem 0.25rem; font-size: 0.7rem;">NEXT ►</button>
+                            </div>
+                        </div>
                     </div>
                     <div class="instruction-secondary">
                         <div class="secondary-item">
-                            <span class="secondary-label">GS (KT)</span>
+                            <span class="secondary-label">GS</span>
                             <span class="secondary-value gs-value"></span>
                         </div>
                         <div class="secondary-item">
-                            <span class="secondary-label">ETA NEXT</span>
+                            <span class="secondary-label">ETA</span>
                             <span class="secondary-value eta-time"></span>
                         </div>
                         <div class="secondary-item">
-                            <span class="secondary-label">ETA DEST</span>
+                            <span class="secondary-label">DEST</span>
                             <span class="secondary-value eta-dest-value">--:--</span>
                         </div>
                         <div class="secondary-item">
-                            <span class="secondary-label">GPS H-ACC</span>
+                            <span class="secondary-label">H-ACC</span>
                             <span class="secondary-value gps-horiz-acc text-secondary">--</span>
                         </div>
                         <div class="secondary-item">
-                            <span class="secondary-label">GPS V-ACC</span>
+                            <span class="secondary-label">V-ACC</span>
                             <span class="secondary-value gps-vert-acc text-secondary">--</span>
-                        </div>
-                        <div class="secondary-item">
-                            <button id="toggleGPSBtn" class="btn btn-secondary">START GPS TRACKING</button>
                         </div>
                     </div>
                 </div>

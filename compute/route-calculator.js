@@ -195,7 +195,11 @@ async function calculateRoute(waypoints, options = {}) {
 
     // Calculate magnetic declination for each waypoint
     waypoints.forEach(waypoint => {
-        waypoint.magVar = getMagneticDeclination(waypoint.lat, waypoint.lon);
+        const magVar = getMagneticDeclination(waypoint.lat, waypoint.lon);
+        waypoint.magVar = magVar;
+        if (magVar === null) {
+            console.warn(`[Route] Failed to calculate magnetic variation for ${waypoint.ident || waypoint.icao} at ${waypoint.lat.toFixed(4)}, ${waypoint.lon.toFixed(4)}`);
+        }
     });
 
     // Fetch winds aloft if wind correction is enabled
@@ -407,10 +411,18 @@ function calculateBearing(lat1, lon1, lat2, lon2) {
 function getMagneticDeclination(lat, lon) {
     try {
         if (typeof calculateMagneticDeclination === 'function') {
-            return calculateMagneticDeclination(lat, lon);
+            const magVar = calculateMagneticDeclination(lat, lon);
+            if (magVar !== null) {
+                return magVar;
+            } else {
+                console.warn(`[MagVar] calculateMagneticDeclination returned null for (${lat.toFixed(4)}, ${lon.toFixed(4)})`);
+                return null;
+            }
+        } else {
+            console.warn('[MagVar] calculateMagneticDeclination function not available');
         }
     } catch (error) {
-        console.error('Error calculating magnetic declination:', error);
+        console.error('[MagVar] Error calculating magnetic declination:', error);
     }
     return null;
 }

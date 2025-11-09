@@ -10,8 +10,10 @@
     --border-color: #ffffff;
     --text-primary: #ffffff;
     --text-secondary: #cccccc;
-    --color-airport: #00ffff;
-    --color-navaid: #ff00ff;
+    --color-airport: #00ffff;       /* Cyan */
+    --color-navaid: #ff00ff;        /* Magenta */
+    --color-fix: #ffffff;           /* White */
+    --color-reporting: #ffbf00;     /* Amber */
     --color-metric: #00ff00;
     --color-warning: #ffff00;
     --color-error: #ff0000;
@@ -89,6 +91,18 @@ body {
     display: block;
 }
 
+@media (max-width: 768px) {
+    .tab-navigation {
+        margin-top: 6px;
+        gap: 4px;
+    }
+
+    .tab-btn {
+        font-size: 10px;
+        padding: 4px 8px;
+    }
+}
+
 /* ============================================
    UTILITY CLASSES
    ============================================ */
@@ -110,6 +124,8 @@ body {
 .text-secondary { color: var(--text-secondary); }
 .text-airport { color: var(--color-airport); }
 .text-navaid { color: var(--color-navaid); }
+.text-fix { color: var(--color-fix); }
+.text-reporting { color: var(--color-reporting); }
 .text-metric { color: var(--color-metric); }
 .text-warning { color: var(--color-warning); }
 .text-error { color: var(--color-error); }
@@ -220,6 +236,17 @@ header {
 
 header h1 {
     letter-spacing: 4px;
+}
+
+@media (max-width: 768px) {
+    header {
+        padding: 0;
+        margin-bottom: 0;
+    }
+
+    header h1 {
+        display: none;
+    }
 }
 
 /* Status Box */
@@ -579,7 +606,14 @@ header h1 {
 
 .autocomplete-item.type-airport .code { color: var(--color-airport); }
 .autocomplete-item.type-navaid .code { color: var(--color-navaid); }
-.autocomplete-item.type-fix .code { color: var(--color-metric); }
+.autocomplete-item.type-fix .code { color: var(--color-fix); }
+.autocomplete-item.type-reporting .code { color: var(--color-reporting); }
+.autocomplete-item.type-airway .code { color: var(--color-warning); }
+
+.autocomplete-item .context-hint {
+    color: var(--color-metric);
+    font-weight: 500;
+}
 
 /* Results Section */
 .results-section {
@@ -754,7 +788,6 @@ header h1 {
    TACTICAL NAVIGATION DISPLAY
    ============================================ */
 .tactical-display {
-    margin-top: var(--space-xl);
     border: 2px solid var(--border-color);
     background: var(--bg-panel);
 }
@@ -838,7 +871,7 @@ header h1 {
 
 @media (max-width: 768px) {
     .map-waypoint:hover .waypoint-circle {
-        r: 30;
+        r: 40;
         stroke-width: 12;
     }
 }
@@ -957,7 +990,6 @@ header h1 {
 .navigation-panel {
     background: var(--bg-primary);
     border-top: 2px solid var(--border-color);
-    margin-top: var(--space-md);
 }
 
 .navigation-toggle {
@@ -988,7 +1020,7 @@ header h1 {
 }
 
 .navigation-content {
-    padding: var(--space-md);
+    padding: var(--space-sm);
 }
 
 /* Legacy support for old class name */
@@ -1016,9 +1048,8 @@ header h1 {
 .instruction-details {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: var(--space-md);
-    padding: var(--space-md) 0;
-    border-top: 1px solid var(--border-color);
+    gap: var(--space-sm);
+    padding: var(--space-sm) 0;
     border-bottom: 1px solid var(--border-color);
 }
 
@@ -1055,26 +1086,27 @@ header h1 {
 
 .instruction-secondary {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: var(--space-md);
-    margin-top: var(--space-md);
+    grid-template-columns: repeat(5, 1fr);
+    gap: var(--space-sm);
+    margin-top: var(--space-sm);
 }
 
 .secondary-item {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: var(--space-xs);
+    gap: 2px;
 }
 
 .secondary-label {
     color: var(--text-secondary);
-    font-size: 9px;
+    font-size: 8px;
+    font-weight: 500;
 }
 
 .secondary-value {
     color: var(--color-metric);
-    font-size: 16px;
+    font-size: 12px;
     font-weight: 700;
 }
 
@@ -1097,8 +1129,18 @@ header h1 {
         grid-template-columns: repeat(2, 1fr);
     }
 
+    /* Keep secondary info horizontal even on mobile */
     .instruction-secondary {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 4px;
+    }
+
+    .secondary-label {
+        font-size: 7px;
+    }
+
+    .secondary-value {
+        font-size: 10px;
     }
 
     .tactical-map {

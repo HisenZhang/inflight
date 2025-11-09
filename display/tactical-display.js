@@ -5,9 +5,10 @@ let currentPosition = null;
 let watchId = null;
 let routeData = null;
 let currentLegIndex = 0;
-let currentZoomMode = 'full'; // 'full', 'destination', 'surrounding'
+let diversionWaypoint = null; // Stores the waypoint when in diversion mode (currentLegIndex = -1)
+let currentZoomMode = 'full'; // 'full', 'destination', 'surrounding-50', 'surrounding-25'
 let currentStatusItem = null; // Track currently visible status bar item
-let zoomLevel = 1.0; // Pinch zoom level (1.0 = default, max based on route bounds)
+let zoomLevel = 1; // Pinch zoom level (1.0 = default, max based on route bounds)
 let initialPinchDistance = null;
 
 // Pan/drag state
@@ -15,6 +16,7 @@ let panOffset = { x: 0, y: 0 }; // Pan offset in screen pixels
 let isPanning = false;
 let panStart = null;
 let svgDimensions = { width: 1000, height: 500 }; // Track SVG dimensions for pan limits
+let touchStartPositions = null; // Track touch positions for pan and pinch
 
 // ============================================
 // GPS TRACKING
@@ -70,7 +72,70 @@ function updateLiveNavigation() {
     // Find current leg based on position
     const { waypoints, legs } = routeData;
 
-    // Check if we've reached the next waypoint (within 0.5nm threshold)
+    // Handle diversion mode differently - calculate to diversion waypoint
+    if (currentLegIndex === -1 && diversionWaypoint) {
+        const distToNext = window.RouteCalculator.calculateDistance(
+            currentPosition.lat,
+            currentPosition.lon,
+            diversionWaypoint.lat,
+            diversionWaypoint.lon
+        );
+
+        // True bearing to diversion waypoint
+        const trueBearing = window.RouteCalculator.calculateBearing(
+            currentPosition.lat,
+            currentPosition.lon,
+            diversionWaypoint.lat,
+            diversionWaypoint.lon
+        );
+
+        // Convert to magnetic heading
+        const magVariation = window.RouteCalculator.getMagneticDeclination(
+            currentPosition.lat,
+            currentPosition.lon
+        );
+        const magHeading = magVariation !== null ? (trueBearing - magVariation + 360) % 360 : null;
+
+        // GPS ground speed in knots
+        const gpsGroundSpeed = currentPosition.speed ? currentPosition.speed * 1.94384 : null;
+
+        // Calculate ETE and ETA to diversion waypoint
+        let eteNextWP = null;
+        let etaNextWP = null;
+
+        if (gpsGroundSpeed && gpsGroundSpeed > 0) {
+            eteNextWP = (distToNext / gpsGroundSpeed) * 60;
+            const etaNextMs = Date.now() + eteNextWP * 60 * 1000;
+            etaNextWP = new Date(etaNextMs);
+        }
+
+        // GPS accuracy
+        const horizontalAccuracy = currentPosition.accuracy || null;
+        const verticalAccuracy = currentPosition.altitudeAccuracy || null;
+
+        // Update display with diversion data
+        updateNavigationDisplay({
+            nextWaypoint: diversionWaypoint,
+            distToNext,
+            magHeading,
+            eteNextWP,
+            etaNextWP,
+            etaDestination: etaNextWP, // For diversion, destination is the diversion point
+            gpsGroundSpeed,
+            horizontalAccuracy,
+            verticalAccuracy
+        });
+
+        // Redraw map if needed
+        if (currentZoomMode === 'destination' || currentZoomMode === 'surrounding-50' || currentZoomMode === 'surrounding-25') {
+            generateMap(waypoints, legs);
+        }
+
+        return;
+    }
+
+    // Normal route navigation
+    // Check if we've reached the next waypoint (within 2nm threshold)
     const nextWaypoint = waypoints[currentLegIndex + 1];
     if (!nextWaypoint) return;
 
@@ -81,19 +146,16 @@ function updateLiveNavigation() {
         nextWaypoint.lon
     );
 
-    // Auto-advance to next waypoint if within 0.5nm (waypoint passage)
-    const waypointThreshold = 0.5; // nautical miles
+    // Auto-advance to next waypoint if within 2nm (waypoint passage)
+    const waypointThreshold = 2.0; // nautical miles
     if (distToNext < waypointThreshold && currentLegIndex < legs.length - 1) {
         currentLegIndex++;
         console.log(`[VectorMap] Advanced to leg ${currentLegIndex + 1}/${legs.length}`);
 
-        // Update instruction for new leg
-        const nextLeg = legs[currentLegIndex];
-        if (nextLeg) {
-            updateCurrentInstruction(nextLeg, routeData.options);
-        }
+        // Update button labels for new waypoint
+        updateNavButtonLabels();
 
-        // Continue processing with new leg
+        // Continue processing with new leg (will calculate GPS-based navigation below)
         return updateLiveNavigation();
     }
 
@@ -157,7 +219,7 @@ function updateLiveNavigation() {
     });
 
     // Redraw map if in destination or surrounding zoom mode (to update GPS position)
-    if (currentZoomMode === 'destination' || currentZoomMode === 'surrounding') {
+    if (currentZoomMode === 'destination' || currentZoomMode === 'surrounding-50' || currentZoomMode === 'surrounding-25') {
         generateMap(waypoints, legs);
     }
 }
@@ -174,10 +236,12 @@ function displayMap(waypoints, legs, options = {}) {
 
     routeData = { waypoints, legs, options };
     currentLegIndex = 0;
+    diversionWaypoint = null; // Clear any previous diversion when loading new route
 
     showMap();
     generateMap(waypoints, legs);
     updateCurrentInstruction(legs[0], options);
+    updateNavButtonLabels();
 }
 
 function showMap() {
@@ -203,9 +267,9 @@ function generateMap(waypoints, legs) {
     // Calculate bounds based on zoom mode
     let bounds;
 
-    if (currentZoomMode === 'surrounding' && currentPosition) {
-        // 100nm radius around current position
-        const radiusNM = 100;
+    if ((currentZoomMode === 'surrounding-50' || currentZoomMode === 'surrounding-25') && currentPosition) {
+        // Radius around current position (50nm or 25nm)
+        const radiusNM = currentZoomMode === 'surrounding-25' ? 25 : 50;
         const radiusDeg = radiusNM / 60; // 1 degree ≈ 60nm
 
         bounds = {
@@ -257,9 +321,10 @@ function generateMap(waypoints, legs) {
         const minLon = Math.min(...lons);
         const maxLon = Math.max(...lons);
 
+        // 5% padding around route bounds
         const latRange = maxLat - minLat;
         const lonRange = maxLon - minLon;
-        const padding = 0.05; // Reduced from 0.15
+        const padding = 0.05;
 
         bounds = {
             minLat: minLat - latRange * padding,
@@ -269,20 +334,44 @@ function generateMap(waypoints, legs) {
         };
     }
 
-    // Calculate responsive sizes based on viewport width
+    // Calculate responsive sizes based on viewport width and route aspect ratio
     const viewportWidth = window.innerWidth;
     const isMobile = viewportWidth < 768;
 
-    // Increase base dimensions for mobile to make everything larger
-    const width = isMobile ? 1400 : 1000;
-    const height = isMobile ? 700 : 500;
+    // Calculate route bounding box aspect ratio
+    const latRange = bounds.maxLat - bounds.minLat;
+    const lonRange = bounds.maxLon - bounds.minLon;
+
+    // Convert to approximate physical distance ratio (accounting for latitude)
+    const avgLat = (bounds.minLat + bounds.maxLat) / 2;
+    const latToLonRatio = Math.cos(avgLat * Math.PI / 180);
+    const physicalLonRange = lonRange * latToLonRatio;
+    const routeAspectRatio = physicalLonRange / latRange;
+
+    // Determine dimensions based on route orientation
+    let width, height;
+    const baseSize = isMobile ? 1400 : 1000;
+
+    if (routeAspectRatio > 1.5) {
+        // Wide route (E-W): use landscape orientation
+        width = baseSize;
+        height = baseSize / 2;
+    } else if (routeAspectRatio < 0.67) {
+        // Tall route (N-S): use portrait orientation
+        width = baseSize / 2;
+        height = baseSize;
+    } else {
+        // Roughly square: use balanced dimensions
+        width = baseSize;
+        height = baseSize * 0.7;
+    }
 
     // Store dimensions for pan limit calculations
     svgDimensions = { width, height };
 
     // Scaling factors for all SVG elements (mobile: larger text, 4x shapes, thicker lines)
-    const textScaleFactor = isMobile ? 2 : 1; // 12 * 4 = 48px (close to hover 45px)
-    const shapeScaleFactor = isMobile ? 2 : 1;
+    const textScaleFactor = isMobile ? 4 : 1; // 12 * 4 = 48px (close to hover 45px)
+    const shapeScaleFactor = isMobile ? 4 : 1;
     const waypointLabelSize = 12 * textScaleFactor;
     const waypointRadius = 5 * shapeScaleFactor;
     const nearbyRadius = waypointRadius; // Same size as route waypoints for consistency
@@ -328,10 +417,10 @@ function generateMap(waypoints, legs) {
     const projRangeX = maxProjX - minProjX;
     const projRangeY = maxProjY - minProjY;
 
-    // Scale to fit viewport with padding, apply zoom level
-    const padding = 0.1;
-    const scaleX = width * (1 - 2 * padding) / projRangeX;
-    const scaleY = height * (1 - 2 * padding) / projRangeY;
+    // Scale to fit viewport with 5% padding, apply zoom level
+    const padding = 0.05;
+    const scaleX = width / (projRangeX * (1 + 2 * padding));
+    const scaleY = height / (projRangeY * (1 + 2 * padding));
     const baseScale = Math.min(scaleX, scaleY);
     const scale = baseScale * zoomLevel; // Apply pinch zoom
     const centerX = (minProjX + maxProjX) / 2;
@@ -403,7 +492,17 @@ function generateMap(waypoints, legs) {
         const pos = project(waypoint.lat, waypoint.lon);
         const code = window.RouteCalculator.getWaypointCode(waypoint);
         const isAirport = waypoint.waypointType === 'airport';
-        const color = isAirport ? '#00ffff' : (waypoint.waypointType === 'fix' ? '#ffffff' : '#ff00ff');
+
+        // Determine color based on waypoint type
+        let color = '#ffffff'; // Default white for unspecified
+        if (isAirport) {
+            color = '#00ffff'; // Cyan
+        } else if (waypoint.waypointType === 'navaid') {
+            color = '#ff00ff'; // Magenta
+        } else if (waypoint.waypointType === 'fix') {
+            // Check if it's a reporting point
+            color = waypoint.isReportingPoint ? '#ffbf00' : '#ffffff'; // Amber or White
+        }
 
         // Priority: first/last waypoints (airports usually) > airports > navaids > fixes
         let priority = 0;
@@ -513,10 +612,10 @@ function generateMap(waypoints, legs) {
             }
         });
 
-        // Add pinch-to-zoom support
-        svgElement.addEventListener('touchstart', handleTouchStart, { passive: true });
-        svgElement.addEventListener('touchmove', handleTouchMove, { passive: true });
-        svgElement.addEventListener('touchend', handleTouchEnd, { passive: true });
+        // Add touch support for both pan and pinch-to-zoom
+        svgElement.addEventListener('touchstart', handleTouchStart, { passive: false });
+        svgElement.addEventListener('touchmove', handleTouchMove, { passive: false });
+        svgElement.addEventListener('touchend', handleTouchEnd, { passive: false });
 
         // Add drag/pan support (only when zoomed in)
         svgElement.addEventListener('mousedown', handlePanStart);
@@ -575,7 +674,16 @@ function showPopup(waypoint, legs, index) {
 
     // Type display
     const typeDisplay = waypoint.waypointType === 'airport' ? 'AIRPORT' : waypoint.type;
-    const colorClass = waypoint.waypointType === 'airport' ? 'text-navaid' : 'text-navaid';
+
+    // Determine color based on waypoint type
+    let colorClass = 'text-fix'; // Default white for unspecified
+    if (waypoint.waypointType === 'airport') {
+        colorClass = 'text-airport'; // Cyan
+    } else if (waypoint.waypointType === 'navaid') {
+        colorClass = 'text-navaid'; // Magenta
+    } else if (waypoint.waypointType === 'fix') {
+        colorClass = waypoint.isReportingPoint ? 'text-reporting' : 'text-fix'; // Amber or White
+    }
 
     // Elevation and magnetic variation
     const elev = waypoint.elevation !== null && !isNaN(waypoint.elevation) ? `${Math.round(waypoint.elevation)} FT` : null;
@@ -634,6 +742,33 @@ function showPopup(waypoint, legs, index) {
         }
     }
 
+    // GPS-relative information (distance and heading from current position)
+    let gpsRelativeInfo = '';
+    if (currentPosition) {
+        const dist = window.RouteCalculator.calculateDistance(
+            currentPosition.lat, currentPosition.lon,
+            waypoint.lat, waypoint.lon
+        );
+        const trueBearing = window.RouteCalculator.calculateBearing(
+            currentPosition.lat, currentPosition.lon,
+            waypoint.lat, waypoint.lon
+        );
+        // Get magnetic variation at current position
+        const magVar = waypoint.magVar !== null && waypoint.magVar !== undefined ? waypoint.magVar : 0;
+        const magBearing = trueBearing - magVar;
+        // Normalize to 0-360
+        const normalizedMagBearing = ((magBearing % 360) + 360) % 360;
+        gpsRelativeInfo = `<div class="text-metric text-xs">FROM GPS: ${dist.toFixed(1)}NM @ ${String(Math.round(normalizedMagBearing)).padStart(3, '0')}°M</div>`;
+    }
+
+    // Direct/Divert button - check if waypoint is in route
+    let setNextWptHTML = '';
+    if (watchId !== null && routeData) {
+        const isInRoute = routeData.waypoints.some(w => w === waypoint);
+        const buttonText = isInRoute ? 'DCT' : 'DIVERT';
+        setNextWptHTML = `<button class="btn btn-secondary btn-sm" id="setNextWptBtn" style="width: 100%; margin-top: 0.25rem; padding: 0.15rem 0.25rem; font-size: 0.7rem;">${buttonText}</button>`;
+    }
+
     // Build waypoint row using exact navlog structure
     let html = `
         <tr class="wpt-row">
@@ -641,9 +776,11 @@ function showPopup(waypoint, legs, index) {
             <td class="wpt-info-cell">
                 <div class="${colorClass} wpt-code">${code}</div>
                 <div class="text-xs text-secondary">${typeDisplay}</div>
+                ${setNextWptHTML}
             </td>
             <td colspan="2">
                 <div class="text-secondary text-xs">${pos}</div>
+                ${gpsRelativeInfo}
                 ${elevMagLine}
                 ${runwayHTML}
                 ${freqHTML ? `<div class="mt-xs">${freqHTML}</div>` : ''}
@@ -651,25 +788,32 @@ function showPopup(waypoint, legs, index) {
         </tr>
     `;
 
-    // Add leg row if there's a next leg
-    if (index < legs.length) {
-        const leg = legs[index];
-        const legDist = leg.distance.toFixed(1);
-        const trueCourse = String(Math.round(leg.trueCourse)).padStart(3, '0');
-        html += `
-            <tr class="leg-row">
-                <td colspan="4" class="leg-info">
-                    <div class="leg-section">
-                        <span class="text-secondary text-xs">NEXT: ${legDist}NM @ ${trueCourse}°</span>
-                    </div>
-                </td>
-            </tr>
-        `;
-    }
-
     statusBarContent.innerHTML = html;
     statusBar.classList.remove('hidden');
     currentStatusItem = index;
+
+    // Attach event listener to "Set as Next WPT" button (DCT button)
+    const setNextWptBtn = document.getElementById('setNextWptBtn');
+    if (setNextWptBtn) {
+        setNextWptBtn.addEventListener('click', () => {
+            // Clear diversion mode when going direct to a route waypoint
+            diversionWaypoint = null;
+
+            // Set to leg that goes TO this waypoint
+            // Waypoint index 2 -> leg index 1 (goes TO waypoint 2)
+            currentLegIndex = index - 1;
+            if (currentLegIndex >= 0 && routeData.legs[currentLegIndex]) {
+                // If GPS is active, let updateLiveNavigation handle the display update
+                // Otherwise, update with static leg data
+                if (watchId === null) {
+                    updateCurrentInstruction(routeData.legs[currentLegIndex], routeData.options);
+                } else {
+                    updateLiveNavigation();
+                }
+                updateNavButtonLabels();
+            }
+        });
+    }
 }
 
 function hidePopup() {
@@ -702,8 +846,15 @@ function showNearbyPointPopup(point, type, elementIndex) {
 
     // Elevation and magnetic variation
     const elev = point.elevation !== null && !isNaN(point.elevation) ? `${Math.round(point.elevation)} FT` : null;
-    const magVarValue = point.magVar !== null && point.magVar !== undefined ? Math.abs(point.magVar).toFixed(1) : '-';
-    const magVarDir = point.magVar >= 0 ? 'E' : 'W';
+
+    // Calculate magnetic variation if not already present
+    let magVar = point.magVar;
+    if ((magVar === null || magVar === undefined) && point.lat && point.lon) {
+        magVar = window.RouteCalculator?.getMagneticDeclination(point.lat, point.lon);
+    }
+
+    const magVarValue = magVar !== null && magVar !== undefined ? Math.abs(magVar).toFixed(1) : '-';
+    const magVarDir = magVar >= 0 ? 'E' : 'W';
     const magVarDisplay = magVarValue !== '-' ? `VAR ${magVarValue}°${magVarDir}` : 'VAR -';
 
     let elevMagLine = '';
@@ -757,6 +908,30 @@ function showNearbyPointPopup(point, type, elementIndex) {
         }
     }
 
+    // GPS-relative information (distance and heading from current position)
+    let gpsRelativeInfo = '';
+    if (currentPosition) {
+        const dist = window.RouteCalculator.calculateDistance(
+            currentPosition.lat, currentPosition.lon,
+            point.lat, point.lon
+        );
+        const trueBearing = window.RouteCalculator.calculateBearing(
+            currentPosition.lat, currentPosition.lon,
+            point.lat, point.lon
+        );
+        // Use the magnetic variation we already calculated
+        const magBearing = trueBearing - (magVar || 0);
+        // Normalize to 0-360
+        const normalizedMagBearing = ((magBearing % 360) + 360) % 360;
+        gpsRelativeInfo = `<div class="text-metric text-xs">FROM GPS: ${dist.toFixed(1)}NM @ ${String(Math.round(normalizedMagBearing)).padStart(3, '0')}°M</div>`;
+    }
+
+    // DIVERT button - nearby points are always off-route
+    let divertHTML = '';
+    if (watchId !== null && routeData) {
+        divertHTML = `<button class="btn btn-secondary btn-sm" id="divertBtn" style="width: 100%; margin-top: 0.25rem; padding: 0.15rem 0.25rem; font-size: 0.7rem;">DIVERT</button>`;
+    }
+
     // Build waypoint row using exact navlog structure
     let html = `
         <tr class="wpt-row">
@@ -764,9 +939,11 @@ function showNearbyPointPopup(point, type, elementIndex) {
             <td class="wpt-info-cell">
                 <div class="${colorClass} wpt-code">${code}</div>
                 <div class="text-xs text-secondary">${typeDisplay}</div>
+                ${divertHTML}
             </td>
             <td colspan="2">
                 <div class="text-secondary text-xs">${pos}</div>
+                ${gpsRelativeInfo}
                 ${elevMagLine}
                 ${runwayHTML}
                 ${freqHTML ? `<div class="mt-xs">${freqHTML}</div>` : ''}
@@ -777,15 +954,31 @@ function showNearbyPointPopup(point, type, elementIndex) {
     statusBarContent.innerHTML = html;
     statusBar.classList.remove('hidden');
     currentStatusItem = `nearby_${type}_${code}`;
+
+    // Attach event listener to DIVERT button
+    const divertBtn = document.getElementById('divertBtn');
+    if (divertBtn) {
+        divertBtn.addEventListener('click', () => {
+            // Set diversion mode
+            if (currentPosition && routeData) {
+                // Store the diversion waypoint
+                diversionWaypoint = point;
+
+                // Set to a special index indicating diversion
+                currentLegIndex = -1; // Use -1 to indicate off-route diversion
+
+                // Update navigation display with live GPS data
+                updateLiveNavigation();
+
+                // Update button labels to show diversion state
+                updateNavButtonLabels();
+            }
+        });
+    }
 }
 
 function updateCurrentInstruction(firstLeg, options) {
     const toCode = window.RouteCalculator.getWaypointCode(firstLeg.to);
-
-    const instructionEl = document.querySelector('.instruction-text');
-    if (instructionEl) {
-        instructionEl.textContent = `PROCEED DIRECT TO ${toCode}`;
-    }
 
     const nextWpEl = document.querySelector('.next-wp');
     if (nextWpEl) {
@@ -832,6 +1025,13 @@ function updateCurrentInstruction(firstLeg, options) {
 function updateNavigationDisplay(navData) {
     const { nextWaypoint, distToNext, magHeading, eteNextWP, etaNextWP, etaDestination,
             gpsGroundSpeed, horizontalAccuracy, verticalAccuracy } = navData;
+
+    // Update waypoint name
+    const nextWpEl = document.querySelector('.next-wp');
+    if (nextWpEl && nextWaypoint) {
+        const toCode = window.RouteCalculator.getWaypointCode(nextWaypoint);
+        nextWpEl.textContent = toCode;
+    }
 
     // Update distance to next waypoint
     const distEl = document.querySelector('.dist-nm');
@@ -934,20 +1134,29 @@ function updateNavigationDisplay(navData) {
 
 function toggleGPS() {
     const btn = document.getElementById('toggleGPSBtn');
+    const navPanel = document.getElementById('navigationPanel');
     if (!btn) return;
 
     if (watchId === null) {
         const started = startGPSTracking();
         if (started) {
-            btn.textContent = 'STOP GPS TRACKING';
             btn.classList.add('active');
+
+            // Show navigation panel when GPS is enabled
+            if (navPanel) {
+                navPanel.style.display = 'block';
+            }
         } else {
             alert('GPS NOT AVAILABLE\n\nYour device does not support geolocation or permission was denied.');
         }
     } else {
         stopGPSTracking();
-        btn.textContent = 'START GPS TRACKING';
         btn.classList.remove('active');
+
+        // Hide navigation panel when GPS is disabled
+        if (navPanel) {
+            navPanel.style.display = 'none';
+        }
 
         // Regenerate map without position marker
         if (routeData) {
@@ -961,9 +1170,9 @@ function toggleGPS() {
 // ============================================
 
 function setZoomMode(mode) {
-    if (['full', 'destination', 'surrounding'].includes(mode)) {
+    if (['full', 'destination', 'surrounding-50', 'surrounding-25'].includes(mode)) {
         currentZoomMode = mode;
-        zoomLevel = 1.0; // Reset zoom level when switching modes
+        zoomLevel = 1; // Reset zoom level when switching modes
         panOffset = { x: 0, y: 0 }; // Reset pan offset when switching modes
 
         // Regenerate map with new zoom
@@ -1004,7 +1213,7 @@ function zoomOut() {
 }
 
 // ============================================
-// PINCH-TO-ZOOM HANDLERS
+// TOUCH HANDLERS (PAN & PINCH-TO-ZOOM)
 // ============================================
 
 function getPinchDistance(touches) {
@@ -1014,34 +1223,114 @@ function getPinchDistance(touches) {
 }
 
 function handleTouchStart(e) {
-    if (e.touches.length === 2) {
+    // Don't handle touches on interactive elements
+    if (e.target.classList.contains('waypoint-circle') ||
+        e.target.closest('.map-waypoint') ||
+        e.target.closest('.nearby-airport') ||
+        e.target.closest('.nearby-navaid')) {
+        return;
+    }
+
+    if (e.touches.length === 1) {
+        // Single finger: start panning (only if zoomed in)
+        if (zoomLevel > 1.0) {
+            isPanning = true;
+            touchStartPositions = [{
+                x: e.touches[0].clientX,
+                y: e.touches[0].clientY
+            }];
+            e.preventDefault();
+        }
+    } else if (e.touches.length === 2) {
+        // Two fingers: start pinch-to-zoom
+        isPanning = false;
         initialPinchDistance = getPinchDistance(e.touches);
+        touchStartPositions = [
+            { x: e.touches[0].clientX, y: e.touches[0].clientY },
+            { x: e.touches[1].clientX, y: e.touches[1].clientY }
+        ];
+        e.preventDefault();
     }
 }
 
 function handleTouchMove(e) {
-    if (e.touches.length === 2 && initialPinchDistance) {
+    if (!touchStartPositions) return;
+
+    if (e.touches.length === 1 && isPanning && zoomLevel > 1.0) {
+        // Single finger pan
+        const dx = e.touches[0].clientX - touchStartPositions[0].x;
+        const dy = e.touches[0].clientY - touchStartPositions[0].y;
+
+        panOffset.x += dx;
+        panOffset.y += dy;
+
+        // Calculate pan limits
+        const maxPanX = (zoomLevel - 1) * svgDimensions.width / 2;
+        const maxPanY = (zoomLevel - 1) * svgDimensions.height / 2;
+
+        // Clamp pan offset
+        panOffset.x = Math.max(-maxPanX, Math.min(maxPanX, panOffset.x));
+        panOffset.y = Math.max(-maxPanY, Math.min(maxPanY, panOffset.y));
+
+        // Update touch start position for next move
+        touchStartPositions[0] = {
+            x: e.touches[0].clientX,
+            y: e.touches[0].clientY
+        };
+
+        // Update transform without regenerating entire SVG (performance)
+        const mapContent = document.getElementById('mapContent');
+        if (mapContent) {
+            mapContent.setAttribute('transform', `translate(${panOffset.x}, ${panOffset.y})`);
+        }
+
+        e.preventDefault();
+    } else if (e.touches.length === 2 && initialPinchDistance) {
+        // Two finger pinch zoom
         const currentDistance = getPinchDistance(e.touches);
         const scale = currentDistance / initialPinchDistance;
 
-        // Calculate new zoom level, clamped between 1.0 (route bounds) and 3.0 (max zoom in)
+        // Calculate new zoom level, clamped between 1.0 and 3.0
         const newZoomLevel = Math.max(1.0, Math.min(3.0, zoomLevel * scale));
 
         if (Math.abs(newZoomLevel - zoomLevel) > 0.05) {
             zoomLevel = newZoomLevel;
             initialPinchDistance = currentDistance;
 
+            // Reset pan offset when zooming back to 1.0
+            if (zoomLevel === 1.0) {
+                panOffset = { x: 0, y: 0 };
+            }
+
             // Regenerate map with new zoom
             if (routeData) {
                 generateMap(routeData.waypoints, routeData.legs);
             }
         }
+
+        e.preventDefault();
     }
 }
 
 function handleTouchEnd(e) {
-    if (e.touches.length < 2) {
+    if (e.touches.length === 0) {
+        // All fingers lifted
+        isPanning = false;
+        touchStartPositions = null;
         initialPinchDistance = null;
+    } else if (e.touches.length === 1) {
+        // One finger remaining (transition from pinch to pan)
+        initialPinchDistance = null;
+        if (zoomLevel > 1.0) {
+            isPanning = true;
+            touchStartPositions = [{
+                x: e.touches[0].clientX,
+                y: e.touches[0].clientY
+            }];
+        } else {
+            isPanning = false;
+            touchStartPositions = null;
+        }
     }
 }
 
@@ -1119,6 +1408,92 @@ window.addEventListener('resize', () => {
 });
 
 // ============================================
+// NAVIGATION WAYPOINT SELECTION
+// ============================================
+
+function updateNavButtonLabels() {
+    if (!routeData) return;
+
+    const prevBtn = document.getElementById('prevNavWptBtn');
+    const nextBtn = document.getElementById('nextNavWptBtn');
+
+    // If in diversion mode (currentLegIndex = -1), disable both buttons
+    if (currentLegIndex === -1) {
+        if (prevBtn) {
+            prevBtn.textContent = '◄ PREV';
+            prevBtn.disabled = true;
+        }
+        if (nextBtn) {
+            nextBtn.textContent = 'NEXT ►';
+            nextBtn.disabled = true;
+        }
+        return;
+    }
+
+    if (prevBtn) {
+        if (currentLegIndex > 0) {
+            const prevWaypoint = routeData.waypoints[currentLegIndex];
+            const prevCode = window.RouteCalculator.getWaypointCode(prevWaypoint);
+            prevBtn.textContent = `◄ ${prevCode}`;
+            prevBtn.disabled = false;
+        } else {
+            prevBtn.textContent = '◄ PREV';
+            prevBtn.disabled = true;
+        }
+    }
+
+    if (nextBtn) {
+        if (currentLegIndex < routeData.legs.length - 1) {
+            const nextWaypoint = routeData.waypoints[currentLegIndex + 2]; // +2 because currentLegIndex points to current leg (from waypoint[i] to waypoint[i+1])
+            const nextCode = window.RouteCalculator.getWaypointCode(nextWaypoint);
+            nextBtn.textContent = `${nextCode} ►`;
+            nextBtn.disabled = false;
+        } else {
+            nextBtn.textContent = 'NEXT ►';
+            nextBtn.disabled = true;
+        }
+    }
+}
+
+function navigateToPrevWaypoint() {
+    if (!routeData || currentLegIndex <= 0) return;
+
+    // Clear diversion mode when navigating back to route
+    diversionWaypoint = null;
+
+    currentLegIndex--;
+    if (routeData.legs[currentLegIndex]) {
+        // If GPS is active, let updateLiveNavigation handle the display update
+        // Otherwise, update with static leg data
+        if (watchId === null) {
+            updateCurrentInstruction(routeData.legs[currentLegIndex], routeData.options);
+        } else {
+            updateLiveNavigation();
+        }
+        updateNavButtonLabels();
+    }
+}
+
+function navigateToNextWaypoint() {
+    if (!routeData || currentLegIndex >= routeData.legs.length - 1) return;
+
+    // Clear diversion mode when navigating forward in route
+    diversionWaypoint = null;
+
+    currentLegIndex++;
+    if (routeData.legs[currentLegIndex]) {
+        // If GPS is active, let updateLiveNavigation handle the display update
+        // Otherwise, update with static leg data
+        if (watchId === null) {
+            updateCurrentInstruction(routeData.legs[currentLegIndex], routeData.options);
+        } else {
+            updateLiveNavigation();
+        }
+        updateNavButtonLabels();
+    }
+}
+
+// ============================================
 // EXPORTS
 // ============================================
 
@@ -1130,5 +1505,7 @@ window.VectorMap = {
     stopGPSTracking,
     setZoomMode,
     zoomIn,
-    zoomOut
+    zoomOut,
+    navigateToPrevWaypoint,
+    navigateToNextWaypoint
 };

@@ -8,6 +8,7 @@
 let qe_airportsData = null;
 let qe_navaidsData = null;
 let qe_fixesData = null;
+let qe_airwaysData = null;
 let qe_tokenTypeMap = null;
 
 // ============================================
@@ -19,15 +20,17 @@ let qe_tokenTypeMap = null;
  * @param {Map} airports - Map of airport data
  * @param {Map} navaids - Map of navaid data
  * @param {Map} fixes - Map of fix data
+ * @param {Map} airways - Map of airway data
  * @param {Map} tokenMap - Token type lookup map
  */
-function init(airports, navaids, fixes, tokenMap) {
+function init(airports, navaids, fixes, airways, tokenMap) {
     qe_airportsData = airports;
     qe_navaidsData = navaids;
     qe_fixesData = fixes;
+    qe_airwaysData = airways;
     qe_tokenTypeMap = tokenMap;
 
-    console.log(`[QueryEngine] Initialized with data references: ${tokenMap ? tokenMap.size : 0} tokens`);
+    console.log(`[QueryEngine] Initialized with data references: ${tokenMap ? tokenMap.size : 0} tokens, ${airways ? airways.size : 0} airways`);
 }
 
 // ============================================
@@ -36,74 +39,258 @@ function init(airports, navaids, fixes, tokenMap) {
 
 /**
  * Search for waypoints matching a term (for autocomplete)
+ * Enhanced with smart ranking and context-aware suggestions
  * @param {string} term - Search term
- * @param {number} limit - Maximum number of results (default: 10)
+ * @param {string} previousToken - Previous token for context-aware suggestions (optional)
+ * @param {number} limit - Maximum number of results (default: 15)
  * @returns {Array} Array of matching waypoints with type and display info
  */
-function searchWaypoints(term, limit = 10) {
-    if (!term || term.length < 2) return [];
+function searchWaypoints(term, previousToken = null, limit = 15) {
+    const upperTerm = term ? term.toUpperCase() : '';
+    const upperPrevToken = previousToken ? previousToken.toUpperCase() : null;
 
-    const results = [];
-    const upperTerm = term.toUpperCase();
+    // Check previous token type for context-aware suggestions
+    const prevTokenType = upperPrevToken ? getTokenType(upperPrevToken) : null;
 
+    // Arrays for different priority levels
+    const exactMatches = [];
+    const prefixMatches = [];
+    const substringMatches = [];
+    const descriptionMatches = [];
+
+    // Special case: if previous token is an airway, suggest waypoints along that airway
+    if (prevTokenType === 'AIRWAY' && qe_airwaysData) {
+        const airway = qe_airwaysData.get(upperPrevToken);
+        if (airway && airway.fixes) {
+            // Filter airway fixes by search term (or show all if term is empty)
+            for (const fixIdent of airway.fixes) {
+                if (exactMatches.length + prefixMatches.length + substringMatches.length >= limit) break;
+
+                const upperFixIdent = fixIdent.toUpperCase();
+
+                // If no search term, add all fixes
+                if (!upperTerm || upperTerm.length === 0) {
+                    const fixData = qe_fixesData?.get(upperFixIdent);
+                    if (fixData) {
+                        prefixMatches.push({
+                            code: upperFixIdent,
+                            name: upperFixIdent,
+                            type: 'fix',
+                            waypointType: 'fix',
+                            lat: fixData.lat,
+                            lon: fixData.lon,
+                            location: `On ${upperPrevToken}`,
+                            contextHint: `Exit point on ${upperPrevToken}`
+                        });
+                    }
+                } else if (upperFixIdent === upperTerm) {
+                    // Exact match
+                    const fixData = qe_fixesData?.get(upperFixIdent);
+                    if (fixData) {
+                        exactMatches.push({
+                            code: upperFixIdent,
+                            name: upperFixIdent,
+                            type: 'fix',
+                            waypointType: 'fix',
+                            lat: fixData.lat,
+                            lon: fixData.lon,
+                            location: `On ${upperPrevToken}`,
+                            contextHint: `Exit point on ${upperPrevToken}`
+                        });
+                    }
+                } else if (upperFixIdent.startsWith(upperTerm)) {
+                    // Prefix match
+                    const fixData = qe_fixesData?.get(upperFixIdent);
+                    if (fixData) {
+                        prefixMatches.push({
+                            code: upperFixIdent,
+                            name: upperFixIdent,
+                            type: 'fix',
+                            waypointType: 'fix',
+                            lat: fixData.lat,
+                            lon: fixData.lon,
+                            location: `On ${upperPrevToken}`,
+                            contextHint: `Exit point on ${upperPrevToken}`
+                        });
+                    }
+                } else if (upperFixIdent.includes(upperTerm)) {
+                    // Substring match
+                    const fixData = qe_fixesData?.get(upperFixIdent);
+                    if (fixData) {
+                        substringMatches.push({
+                            code: upperFixIdent,
+                            name: upperFixIdent,
+                            type: 'fix',
+                            waypointType: 'fix',
+                            lat: fixData.lat,
+                            lon: fixData.lon,
+                            location: `On ${upperPrevToken}`,
+                            contextHint: `Exit point on ${upperPrevToken}`
+                        });
+                    }
+                }
+            }
+
+            // Return airway-specific suggestions
+            return [...exactMatches, ...prefixMatches, ...substringMatches].slice(0, limit);
+        }
+    }
+
+    // Special case: if previous token is a fix or navaid, suggest airways containing that waypoint
+    if ((prevTokenType === 'FIX' || prevTokenType === 'NAVAID') && qe_airwaysData) {
+        for (const [airwayId, airway] of qe_airwaysData) {
+            if (exactMatches.length + prefixMatches.length + substringMatches.length >= limit) break;
+
+            // Check if this airway contains the previous waypoint
+            if (airway.fixes && airway.fixes.some(f => f.toUpperCase() === upperPrevToken)) {
+                const upperAirwayId = airwayId.toUpperCase();
+
+                // If no search term, add all airways
+                if (!upperTerm || upperTerm.length === 0) {
+                    prefixMatches.push({
+                        code: upperAirwayId,
+                        name: upperAirwayId,
+                        type: 'airway',
+                        waypointType: 'airway',
+                        location: `Contains ${upperPrevToken}`,
+                        contextHint: `Airway via ${upperPrevToken}`
+                    });
+                } else if (upperAirwayId === upperTerm) {
+                    exactMatches.push({
+                        code: upperAirwayId,
+                        name: upperAirwayId,
+                        type: 'airway',
+                        waypointType: 'airway',
+                        location: `Contains ${upperPrevToken}`,
+                        contextHint: `Airway via ${upperPrevToken}`
+                    });
+                } else if (upperAirwayId.startsWith(upperTerm)) {
+                    prefixMatches.push({
+                        code: upperAirwayId,
+                        name: upperAirwayId,
+                        type: 'airway',
+                        waypointType: 'airway',
+                        location: `Contains ${upperPrevToken}`,
+                        contextHint: `Airway via ${upperPrevToken}`
+                    });
+                } else if (upperAirwayId.includes(upperTerm)) {
+                    substringMatches.push({
+                        code: upperAirwayId,
+                        name: upperAirwayId,
+                        type: 'airway',
+                        waypointType: 'airway',
+                        location: `Contains ${upperPrevToken}`,
+                        contextHint: `Airway via ${upperPrevToken}`
+                    });
+                }
+            }
+        }
+
+        // If we found airway suggestions, return them with high priority
+        if (exactMatches.length + prefixMatches.length + substringMatches.length > 0) {
+            return [...exactMatches, ...prefixMatches, ...substringMatches].slice(0, limit);
+        }
+    }
+
+    // If no search term and no context-aware suggestions, return empty
+    if (!upperTerm || upperTerm.length < 1) return [];
+
+    // Standard search with improved ranking
     // Search airports
     if (qe_airportsData) {
         for (const [code, airport] of qe_airportsData) {
-            if (results.length >= limit) break;
+            const upperCode = code.toUpperCase();
+            const upperName = (airport.name || '').toUpperCase();
+            const iata = (airport.iata || '').toUpperCase();
 
-            if (code.startsWith(upperTerm) ||
-                (airport.name && airport.name.toUpperCase().includes(upperTerm))) {
-                results.push({
-                    code: code,
-                    name: airport.name || code,
-                    type: 'airport',
-                    lat: airport.lat,
-                    lon: airport.lon,
-                    display: `${code} - ${airport.name || 'Airport'}`
-                });
+            const result = {
+                code: code,
+                name: airport.name || code,
+                type: 'AIRPORT',
+                waypointType: 'airport',
+                lat: airport.lat,
+                lon: airport.lon,
+                location: `${airport.municipality || ''}, ${airport.country || ''}`.trim()
+            };
+
+            if (upperCode === upperTerm || iata === upperTerm) {
+                exactMatches.push(result);
+            } else if (upperCode.startsWith(upperTerm) || iata.startsWith(upperTerm)) {
+                prefixMatches.push(result);
+            } else if (upperCode.includes(upperTerm) || iata.includes(upperTerm)) {
+                substringMatches.push(result);
+            } else if (upperName.includes(upperTerm)) {
+                descriptionMatches.push(result);
             }
         }
     }
 
     // Search navaids
-    if (qe_navaidsData && results.length < limit) {
+    if (qe_navaidsData) {
         for (const [ident, navaid] of qe_navaidsData) {
-            if (results.length >= limit) break;
+            const upperIdent = ident.toUpperCase();
+            const upperName = (navaid.name || '').toUpperCase();
 
-            if (ident.startsWith(upperTerm) ||
-                (navaid.name && navaid.name.toUpperCase().includes(upperTerm))) {
-                results.push({
-                    code: ident,
-                    name: navaid.name || ident,
-                    type: 'navaid',
-                    navaidType: navaid.type,
-                    lat: navaid.lat,
-                    lon: navaid.lon,
-                    display: `${ident} - ${navaid.name || 'Navaid'} (${navaid.type || 'NAV'})`
-                });
+            const result = {
+                code: ident,
+                name: navaid.name || ident,
+                type: navaid.type || 'NAVAID',
+                waypointType: 'navaid',
+                lat: navaid.lat,
+                lon: navaid.lon,
+                location: navaid.country || ''
+            };
+
+            if (upperIdent === upperTerm) {
+                exactMatches.push(result);
+            } else if (upperIdent.startsWith(upperTerm)) {
+                prefixMatches.push(result);
+            } else if (upperIdent.includes(upperTerm)) {
+                substringMatches.push(result);
+            } else if (upperName.includes(upperTerm)) {
+                descriptionMatches.push(result);
             }
         }
     }
 
     // Search fixes
-    if (qe_fixesData && results.length < limit) {
+    if (qe_fixesData) {
         for (const [name, fix] of qe_fixesData) {
-            if (results.length >= limit) break;
+            const upperName = name.toUpperCase();
 
-            if (name.startsWith(upperTerm)) {
-                results.push({
-                    code: name,
-                    name: name,
-                    type: 'fix',
-                    lat: fix.lat,
-                    lon: fix.lon,
-                    display: `${name} - Fix`
-                });
+            const result = {
+                code: name,
+                name: name,
+                type: 'FIX',
+                waypointType: 'fix',
+                lat: fix.lat,
+                lon: fix.lon,
+                location: `${fix.state || ''} ${fix.country || ''}`.trim()
+            };
+
+            if (upperName === upperTerm) {
+                exactMatches.push(result);
+            } else if (upperName.startsWith(upperTerm)) {
+                prefixMatches.push(result);
+            } else if (upperName.includes(upperTerm)) {
+                substringMatches.push(result);
             }
         }
     }
 
-    return results;
+    // Sort each group alphabetically by code
+    exactMatches.sort((a, b) => a.code.localeCompare(b.code));
+    prefixMatches.sort((a, b) => a.code.localeCompare(b.code));
+    substringMatches.sort((a, b) => a.code.localeCompare(b.code));
+    descriptionMatches.sort((a, b) => a.code.localeCompare(b.code));
+
+    // Combine results with priority: exact > prefix > substring > description
+    return [
+        ...exactMatches,
+        ...prefixMatches,
+        ...substringMatches,
+        ...descriptionMatches
+    ].slice(0, limit);
 }
 
 /**

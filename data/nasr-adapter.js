@@ -189,15 +189,25 @@ function parseNASRNavaids(csvText) {
 
             if (!navId || isNaN(lat) || isNaN(lon)) continue;
 
+            const navaidType = values[typeIdx]?.trim() || '';
+            let frequency = values[freqIdx] ? parseFloat(values[freqIdx]) : null;
+
+            // Convert VOR/VORTAC/DME frequencies from kHz to MHz
+            // NASR stores VOR frequencies in kHz (e.g., 110200 for 110.20 MHz)
+            // NDB frequencies are already in kHz and should stay that way
+            if (frequency && frequency >= 10000 && navaidType !== 'NDB') {
+                frequency = frequency / 1000; // Convert kHz to MHz
+            }
+
             const navaid = {
                 id: `nasr_nav_${navId}`,
                 ident: navId,
                 name: values[nameIdx]?.trim() || '',
-                type: values[typeIdx]?.trim() || '',
+                type: navaidType,
                 lat,
                 lon,
                 elevation: values[elevIdx] ? parseFloat(values[elevIdx]) : null,
-                frequency: values[freqIdx] ? parseFloat(values[freqIdx]) : null,
+                frequency: frequency,
                 country: values[countryIdx]?.trim() || 'US',
                 waypointType: 'navaid',
                 source: 'nasr'
@@ -239,17 +249,19 @@ function parseNASRFixes(csvText) {
 
             if (!fixId || isNaN(lat) || isNaN(lon)) continue;
 
+            const fixUseCode = values[useIdx]?.trim() || 'FIX';
             const fix = {
                 id: `nasr_fix_${fixId}`,
                 ident: fixId,
                 name: fixId, // Fixes don't have separate names
-                type: values[useIdx]?.trim() || 'FIX',
+                type: fixUseCode,
                 lat,
                 lon,
                 country: values[countryIdx]?.trim() || 'US',
                 state: values[stateIdx]?.trim() || '',
                 artcc: values[artccLowIdx]?.trim() || values[artccHighIdx]?.trim() || '',
                 waypointType: 'fix',
+                isReportingPoint: fixUseCode === 'RP', // Mark reporting points
                 source: 'nasr'
             };
 

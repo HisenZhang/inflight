@@ -371,16 +371,33 @@ function handleAutocompleteInput(e) {
     const cursorPos = e.target.selectionStart;
 
     const beforeCursor = value.substring(0, cursorPos);
-    const words = beforeCursor.split(/\s+/);
-    const currentWord = words[words.length - 1].toUpperCase();
+    const words = beforeCursor.split(/\s+/).filter(w => w.length > 0);
+    const currentWord = words.length > 0 ? words[words.length - 1].toUpperCase() : '';
+    const previousWord = words.length > 1 ? words[words.length - 2].toUpperCase() : null;
 
-    if (currentWord.length < 2) {
+    // Check if cursor is at the end and last character is a space (just finished a waypoint)
+    const justFinishedWaypoint = cursorPos === value.length && value.endsWith(' ') && currentWord === '';
+
+    // If we just finished a waypoint (pressed space), show context-aware suggestions
+    if (justFinishedWaypoint && previousWord) {
+        // Show all context-aware suggestions for the previous waypoint
+        // Use a dummy search term that will match everything
+        const results = window.QueryEngine?.searchWaypoints('', previousWord, 20) || [];
+        if (results.length > 0) {
+            autocompleteResults = results;
+            displayAutocomplete(results);
+            return;
+        }
+    }
+
+    // Normal autocomplete behavior
+    if (currentWord.length < 1) {
         hideAutocomplete();
         return;
     }
 
-    // Search for matches
-    const results = window.QueryEngine?.searchWaypoints(currentWord) || [];
+    // Search for matches with context-aware suggestions
+    const results = window.QueryEngine?.searchWaypoints(currentWord, previousWord) || [];
     autocompleteResults = results;
     displayAutocomplete(results);
 }
@@ -394,15 +411,36 @@ function displayAutocomplete(results) {
 
     let html = '';
     results.forEach((result, index) => {
-        let colorClass = 'type-navaid';
-        if (result.waypointType === 'airport') colorClass = 'type-airport';
-        else if (result.waypointType === 'fix') colorClass = 'type-fix';
+        let colorClass = 'type-fix'; // Default to white for unspecified
+        if (result.waypointType === 'airport') {
+            colorClass = 'type-airport';
+        } else if (result.waypointType === 'navaid') {
+            colorClass = 'type-navaid';
+        } else if (result.waypointType === 'fix') {
+            colorClass = result.isReportingPoint ? 'type-reporting' : 'type-fix';
+        } else if (result.waypointType === 'airway') {
+            colorClass = 'type-airway';
+        }
+
+        // Build the display name/type line
+        let displayType = result.type;
+        if (result.waypointType === 'airway') {
+            displayType = 'AIRWAY';
+        }
+
+        // Show context hint if available
+        const contextHint = result.contextHint || '';
+        const locationText = result.location || '';
+        const showContextHint = contextHint && contextHint.length > 0;
 
         html += `
             <div class="autocomplete-item ${colorClass}" data-index="${index}">
                 <span class="code">${result.code}</span>
-                <span class="name">${result.type} - ${result.name}</span>
-                <span class="location">${result.location || ''}</span>
+                <span class="name">${displayType}${result.name !== result.code ? ' - ' + result.name : ''}</span>
+                ${showContextHint
+                    ? `<span class="location context-hint">${contextHint}</span>`
+                    : `<span class="location">${locationText}</span>`
+                }
             </div>
         `;
     });
@@ -421,6 +459,11 @@ function displayAutocomplete(results) {
 }
 
 function hideAutocomplete() {
+    // Don't hide if we're in the middle of processing a selection
+    if (isProcessingSelection) {
+        return;
+    }
+
     elements.autocompleteDropdown.classList.remove('show');
     elements.autocompleteDropdown.innerHTML = '';
     selectedAutocompleteIndex = -1;
@@ -468,9 +511,14 @@ function updateAutocompleteSelection(items) {
     });
 }
 
+// Flag to prevent autocomplete from hiding during selection
+let isProcessingSelection = false;
+
 function selectAutocompleteItem(index) {
     const result = autocompleteResults[index];
     if (!result) return;
+
+    isProcessingSelection = true;
 
     const value = elements.routeInput.value;
     const cursorPos = elements.routeInput.selectionStart;
@@ -484,9 +532,34 @@ function selectAutocompleteItem(index) {
     elements.routeInput.value = newBefore + ' ' + afterCursor;
     const newPos = newBefore.length + 1;
     elements.routeInput.setSelectionRange(newPos, newPos);
-    elements.routeInput.focus();
 
-    hideAutocomplete();
+    // Instead of hiding, trigger autocomplete to show next suggestions
+    // Simulate the "just finished waypoint" scenario
+    const selectedCode = result.code.toUpperCase();
+    const nextResults = window.QueryEngine?.searchWaypoints('', selectedCode, 20) || [];
+
+    if (nextResults.length > 0) {
+        autocompleteResults = nextResults;
+        displayAutocomplete(nextResults);
+
+        // Cancel any pending blur timeout from app.js
+        if (elements.cancelBlurTimeout) {
+            elements.cancelBlurTimeout();
+        }
+
+        // Focus AFTER showing autocomplete to prevent blur from hiding it
+        elements.routeInput.focus();
+
+        // Keep protection longer than blur timeout (250ms > 200ms)
+        setTimeout(() => {
+            isProcessingSelection = false;
+        }, 250);
+    } else {
+        // No next suggestions - allow immediate hiding
+        isProcessingSelection = false;
+        hideAutocomplete();
+        elements.routeInput.focus();
+    }
 }
 
 // ============================================
@@ -578,7 +651,17 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelSt
 
     waypoints.forEach((waypoint, index) => {
         const code = RouteCalculator.getWaypointCode(waypoint);
-        const colorClass = waypoint.waypointType === 'airport' ? 'text-navaid' : 'text-navaid';
+
+        // Determine color based on waypoint type
+        let colorClass = 'text-fix'; // Default white for unspecified
+        if (waypoint.waypointType === 'airport') {
+            colorClass = 'text-airport'; // Cyan
+        } else if (waypoint.waypointType === 'navaid') {
+            colorClass = 'text-navaid'; // Magenta
+        } else if (waypoint.waypointType === 'fix') {
+            colorClass = waypoint.isReportingPoint ? 'text-reporting' : 'text-fix'; // Amber or White
+        }
+
         const waypointNumber = index + 1;
 
         // Position
