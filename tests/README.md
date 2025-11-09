@@ -6,11 +6,72 @@ Comprehensive test suite for the InFlight flight planning application, testing a
 
 ## Running Tests
 
+### Automated Testing (Node.js)
+
+**Recommended for CI/CD and development:**
+
+```bash
+# Install dependencies (first time only)
+npm install
+
+# Run all tests
+npm test
+
+# Alternative: run test runner directly
+node tests/test-runner.js
+```
+
+**Features:**
+- ✅ Runs in Node.js with JSDOM (simulates browser environment)
+- ✅ Colored terminal output with pass/fail indicators
+- ✅ Exit code 0 (success) or 1 (failure) for CI/CD integration
+- ✅ No browser required - perfect for automated testing
+- ✅ Fast execution (~1 second for 50+ tests)
+
+**Output Example:**
+```
+InFlight Test Suite
+
+Testing: Coordinate Formatting
+  ✓ should format positive latitude correctly
+  ✓ should format negative latitude correctly
+  ...
+
+Testing: Flight Plan Management
+  ✓ should update flight plan
+  ✓ should clear flight plan
+  ...
+
+====================================
+Test Results Summary
+====================================
+
+✓ Coordinate Formatting
+  Passed: 10, Failed: 0
+
+✓ Flight Plan Management
+  Passed: 8, Failed: 0
+
+====================================
+Total Tests: 50
+Passed: 50
+Failed: 0
+
+✓ All tests passed!
+```
+
 ### Browser-Based Testing
+
+**For interactive debugging and development:**
 
 1. Open `tests/index.html` in your browser
 2. Click "Run All Tests"
 3. View results in the console and on-page display
+
+**Or run via npm:**
+```bash
+npm run test:browser
+```
 
 ### Manual Testing in Console
 
@@ -198,16 +259,37 @@ Future performance tests will track:
 - Spatial query performance
 - Map rendering performance
 
-## Continuous Testing
+## Continuous Integration
+
+### GitHub Actions
+
+Automated tests run on every push and pull request:
+
+**Workflow:** `.github/workflows/test.yml`
+
+**Matrix Testing:**
+- Node.js 16.x, 18.x, 20.x
+- Ubuntu latest
+
+**Checks:**
+- ✅ Run all test suites
+- ✅ Code quality checks
+- ✅ Test coverage reporting
+
+**View Results:**
+- Check the "Actions" tab in GitHub
+- Green checkmark = all tests passed
+- Red X = tests failed
 
 ### Pre-Commit Checklist
 
 Before committing changes:
 
-1. ✅ Run all tests: `TestFramework.runAll()`
-2. ✅ All tests pass
+1. ✅ Run all tests: `npm test`
+2. ✅ All tests pass (exit code 0)
 3. ✅ No console errors
 4. ✅ Add tests for new features
+5. ✅ Update test documentation if needed
 
 ### Browser Compatibility Testing
 

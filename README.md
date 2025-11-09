@@ -280,18 +280,41 @@ For detailed architecture documentation, see [docs/ARCHITECTURE.md](docs/ARCHITE
 
 ## Testing
 
-Comprehensive test suite with custom framework (no external dependencies):
+Comprehensive automated testing with 50+ tests:
 
-- **Test Runner**: Open [tests/index.html](tests/index.html) in browser
-- **Test Suites**: 50+ tests covering utilities, state management
-- **Coverage**: 100% for formatters, 95% for flight state
-- **Documentation**: See [tests/README.md](tests/README.md)
+### Automated Testing (Recommended)
+```bash
+# Install dependencies (first time only)
+npm install
 
-Run tests:
-```javascript
-// In browser console after opening tests/index.html
-TestFramework.runAll();
+# Run all tests
+npm test
 ```
+
+**Features:**
+- ✅ Automated testing in Node.js (no browser required)
+- ✅ GitHub Actions CI/CD integration
+- ✅ Colored terminal output with pass/fail indicators
+- ✅ Exit codes for automation (0 = success, 1 = failure)
+- ✅ Fast execution (~1 second for 50+ tests)
+
+### Browser Testing (Interactive)
+```bash
+# Open browser test runner
+npm run test:browser
+
+# Or manually: open tests/index.html in browser
+```
+
+### Test Coverage
+- **utils/formatters.js**: 100% ✅
+- **state/flight-state.js**: 95% ✅
+- **50+ tests total** covering utilities and state management
+
+### Documentation
+- **Testing Guide**: See [TESTING.md](TESTING.md)
+- **Test Suite Details**: See [tests/README.md](tests/README.md)
+- **CI/CD**: GitHub Actions runs tests on every push/PR
 
 ## Technical Details
 
