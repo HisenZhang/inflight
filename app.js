@@ -56,6 +56,12 @@ function setupEventListeners() {
     elements.calculateBtn.addEventListener('click', handleCalculateRoute);
     elements.clearRouteBtn.addEventListener('click', handleClearRoute);
 
+    // GPS tracking
+    const gpsBtn = document.getElementById('toggleGPSBtn');
+    if (gpsBtn) {
+        gpsBtn.addEventListener('click', () => TacticalDisplay.toggleGPS());
+    }
+
     // Autocomplete
     elements.routeInput.addEventListener('input', (e) => {
         // Force uppercase
@@ -199,7 +205,7 @@ async function handleCalculateRoute() {
         UIController.displayResults(waypoints, legs, totalDistance, totalTime, fuelStatus, options);
 
         // Display tactical navigation
-        UIController.displayTacticalNavigation(waypoints, legs, options);
+        TacticalDisplay.displayTacticalNavigation(waypoints, legs, options);
 
         // Save to history
         DataManager.saveQueryHistory(routeValue.trim().toUpperCase());

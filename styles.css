@@ -726,7 +726,7 @@ header h1 {
 .tactical-map {
     position: relative;
     height: 500px;
-    background: linear-gradient(135deg, #001a00 0%, #000a00 100%);
+    background: #000000;
     border-bottom: 2px solid var(--border-color);
     overflow: hidden;
 }

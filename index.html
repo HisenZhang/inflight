@@ -187,6 +187,54 @@
             </div>
         </div>
 
+        <!-- Tactical Navigation Display -->
+        <div id="tacticalDisplay" class="tactical-display" style="display: none;">
+            <div class="tactical-header">
+                <h2 class="font-bold text-primary">TACTICAL NAVIGATION</h2>
+                <div class="tactical-route-info"></div>
+            </div>
+
+            <div id="tacticalMap" class="tactical-map"></div>
+
+            <div id="currentInstruction" class="current-instruction">
+                <div class="instruction-header">CURRENT INSTRUCTION</div>
+                <div class="instruction-text"></div>
+                <div class="instruction-details">
+                    <div class="detail-item">
+                        <div class="detail-label">NEXT WP</div>
+                        <div class="detail-value next-wp"></div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">REQ HDG</div>
+                        <div class="detail-value req-hdg"></div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">DIST (NM)</div>
+                        <div class="detail-value dist-nm"></div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">ETA (HH:MM)</div>
+                        <div class="detail-value eta-time"></div>
+                    </div>
+                </div>
+                <div class="instruction-secondary">
+                    <div class="secondary-item">
+                        <span class="secondary-label">GROUND SPEED (KT)</span>
+                        <span class="secondary-value gs-value"></span>
+                    </div>
+                    <div class="secondary-item">
+                        <button id="toggleGPSBtn" class="btn btn-secondary">START GPS TRACKING</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="selectedPointInfo" class="selected-point-info">
+                <div class="info-header">SELECTED POINT INFORMATION</div>
+                <div class="info-placeholder">Select an element on the map to view details.</div>
+                <div class="info-content" style="display: none;"></div>
+            </div>
+        </div>
+
         <!-- Results Section -->
         <div id="resultsSection" class="results-section" style="display: none;">
             <h2 class="font-bold text-primary">NAVIGATION LOG</h2>
@@ -196,59 +244,6 @@
             <div id="windAltitudeTable" class="wind-altitude-table" style="display: none;"></div>
 
             <div id="navlogTable" class="navlog-table"></div>
-
-            <!-- Tactical Navigation Display -->
-            <div id="tacticalDisplay" class="tactical-display" style="display: none;">
-                <div class="tactical-header">
-                    <h2 class="font-bold text-primary">FMS - TACTICAL NAVIGATION DISPLAY (CORRECTED PROJECTION)</h2>
-                    <div class="tactical-route-info"></div>
-                </div>
-                <div id="tacticalMap" class="tactical-map"></div>
-                <div id="selectedPointInfo" class="selected-point-info">
-                    <div class="info-header">SELECTED POINT INFORMATION</div>
-                    <div class="info-placeholder">Select an element on the map to view details.</div>
-                    <div class="info-content" style="display: none;"></div>
-                </div>
-                <div class="tactical-briefing-btn">
-                    <button id="generateBriefingBtn" class="btn btn-primary">GENERATE PRE-FLIGHT BRIEFING ✨</button>
-                </div>
-                <div id="currentInstruction" class="current-instruction">
-                    <div class="instruction-header">CURRENT INSTRUCTION</div>
-                    <div class="instruction-text"></div>
-                    <div class="instruction-details">
-                        <div class="detail-item">
-                            <div class="detail-label">NEXT WP</div>
-                            <div class="detail-value next-wp"></div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">REQ HDG</div>
-                            <div class="detail-value req-hdg"></div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">DIST (NM)</div>
-                            <div class="detail-value dist-nm"></div>
-                        </div>
-                        <div class="detail-item">
-                            <div class="detail-label">ETA (HH:MM)</div>
-                            <div class="detail-value eta-time"></div>
-                        </div>
-                    </div>
-                    <div class="instruction-secondary">
-                        <div class="secondary-item">
-                            <span class="secondary-label">TRUE AIRSPEED (KT)</span>
-                            <span class="secondary-value tas-value"></span>
-                        </div>
-                        <div class="secondary-item">
-                            <span class="secondary-label">GROUND SPEED (KT)</span>
-                            <span class="secondary-value gs-value"></span>
-                        </div>
-                        <div class="secondary-item">
-                            <span class="secondary-label">WIND VECTOR</span>
-                            <span class="secondary-value wind-vector"></span>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
 
@@ -261,6 +256,7 @@
     <script src="route-expander.js"></script>       <!-- Airway/STAR/DP expansion module -->
     <script src="data-manager.js"></script>         <!-- Data loading & caching orchestrator -->
     <script src="route-calculator.js"></script>     <!-- Navigation calculations module -->
+    <script src="tactical-display.js"></script>     <!-- Tactical navigation display -->
     <script src="ui-controller.js"></script>        <!-- UI interactions module -->
     <script src="app.js"></script>                  <!-- Main coordinator -->
 </body>
