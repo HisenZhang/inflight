@@ -46,10 +46,6 @@ body {
 
 @media (max-width: 768px) {
     body {
-        overflow: hidden;
-        height: 100vh;
-        position: fixed;
-        width: 100%;
         padding: 0;
     }
 }
@@ -1282,8 +1278,9 @@ header h1 {
 
     #tab-map.active .navigation-panel {
         flex-shrink: 0;
-        height: 25vh; /* Fixed height - same as status bar */
-        overflow: hidden; /* Navigation content should fit */
+        min-height: 25vh; /* Minimum height to match status bar */
+        max-height: 30vh; /* Allow slightly more space if needed */
+        overflow-y: auto; /* Scrollable if content exceeds max height */
         border-top: 1px solid var(--border-color); /* Thinner border on mobile */
     }
 
