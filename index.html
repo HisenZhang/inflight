@@ -25,15 +25,18 @@
                 <span class="status-indicator">[!]</span>
                 <span id="statusText" class="font-medium">DATABASE NOT LOADED</span>
                 <button id="loadDataBtn" class="btn btn-primary font-bold">LOAD DATA</button>
-                <button id="clearCacheBtn" class="btn btn-secondary" style="display: none;">CLEAR CACHE</button>
                 <button id="inspectDbBtn" class="btn btn-secondary" style="display: none;">INSPECT</button>
             </div>
             <div id="dataInfo" class="data-info text-sm"></div>
             <div id="dataInspection" class="data-inspection hidden">
                 <div class="inspection-header">
-                    <span class="text-metric font-bold">DATABASE INSPECTION</span>
+                    <span class="text-metric font-bold">DATABASE MANAGEMENT</span>
                 </div>
                 <div id="inspectionContent" class="inspection-content"></div>
+                <div class="inspection-actions">
+                    <button id="reindexCacheBtn" class="btn btn-secondary">REINDEX TOKEN MAP</button>
+                    <button id="clearDataBtn" class="btn btn-warning">CLEAR ALL DATA</button>
+                </div>
             </div>
             <p class="help-text">
                 Sources: <span class="text-secondary">FAA NASR (US) + OurAirports (Worldwide)</span>
@@ -165,10 +168,10 @@
                         >
                     </div>
                     <div class="input-row">
-                        <label class="text-sm font-medium">VFR RESERVE:</label>
+                        <label class="text-sm font-medium">FUEL RESERVE:</label>
                         <div class="radio-group">
-                            <div class="radio-btn selected" data-reserve="30">DAY (30 MIN)</div>
-                            <div class="radio-btn" data-reserve="45">NIGHT (45 MIN)</div>
+                            <div class="radio-btn selected" data-reserve="30">VFR DAY (30 MIN)</div>
+                            <div class="radio-btn" data-reserve="45">VFR NIGHT / IFR (45 MIN)</div>
                         </div>
                     </div>
                     <p class="help-text mt-sm">
@@ -193,6 +196,59 @@
             <div id="windAltitudeTable" class="wind-altitude-table" style="display: none;"></div>
 
             <div id="navlogTable" class="navlog-table"></div>
+
+            <!-- Tactical Navigation Display -->
+            <div id="tacticalDisplay" class="tactical-display" style="display: none;">
+                <div class="tactical-header">
+                    <h2 class="font-bold text-primary">FMS - TACTICAL NAVIGATION DISPLAY (CORRECTED PROJECTION)</h2>
+                    <div class="tactical-route-info"></div>
+                </div>
+                <div id="tacticalMap" class="tactical-map"></div>
+                <div id="selectedPointInfo" class="selected-point-info">
+                    <div class="info-header">SELECTED POINT INFORMATION</div>
+                    <div class="info-placeholder">Select an element on the map to view details.</div>
+                    <div class="info-content" style="display: none;"></div>
+                </div>
+                <div class="tactical-briefing-btn">
+                    <button id="generateBriefingBtn" class="btn btn-primary">GENERATE PRE-FLIGHT BRIEFING ✨</button>
+                </div>
+                <div id="currentInstruction" class="current-instruction">
+                    <div class="instruction-header">CURRENT INSTRUCTION</div>
+                    <div class="instruction-text"></div>
+                    <div class="instruction-details">
+                        <div class="detail-item">
+                            <div class="detail-label">NEXT WP</div>
+                            <div class="detail-value next-wp"></div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">REQ HDG</div>
+                            <div class="detail-value req-hdg"></div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">DIST (NM)</div>
+                            <div class="detail-value dist-nm"></div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">ETA (HH:MM)</div>
+                            <div class="detail-value eta-time"></div>
+                        </div>
+                    </div>
+                    <div class="instruction-secondary">
+                        <div class="secondary-item">
+                            <span class="secondary-label">TRUE AIRSPEED (KT)</span>
+                            <span class="secondary-value tas-value"></span>
+                        </div>
+                        <div class="secondary-item">
+                            <span class="secondary-label">GROUND SPEED (KT)</span>
+                            <span class="secondary-value gs-value"></span>
+                        </div>
+                        <div class="secondary-item">
+                            <span class="secondary-label">WIND VECTOR</span>
+                            <span class="secondary-value wind-vector"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 

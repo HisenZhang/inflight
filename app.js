@@ -49,7 +49,8 @@ function setupEventListeners() {
 
     // Data management
     elements.loadDataBtn.addEventListener('click', handleLoadData);
-    elements.clearCacheBtn.addEventListener('click', handleClearCache);
+    elements.reindexCacheBtn.addEventListener('click', handleReindexCache);
+    elements.clearDataBtn.addEventListener('click', handleClearCache);
 
     // Route calculation
     elements.calculateBtn.addEventListener('click', handleCalculateRoute);
@@ -103,18 +104,32 @@ async function handleLoadData() {
     }
 }
 
+async function handleReindexCache() {
+    try {
+        UIController.updateStatus('[...] REINDEXING TOKEN MAP', 'loading');
+        await DataManager.rebuildTokenTypeMap();
+        UIController.updateStatus('[✓] DATABASE READY', 'success');
+        UIController.showDataInfo();
+        alert('Token map reindexed successfully!');
+    } catch (error) {
+        console.error('Error reindexing:', error);
+        alert('ERROR: REINDEX OPERATION FAILED');
+    }
+}
+
 async function handleClearCache() {
-    if (confirm('CONFIRM: CLEAR ALL CACHED DATA?')) {
+    if (confirm('WARNING: This will delete ALL cached data (airports, navaids, airways, procedures).\n\nYou will need to reload all data from scratch.\n\nContinue?')) {
         try {
             await DataManager.clearCache();
             const elements = UIController.getElements();
 
-            UIController.updateStatus('[!] CACHE CLEARED - RELOAD DATABASE', 'warning');
+            UIController.updateStatus('[!] DATA CLEARED - RELOAD DATABASE', 'warning');
             elements.dataInfo.innerHTML = '';
+            elements.inspectDbBtn.style.display = 'none';
+            elements.dataInspection.classList.add('hidden');
             UIController.disableRouteInput();
             elements.loadDataBtn.disabled = false;
             elements.loadDataBtn.style.display = 'inline-block';
-            elements.clearCacheBtn.style.display = 'none';
             elements.resultsSection.style.display = 'none';
         } catch (error) {
             console.error('Error clearing cache:', error);
@@ -182,6 +197,9 @@ async function handleCalculateRoute() {
 
         // Display results
         UIController.displayResults(waypoints, legs, totalDistance, totalTime, fuelStatus, options);
+
+        // Display tactical navigation
+        UIController.displayTacticalNavigation(waypoints, legs, options);
 
         // Save to history
         DataManager.saveQueryHistory(routeValue.trim().toUpperCase());

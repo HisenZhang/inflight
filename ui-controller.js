@@ -49,6 +49,14 @@ function init() {
         windAltitudeTable: document.getElementById('windAltitudeTable'),
         navlogTable: document.getElementById('navlogTable'),
 
+        // Tactical display elements
+        tacticalDisplay: document.getElementById('tacticalDisplay'),
+        tacticalMap: document.getElementById('tacticalMap'),
+        tacticalRouteInfo: document.querySelector('.tactical-route-info'),
+        selectedPointInfo: document.getElementById('selectedPointInfo'),
+        currentInstruction: document.getElementById('currentInstruction'),
+        generateBriefingBtn: document.getElementById('generateBriefingBtn'),
+
         // Autocomplete elements
         autocompleteDropdown: document.getElementById('autocompleteDropdown'),
 
@@ -848,6 +856,243 @@ function displayWindAltitudeTable(legs, filedAltitude) {
 }
 
 // ============================================
+// TACTICAL NAVIGATION DISPLAY
+// ============================================
+
+function displayTacticalNavigation(waypoints, legs, options = {}) {
+    if (waypoints.length < 2) {
+        elements.tacticalDisplay.style.display = 'none';
+        return;
+    }
+
+    // Show tactical display
+    elements.tacticalDisplay.style.display = 'block';
+
+    // Update route info
+    const routeCodes = waypoints.map(w => RouteCalculator.getWaypointCode(w)).join(' ');
+    elements.tacticalRouteInfo.textContent = `Route: ${routeCodes} (${waypoints.length} waypoints)`;
+
+    // Generate SVG map
+    generateTacticalMap(waypoints, legs);
+
+    // Update current instruction (first leg)
+    if (legs.length > 0) {
+        updateCurrentInstruction(legs[0], options);
+    }
+}
+
+function generateTacticalMap(waypoints, legs) {
+    // Calculate bounds for projection
+    const lats = waypoints.map(w => w.lat);
+    const lons = waypoints.map(w => w.lon);
+    const minLat = Math.min(...lats);
+    const maxLat = Math.max(...lats);
+    const minLon = Math.min(...lons);
+    const maxLon = Math.max(...lons);
+
+    // Add padding
+    const latRange = maxLat - minLat;
+    const lonRange = maxLon - minLon;
+    const padding = 0.15; // 15% padding
+
+    const bounds = {
+        minLat: minLat - latRange * padding,
+        maxLat: maxLat + latRange * padding,
+        minLon: minLon - lonRange * padding,
+        maxLon: maxLon + lonRange * padding
+    };
+
+    // SVG dimensions
+    const width = 1000;
+    const height = 500;
+
+    // Project lat/lon to SVG coordinates
+    const project = (lat, lon) => {
+        const x = ((lon - bounds.minLon) / (bounds.maxLon - bounds.minLon)) * width;
+        const y = height - ((lat - bounds.minLat) / (bounds.maxLat - bounds.minLat)) * height;
+        return { x, y };
+    };
+
+    // Start SVG
+    let svg = `<svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">`;
+
+    // Add scale reference in top right
+    svg += `<text x="${width - 10}" y="20" text-anchor="end" fill="#cccccc" font-size="10" font-family="Roboto Mono">20 KT</text>`;
+
+    // Draw route lines
+    for (let i = 0; i < legs.length; i++) {
+        const leg = legs[i];
+        const from = project(leg.from.lat, leg.from.lon);
+        const to = project(leg.to.lat, leg.to.lon);
+
+        // Determine if this is a direct route or reference line
+        const isDashed = i > 0; // First leg is solid, rest can be dashed for visual effect
+        const lineClass = isDashed ? 'route-line route-line-dashed' : 'route-line';
+
+        svg += `<line x1="${from.x}" y1="${from.y}" x2="${to.x}" y2="${to.y}" class="${lineClass}"/>`;
+    }
+
+    // Draw waypoints
+    waypoints.forEach((waypoint, index) => {
+        const pos = project(waypoint.lat, waypoint.lon);
+        const code = RouteCalculator.getWaypointCode(waypoint);
+        const isAirport = waypoint.waypointType === 'airport';
+        const color = isAirport ? '#00ffff' : (waypoint.waypointType === 'fix' ? '#ffffff' : '#ff00ff');
+
+        // Waypoint circle
+        svg += `<g class="map-waypoint" data-index="${index}">`;
+        svg += `<circle class="waypoint-circle" cx="${pos.x}" cy="${pos.y}" r="5" fill="${color}" stroke="${color}" stroke-width="2"/>`;
+
+        // Label positioning (above the waypoint)
+        const labelY = pos.y - 12;
+        svg += `<text class="waypoint-label" x="${pos.x}" y="${labelY}" text-anchor="middle" fill="${color}">${code}</text>`;
+        svg += `</g>`;
+    });
+
+    svg += `</svg>`;
+
+    // Insert SVG
+    elements.tacticalMap.innerHTML = svg;
+
+    // Add click handlers to waypoints
+    const waypointElements = elements.tacticalMap.querySelectorAll('.map-waypoint');
+    waypointElements.forEach(el => {
+        el.addEventListener('click', () => {
+            const index = parseInt(el.getAttribute('data-index'));
+            showPointInfo(waypoints[index], legs, index);
+        });
+    });
+}
+
+function showPointInfo(waypoint, legs, index) {
+    const code = RouteCalculator.getWaypointCode(waypoint);
+    const pos = `${RouteCalculator.formatCoordinate(waypoint.lat, 'lat')} ${RouteCalculator.formatCoordinate(waypoint.lon, 'lon')}`;
+
+    let infoHTML = `
+        <div class="info-row">
+            <span class="info-label">IDENTIFIER:</span>
+            <span class="info-value">${code}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">TYPE:</span>
+            <span class="info-value">${waypoint.waypointType.toUpperCase()}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">POSITION:</span>
+            <span class="info-value">${pos}</span>
+        </div>
+    `;
+
+    if (waypoint.elevation !== null && !isNaN(waypoint.elevation)) {
+        infoHTML += `
+            <div class="info-row">
+                <span class="info-label">ELEVATION:</span>
+                <span class="info-value">${Math.round(waypoint.elevation)} FT</span>
+            </div>
+        `;
+    }
+
+    if (waypoint.magVar !== null && waypoint.magVar !== undefined) {
+        const magVarValue = Math.abs(waypoint.magVar).toFixed(1);
+        const magVarDir = waypoint.magVar >= 0 ? 'E' : 'W';
+        infoHTML += `
+            <div class="info-row">
+                <span class="info-label">MAG VAR:</span>
+                <span class="info-value">${magVarValue}° ${magVarDir}</span>
+            </div>
+        `;
+    }
+
+    // Show leg info if this is not the last waypoint
+    if (index < legs.length) {
+        const leg = legs[index];
+        infoHTML += `
+            <div class="info-row">
+                <span class="info-label">NEXT LEG:</span>
+                <span class="info-value">${leg.distance.toFixed(1)} NM @ ${Math.round(leg.trueCourse)}° TRUE</span>
+            </div>
+        `;
+        if (leg.magHeading !== null) {
+            infoHTML += `
+                <div class="info-row">
+                    <span class="info-label">MAG HEADING:</span>
+                    <span class="info-value">${Math.round(leg.magHeading)}°</span>
+                </div>
+            `;
+        }
+    }
+
+    // Show frequencies for airports
+    if (waypoint.waypointType === 'airport') {
+        const frequencies = DataManager.getFrequencies(waypoint.icao || waypoint.ident);
+        if (frequencies.length > 0) {
+            const freqList = frequencies.slice(0, 3).map(f => `${f.type} ${f.frequency.toFixed(3)}`).join(', ');
+            infoHTML += `
+                <div class="info-row">
+                    <span class="info-label">FREQUENCIES:</span>
+                    <span class="info-value">${freqList}</span>
+                </div>
+            `;
+        }
+    }
+
+    // Update UI
+    document.querySelector('.info-placeholder').style.display = 'none';
+    document.querySelector('.info-content').style.display = 'block';
+    document.querySelector('.info-content').innerHTML = infoHTML;
+}
+
+function updateCurrentInstruction(firstLeg, options) {
+    const fromCode = RouteCalculator.getWaypointCode(firstLeg.from);
+    const toCode = RouteCalculator.getWaypointCode(firstLeg.to);
+
+    // Instruction text
+    const instructionText = `PROCEED DIRECT TO ${toCode}`;
+    elements.currentInstruction.querySelector('.instruction-text').textContent = instructionText;
+
+    // Details
+    elements.currentInstruction.querySelector('.next-wp').textContent = toCode;
+
+    const heading = firstLeg.magHeading !== null ? Math.round(firstLeg.magHeading) : Math.round(firstLeg.trueCourse);
+    elements.currentInstruction.querySelector('.req-hdg').textContent = String(heading).padStart(3, '0') + '°';
+
+    elements.currentInstruction.querySelector('.dist-nm').textContent = firstLeg.distance.toFixed(1);
+
+    // ETA
+    if (firstLeg.legTime !== undefined) {
+        const now = new Date();
+        const etaMs = now.getTime() + firstLeg.legTime * 60 * 1000;
+        const eta = new Date(etaMs);
+        const hours = String(eta.getHours()).padStart(2, '0');
+        const minutes = String(eta.getMinutes()).padStart(2, '0');
+        elements.currentInstruction.querySelector('.eta-time').textContent = `${hours}:${minutes}`;
+    } else {
+        elements.currentInstruction.querySelector('.eta-time').textContent = '--:--';
+    }
+
+    // Secondary info
+    if (options.tas) {
+        elements.currentInstruction.querySelector('.tas-value').textContent = Math.round(options.tas);
+    } else {
+        elements.currentInstruction.querySelector('.tas-value').textContent = '--';
+    }
+
+    if (firstLeg.groundSpeed !== undefined) {
+        elements.currentInstruction.querySelector('.gs-value').textContent = Math.round(firstLeg.groundSpeed);
+    } else {
+        elements.currentInstruction.querySelector('.gs-value').textContent = '--';
+    }
+
+    if (firstLeg.windDir !== undefined && firstLeg.windSpd !== undefined) {
+        const windDir = String(Math.round(firstLeg.windDir)).padStart(3, '0');
+        const windSpd = Math.round(firstLeg.windSpd);
+        elements.currentInstruction.querySelector('.wind-vector').textContent = `${windDir}° / ${windSpd} KT`;
+    } else {
+        elements.currentInstruction.querySelector('.wind-vector').textContent = '---° / -- KT';
+    }
+}
+
+// ============================================
 // EXPORTS
 // ============================================
 
@@ -875,6 +1120,7 @@ window.UIController = {
 
     // Results
     displayResults,
+    displayTacticalNavigation,
 
     // History
     displayQueryHistory

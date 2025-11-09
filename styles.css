@@ -250,6 +250,14 @@ header h1 {
     font-weight: 500;
 }
 
+.inspection-actions {
+    padding: var(--space-md);
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
+}
+
 /* Buttons */
 .btn {
     padding: var(--space-sm) var(--space-lg);
@@ -286,6 +294,16 @@ header h1 {
 .btn-secondary {
     border-color: var(--text-secondary);
     color: var(--text-secondary);
+}
+
+.btn-warning {
+    border-color: var(--color-warning);
+    color: var(--color-warning);
+}
+
+.btn-warning:hover:not(:disabled) {
+    background: var(--color-warning);
+    color: var(--bg-primary);
 }
 
 /* Input Section */
@@ -543,6 +561,7 @@ header h1 {
     border: 2px solid var(--border-color);
     padding: var(--space-md);
     margin-bottom: var(--space-md);
+    overflow-x: auto;
 }
 
 .wind-altitude-table h2 {
@@ -557,6 +576,7 @@ header h1 {
     width: 100%;
     border-collapse: collapse;
     font-size: 0.75rem;
+    min-width: 600px;
 }
 
 .wind-altitude-table th {
@@ -677,6 +697,227 @@ header h1 {
     color: var(--text-secondary);
 }
 
+/* ============================================
+   TACTICAL NAVIGATION DISPLAY
+   ============================================ */
+.tactical-display {
+    margin-top: var(--space-xl);
+    border: 2px solid var(--border-color);
+    background: var(--bg-panel);
+}
+
+.tactical-header {
+    background: var(--bg-primary);
+    border-bottom: 2px solid var(--border-color);
+    padding: var(--space-md);
+    text-align: center;
+}
+
+.tactical-header h2 {
+    font-size: 14px;
+    margin-bottom: var(--space-xs);
+}
+
+.tactical-route-info {
+    color: var(--color-metric);
+    font-size: 12px;
+}
+
+.tactical-map {
+    position: relative;
+    height: 500px;
+    background: linear-gradient(135deg, #001a00 0%, #000a00 100%);
+    border-bottom: 2px solid var(--border-color);
+    overflow: hidden;
+}
+
+.tactical-map svg {
+    width: 100%;
+    height: 100%;
+}
+
+/* Map elements */
+.map-waypoint {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.map-waypoint:hover .waypoint-circle {
+    r: 8;
+    stroke-width: 3;
+}
+
+.map-waypoint:hover .waypoint-label {
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.waypoint-circle {
+    transition: all 0.2s ease;
+}
+
+.waypoint-label {
+    font-family: 'Roboto Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    pointer-events: none;
+}
+
+.route-line {
+    fill: none;
+    stroke: var(--color-metric);
+    stroke-width: 2;
+    stroke-linecap: round;
+}
+
+.route-line-dashed {
+    stroke-dasharray: 8 4;
+}
+
+/* Selected point info */
+.selected-point-info {
+    background: var(--bg-primary);
+    border-bottom: 2px solid var(--border-color);
+    padding: var(--space-md);
+}
+
+.info-header {
+    color: var(--text-secondary);
+    font-weight: 700;
+    font-size: 11px;
+    margin-bottom: var(--space-sm);
+}
+
+.info-placeholder {
+    color: var(--text-secondary);
+    font-size: 11px;
+    padding: var(--space-sm) 0;
+}
+
+.info-content {
+    font-size: 11px;
+}
+
+.info-content .info-row {
+    display: flex;
+    justify-content: space-between;
+    padding: var(--space-xs) 0;
+    border-bottom: 1px solid #333;
+}
+
+.info-content .info-row:last-child {
+    border-bottom: none;
+}
+
+.info-content .info-label {
+    color: var(--text-secondary);
+}
+
+.info-content .info-value {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+/* Briefing button */
+.tactical-briefing-btn {
+    background: var(--bg-primary);
+    border-bottom: 2px solid var(--border-color);
+    padding: var(--space-md);
+    text-align: center;
+}
+
+.tactical-briefing-btn .btn {
+    font-size: 13px;
+    padding: var(--space-md) var(--space-xl);
+}
+
+/* Current instruction panel */
+.current-instruction {
+    background: var(--bg-primary);
+    padding: var(--space-md);
+}
+
+.instruction-header {
+    color: var(--text-secondary);
+    font-weight: 700;
+    font-size: 11px;
+    margin-bottom: var(--space-sm);
+}
+
+.instruction-text {
+    color: var(--color-navaid);
+    font-size: 18px;
+    font-weight: 700;
+    text-align: center;
+    padding: var(--space-md) 0;
+    margin-bottom: var(--space-md);
+}
+
+.instruction-details {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-md);
+    padding: var(--space-md) 0;
+    border-top: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.detail-item {
+    text-align: center;
+}
+
+.detail-label {
+    color: var(--text-secondary);
+    font-size: 10px;
+    margin-bottom: var(--space-xs);
+}
+
+.detail-value {
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.detail-value.next-wp {
+    color: var(--color-airport);
+}
+
+.detail-value.req-hdg {
+    color: var(--color-airport);
+}
+
+.detail-value.dist-nm {
+    color: var(--color-metric);
+}
+
+.detail-value.eta-time {
+    color: var(--color-metric);
+}
+
+.instruction-secondary {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-md);
+    margin-top: var(--space-md);
+}
+
+.secondary-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-xs);
+}
+
+.secondary-label {
+    color: var(--text-secondary);
+    font-size: 9px;
+}
+
+.secondary-value {
+    color: var(--color-metric);
+    font-size: 16px;
+    font-weight: 700;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .route-input {
@@ -690,5 +931,17 @@ header h1 {
 
     .feature-inputs label {
         min-width: auto;
+    }
+
+    .instruction-details {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .instruction-secondary {
+        grid-template-columns: 1fr;
+    }
+
+    .tactical-map {
+        height: 400px;
     }
 }
