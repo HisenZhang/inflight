@@ -697,6 +697,136 @@ function getTokenType(token) {
 }
 
 // ============================================
+// NAVLOG SAVE/RESTORE FOR CRASH RECOVERY
+// ============================================
+
+const NAVLOG_KEY = 'saved_navlog';
+
+// Save computed navlog to localStorage for crash recovery
+function saveNavlog(navlogData) {
+    try {
+        const saveData = {
+            timestamp: Date.now(),
+            routeString: navlogData.routeString,
+            waypoints: navlogData.waypoints,
+            legs: navlogData.legs,
+            totalDistance: navlogData.totalDistance,
+            totalTime: navlogData.totalTime,
+            fuelStatus: navlogData.fuelStatus,
+            options: navlogData.options
+        };
+
+        localStorage.setItem(NAVLOG_KEY, JSON.stringify(saveData));
+        console.log('[DataManager] Navlog saved for crash recovery');
+        return true;
+    } catch (error) {
+        console.error('[DataManager] Failed to save navlog:', error);
+        return false;
+    }
+}
+
+// Load saved navlog from localStorage
+function loadSavedNavlog() {
+    try {
+        const saved = localStorage.getItem(NAVLOG_KEY);
+        if (!saved) return null;
+
+        const navlogData = JSON.parse(saved);
+
+        // Check if saved data is less than 24 hours old
+        const ageHours = (Date.now() - navlogData.timestamp) / (1000 * 60 * 60);
+        if (ageHours > 24) {
+            console.log('[DataManager] Saved navlog expired (>24h old), discarding');
+            clearSavedNavlog();
+            return null;
+        }
+
+        console.log('[DataManager] Loaded saved navlog from', new Date(navlogData.timestamp).toLocaleString());
+        return navlogData;
+    } catch (error) {
+        console.error('[DataManager] Failed to load saved navlog:', error);
+        return null;
+    }
+}
+
+// Clear saved navlog
+function clearSavedNavlog() {
+    try {
+        localStorage.removeItem(NAVLOG_KEY);
+        console.log('[DataManager] Saved navlog cleared');
+        return true;
+    } catch (error) {
+        console.error('[DataManager] Failed to clear saved navlog:', error);
+        return false;
+    }
+}
+
+// Export navlog as JSON file for download
+function exportNavlog(navlogData) {
+    try {
+        const exportData = {
+            version: '1.0',
+            exportTimestamp: Date.now(),
+            exportDate: new Date().toISOString(),
+            routeString: navlogData.routeString,
+            waypoints: navlogData.waypoints,
+            legs: navlogData.legs,
+            totalDistance: navlogData.totalDistance,
+            totalTime: navlogData.totalTime,
+            fuelStatus: navlogData.fuelStatus,
+            options: navlogData.options
+        };
+
+        const json = JSON.stringify(exportData, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+
+        const filename = `navlog_${navlogData.routeString.replace(/\s+/g, '_')}_${Date.now()}.json`;
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+
+        URL.revokeObjectURL(url);
+        console.log('[DataManager] Navlog exported:', filename);
+        return true;
+    } catch (error) {
+        console.error('[DataManager] Failed to export navlog:', error);
+        return false;
+    }
+}
+
+// Import navlog from JSON file
+function importNavlog(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+
+        reader.onload = (e) => {
+            try {
+                const navlogData = JSON.parse(e.target.result);
+
+                // Validate structure
+                if (!navlogData.routeString || !navlogData.waypoints || !navlogData.legs) {
+                    throw new Error('Invalid navlog file structure');
+                }
+
+                console.log('[DataManager] Navlog imported from file');
+                resolve(navlogData);
+            } catch (error) {
+                console.error('[DataManager] Failed to parse navlog file:', error);
+                reject(error);
+            }
+        };
+
+        reader.onerror = () => {
+            reject(new Error('Failed to read file'));
+        };
+
+        reader.readAsText(file);
+    });
+}
+
+// ============================================
 // EXPORTS
 // ============================================
 
@@ -725,5 +855,12 @@ window.DataManager = {
 
     // Query history
     saveQueryHistory,
-    loadQueryHistory
+    loadQueryHistory,
+
+    // Navlog save/restore/export
+    saveNavlog,
+    loadSavedNavlog,
+    clearSavedNavlog,
+    exportNavlog,
+    importNavlog
 };

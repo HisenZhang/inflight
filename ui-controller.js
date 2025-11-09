@@ -854,6 +854,59 @@ function displayWindAltitudeTable(legs, filedAltitude) {
 }
 
 // ============================================
+// NAVLOG RESTORE
+// ============================================
+
+function restoreNavlog(navlogData) {
+    const { routeString, waypoints, legs, totalDistance, totalTime, fuelStatus, options } = navlogData;
+
+    // Restore route input
+    elements.routeInput.value = routeString;
+
+    // Restore optional feature settings
+    if (options.enableWinds) {
+        document.getElementById('enableWindsToggle').classList.add('active');
+        document.getElementById('windInputs').classList.remove('hidden');
+        if (options.altitude) elements.altitudeInput.value = options.altitude;
+        if (options.tas) elements.tasInput.value = options.tas;
+
+        // Restore forecast period
+        document.querySelectorAll('.radio-btn[data-period]').forEach(btn => {
+            btn.classList.remove('selected');
+            if (btn.getAttribute('data-period') === options.forecastPeriod) {
+                btn.classList.add('selected');
+            }
+        });
+    }
+
+    if (options.enableFuel) {
+        document.getElementById('enableFuelToggle').classList.add('active');
+        document.getElementById('fuelInputs').classList.remove('hidden');
+        if (options.usableFuel) elements.usableFuelInput.value = options.usableFuel;
+        if (options.taxiFuel) elements.taxiFuelInput.value = options.taxiFuel;
+        if (options.burnRate) elements.burnRateInput.value = options.burnRate;
+
+        // Restore reserve setting
+        document.querySelectorAll('.radio-btn[data-reserve]').forEach(btn => {
+            btn.classList.remove('selected');
+            if (parseInt(btn.getAttribute('data-reserve')) === options.vfrReserve) {
+                btn.classList.add('selected');
+            }
+        });
+    }
+
+    // Display results
+    displayResults(waypoints, legs, totalDistance, totalTime, fuelStatus, options);
+
+    // Display tactical navigation
+    if (typeof window.TacticalDisplay !== 'undefined') {
+        window.TacticalDisplay.displayTacticalNavigation(waypoints, legs, options);
+    }
+
+    console.log('[UIController] Navlog restored:', routeString);
+}
+
+// ============================================
 // EXPORTS
 // ============================================
 
@@ -882,6 +935,7 @@ window.UIController = {
 
     // Results
     displayResults,
+    restoreNavlog,
 
     // History
     displayQueryHistory

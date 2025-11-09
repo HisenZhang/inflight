@@ -198,7 +198,14 @@
 
         <!-- Results Section -->
         <div id="resultsSection" class="results-section" style="display: none;">
-            <h2 class="font-bold text-primary">NAVIGATION LOG</h2>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                <h2 class="font-bold text-primary">NAVIGATION LOG</h2>
+                <div class="navlog-actions">
+                    <button id="exportNavlogBtn" class="btn btn-secondary btn-sm">EXPORT NAVLOG</button>
+                    <button id="importNavlogBtn" class="btn btn-secondary btn-sm">IMPORT NAVLOG</button>
+                    <input type="file" id="importNavlogInput" accept=".json" style="display: none;">
+                </div>
+            </div>
             <div id="routeSummary" class="route-summary"></div>
 
             <!-- Wind Altitude Table (shown when wind correction enabled) -->

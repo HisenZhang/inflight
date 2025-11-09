@@ -2,6 +2,12 @@
 // Orchestrates modules and handles high-level flow
 
 // ============================================
+// STATE
+// ============================================
+
+let currentNavlogData = null;
+
+// ============================================
 // INITIALIZATION
 // ============================================
 
@@ -33,6 +39,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Display query history
         UIController.displayQueryHistory();
+
+        // Check for saved navlog (crash recovery)
+        const savedNavlog = DataManager.loadSavedNavlog();
+        if (savedNavlog && cacheResult.loaded) {
+            // Prompt user to restore
+            const ageMinutes = Math.floor((Date.now() - savedNavlog.timestamp) / (1000 * 60));
+            const ageText = ageMinutes < 60 ? `${ageMinutes}m ago` : `${Math.floor(ageMinutes / 60)}h ago`;
+
+            if (confirm(`SAVED NAVLOG FOUND\n\nRoute: ${savedNavlog.routeString}\nSaved: ${ageText}\n\nRestore this flight plan?`)) {
+                UIController.restoreNavlog(savedNavlog);
+            } else {
+                DataManager.clearSavedNavlog();
+            }
+        }
 
     } catch (error) {
         console.error('Failed to initialize application:', error);
@@ -95,6 +115,23 @@ function setupEventListeners() {
     const gpsBtn = document.getElementById('toggleGPSBtn');
     if (gpsBtn) {
         gpsBtn.addEventListener('click', () => TacticalDisplay.toggleGPS());
+    }
+
+    // Navlog export/import
+    const exportNavlogBtn = document.getElementById('exportNavlogBtn');
+    const importNavlogBtn = document.getElementById('importNavlogBtn');
+    const importNavlogInput = document.getElementById('importNavlogInput');
+
+    if (exportNavlogBtn) {
+        exportNavlogBtn.addEventListener('click', handleExportNavlog);
+    }
+
+    if (importNavlogBtn && importNavlogInput) {
+        importNavlogBtn.addEventListener('click', () => {
+            importNavlogInput.click();
+        });
+
+        importNavlogInput.addEventListener('change', handleImportNavlog);
     }
 
     // Tab navigation
@@ -299,6 +336,20 @@ async function handleCalculateRoute() {
         // Save to history
         DataManager.saveQueryHistory(routeValue.trim().toUpperCase());
         UIController.displayQueryHistory();
+
+        // Store current navlog data
+        currentNavlogData = {
+            routeString: routeValue.trim().toUpperCase(),
+            waypoints,
+            legs,
+            totalDistance,
+            totalTime,
+            fuelStatus,
+            options
+        };
+
+        // Auto-save navlog for crash recovery
+        DataManager.saveNavlog(currentNavlogData);
     } catch (error) {
         console.error('Error calculating route:', error);
         alert(`ERROR: ROUTE CALCULATION FAILED\n\n${error.message}`);
@@ -307,6 +358,46 @@ async function handleCalculateRoute() {
 
 function handleClearRoute() {
     UIController.clearRoute();
+    DataManager.clearSavedNavlog();
+    currentNavlogData = null;
+}
+
+function handleExportNavlog() {
+    if (!currentNavlogData) {
+        alert('ERROR: NO NAVLOG TO EXPORT\n\nCalculate a route first.');
+        return;
+    }
+
+    const success = DataManager.exportNavlog(currentNavlogData);
+    if (!success) {
+        alert('ERROR: FAILED TO EXPORT NAVLOG');
+    }
+}
+
+async function handleImportNavlog(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    try {
+        const navlogData = await DataManager.importNavlog(file);
+
+        // Restore the navlog
+        UIController.restoreNavlog(navlogData);
+
+        // Store as current
+        currentNavlogData = navlogData;
+
+        // Save for crash recovery
+        DataManager.saveNavlog(navlogData);
+
+        alert(`NAVLOG IMPORTED\n\nRoute: ${navlogData.routeString}`);
+    } catch (error) {
+        console.error('Import error:', error);
+        alert(`ERROR: FAILED TO IMPORT NAVLOG\n\n${error.message}`);
+    } finally {
+        // Clear file input
+        event.target.value = '';
+    }
 }
 
 // ============================================
