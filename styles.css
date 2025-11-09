@@ -1278,8 +1278,8 @@ header h1 {
 
     #tab-map.active .navigation-panel {
         flex-shrink: 0;
-        min-height: 25vh; /* Minimum height to match status bar */
-        max-height: 30vh; /* Allow slightly more space if needed */
+        min-height: 30vh; /* Minimum height to show all content */
+        max-height: 35vh; /* Allow slightly more space if needed */
         overflow-y: auto; /* Scrollable if content exceeds max height */
         border-top: 1px solid var(--border-color); /* Thinner border on mobile */
     }
