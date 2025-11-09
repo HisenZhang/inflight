@@ -1284,38 +1284,49 @@ header h1 {
         flex-shrink: 0;
         height: 25vh; /* Fixed height - same as status bar */
         overflow: hidden; /* Navigation content should fit */
+        border-top: 1px solid var(--border-color); /* Thinner border on mobile */
     }
 
     /* Compact navigation panel to fit in 25vh on mobile */
     #tab-map.active .navigation-content {
-        padding: 4px;
+        padding: 2px;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
     }
 
     #tab-map.active .instruction-details {
-        padding: 4px 0;
-        gap: 4px;
+        padding: 2px 0;
+        gap: 2px;
+        border-bottom: 1px solid var(--border-color);
     }
 
     #tab-map.active .detail-label {
-        font-size: 9px;
-        margin-bottom: 2px;
+        font-size: 8px;
+        margin-bottom: 1px;
     }
 
     #tab-map.active .detail-value {
-        font-size: 16px;
+        font-size: 14px;
     }
 
     #tab-map.active .instruction-secondary {
-        gap: 4px;
-        margin-top: 4px;
+        gap: 2px;
+        margin-top: 2px;
     }
 
     #tab-map.active .secondary-label {
-        font-size: 7px;
+        font-size: 6px;
     }
 
     #tab-map.active .secondary-value {
-        font-size: 10px;
+        font-size: 9px;
+    }
+
+    /* Make PREV/NEXT buttons more compact on mobile */
+    #tab-map.active .detail-item button {
+        padding: 0.1rem 0.2rem !important;
+        font-size: 0.65rem !important;
     }
 }
 
