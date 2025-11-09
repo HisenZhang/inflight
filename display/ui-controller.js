@@ -339,7 +339,8 @@ function setupFeatureToggles() {
 // ============================================
 
 function displayQueryHistory() {
-    const history = DataManager.loadQueryHistory();
+    // Use FlightState instead of DataManager for loading history
+    const history = window.FlightState ? window.FlightState.loadHistory() : [];
 
     if (history.length === 0) {
         elements.queryHistoryDiv.style.display = 'none';

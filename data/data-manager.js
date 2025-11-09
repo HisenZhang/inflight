@@ -304,6 +304,12 @@ function mergeDataSources(nasrData, ourairportsData, onStatusUpdate = null) {
     if (onStatusUpdate) onStatusUpdate('[...] BUILDING TOKEN TYPE MAP', 'loading');
     buildTokenTypeMap();
 
+    // Initialize QueryEngine with data references
+    if (typeof window.QueryEngine !== 'undefined') {
+        if (onStatusUpdate) onStatusUpdate('[...] INITIALIZING QUERY ENGINE', 'loading');
+        window.QueryEngine.init(airportsData, navaidsData, fixesData, tokenTypeMap);
+    }
+
     // Initialize RouteExpander with data
     if (typeof window.RouteExpander !== 'undefined') {
         if (onStatusUpdate) onStatusUpdate('[...] INITIALIZING ROUTE EXPANDER', 'loading');
@@ -368,6 +374,11 @@ function loadFromCache(cachedData) {
 
     // Build token type lookup map
     buildTokenTypeMap();
+
+    // Initialize QueryEngine with data references
+    if (typeof window.QueryEngine !== 'undefined') {
+        window.QueryEngine.init(airportsData, navaidsData, fixesData, tokenTypeMap);
+    }
 
     // Initialize RouteExpander with data
     if (typeof window.RouteExpander !== 'undefined') {
@@ -827,6 +838,160 @@ function importNavlog(file) {
 }
 
 // ============================================
+// SPATIAL QUERIES
+// ============================================
+
+// Get points within specified distance (nm) of route legs
+function getPointsNearRoute(legs, distanceNM = 45) {
+    const result = {
+        airports: [],
+        navaids: []
+    };
+
+    // Helper function to check if airport has tower frequencies
+    const isToweredAirport = (code) => {
+        const freqs = frequenciesData.get(code);
+        if (!freqs || freqs.length === 0) return false;
+
+        // Check for tower-related frequency types
+        return freqs.some(f => {
+            const type = (f.type || f.description || '').toUpperCase();
+            return type.includes('TWR') || type.includes('TOWER') ||
+                   type.includes('GND') || type.includes('GROUND') ||
+                   type.includes('ATCT');
+        });
+    };
+
+    // Helper to calculate distance from point to line segment
+    const distanceToSegment = (px, py, x1, y1, x2, y2) => {
+        const A = px - x1;
+        const B = py - y1;
+        const C = x2 - x1;
+        const D = y2 - y1;
+
+        const dot = A * C + B * D;
+        const lenSq = C * C + D * D;
+        let param = -1;
+
+        if (lenSq !== 0) param = dot / lenSq;
+
+        let xx, yy;
+
+        if (param < 0) {
+            xx = x1;
+            yy = y1;
+        } else if (param > 1) {
+            xx = x2;
+            yy = y2;
+        } else {
+            xx = x1 + param * C;
+            yy = y1 + param * D;
+        }
+
+        const dx = px - xx;
+        const dy = py - yy;
+        return Math.sqrt(dx * dx + dy * dy);
+    };
+
+    // Use RouteCalculator for distance calculations
+    const calculateDistance = window.RouteCalculator.calculateDistance;
+
+    // Check each airport
+    for (const [code, airport] of airportsData) {
+        if (!isToweredAirport(code)) continue;
+
+        let minDistance = Infinity;
+
+        // Check distance to each leg
+        for (const leg of legs) {
+            // Simple approximation: check distance to both endpoints and a midpoint
+            const distToFrom = calculateDistance(airport.lat, airport.lon, leg.from.lat, leg.from.lon);
+            const distToTo = calculateDistance(airport.lat, airport.lon, leg.to.lat, leg.to.lon);
+
+            // Calculate midpoint
+            const midLat = (leg.from.lat + leg.to.lat) / 2;
+            const midLon = (leg.from.lon + leg.to.lon) / 2;
+            const distToMid = calculateDistance(airport.lat, airport.lon, midLat, midLon);
+
+            minDistance = Math.min(minDistance, distToFrom, distToTo, distToMid);
+        }
+
+        if (minDistance <= distanceNM) {
+            result.airports.push({ code, ...airport });
+        }
+    }
+
+    // Check each navaid
+    for (const [ident, navaid] of navaidsData) {
+        let minDistance = Infinity;
+
+        // Check distance to each leg
+        for (const leg of legs) {
+            const distToFrom = calculateDistance(navaid.lat, navaid.lon, leg.from.lat, leg.from.lon);
+            const distToTo = calculateDistance(navaid.lat, navaid.lon, leg.to.lat, leg.to.lon);
+
+            const midLat = (leg.from.lat + leg.to.lat) / 2;
+            const midLon = (leg.from.lon + leg.to.lon) / 2;
+            const distToMid = calculateDistance(navaid.lat, navaid.lon, midLat, midLon);
+
+            minDistance = Math.min(minDistance, distToFrom, distToTo, distToMid);
+        }
+
+        if (minDistance <= distanceNM) {
+            result.navaids.push({ ident, ...navaid });
+        }
+    }
+
+    return result;
+}
+
+// Legacy function - kept for compatibility but now uses route-based logic if legs provided
+function getPointsInBounds(bounds, legs = null) {
+    // If legs provided, use route-based logic instead
+    if (legs) {
+        return getPointsNearRoute(legs, 45);
+    }
+
+    const result = {
+        airports: [],
+        navaids: []
+    };
+
+    // Helper function to check if airport has tower frequencies
+    const isToweredAirport = (code) => {
+        const freqs = frequenciesData.get(code);
+        if (!freqs || freqs.length === 0) return false;
+
+        // Check for tower-related frequency types
+        return freqs.some(f => {
+            const type = (f.type || f.description || '').toUpperCase();
+            return type.includes('TWR') || type.includes('TOWER') ||
+                   type.includes('GND') || type.includes('GROUND') ||
+                   type.includes('ATCT');
+        });
+    };
+
+    // Get towered airports within bounds only
+    for (const [code, airport] of airportsData) {
+        if (airport.lat >= bounds.minLat && airport.lat <= bounds.maxLat &&
+            airport.lon >= bounds.minLon && airport.lon <= bounds.maxLon &&
+            isToweredAirport(code)) {
+            result.airports.push({ code, ...airport });
+        }
+    }
+
+    // Get navaids within bounds
+    for (const [ident, navaid] of navaidsData) {
+        if (navaid.lat >= bounds.minLat && navaid.lat <= bounds.maxLat &&
+            navaid.lon >= bounds.minLon && navaid.lon <= bounds.maxLon) {
+            result.navaids.push({ ident, ...navaid });
+        }
+    }
+
+    return result;
+}
+
+// ============================================
 // EXPORTS
 // ============================================
 
@@ -841,7 +1006,7 @@ window.DataManager = {
     rebuildTokenTypeMap,
     getFileStatus,
 
-    // Data access
+    // Data access (CRUD only)
     getAirport,
     getAirportByIATA,
     getNavaid,
@@ -850,17 +1015,60 @@ window.DataManager = {
     getFrequencies,
     getRunways,
     getDataStats,
-    searchWaypoints,
-    getTokenType,
 
-    // Query history
-    saveQueryHistory,
-    loadQueryHistory,
+    // DEPRECATED: Use QueryEngine instead
+    searchWaypoints: (query) => {
+        console.warn('[DataManager] searchWaypoints is deprecated. Use QueryEngine.searchWaypoints instead.');
+        return window.QueryEngine ? window.QueryEngine.searchWaypoints(query) : [];
+    },
+    getTokenType: (token) => {
+        console.warn('[DataManager] getTokenType is deprecated. Use QueryEngine.getTokenType instead.');
+        return window.QueryEngine ? window.QueryEngine.getTokenType(token) : null;
+    },
+    getPointsInBounds: (bounds, legs) => {
+        console.warn('[DataManager] getPointsInBounds is deprecated. Use QueryEngine.getPointsInBounds instead.');
+        return window.QueryEngine ? window.QueryEngine.getPointsInBounds(bounds, legs) : { airports: [], navaids: [] };
+    },
+    getPointsNearRoute: (legs, distanceNM) => {
+        console.warn('[DataManager] getPointsNearRoute is deprecated. Use QueryEngine.getPointsNearRoute instead.');
+        return window.QueryEngine ? window.QueryEngine.getPointsNearRoute(legs, distanceNM) : { airports: [], navaids: [] };
+    },
 
-    // Navlog save/restore/export
-    saveNavlog,
-    loadSavedNavlog,
-    clearSavedNavlog,
-    exportNavlog,
-    importNavlog
+    // DEPRECATED: Use FlightState instead
+    saveQueryHistory: (route) => {
+        console.warn('[DataManager] saveQueryHistory is deprecated. Use FlightState.saveToHistory instead.');
+        if (window.FlightState) window.FlightState.saveToHistory(route);
+    },
+    loadQueryHistory: () => {
+        console.warn('[DataManager] loadQueryHistory is deprecated. Use FlightState.loadHistory instead.');
+        return window.FlightState ? window.FlightState.loadHistory() : [];
+    },
+    saveNavlog: (data) => {
+        console.warn('[DataManager] saveNavlog is deprecated. Use FlightState.saveToStorage instead.');
+        if (window.FlightState) {
+            window.FlightState.updateFlightPlan(data);
+            return window.FlightState.saveToStorage();
+        }
+        return false;
+    },
+    loadSavedNavlog: () => {
+        console.warn('[DataManager] loadSavedNavlog is deprecated. Use FlightState.loadFromStorage instead.');
+        return window.FlightState ? window.FlightState.loadFromStorage() : null;
+    },
+    clearSavedNavlog: () => {
+        console.warn('[DataManager] clearSavedNavlog is deprecated. Use FlightState.clearStorage instead.');
+        return window.FlightState ? window.FlightState.clearStorage() : false;
+    },
+    exportNavlog: (data) => {
+        console.warn('[DataManager] exportNavlog is deprecated. Use FlightState.exportAsFile instead.');
+        if (window.FlightState) {
+            window.FlightState.updateFlightPlan(data);
+            return window.FlightState.exportAsFile();
+        }
+        return false;
+    },
+    importNavlog: (file) => {
+        console.warn('[DataManager] importNavlog is deprecated. Use FlightState.importFromFile instead.');
+        return window.FlightState ? window.FlightState.importFromFile(file) : Promise.reject('FlightState not available');
+    }
 };

@@ -173,6 +173,126 @@ The app features a professional navigation log interface:
 - Visual distinction between airports and navaids
 - Shows full context (code, type, name, location)
 
+## Architecture
+
+InFlight uses a **3-engine architecture** with clear separation of concerns:
+
+### Design Philosophy
+
+- **Three-Engine Model**: Data, Compute, Display
+- **Hybrid Module Pattern**: Uses `window.X` globals for universal browser compatibility
+- **Centralized State**: Single source of truth for flight planning and navigation
+- **Offline-First**: Progressive Web App with Service Worker and IndexedDB
+- **No Build Tools**: Pure JavaScript, runs directly in any modern browser
+
+### Directory Structure
+
+```
+inflight/
+├── index.html                # Main app entry point
+├── service-worker.js         # PWA offline support
+├── lib/                      # External libraries
+│   ├── geodesy.js           # Vincenty formulae (WGS84)
+│   └── wind-stations.js     # Winds aloft data
+├── utils/                    # Shared utilities
+│   └── formatters.js        # Formatting and validation
+├── data/                     # Data Engine (CRUD)
+│   ├── data-manager.js      # IndexedDB storage
+│   ├── nasr-adapter.js      # NASR data parsing
+│   └── ourairports-adapter.js  # OurAirports CSV parsing
+├── compute/                  # Compute Engine (Business Logic)
+│   ├── query-engine.js      # Search and spatial queries
+│   ├── route-calculator.js  # Distance/bearing calculations
+│   ├── route-expander.js    # Airway/STAR/DP expansion
+│   └── winds-aloft.js       # Wind correction calculations
+├── state/                    # State Management
+│   └── flight-state.js      # Flight plan and navigation state
+├── display/                  # Display Engine (UI)
+│   ├── ui-controller.js     # Form controls and navlog rendering
+│   ├── tactical-display.js  # FMS-style moving map
+│   └── app.js              # Main application orchestration
+├── tests/                    # Test suite
+│   ├── test-framework.js    # Custom test framework
+│   ├── test-utils.js        # Utils tests (30+ tests)
+│   ├── test-state.js        # State tests (20+ tests)
+│   ├── index.html           # Test runner
+│   └── README.md            # Test documentation
+└── docs/                     # Documentation
+    └── ARCHITECTURE.md       # Detailed architecture docs
+```
+
+### The Three Engines
+
+**1. Data Engine** (`data/`)
+- **Responsibility**: CRUD operations, data storage, caching
+- **Modules**: DataManager, NASR adapter, OurAirports adapter
+- **Storage**: IndexedDB for airports, navaids, airways, procedures
+- **Data Sources**: OurAirports (GitHub mirror), NASR data files
+
+**2. Compute Engine** (`compute/`)
+- **Responsibility**: Business logic, calculations, queries
+- **Modules**: QueryEngine, RouteCalculator, RouteExpander, WindsAloft
+- **Algorithms**: Vincenty distance, WMM2025 magnetic variation, airway expansion
+- **Queries**: Spatial searches, autocomplete, route validation
+
+**3. Display Engine** (`display/`)
+- **Responsibility**: User interface, visualization, interaction
+- **Modules**: UIController, TacticalDisplay, App orchestration
+- **Features**: Navlog table, moving map, autocomplete dropdown
+- **Rendering**: Professional airline-style interface
+
+### State Management (`state/`)
+
+Centralized state for flight planning and navigation:
+
+- **Flight Plan State**: Route string, waypoints, legs, fuel, options
+- **Navigation State**: GPS position, active leg, ETA, ground speed
+- **Persistence**: LocalStorage for crash recovery and route history
+- **Import/Export**: JSON file format for sharing flight plans
+
+### Utilities (`utils/`)
+
+Pure functions with no dependencies:
+
+- **Formatters**: Coordinates, frequencies, distance, time, heading
+- **Validators**: Latitude/longitude validation
+- **No Side Effects**: All functions are stateless and testable
+
+### Data Flow
+
+**Planning Phase** (Pre-Flight):
+1. User enters route string → UIController
+2. UIController → RouteExpander (expand airways/procedures)
+3. RouteExpander → QueryEngine (resolve waypoints)
+4. QueryEngine → DataManager (fetch waypoint data)
+5. RouteCalculator (calculate legs, distance, fuel)
+6. FlightState (update flight plan)
+7. UIController (render navlog table)
+
+**Navigation Phase** (In-Flight):
+1. GPS position → App
+2. App → FlightState (update navigation state)
+3. App → RouteCalculator (calculate distance/bearing to next waypoint)
+4. App → TacticalDisplay (update moving map)
+5. App → UIController (update real-time data in navlog)
+
+For detailed architecture documentation, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+## Testing
+
+Comprehensive test suite with custom framework (no external dependencies):
+
+- **Test Runner**: Open [tests/index.html](tests/index.html) in browser
+- **Test Suites**: 50+ tests covering utilities, state management
+- **Coverage**: 100% for formatters, 95% for flight state
+- **Documentation**: See [tests/README.md](tests/README.md)
+
+Run tests:
+```javascript
+// In browser console after opening tests/index.html
+TestFramework.runAll();
+```
+
 ## Technical Details
 
 ### Geodetic Calculations

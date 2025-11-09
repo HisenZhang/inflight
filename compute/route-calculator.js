@@ -425,7 +425,7 @@ function trueToMagnetic(trueHeading, declination) {
 }
 
 // ============================================
-// FORMATTING UTILITIES
+// UTILITIES
 // ============================================
 
 function getWaypointCode(waypoint) {
@@ -436,37 +436,32 @@ function getWaypointCode(waypoint) {
     }
 }
 
+// DEPRECATED: Use Utils.formatters instead
+// These wrappers maintained for backward compatibility
 function formatCoordinate(value, type) {
-    const abs = Math.abs(value);
-    const degrees = Math.floor(abs);
-    const minutes = ((abs - degrees) * 60).toFixed(3);
-    const direction = type === 'lat' ? (value >= 0 ? 'N' : 'S') : (value >= 0 ? 'E' : 'W');
-    return `${degrees}°${minutes}'${direction}`;
+    console.warn('[RouteCalculator] formatCoordinate is deprecated. Use Utils.formatCoordinate instead.');
+    return window.Utils ? window.Utils.formatCoordinate(value, type) : `${value}`;
 }
 
 function formatNavaidFrequency(freqKhz, type) {
-    if (!freqKhz || freqKhz === 0) {
-        return '';
-    }
+    console.warn('[RouteCalculator] formatNavaidFrequency is deprecated. Use Utils.formatNavaidFrequency instead.');
+    if (!window.Utils) return `${freqKhz}`;
 
+    // Utils.formatNavaidFrequency expects frequency in correct units and navaid type
+    // Convert to format Utils expects
     if (type === 'VOR' || type === 'VOR-DME' || type === 'VORTAC' || type === 'TACAN') {
-        // VOR frequencies are in MHz (108.00-117.95)
-        // If already in correct range, use as-is, otherwise divide by 1000
         const freqMhz = freqKhz > 200 ? freqKhz / 1000 : freqKhz;
-        return `${freqMhz.toFixed(2)}`;
+        return window.Utils.formatNavaidFrequency(freqMhz, type);
     } else if (type === 'NDB' || type === 'NDB-DME') {
-        // NDB frequencies are in kHz
-        return `${Math.round(freqKhz)}`;
+        return window.Utils.formatNavaidFrequency(freqKhz, type);
     } else {
         return `${freqKhz}`;
     }
 }
 
 function getCardinalDirection(bearing) {
-    const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE',
-                       'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
-    const index = Math.round(bearing / 22.5) % 16;
-    return directions[index];
+    console.warn('[RouteCalculator] getCardinalDirection is deprecated. Use Utils.getCardinalDirection instead.');
+    return window.Utils ? window.Utils.getCardinalDirection(bearing) : '';
 }
 
 // ============================================
@@ -508,6 +503,9 @@ window.RouteCalculator = {
     calculateRoute,
     calculateDistance,
     calculateBearing,
+
+    // Magnetic variation
+    getMagneticDeclination,
 
     // Utilities
     getWaypointCode,

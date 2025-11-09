@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InFlight Test Suite</title>
+    <style>
+        body {
+            font-family: 'Roboto Mono', monospace;
+            background: #0a0a0a;
+            color: #ffffff;
+            padding: 20px;
+            margin: 0;
+        }
+
+        h1 {
+            color: #00ff00;
+            border-bottom: 2px solid #00ff00;
+            padding-bottom: 10px;
+        }
+
+        .test-controls {
+            margin: 20px 0;
+        }
+
+        button {
+            background: #00ff00;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            font-family: 'Roboto Mono', monospace;
+            font-weight: bold;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+
+        button:hover {
+            background: #00cc00;
+        }
+
+        #results {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            padding: 15px;
+            margin-top: 20px;
+            min-height: 400px;
+            font-size: 13px;
+        }
+
+        .summary {
+            background: #2a2a2a;
+            padding: 15px;
+            margin: 20px 0;
+            border-left: 4px solid #00ff00;
+        }
+
+        .pass { color: #00ff00; }
+        .fail { color: #ff0000; }
+        .warning { color: #ffaa00; }
+    </style>
+</head>
+<body>
+    <h1>InFlight Test Suite</h1>
+
+    <div class="test-controls">
+        <button onclick="runTests()">Run All Tests</button>
+        <button onclick="clearResults()">Clear Results</button>
+    </div>
+
+    <div class="summary" id="summary" style="display: none;">
+        <div id="summary-content"></div>
+    </div>
+
+    <div id="results">
+        <p style="color: #666;">Click "Run All Tests" to begin testing...</p>
+    </div>
+
+    <!-- Load dependencies in order (3-Engine Architecture) -->
+
+    <!-- External Libraries -->
+    <script src="../lib/geodesy.js"></script>
+    <script src="../lib/wind-stations.js"></script>
+
+    <!-- Utilities Layer -->
+    <script src="../utils/formatters.js"></script>
+
+    <!-- State Management -->
+    <script src="../state/flight-state.js"></script>
+
+    <!-- Test Framework -->
+    <script src="test-framework.js"></script>
+
+    <!-- Test Suites -->
+    <script src="test-utils.js"></script>
+    <script src="test-state.js"></script>
+
+    <script>
+        // Intercept console output for display
+        const resultsDiv = document.getElementById('results');
+        const summaryDiv = document.getElementById('summary');
+        const summaryContent = document.getElementById('summary-content');
+
+        const originalLog = console.log;
+        const originalError = console.error;
+
+        function interceptConsole() {
+            resultsDiv.innerHTML = '';
+
+            console.log = function(...args) {
+                originalLog.apply(console, args);
+
+                const message = args.map(arg => {
+                    if (typeof arg === 'string') {
+                        // Extract style from %c format
+                        if (arg.includes('%c')) {
+                            const cleanMsg = arg.replace(/%c/g, '');
+                            const style = args[1] || '';
+                            let className = '';
+
+                            if (style.includes('color: #00ff00')) className = 'pass';
+                            else if (style.includes('color: #ff0000')) className = 'fail';
+                            else if (style.includes('color: #ffaa00')) className = 'warning';
+
+                            return `<div class="${className}">${cleanMsg}</div>`;
+                        }
+                        return `<div>${arg}</div>`;
+                    }
+                    return `<div>${String(arg)}</div>`;
+                }).join('');
+
+                resultsDiv.innerHTML += message;
+            };
+
+            console.error = function(...args) {
+                originalError.apply(console, args);
+                const message = args.map(arg => String(arg)).join(' ');
+                resultsDiv.innerHTML += `<div class="fail">    ${message}</div>`;
+            };
+        }
+
+        function restoreConsole() {
+            console.log = originalLog;
+            console.error = originalError;
+        }
+
+        async function runTests() {
+            interceptConsole();
+
+            const results = await TestFramework.runAll();
+
+            // Display summary
+            summaryDiv.style.display = 'block';
+            summaryContent.innerHTML = `
+                <strong>Total Tests:</strong> ${results.passed + results.failed}<br>
+                <span class="pass">✓ Passed: ${results.passed}</span><br>
+                <span class="fail">✗ Failed: ${results.failed}</span>
+            `;
+
+            restoreConsole();
+        }
+
+        function clearResults() {
+            resultsDiv.innerHTML = '<p style="color: #666;">Results cleared. Click "Run All Tests" to run again...</p>';
+            summaryDiv.style.display = 'none';
+        }
+    </script>
+</body>
+</html>

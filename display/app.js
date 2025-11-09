@@ -40,8 +40,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Display query history
         UIController.displayQueryHistory();
 
-        // Check for saved navlog (crash recovery)
-        const savedNavlog = DataManager.loadSavedNavlog();
+        // Check for saved navlog (crash recovery) - use FlightState instead of DataManager
+        const savedNavlog = window.FlightState ? window.FlightState.loadFromStorage() : null;
         if (savedNavlog && cacheResult.loaded) {
             // Prompt user to restore
             const ageMinutes = Math.floor((Date.now() - savedNavlog.timestamp) / (1000 * 60));
@@ -50,7 +50,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (confirm(`SAVED NAVLOG FOUND\n\nRoute: ${savedNavlog.routeString}\nSaved: ${ageText}\n\nRestore this flight plan?`)) {
                 UIController.restoreNavlog(savedNavlog);
             } else {
-                DataManager.clearSavedNavlog();
+                if (window.FlightState) window.FlightState.clearStorage();
             }
         }
 
@@ -115,6 +115,43 @@ function setupEventListeners() {
     const gpsBtn = document.getElementById('toggleGPSBtn');
     if (gpsBtn) {
         gpsBtn.addEventListener('click', () => VectorMap.toggleGPS());
+    }
+
+    // Navigation panel toggle
+    const navToggleBtn = document.getElementById('toggleNavigationBtn');
+    const navContent = document.getElementById('navigationContent');
+    if (navToggleBtn && navContent) {
+        navToggleBtn.addEventListener('click', () => {
+            const isHidden = navContent.style.display === 'none';
+            navContent.style.display = isHidden ? 'block' : 'none';
+            const indicator = navToggleBtn.querySelector('.toggle-indicator');
+            if (indicator) {
+                indicator.textContent = isHidden ? '▲' : '▼';
+            }
+        });
+    }
+
+    // Zoom controls
+    const zoomBtns = document.querySelectorAll('.zoom-btn[data-zoom]');
+    zoomBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const zoomMode = btn.getAttribute('data-zoom');
+            VectorMap.setZoomMode(zoomMode);
+
+            // Update active state
+            zoomBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        });
+    });
+
+    // Zoom in/out buttons
+    const zoomInBtn = document.getElementById('zoomInBtn');
+    const zoomOutBtn = document.getElementById('zoomOutBtn');
+    if (zoomInBtn) {
+        zoomInBtn.addEventListener('click', () => VectorMap.zoomIn());
+    }
+    if (zoomOutBtn) {
+        zoomOutBtn.addEventListener('click', () => VectorMap.zoomOut());
     }
 
     // Navlog export/import
@@ -333,8 +370,10 @@ async function handleCalculateRoute() {
         // Display vector map
         VectorMap.displayMap(waypoints, legs, options);
 
-        // Save to history
-        DataManager.saveQueryHistory(routeValue.trim().toUpperCase());
+        // Save to history - use FlightState instead of DataManager
+        if (window.FlightState) {
+            window.FlightState.saveToHistory(routeValue.trim().toUpperCase());
+        }
         UIController.displayQueryHistory();
 
         // Store current navlog data
@@ -348,8 +387,11 @@ async function handleCalculateRoute() {
             options
         };
 
-        // Auto-save navlog for crash recovery
-        DataManager.saveNavlog(currentNavlogData);
+        // Update flight plan state and auto-save for crash recovery
+        if (window.FlightState) {
+            window.FlightState.updateFlightPlan(currentNavlogData);
+            window.FlightState.saveToStorage();
+        }
     } catch (error) {
         console.error('Error calculating route:', error);
         alert(`ERROR: ROUTE CALCULATION FAILED\n\n${error.message}`);
@@ -358,7 +400,11 @@ async function handleCalculateRoute() {
 
 function handleClearRoute() {
     UIController.clearRoute();
-    DataManager.clearSavedNavlog();
+    // Clear flight plan and storage - use FlightState instead of DataManager
+    if (window.FlightState) {
+        window.FlightState.clearFlightPlan();
+        window.FlightState.clearStorage();
+    }
     currentNavlogData = null;
 }
 
@@ -368,9 +414,16 @@ function handleExportNavlog() {
         return;
     }
 
-    const success = DataManager.exportNavlog(currentNavlogData);
-    if (!success) {
-        alert('ERROR: FAILED TO EXPORT NAVLOG');
+    // Use FlightState for export instead of DataManager
+    if (window.FlightState) {
+        // Ensure FlightState has current data
+        window.FlightState.updateFlightPlan(currentNavlogData);
+        const success = window.FlightState.exportAsFile();
+        if (!success) {
+            alert('ERROR: FAILED TO EXPORT NAVLOG');
+        }
+    } else {
+        alert('ERROR: FLIGHTSTATE NOT AVAILABLE');
     }
 }
 
@@ -379,7 +432,12 @@ async function handleImportNavlog(event) {
     if (!file) return;
 
     try {
-        const navlogData = await DataManager.importNavlog(file);
+        // Use FlightState for import instead of DataManager
+        if (!window.FlightState) {
+            throw new Error('FlightState not available');
+        }
+
+        const navlogData = await window.FlightState.importFromFile(file);
 
         // Restore the navlog
         UIController.restoreNavlog(navlogData);
@@ -387,8 +445,9 @@ async function handleImportNavlog(event) {
         // Store as current
         currentNavlogData = navlogData;
 
-        // Save for crash recovery
-        DataManager.saveNavlog(navlogData);
+        // Update flight plan and save for crash recovery
+        window.FlightState.updateFlightPlan(navlogData);
+        window.FlightState.saveToStorage();
 
         alert(`NAVLOG IMPORTED\n\nRoute: ${navlogData.routeString}`);
     } catch (error) {

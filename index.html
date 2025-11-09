@@ -222,63 +222,69 @@
         <div id="tacticalDisplay" class="tactical-display" style="display: none;">
             <div class="tactical-header">
                 <h2 class="font-bold text-primary">VECTOR MAP</h2>
-                <div class="tactical-route-info"></div>
+                <div class="zoom-controls">
+                    <button class="zoom-btn active" data-zoom="full">FULL ROUTE</button>
+                    <button class="zoom-btn" data-zoom="destination">TO DEST</button>
+                    <button class="zoom-btn" data-zoom="surrounding">100NM</button>
+                    <button class="zoom-btn" id="zoomOutBtn">−</button>
+                    <button class="zoom-btn" id="zoomInBtn">+</button>
+                </div>
             </div>
 
             <div id="tacticalMap" class="tactical-map"></div>
 
-            <div id="currentInstruction" class="current-instruction">
-                <div class="instruction-header">GPS NAVIGATION</div>
-                <div class="instruction-text"></div>
-                <div class="instruction-details">
-                    <div class="detail-item">
-                        <div class="detail-label">NEXT WP</div>
-                        <div class="detail-value next-wp"></div>
+            <!-- Navigation Panel (Collapsible) -->
+            <div id="navigationPanel" class="navigation-panel">
+                <div class="navigation-toggle" id="toggleNavigationBtn">
+                    <span class="toggle-label">GPS NAVIGATION</span>
+                    <span class="toggle-indicator">▼</span>
+                </div>
+                <div id="navigationContent" class="navigation-content" style="display: none;">
+                    <div class="instruction-text"></div>
+                    <div class="instruction-details">
+                        <div class="detail-item">
+                            <div class="detail-label">NEXT WP</div>
+                            <div class="detail-value next-wp"></div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">MAG HDG</div>
+                            <div class="detail-value req-hdg"></div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">DIST (NM)</div>
+                            <div class="detail-value dist-nm"></div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">ETE</div>
+                            <div class="detail-value ete-value"></div>
+                        </div>
                     </div>
-                    <div class="detail-item">
-                        <div class="detail-label">MAG HDG</div>
-                        <div class="detail-value req-hdg"></div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">DIST (NM)</div>
-                        <div class="detail-value dist-nm"></div>
-                    </div>
-                    <div class="detail-item">
-                        <div class="detail-label">ETE</div>
-                        <div class="detail-value ete-value"></div>
+                    <div class="instruction-secondary">
+                        <div class="secondary-item">
+                            <span class="secondary-label">GS (KT)</span>
+                            <span class="secondary-value gs-value"></span>
+                        </div>
+                        <div class="secondary-item">
+                            <span class="secondary-label">ETA NEXT</span>
+                            <span class="secondary-value eta-time"></span>
+                        </div>
+                        <div class="secondary-item">
+                            <span class="secondary-label">ETA DEST</span>
+                            <span class="secondary-value eta-dest-value">--:--</span>
+                        </div>
+                        <div class="secondary-item">
+                            <span class="secondary-label">GPS H-ACC</span>
+                            <span class="secondary-value gps-horiz-acc text-secondary">--</span>
+                        </div>
+                        <div class="secondary-item">
+                            <span class="secondary-label">GPS V-ACC</span>
+                            <span class="secondary-value gps-vert-acc text-secondary">--</span>
+                        </div>
+                        <div class="secondary-item">
+                            <button id="toggleGPSBtn" class="btn btn-secondary">START GPS TRACKING</button>
+                        </div>
                     </div>
                 </div>
-                <div class="instruction-secondary">
-                    <div class="secondary-item">
-                        <span class="secondary-label">GS (KT)</span>
-                        <span class="secondary-value gs-value"></span>
-                    </div>
-                    <div class="secondary-item">
-                        <span class="secondary-label">ETA NEXT</span>
-                        <span class="secondary-value eta-time"></span>
-                    </div>
-                    <div class="secondary-item">
-                        <span class="secondary-label">ETA DEST</span>
-                        <span class="secondary-value eta-dest-value">--:--</span>
-                    </div>
-                    <div class="secondary-item">
-                        <span class="secondary-label">GPS H-ACC</span>
-                        <span class="secondary-value gps-horiz-acc text-secondary">--</span>
-                    </div>
-                    <div class="secondary-item">
-                        <span class="secondary-label">GPS V-ACC</span>
-                        <span class="secondary-value gps-vert-acc text-secondary">--</span>
-                    </div>
-                    <div class="secondary-item">
-                        <button id="toggleGPSBtn" class="btn btn-secondary">START GPS TRACKING</button>
-                    </div>
-                </div>
-            </div>
-
-            <div id="selectedPointInfo" class="selected-point-info">
-                <div class="info-header">SELECTED POINT INFORMATION</div>
-                <div class="info-placeholder">Select an element on the map to view details.</div>
-                <div class="info-content" style="display: none;"></div>
             </div>
         </div>
         </div>
@@ -314,17 +320,32 @@
 
     </div>
 
-    <!-- Scripts - Load modules in order -->
-    <script src="geodesy.js"></script>              <!-- WGS84 + WMM2025 library -->
-    <script src="wind-stations.js"></script>        <!-- Wind station data -->
-    <script src="winds-aloft.js"></script>          <!-- Wind calculation module -->
-    <script src="nasr-adapter.js"></script>         <!-- NASR data adapter (primary) -->
-    <script src="ourairports-adapter.js"></script>  <!-- OurAirports adapter (fallback) -->
-    <script src="route-expander.js"></script>       <!-- Airway/STAR/DP expansion module -->
-    <script src="data-manager.js"></script>         <!-- Data loading & caching orchestrator -->
-    <script src="route-calculator.js"></script>     <!-- Navigation calculations module -->
-    <script src="tactical-display.js"></script>     <!-- Tactical navigation display -->
-    <script src="ui-controller.js"></script>        <!-- UI interactions module -->
-    <script src="app.js"></script>                  <!-- Main coordinator -->
+    <!-- Scripts - Load modules in order (3-Engine Architecture) -->
+
+    <!-- External Libraries -->
+    <script src="lib/geodesy.js"></script>              <!-- WGS84 + WMM2025 library -->
+    <script src="lib/wind-stations.js"></script>        <!-- Wind station data -->
+
+    <!-- Utilities Layer -->
+    <script src="utils/formatters.js"></script>         <!-- Shared formatting utilities -->
+
+    <!-- Data Engine -->
+    <script src="data/nasr-adapter.js"></script>        <!-- NASR data adapter (primary) -->
+    <script src="data/ourairports-adapter.js"></script> <!-- OurAirports adapter (fallback) -->
+    <script src="data/data-manager.js"></script>        <!-- Data loading & caching orchestrator -->
+
+    <!-- Compute Engine -->
+    <script src="compute/winds-aloft.js"></script>      <!-- Wind data fetching & interpolation -->
+    <script src="compute/route-expander.js"></script>   <!-- Airway/STAR/DP expansion module -->
+    <script src="compute/route-calculator.js"></script> <!-- Navigation calculations module -->
+    <script src="compute/query-engine.js"></script>     <!-- Spatial queries & search -->
+
+    <!-- State Management -->
+    <script src="state/flight-state.js"></script>       <!-- Flight plan & navigation state -->
+
+    <!-- Display Layer -->
+    <script src="display/ui-controller.js"></script>    <!-- UI interactions module -->
+    <script src="display/tactical-display.js"></script> <!-- Vector map & GPS tracking -->
+    <script src="display/app.js"></script>              <!-- Main application coordinator -->
 </body>
 </html>
