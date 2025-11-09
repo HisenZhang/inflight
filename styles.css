@@ -1276,12 +1276,46 @@ header h1 {
 
     #tab-map.active .map-status-bar {
         flex-shrink: 0;
-        max-height: 30vh;
-        overflow-y: auto;
+        height: 25vh; /* Fixed height for shared space */
+        overflow-y: auto; /* Scrollable if content exceeds height */
     }
 
     #tab-map.active .navigation-panel {
         flex-shrink: 0;
+        height: 25vh; /* Fixed height - same as status bar */
+        overflow: hidden; /* Navigation content should fit */
+    }
+
+    /* Compact navigation panel to fit in 25vh on mobile */
+    #tab-map.active .navigation-content {
+        padding: 4px;
+    }
+
+    #tab-map.active .instruction-details {
+        padding: 4px 0;
+        gap: 4px;
+    }
+
+    #tab-map.active .detail-label {
+        font-size: 9px;
+        margin-bottom: 2px;
+    }
+
+    #tab-map.active .detail-value {
+        font-size: 16px;
+    }
+
+    #tab-map.active .instruction-secondary {
+        gap: 4px;
+        margin-top: 4px;
+    }
+
+    #tab-map.active .secondary-label {
+        font-size: 7px;
+    }
+
+    #tab-map.active .secondary-value {
+        font-size: 10px;
     }
 }
 

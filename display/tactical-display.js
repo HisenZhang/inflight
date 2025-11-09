@@ -799,6 +799,12 @@ function showPopup(waypoint, legs, index) {
     statusBar.classList.remove('hidden');
     currentStatusItem = index;
 
+    // Hide navigation panel when showing status bar
+    const navPanel = document.getElementById('navigationPanel');
+    if (navPanel) {
+        navPanel.style.display = 'none';
+    }
+
     // Attach event listener to "Set as Next WPT" button (DCT button)
     const setNextWptBtn = document.getElementById('setNextWptBtn');
     if (setNextWptBtn) {
@@ -829,6 +835,12 @@ function hidePopup() {
         statusBar.classList.add('hidden');
         document.getElementById('statusBarContent').innerHTML = '';
         currentStatusItem = null;
+    }
+
+    // Show navigation panel when hiding status bar (only if GPS is active)
+    const navPanel = document.getElementById('navigationPanel');
+    if (navPanel && watchId !== null) {
+        navPanel.style.display = 'block';
     }
 }
 
@@ -961,6 +973,12 @@ function showNearbyPointPopup(point, type, elementIndex) {
     statusBarContent.innerHTML = html;
     statusBar.classList.remove('hidden');
     currentStatusItem = `nearby_${type}_${code}`;
+
+    // Hide navigation panel when showing status bar
+    const navPanel = document.getElementById('navigationPanel');
+    if (navPanel) {
+        navPanel.style.display = 'none';
+    }
 
     // Attach event listener to DIVERT button
     const divertBtn = document.getElementById('divertBtn');
