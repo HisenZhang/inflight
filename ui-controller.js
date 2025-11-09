@@ -66,8 +66,16 @@ function updateStatus(message, type) {
     elements.statusText.textContent = message;
     elements.statusBox.className = 'status-box status-' + type;
 
+    // Also update Data tab status
+    const statusTextData = document.getElementById('statusTextData');
+    const dataStatusData = document.getElementById('dataStatusData');
+    if (statusTextData) statusTextData.textContent = message;
+    if (dataStatusData) dataStatusData.className = 'status-box status-' + type;
+
     if (type === 'success') {
         elements.loadDataBtn.style.display = 'none';
+        const loadDataBtnData = document.getElementById('loadDataBtnData');
+        if (loadDataBtnData) loadDataBtnData.style.display = 'none';
     }
 }
 
@@ -86,13 +94,21 @@ function showDataInfo() {
         timestampText = `<p><strong>DB UPDATE:</strong> ${dateStr} ${timeStr} UTC (${daysAgo}D AGO)</p>`;
     }
 
-    elements.dataInfo.innerHTML = `
+    const infoHTML = `
         <p><strong>AIRPORTS:</strong> ${totalAirports.toLocaleString()} | <strong>NAVAIDS:</strong> ${totalNavaids.toLocaleString()} | <strong>FIXES:</strong> ${totalFixes.toLocaleString()} | <strong>STATUS:</strong> READY</p>
         ${timestampText}
     `;
 
-    // Show inspect button
+    elements.dataInfo.innerHTML = infoHTML;
+
+    // Also update Data tab info
+    const dataInfoData = document.getElementById('dataInfoData');
+    if (dataInfoData) dataInfoData.innerHTML = infoHTML;
+
+    // Show inspect button (both tabs)
     elements.inspectDbBtn.style.display = 'inline-block';
+    const inspectDbBtnData = document.getElementById('inspectDbBtnData');
+    if (inspectDbBtnData) inspectDbBtnData.style.display = 'inline-block';
 
     // Setup inspect button toggle
     elements.inspectDbBtn.addEventListener('click', toggleInspection);
@@ -170,7 +186,7 @@ function populateInspection() {
         return html;
     };
 
-    elements.inspectionContent.innerHTML = `
+    const inspectionHTML = `
         <div class="inspection-section">
             <div class="text-secondary font-bold" style="margin-bottom: 8px;">INDEXED CACHE</div>
             <div><span class="inspection-label">Airports:</span><span class="inspection-value">${stats.airports.toLocaleString()}</span></div>
@@ -216,6 +232,14 @@ function populateInspection() {
             <div><span class="inspection-label">Winds Aloft API:</span><span class="text-warning">⚠ Requires internet</span></div>
         </div>
     `;
+
+    elements.inspectionContent.innerHTML = inspectionHTML;
+
+    // Also update Data tab inspection content
+    const inspectionContentData = document.getElementById('inspectionContentData');
+    if (inspectionContentData) {
+        inspectionContentData.innerHTML = inspectionHTML;
+    }
 }
 
 // ============================================

@@ -47,10 +47,26 @@ document.addEventListener('DOMContentLoaded', async () => {
 function setupEventListeners() {
     const elements = UIController.getElements();
 
-    // Data management
+    // Data management - Route tab buttons
     elements.loadDataBtn.addEventListener('click', handleLoadData);
     elements.reindexCacheBtn.addEventListener('click', handleReindexCache);
     elements.clearDataBtn.addEventListener('click', handleClearCache);
+
+    // Data management - Data tab buttons
+    const loadDataBtnData = document.getElementById('loadDataBtnData');
+    const reindexCacheBtnData = document.getElementById('reindexCacheBtnData');
+    const clearDataBtnData = document.getElementById('clearDataBtnData');
+    const inspectDbBtnData = document.getElementById('inspectDbBtnData');
+
+    if (loadDataBtnData) loadDataBtnData.addEventListener('click', handleLoadData);
+    if (reindexCacheBtnData) reindexCacheBtnData.addEventListener('click', handleReindexCache);
+    if (clearDataBtnData) clearDataBtnData.addEventListener('click', handleClearCache);
+    if (inspectDbBtnData) inspectDbBtnData.addEventListener('click', () => {
+        const dataInspectionData = document.getElementById('dataInspectionData');
+        if (dataInspectionData) {
+            dataInspectionData.classList.toggle('hidden');
+        }
+    });
 
     // Route calculation
     elements.calculateBtn.addEventListener('click', handleCalculateRoute);
@@ -167,13 +183,30 @@ async function handleClearCache() {
             const elements = UIController.getElements();
 
             UIController.updateStatus('[!] DATA CLEARED - RELOAD DATABASE', 'warning');
+
+            // Clear Route tab elements
             elements.dataInfo.innerHTML = '';
             elements.inspectDbBtn.style.display = 'none';
             elements.dataInspection.classList.add('hidden');
-            UIController.disableRouteInput();
             elements.loadDataBtn.disabled = false;
             elements.loadDataBtn.style.display = 'inline-block';
             elements.resultsSection.style.display = 'none';
+
+            // Clear Data tab elements
+            const dataInfoData = document.getElementById('dataInfoData');
+            const inspectDbBtnData = document.getElementById('inspectDbBtnData');
+            const dataInspectionData = document.getElementById('dataInspectionData');
+            const loadDataBtnData = document.getElementById('loadDataBtnData');
+
+            if (dataInfoData) dataInfoData.innerHTML = '';
+            if (inspectDbBtnData) inspectDbBtnData.style.display = 'none';
+            if (dataInspectionData) dataInspectionData.classList.add('hidden');
+            if (loadDataBtnData) {
+                loadDataBtnData.disabled = false;
+                loadDataBtnData.style.display = 'inline-block';
+            }
+
+            UIController.disableRouteInput();
         } catch (error) {
             console.error('Error clearing cache:', error);
             alert('ERROR: CACHE CLEAR OPERATION FAILED');
