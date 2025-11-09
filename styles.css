@@ -93,13 +93,14 @@ body {
 
 @media (max-width: 768px) {
     .tab-navigation {
-        margin-top: 6px;
+        margin-top: 0;
         gap: 4px;
+        border-bottom: none;
     }
 
     .tab-btn {
         font-size: 10px;
-        padding: 4px 8px;
+        padding: 6px 8px;
     }
 }
 
@@ -242,6 +243,8 @@ header h1 {
     header {
         padding: 0;
         margin-bottom: 0;
+        border: none;
+        background: transparent;
     }
 
     header h1 {
@@ -1112,6 +1115,51 @@ header h1 {
 
 /* Responsive */
 @media (max-width: 768px) {
+    /* Remove borders on mobile for cleaner look (except map which needs border) */
+    .data-status,
+    .input-section,
+    .results-section {
+        border: none;
+        padding: var(--space-sm);
+        margin-bottom: var(--space-sm);
+    }
+
+    /* Keep border on map */
+    .tactical-display {
+        padding: 0;
+        margin-bottom: var(--space-sm);
+    }
+
+    .tactical-header {
+        border-bottom: 1px solid var(--border-color);
+        padding: var(--space-sm);
+        flex-wrap: nowrap;
+    }
+
+    /* Make zoom controls scrollable on mobile */
+    .zoom-controls {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none; /* IE/Edge */
+    }
+
+    .zoom-controls::-webkit-scrollbar {
+        display: none; /* Chrome/Safari */
+    }
+
+    /* Hide section titles on mobile */
+    .input-section h2,
+    .results-section h2 {
+        display: none;
+    }
+
+    /* Compact button text on mobile */
+    #exportNavlogBtn::before { content: 'EXPORT'; }
+    #exportNavlogBtn { font-size: 0; }
+    #importNavlogBtn::before { content: 'IMPORT'; }
+    #importNavlogBtn { font-size: 0; }
+
     .route-input {
         grid-template-columns: 1fr;
     }
