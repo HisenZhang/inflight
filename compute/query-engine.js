@@ -68,66 +68,52 @@ function searchWaypoints(term, previousToken = null, limit = 15) {
 
                 const upperFixIdent = fixIdent.toUpperCase();
 
+                // Look up waypoint in all data sources (fixes, navaids, airports)
+                let waypointData = qe_fixesData?.get(upperFixIdent);
+                let waypointType = 'fix';
+                let displayType = 'FIX';
+
+                if (!waypointData) {
+                    waypointData = qe_navaidsData?.get(upperFixIdent);
+                    if (waypointData) {
+                        waypointType = 'navaid';
+                        displayType = waypointData.type || 'NAVAID';
+                    }
+                }
+
+                if (!waypointData) {
+                    waypointData = qe_airportsData?.get(upperFixIdent);
+                    if (waypointData) {
+                        waypointType = 'airport';
+                        displayType = 'AIRPORT';
+                    }
+                }
+
+                if (!waypointData) continue; // Skip if waypoint not found in any database
+
+                const result = {
+                    code: upperFixIdent,
+                    name: waypointType === 'airport' ? (waypointData.name || upperFixIdent) : upperFixIdent,
+                    type: displayType,
+                    waypointType: waypointType,
+                    lat: waypointData.lat,
+                    lon: waypointData.lon,
+                    location: `On ${upperPrevToken}`,
+                    contextHint: `Exit point on ${upperPrevToken}`
+                };
+
                 // If no search term, add all fixes
                 if (!upperTerm || upperTerm.length === 0) {
-                    const fixData = qe_fixesData?.get(upperFixIdent);
-                    if (fixData) {
-                        prefixMatches.push({
-                            code: upperFixIdent,
-                            name: upperFixIdent,
-                            type: 'fix',
-                            waypointType: 'fix',
-                            lat: fixData.lat,
-                            lon: fixData.lon,
-                            location: `On ${upperPrevToken}`,
-                            contextHint: `Exit point on ${upperPrevToken}`
-                        });
-                    }
+                    prefixMatches.push(result);
                 } else if (upperFixIdent === upperTerm) {
                     // Exact match
-                    const fixData = qe_fixesData?.get(upperFixIdent);
-                    if (fixData) {
-                        exactMatches.push({
-                            code: upperFixIdent,
-                            name: upperFixIdent,
-                            type: 'fix',
-                            waypointType: 'fix',
-                            lat: fixData.lat,
-                            lon: fixData.lon,
-                            location: `On ${upperPrevToken}`,
-                            contextHint: `Exit point on ${upperPrevToken}`
-                        });
-                    }
+                    exactMatches.push(result);
                 } else if (upperFixIdent.startsWith(upperTerm)) {
                     // Prefix match
-                    const fixData = qe_fixesData?.get(upperFixIdent);
-                    if (fixData) {
-                        prefixMatches.push({
-                            code: upperFixIdent,
-                            name: upperFixIdent,
-                            type: 'fix',
-                            waypointType: 'fix',
-                            lat: fixData.lat,
-                            lon: fixData.lon,
-                            location: `On ${upperPrevToken}`,
-                            contextHint: `Exit point on ${upperPrevToken}`
-                        });
-                    }
+                    prefixMatches.push(result);
                 } else if (upperFixIdent.includes(upperTerm)) {
                     // Substring match
-                    const fixData = qe_fixesData?.get(upperFixIdent);
-                    if (fixData) {
-                        substringMatches.push({
-                            code: upperFixIdent,
-                            name: upperFixIdent,
-                            type: 'fix',
-                            waypointType: 'fix',
-                            lat: fixData.lat,
-                            lon: fixData.lon,
-                            location: `On ${upperPrevToken}`,
-                            contextHint: `Exit point on ${upperPrevToken}`
-                        });
-                    }
+                    substringMatches.push(result);
                 }
             }
 
