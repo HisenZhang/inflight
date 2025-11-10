@@ -795,9 +795,9 @@ function hidePopup() {
         currentStatusItem = null;
     }
 
-    // Show navigation panel when hiding status bar (only if GPS is active)
+    // Show navigation panel when hiding status bar
     const navPanel = document.getElementById('navigationPanel');
-    if (navPanel && watchId !== null) {
+    if (navPanel) {
         navPanel.style.display = 'block';
     }
 }
@@ -983,39 +983,6 @@ function updateNavigationDisplay(navData) {
     // Regenerate map with current position
     if (routeData) {
         generateMap(routeData.waypoints, routeData.legs);
-    }
-}
-
-function toggleGPS() {
-    const btn = document.getElementById('toggleGPSBtn');
-    const navPanel = document.getElementById('navigationPanel');
-    if (!btn) return;
-
-    if (watchId === null) {
-        const started = startGPSTracking();
-        if (started) {
-            btn.classList.add('active');
-
-            // Show navigation panel when GPS is enabled
-            if (navPanel) {
-                navPanel.style.display = 'block';
-            }
-        } else {
-            alert('GPS NOT AVAILABLE\n\nYour device does not support geolocation or permission was denied.');
-        }
-    } else {
-        stopGPSTracking();
-        btn.classList.remove('active');
-
-        // Hide navigation panel when GPS is disabled
-        if (navPanel) {
-            navPanel.style.display = 'none';
-        }
-
-        // Regenerate map without position marker
-        if (routeData) {
-            generateMap(routeData.waypoints, routeData.legs);
-        }
     }
 }
 
@@ -1354,7 +1321,6 @@ function navigateToNextWaypoint() {
 window.VectorMap = {
     displayMap,
     hideMap,
-    toggleGPS,
     startGPSTracking,
     stopGPSTracking,
     setZoomMode,

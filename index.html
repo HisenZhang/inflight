@@ -247,9 +247,6 @@
         <!-- Vector Map Display -->
         <div id="tacticalDisplay" class="tactical-display" style="display: none;">
             <div class="tactical-header">
-                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <button id="toggleGPSBtn" class="zoom-btn">GPS</button>
-                </div>
                 <div class="zoom-controls">
                     <button class="zoom-btn active" data-zoom="full">ROUTE</button>
                     <button class="zoom-btn" data-zoom="destination">DEST</button>
@@ -269,8 +266,8 @@
                 </table>
             </div>
 
-            <!-- Navigation Panel - Hidden when GPS is off -->
-            <div id="navigationPanel" class="navigation-panel" style="display: none;">
+            <!-- Navigation Panel -->
+            <div id="navigationPanel" class="navigation-panel">
                 <div id="navigationContent" class="navigation-content">
                     <!-- Primary row: WPT, HDG, DIST, ETE -->
                     <div class="nav-primary-row">

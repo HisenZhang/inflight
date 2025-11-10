@@ -94,12 +94,6 @@ function setupEventListeners() {
     elements.calculateBtn.addEventListener('click', handleCalculateRoute);
     elements.clearRouteBtn.addEventListener('click', handleClearRoute);
 
-    // GPS tracking
-    const gpsBtn = document.getElementById('toggleGPSBtn');
-    if (gpsBtn) {
-        gpsBtn.addEventListener('click', () => VectorMap.toggleGPS());
-    }
-
     // Navigation waypoint selection
     const prevNavWptBtn = document.getElementById('prevNavWptBtn');
     const nextNavWptBtn = document.getElementById('nextNavWptBtn');
