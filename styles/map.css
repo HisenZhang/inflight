@@ -1,0 +1,514 @@
+
+/* ============================================
+   TACTICAL NAVIGATION DISPLAY
+   ============================================ */
+.tactical-display {
+    border: 2px solid var(--border-color);
+    background: var(--bg-panel);
+}
+
+.tactical-header {
+    background: var(--bg-primary);
+    border-bottom: 2px solid var(--border-color);
+    padding: var(--space-md);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.tactical-header h2 {
+    font-size: 14px;
+    margin: 0;
+}
+
+.zoom-controls {
+    display: flex;
+    gap: 4px;
+}
+
+.zoom-btn {
+    padding: 4px 8px;
+    font-size: 10px;
+    font-family: 'Roboto Mono', monospace;
+    font-weight: 500;
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.zoom-btn:hover {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+.zoom-btn.active {
+    background: var(--color-metric);
+    color: var(--bg-primary);
+    border-color: var(--color-metric);
+    font-weight: 700;
+}
+
+.tactical-route-info {
+    color: var(--color-metric);
+    font-size: 12px;
+}
+
+.tactical-map {
+    position: relative;
+    height: 600px;
+    background: #000000;
+    border-bottom: 2px solid var(--border-color);
+    overflow: hidden;
+}
+
+.tactical-map svg {
+    width: 100%;
+    height: 100%;
+    cursor: grab;
+}
+
+.tactical-map svg:active {
+    cursor: grabbing;
+}
+
+/* Map elements */
+.map-waypoint {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.map-waypoint:hover .waypoint-circle {
+    r: 8;
+    stroke-width: 3;
+}
+
+@media (max-width: 1024px) {
+    .map-waypoint:hover .waypoint-circle {
+        r: 40;
+        stroke-width: 12;
+    }
+}
+
+.map-waypoint:hover .waypoint-label {
+    font-size: 14px;
+    font-weight: 700;
+}
+
+@media (max-width: 1024px) {
+    .map-waypoint:hover .waypoint-label {
+        font-size: 65px;
+        font-weight: 700;
+    }
+}
+
+.waypoint-circle {
+    transition: all 0.2s ease;
+}
+
+/* Blink animation for target waypoint */
+@keyframes blink-waypoint {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+.target-waypoint .waypoint-circle,
+.target-waypoint .waypoint-label {
+    animation: blink-waypoint 1.5s ease-in-out infinite;
+}
+
+/* GPS arrow smooth rotation */
+.gps-arrow {
+    transition: transform 0.5s ease-out;
+}
+
+.waypoint-label {
+    font-family: 'Roboto Mono', monospace;
+    font-size: clamp(10px, 2vw, 12px); /* Responsive font size */
+    font-weight: 500;
+    pointer-events: none;
+}
+
+@media (max-width: 1024px) {
+    .waypoint-label {
+        font-size: 36px; /* Match inline SVG size (12 * 3) */
+        font-weight: 700;
+    }
+}
+
+.route-line {
+    fill: none;
+    stroke: #cccccc;
+    stroke-width: 2;
+    stroke-linecap: round;
+}
+
+@media (max-width: 1024px) {
+    .route-line {
+        stroke-width: 10;
+    }
+}
+
+.route-line-dashed {
+    stroke-dasharray: 8 4;
+}
+
+@media (max-width: 1024px) {
+    .route-line-dashed {
+        stroke-dasharray: 30 15;
+    }
+}
+
+/* Selected point info */
+.selected-point-info {
+    background: var(--bg-primary);
+    border-bottom: 2px solid var(--border-color);
+    padding: var(--space-md);
+}
+
+.info-header {
+    color: var(--text-secondary);
+    font-weight: 700;
+    font-size: 11px;
+    margin-bottom: var(--space-sm);
+}
+
+.info-placeholder {
+    color: var(--text-secondary);
+    font-size: 11px;
+    padding: var(--space-sm) 0;
+}
+
+.info-content {
+    font-size: 11px;
+}
+
+.info-content .info-row {
+    display: flex;
+    justify-content: space-between;
+    padding: var(--space-xs) 0;
+    border-bottom: 1px solid #333;
+}
+
+.info-content .info-row:last-child {
+    border-bottom: none;
+}
+
+.info-content .info-label {
+    color: var(--text-secondary);
+}
+
+.info-content .info-value {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+/* Briefing button */
+.tactical-briefing-btn {
+    background: var(--bg-primary);
+    border-bottom: 2px solid var(--border-color);
+    padding: var(--space-md);
+    text-align: center;
+}
+
+.tactical-briefing-btn .btn {
+    font-size: 13px;
+    padding: var(--space-md) var(--space-xl);
+}
+
+/* Navigation panel */
+.navigation-panel {
+    background: var(--bg-primary);
+    border-top: 2px solid var(--border-color);
+    padding: var(--space-md);
+}
+
+.navigation-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+}
+
+.nav-primary-row {
+    display: flex;
+    justify-content: space-around;
+    gap: var(--space-md);
+}
+
+.nav-secondary-row {
+    display: flex;
+    justify-content: space-around;
+    gap: var(--space-sm);
+}
+
+.nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-xs);
+}
+
+.nav-label {
+    font-size: 10px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    letter-spacing: 1px;
+}
+
+.nav-value {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+/* Primary row has larger values */
+.nav-primary-row .nav-value {
+    font-size: 24px;
+    font-weight: 700;
+}
+
+.nav-buttons-row {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-md);
+}
+
+/* Legacy support for old class name */
+.current-instruction {
+    background: var(--bg-primary);
+    padding: var(--space-md);
+}
+
+.instruction-header {
+    color: var(--text-secondary);
+    font-weight: 700;
+    font-size: 11px;
+    margin-bottom: var(--space-sm);
+}
+
+.instruction-text {
+    color: var(--color-navaid);
+    font-size: 18px;
+    font-weight: 700;
+    text-align: center;
+    padding: var(--space-md) 0;
+    margin-bottom: var(--space-md);
+}
+
+.instruction-details {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-sm);
+    padding: var(--space-sm) 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.detail-item {
+    text-align: center;
+}
+
+.detail-label {
+    color: var(--text-secondary);
+    font-size: 10px;
+    margin-bottom: var(--space-xs);
+}
+
+.detail-value {
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.detail-value.next-wp {
+    color: var(--color-airport);
+}
+
+.detail-value.req-hdg {
+    color: var(--color-airport);
+}
+
+.detail-value.dist-nm {
+    color: var(--color-metric);
+}
+
+.detail-value.eta-time {
+    color: var(--color-metric);
+}
+
+.instruction-secondary {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: var(--space-sm);
+    margin-top: var(--space-sm);
+}
+
+.secondary-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.secondary-label {
+    color: var(--text-secondary);
+    font-size: 8px;
+    font-weight: 500;
+}
+
+.secondary-value {
+    color: var(--color-metric);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    /* Remove borders on mobile for cleaner look (except map which needs border) */
+    .data-status,
+    .input-section,
+    .results-section {
+        border: none;
+        padding: var(--space-sm);
+        margin-bottom: var(--space-sm);
+    }
+
+    /* Keep border on map */
+    .tactical-display {
+        padding: 0;
+        margin-bottom: var(--space-sm);
+    }
+
+    .tactical-header {
+        border-bottom: 1px solid var(--border-color);
+        padding: var(--space-sm);
+        flex-wrap: nowrap;
+    }
+
+    /* Make zoom controls scrollable on mobile */
+    .zoom-controls {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none; /* IE/Edge */
+    }
+
+    .zoom-controls::-webkit-scrollbar {
+        display: none; /* Chrome/Safari */
+    }
+
+    /* Hide section titles on mobile */
+    .input-section h2,
+    .results-section h2 {
+        display: none;
+    }
+
+    .feature-inputs {
+        margin-left: var(--space-md);
+        padding: var(--space-sm);
+    }
+
+    .help-text {
+        border-left: none;
+        padding-left: 0;
+        margin-bottom: var(--space-xs);
+    }
+
+    /* Compact feature toggles on mobile */
+    .feature-toggle {
+        padding: var(--space-xs) 0;
+        margin-bottom: var(--space-xs);
+    }
+
+    .feature-toggle label {
+        font-size: 0.8rem;
+    }
+
+    .help-text-inline {
+        display: block;
+        margin-left: 0;
+        margin-top: 2px;
+        font-size: 0.7rem;
+    }
+
+    .route-input {
+        grid-template-columns: 1fr;
+    }
+
+    .feature-inputs .input-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--space-xs);
+    }
+
+    .feature-inputs label {
+        min-width: auto;
+        font-size: 0.75rem;
+    }
+
+    .feature-inputs input {
+        width: 100%;
+        max-width: 200px;
+    }
+
+    .instruction-details {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    /* Keep secondary info horizontal even on mobile */
+    .instruction-secondary {
+        grid-template-columns: repeat(5, 1fr);
+        gap: 4px;
+    }
+
+    .secondary-label {
+        font-size: 7px;
+    }
+
+    .secondary-value {
+        font-size: 10px;
+    }
+
+    /* Mobile map styles - simple scrollable layout */
+    .tactical-display {
+        margin-bottom: var(--space-sm);
+        border: none;
+    }
+
+    .tactical-map {
+        height: 400px;
+    }
+
+    .navigation-panel {
+        padding: var(--space-sm);
+    }
+
+    .nav-primary-row .nav-label {
+        font-size: 9px;
+    }
+
+    .nav-primary-row .nav-value {
+        font-size: 18px;
+    }
+
+    .nav-secondary-row .nav-label {
+        font-size: 8px;
+    }
+
+    .nav-secondary-row .nav-value {
+        font-size: 14px;
+    }
+}
+
+/* ============================================ */
+/* Map Status Bar */
+/* ============================================ */
+
+.map-status-bar {
+    background: var(--bg-panel);
+    border-top: 2px solid var(--border-color);
+    padding: 0;
+}
+
+.map-status-bar.hidden {
+    display: none;
+}

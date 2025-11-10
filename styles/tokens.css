@@ -1,0 +1,25 @@
+/* ============================================
+   DESIGN TOKENS
+   ============================================ */
+:root {
+    /* Colors */
+    --bg-primary: #000000;
+    --bg-panel: #0a0a0a;
+    --border-color: #ffffff;
+    --text-primary: #ffffff;
+    --text-secondary: #cccccc;
+    --color-airport: #00ffff;       /* Cyan */
+    --color-navaid: #ff00ff;        /* Magenta */
+    --color-fix: #ffffff;           /* White */
+    --color-reporting: #ffbf00;     /* Amber */
+    --color-metric: #00ff00;
+    --color-warning: #ffff00;
+    --color-error: #ff0000;
+
+    /* Spacing */
+    --space-xs: 4px;
+    --space-sm: 8px;
+    --space-md: 10px;
+    --space-lg: 16px;
+    --space-xl: 20px;
+}

@@ -1,0 +1,117 @@
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+
+/* Typography */
+.text-xs { font-size: 0.75rem; }
+.text-sm { font-size: 0.85rem; }
+.text-base { font-size: 0.95rem; }
+.text-lg { font-size: 1.1rem; }
+.text-xl { font-size: 1.4rem; }
+
+/* Font Weight */
+.font-normal { font-weight: 400; }
+.font-medium { font-weight: 500; }
+.font-bold { font-weight: 700; }
+
+/* Colors */
+.text-primary { color: var(--text-primary); }
+.text-secondary { color: var(--text-secondary); }
+.text-airport { color: var(--color-airport); }
+.text-navaid { color: var(--color-navaid); }
+.text-fix { color: var(--color-fix); }
+.text-reporting { color: var(--color-reporting); }
+.text-metric { color: var(--color-metric); }
+.text-warning { color: var(--color-warning); }
+.text-error { color: var(--color-error); }
+
+/* Spacing */
+.mb-xs { margin-bottom: var(--space-xs); }
+.mb-sm { margin-bottom: var(--space-sm); }
+.mb-md { margin-bottom: var(--space-md); }
+.mb-lg { margin-bottom: var(--space-lg); }
+.mt-sm { margin-top: var(--space-sm); }
+.mt-md { margin-top: var(--space-md); }
+
+/* Display */
+.hidden { display: none; }
+.block { display: block; }
+.flex { display: flex; }
+.inline-flex { display: inline-flex; }
+
+/* Avionics UI Widgets */
+.checkbox-toggle {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--border-color);
+    background: var(--bg-primary);
+    cursor: pointer;
+    position: relative;
+    flex-shrink: 0;
+}
+
+.checkbox-toggle.checked {
+    background: var(--bg-primary);
+}
+
+.checkbox-toggle.checked::before,
+.checkbox-toggle.checked::after {
+    content: '';
+    position: absolute;
+    background: var(--color-metric);
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.checkbox-toggle.checked::before {
+    width: 12px;
+    height: 2px;
+}
+
+.checkbox-toggle.checked::after {
+    width: 2px;
+    height: 12px;
+}
+
+/* Radio Button Group */
+.radio-group {
+    display: flex;
+    gap: var(--space-sm);
+}
+
+.radio-btn {
+    padding: 6px 12px;
+    border: 2px solid var(--border-color);
+    background: var(--bg-primary);
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    cursor: pointer;
+    font-family: inherit;
+    letter-spacing: 1px;
+    transition: all 0.1s;
+    font-weight: 500;
+}
+
+.radio-btn:hover {
+    color: var(--text-primary);
+}
+
+.radio-btn.selected {
+    border-color: var(--color-metric) !important;
+    color: var(--color-metric) !important;
+    background: rgba(102, 255, 255, 0.1) !important;
+    font-weight: 700;
+}
+
+.radio-btn.selected:hover {
+    color: var(--color-metric) !important;
+}
+
+/* Flex */
+.flex-col { flex-direction: column; }
+.flex-wrap { flex-wrap: wrap; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.gap-sm { gap: var(--space-sm); }
+.gap-md { gap: var(--space-md); }

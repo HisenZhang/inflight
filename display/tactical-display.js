@@ -336,7 +336,7 @@ function generateMap(waypoints, legs) {
 
     // Calculate responsive sizes based on viewport width and route aspect ratio
     const viewportWidth = window.innerWidth;
-    const isMobile = viewportWidth < 768;
+    const isMobile = viewportWidth < 1024; // Tablets in portrait (iPad: 768-810px) considered mobile
 
     // Calculate route bounding box aspect ratio
     const latRange = bounds.maxLat - bounds.minLat;
@@ -571,36 +571,20 @@ function generateMap(waypoints, legs) {
         const triangleHeight = isMobile ? 80 : 20; // Height from base to tip
         const triangleBaseWidth = isMobile ? 40 : 10; // Width of base
 
-        // Triangle vertices in local coordinates (tip points up)
-        // Tip vertex
+        // Triangle vertices in local coordinates (tip points up, unrotated)
         const tipLocalX = 0;
         const tipLocalY = -triangleHeight;
-
-        // Base vertices (left and right)
         const baseLeftLocalX = -triangleBaseWidth / 2;
         const baseLeftLocalY = 0;
         const baseRightLocalX = triangleBaseWidth / 2;
         const baseRightLocalY = 0;
 
-        // Rotate based on heading (convert to radians, adjust for SVG coordinate system)
-        const headingRad = (heading - 90) * Math.PI / 180; // -90 because SVG 0° is East
-        const cosH = Math.cos(headingRad);
-        const sinH = Math.sin(headingRad);
-
-        // Apply rotation and translate to position
-        const tipX = pos.x + (tipLocalX * cosH - tipLocalY * sinH);
-        const tipY = pos.y + (tipLocalX * sinH + tipLocalY * cosH);
-
-        const baseLeftX = pos.x + (baseLeftLocalX * cosH - baseLeftLocalY * sinH);
-        const baseLeftY = pos.y + (baseLeftLocalX * sinH + baseLeftLocalY * cosH);
-
-        const baseRightX = pos.x + (baseRightLocalX * cosH - baseRightLocalY * sinH);
-        const baseRightY = pos.y + (baseRightLocalX * sinH + baseRightLocalY * cosH);
-
-        // Draw tall triangle with bright lime green fill and white outline for maximum visibility
+        // Draw using CSS transform for smooth rotation (heading - 90 because SVG 0° is East)
         const arrowStrokeWidth = isMobile ? 6 : 3;
-        svg += `<polygon points="${tipX},${tipY} ${baseLeftX},${baseLeftY} ${baseRightX},${baseRightY}"
+        svg += `<g class="gps-arrow" transform="translate(${pos.x}, ${pos.y}) rotate(${heading - 90})">`;
+        svg += `<polygon points="${tipLocalX},${tipLocalY} ${baseLeftLocalX},${baseLeftLocalY} ${baseRightLocalX},${baseRightLocalY}"
                 fill="#00ff00" stroke="#ffffff" stroke-width="${arrowStrokeWidth}" stroke-linejoin="miter"/>`;
+        svg += `</g>`;
     }
 
     // Close the transform group
@@ -1128,9 +1112,9 @@ function updateNavigationDisplay(navData) {
         reqHdgEl.style.color = '#00ffff'; // Cyan for heading
     }
 
-    // Update ETE to next waypoint (green)
+    // Update ETE to next waypoint (green) - hide if ground speed < 5kt (likely noise)
     const eteEl = document.querySelector('.ete-value');
-    if (eteEl && eteNextWP !== null) {
+    if (eteEl && eteNextWP !== null && gpsGroundSpeed !== null && gpsGroundSpeed >= 5) {
         const hours = Math.floor(eteNextWP / 60);
         const minutes = Math.round(eteNextWP % 60);
         eteEl.textContent = hours > 0 ? `${hours}H${minutes}M` : `${minutes}M`;
@@ -1140,9 +1124,9 @@ function updateNavigationDisplay(navData) {
         eteEl.style.color = '#00ff00'; // Green
     }
 
-    // Update ETA (green)
+    // Update ETA (green) - hide if ground speed < 5kt (likely noise)
     const etaEl = document.querySelector('.eta-time');
-    if (etaEl && etaNextWP) {
+    if (etaEl && etaNextWP && gpsGroundSpeed !== null && gpsGroundSpeed >= 5) {
         const hours = String(etaNextWP.getHours()).padStart(2, '0');
         const minutes = String(etaNextWP.getMinutes()).padStart(2, '0');
         etaEl.textContent = `${hours}:${minutes}`;

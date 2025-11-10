@@ -266,8 +266,9 @@ function setupFeatureToggles() {
     let windsEnabled = false;
     let fuelEnabled = false;
 
-    // Wind correction & time toggle (merged)
-    elements.enableWindsToggle.addEventListener('click', () => {
+    // Wind correction & time toggle (merged) - make entire row clickable
+    const windsToggleRow = elements.enableWindsToggle.parentElement;
+    windsToggleRow.addEventListener('click', () => {
         windsEnabled = !windsEnabled;
         if (windsEnabled) {
             elements.enableWindsToggle.classList.add('checked');
@@ -284,8 +285,9 @@ function setupFeatureToggles() {
         }
     });
 
-    // Fuel planning toggle
-    elements.enableFuelToggle.addEventListener('click', () => {
+    // Fuel planning toggle - make entire row clickable
+    const fuelToggleRow = elements.enableFuelToggle.parentElement;
+    fuelToggleRow.addEventListener('click', () => {
         fuelEnabled = !fuelEnabled;
         if (fuelEnabled) {
             elements.enableFuelToggle.classList.add('checked');
