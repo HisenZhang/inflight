@@ -1339,9 +1339,10 @@ function handleTouchMove(e) {
         panOffset.x += dx;
         panOffset.y += dy;
 
-        // Calculate pan limits
-        const maxPanX = (zoomLevel - 1) * svgDimensions.width / 2;
-        const maxPanY = (zoomLevel - 1) * svgDimensions.height / 2;
+        // Calculate pan limits - allow panning to see all zoomed content
+        // At 2x zoom, allow panning by the full viewport width to explore all areas
+        const maxPanX = zoomLevel * svgDimensions.width / 2;
+        const maxPanY = zoomLevel * svgDimensions.height / 2;
 
         // Clamp pan offset
         panOffset.x = Math.max(-maxPanX, Math.min(maxPanX, panOffset.x));
@@ -1439,11 +1440,10 @@ function handlePanMove(e) {
     panOffset.x += dx;
     panOffset.y += dy;
 
-    // Calculate pan limits: when zoomed in, we can pan but must keep some content visible
-    // Allow panning up to (zoomLevel - 1) * viewport dimension / 2
-    // This ensures content stays within reasonable bounds
-    const maxPanX = (zoomLevel - 1) * svgDimensions.width / 2;
-    const maxPanY = (zoomLevel - 1) * svgDimensions.height / 2;
+    // Calculate pan limits - allow panning to see all zoomed content
+    // At 2x zoom, allow panning by the full viewport width to explore all areas
+    const maxPanX = zoomLevel * svgDimensions.width / 2;
+    const maxPanY = zoomLevel * svgDimensions.height / 2;
 
     // Clamp pan offset
     panOffset.x = Math.max(-maxPanX, Math.min(maxPanX, panOffset.x));
