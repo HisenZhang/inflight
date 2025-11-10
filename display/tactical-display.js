@@ -370,6 +370,9 @@ function generateMap(waypoints, legs) {
     }
 
     // Calculate responsive sizes based on route aspect ratio
+    const viewportWidth = window.innerWidth;
+    const isMobile = viewportWidth < 1024; // Tablets in portrait (iPad: 768-810px) considered mobile
+
     const latRange = bounds.maxLat - bounds.minLat;
     const lonRange = bounds.maxLon - bounds.minLon;
 
@@ -400,12 +403,14 @@ function generateMap(waypoints, legs) {
     // Store dimensions for pan limit calculations
     svgDimensions = { width, height };
 
-    // Scaling factors for all SVG elements - use consistent scale for all devices
-    const textScaleFactor = 4; // 12 * 4 = 48px (close to hover 45px)
-    const shapeScaleFactor = 4;
+    // Scaling factors for SVG elements
+    // Desktop: 2x text (96px), 2x shapes (10px radius), 8px stroke
+    // Mobile: 4x text (48px), 4x shapes (20px radius), 4px stroke
+    const textScaleFactor = isMobile ? 4 : 8; // Desktop: 12 * 8 = 96px, Mobile: 12 * 4 = 48px
+    const shapeScaleFactor = isMobile ? 4 : 2; // Desktop: half shape size of mobile
     const waypointLabelSize = 12 * textScaleFactor;
     const waypointRadius = 5 * shapeScaleFactor;
-    const strokeWidth = 4;
+    const strokeWidth = isMobile ? 4 : 8; // Desktop: double line width
 
     // Calculate projection center (center of visible area)
     const centerLat = (bounds.minLat + bounds.maxLat) / 2;
@@ -504,7 +509,9 @@ function generateMap(waypoints, legs) {
             priority = 1;
         }
 
-        return { waypoint, index, pos, code, color, priority, labelY: pos.y - (12 * textScaleFactor) };
+        // Label offset: radius + half text size + small padding
+        const labelOffset = waypointRadius + (waypointLabelSize / 2) + 4;
+        return { waypoint, index, pos, code, color, priority, labelY: pos.y - labelOffset };
     });
 
     // Label collision detection - hide labels that are too close
@@ -557,8 +564,9 @@ function generateMap(waypoints, legs) {
         const heading = currentPosition.heading || 0; // GPS heading in degrees
 
         // Tall isosceles triangle (like old vector graphics)
-        const triangleHeight = 80; // Height from base to tip
-        const triangleBaseWidth = 40; // Width of base
+        // Desktop: 4x size (160x80), Mobile: 2x size (80x40)
+        const triangleHeight = isMobile ? 80 : 160;
+        const triangleBaseWidth = isMobile ? 40 : 80;
 
         // Triangle vertices in local coordinates (tip points up, unrotated)
         const tipLocalX = 0;
@@ -569,7 +577,7 @@ function generateMap(waypoints, legs) {
         const baseRightLocalY = 0;
 
         // Draw using CSS transform for smooth rotation (heading - 90 because SVG 0° is East)
-        const arrowStrokeWidth = 6;
+        const arrowStrokeWidth = isMobile ? 6 : 12;
         svg += `<g class="gps-arrow" transform="translate(${pos.x}, ${pos.y}) rotate(${heading - 90})">`;
         svg += `<polygon points="${tipLocalX},${tipLocalY} ${baseLeftLocalX},${baseLeftLocalY} ${baseRightLocalX},${baseRightLocalY}"
                 fill="#00ff00" stroke="#ffffff" stroke-width="${arrowStrokeWidth}" stroke-linejoin="miter"/>`;
