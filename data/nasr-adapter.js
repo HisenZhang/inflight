@@ -526,45 +526,50 @@ async function loadNASRData(onStatusUpdate, onFileLoaded) {
         const parsedData = {};
         const rawCSV = {};
 
-        // Download and parse each file individually
-        for (const fileInfo of filesToDownload) {
-            const startTime = Date.now();
-            onStatusUpdate(`[...] DOWNLOADING NASR ${fileInfo.label}`, 'loading');
+        // Download and parse all files in parallel
+        onStatusUpdate('[...] DOWNLOADING NASR FILES IN PARALLEL', 'loading');
 
+        const downloadPromises = filesToDownload.map(async (fileInfo) => {
+            const startTime = Date.now();
             const csvData = await fetchNASRFile(fileInfo.filename);
             const downloadTime = Date.now() - startTime;
 
-            onStatusUpdate(`[...] PARSING NASR ${fileInfo.label}`, 'loading');
             const parseStartTime = Date.now();
             const parsed = fileInfo.parser(csvData);
             const parseTime = Date.now() - parseStartTime;
 
-            // Store parsed data
-            const dataKey = fileInfo.id.replace('nasr_', '');
-            parsedData[dataKey] = parsed;
-            rawCSV[`${dataKey}CSV`] = csvData;
+            return { fileInfo, csvData, parsed, downloadTime, parseTime };
+        });
+
+        const results = await Promise.all(downloadPromises);
+
+        // Process results and build metadata
+        for (const result of results) {
+            const dataKey = result.fileInfo.id.replace('nasr_', '');
+            parsedData[dataKey] = result.parsed;
+            rawCSV[`${dataKey}CSV`] = result.csvData;
 
             // Track file metadata
             const metadata = {
-                id: fileInfo.id,
-                filename: fileInfo.filename,
-                label: fileInfo.label,
+                id: result.fileInfo.id,
+                filename: result.fileInfo.filename,
+                label: result.fileInfo.label,
                 timestamp: Date.now(),
-                downloadTime,
-                parseTime,
-                recordCount: parsed.size || 0,
-                sizeBytes: csvData.length,
+                downloadTime: result.downloadTime,
+                parseTime: result.parseTime,
+                recordCount: result.parsed.size || 0,
+                sizeBytes: result.csvData.length,
                 source: 'NASR'
             };
 
-            fileMetadata.set(fileInfo.id, metadata);
+            fileMetadata.set(result.fileInfo.id, metadata);
 
             // Notify about file completion
             if (onFileLoaded) {
                 onFileLoaded(metadata);
             }
 
-            onStatusUpdate(`[OK] NASR ${fileInfo.label} (${metadata.recordCount} RECORDS)`, 'success');
+            onStatusUpdate(`[OK] NASR ${result.fileInfo.label} (${metadata.recordCount} RECORDS)`, 'success');
         }
 
         onStatusUpdate('[OK] NASR DATA LOADED', 'success');
