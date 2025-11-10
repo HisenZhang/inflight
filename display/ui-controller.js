@@ -58,6 +58,101 @@ function init() {
 }
 
 // ============================================
+// SYSTEM CHECKS
+// ============================================
+
+function checkInternetConnection() {
+    const statusEl = document.getElementById('internetStatus');
+    if (!statusEl) return;
+
+    // Check if online
+    if (!navigator.onLine) {
+        statusEl.textContent = 'OFFLINE';
+        statusEl.className = 'check-status status-error';
+        return;
+    }
+
+    // Try to fetch a small resource to verify connectivity
+    fetch('https://www.google.com/favicon.ico', {
+        mode: 'no-cors',
+        cache: 'no-cache'
+    })
+    .then(() => {
+        statusEl.textContent = 'CONNECTED';
+        statusEl.className = 'check-status status-ok';
+    })
+    .catch(() => {
+        statusEl.textContent = 'NO ACCESS';
+        statusEl.className = 'check-status status-error';
+    });
+}
+
+function checkGPSAvailability() {
+    const statusEl = document.getElementById('gpsStatus');
+    if (!statusEl) return;
+
+    if (!navigator.geolocation) {
+        statusEl.textContent = 'NOT AVAILABLE';
+        statusEl.className = 'check-status status-error';
+        return;
+    }
+
+    // Try to get GPS position
+    navigator.geolocation.getCurrentPosition(
+        (position) => {
+            const accuracy = position.coords.accuracy;
+            if (accuracy < 50) {
+                statusEl.textContent = 'EXCELLENT';
+                statusEl.className = 'check-status status-ok';
+            } else if (accuracy < 100) {
+                statusEl.textContent = 'GOOD';
+                statusEl.className = 'check-status status-ok';
+            } else {
+                statusEl.textContent = 'POOR';
+                statusEl.className = 'check-status status-warning';
+            }
+        },
+        (error) => {
+            if (error.code === error.PERMISSION_DENIED) {
+                statusEl.textContent = 'PERMISSION DENIED';
+                statusEl.className = 'check-status status-error';
+            } else if (error.code === error.POSITION_UNAVAILABLE) {
+                statusEl.textContent = 'UNAVAILABLE';
+                statusEl.className = 'check-status status-error';
+            } else {
+                statusEl.textContent = 'TIMEOUT';
+                statusEl.className = 'check-status status-warning';
+            }
+        },
+        {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+        }
+    );
+}
+
+function updateDatabaseStatus(status, message) {
+    const statusEl = document.getElementById('databaseStatus');
+    if (!statusEl) return;
+
+    statusEl.textContent = message;
+    statusEl.className = `check-status status-${status}`;
+}
+
+function initSystemChecks() {
+    checkInternetConnection();
+    checkGPSAvailability();
+
+    // Recheck internet connection every 30 seconds
+    setInterval(checkInternetConnection, 30000);
+
+    // Listen for online/offline events
+    window.addEventListener('online', checkInternetConnection);
+    window.addEventListener('offline', checkInternetConnection);
+}
+
+// ============================================
 // STATUS & DATA INFO
 // ============================================
 
@@ -90,21 +185,27 @@ function showDataInfo() {
         const daysAgo = Math.floor((Date.now() - stats.timestamp) / (24 * 60 * 60 * 1000));
         const dateStr = date.toISOString().split('T')[0];
         const timeStr = date.toTimeString().split(' ')[0];
-        timestampText = `<p><strong>DB UPDATE:</strong> ${dateStr} ${timeStr} UTC (${daysAgo}D AGO)</p>`;
+        timestampText = `<p style="margin-top: 0.5rem;"><strong>LAST UPDATE:</strong> ${dateStr} ${timeStr} UTC (${daysAgo}D AGO)</p>`;
     }
 
     const infoHTML = `
-        <p><strong>AIRPORTS:</strong> ${totalAirports.toLocaleString()} | <strong>NAVAIDS:</strong> ${totalNavaids.toLocaleString()} | <strong>FIXES:</strong> ${totalFixes.toLocaleString()} | <strong>STATUS:</strong> READY</p>
+        <p><strong>AIRPORTS:</strong> ${totalAirports.toLocaleString()} | <strong>NAVAIDS:</strong> ${totalNavaids.toLocaleString()} | <strong>FIXES:</strong> ${totalFixes.toLocaleString()}</p>
         ${timestampText}
     `;
 
     elements.dataInfo.innerHTML = infoHTML;
+    elements.dataInfo.style.display = 'block';
 
-    // Also update Data tab info
-    const dataInfoData = document.getElementById('dataInfoData');
-    if (dataInfoData) dataInfoData.innerHTML = infoHTML;
+    // Update database status check
+    updateDatabaseStatus('ok', 'LOADED');
 
-    // Automatically populate inspection details (always visible)
+    // Show management buttons
+    elements.loadDataBtn.style.display = 'none';
+    elements.reindexCacheBtn.style.display = 'inline-block';
+    elements.clearDataBtn.style.display = 'inline-block';
+
+    // Show and populate inspection details
+    elements.dataInspection.style.display = 'block';
     populateInspection();
 }
 
@@ -1009,6 +1110,7 @@ window.UIController = {
     // Initialization
     init,
     setupFeatureToggles,
+    initSystemChecks,
 
     // Elements access
     getElements: () => elements,
@@ -1017,6 +1119,7 @@ window.UIController = {
     updateStatus,
     showDataInfo,
     populateInspection,
+    updateDatabaseStatus,
 
     // Input controls
     enableRouteInput,

@@ -28,28 +28,47 @@
 
         <!-- Tab: Data & Cache -->
         <div class="tab-content active" id="tab-data">
-        <!-- Database Status (visible in data tab) -->
-        <div class="data-status">
-            <div id="dataStatus" class="status-box">
-                <span class="status-indicator">[!]</span>
-                <span id="statusText" class="font-medium">DATABASE NOT LOADED</span>
-                <button id="loadDataBtn" class="btn btn-primary font-bold">LOAD DATA</button>
-            </div>
-            <div id="dataInfo" class="data-info text-sm"></div>
-            <div id="dataInspection" class="data-inspection">
-                <div class="inspection-header">
-                    <span class="text-metric font-bold">DATABASE MANAGEMENT</span>
+            <div class="data-status">
+                <h2 class="font-bold text-primary">SYSTEM STATUS</h2>
+
+                <!-- System Checks -->
+                <div class="system-checks">
+                    <div class="check-item" id="internetCheck">
+                        <span class="check-label">INTERNET</span>
+                        <span class="check-status" id="internetStatus">CHECKING...</span>
+                    </div>
+                    <div class="check-item" id="gpsCheck">
+                        <span class="check-label">GPS</span>
+                        <span class="check-status" id="gpsStatus">CHECKING...</span>
+                    </div>
+                    <div class="check-item" id="databaseCheck">
+                        <span class="check-label">DATABASE</span>
+                        <span class="check-status" id="databaseStatus">NOT LOADED</span>
+                    </div>
                 </div>
-                <div id="inspectionContent" class="inspection-content"></div>
-                <div class="inspection-actions">
-                    <button id="reindexCacheBtn" class="btn btn-secondary">REINDEX TOKEN MAP</button>
-                    <button id="clearDataBtn" class="btn btn-warning">CLEAR ALL DATA</button>
+
+                <!-- Action Buttons -->
+                <div class="data-actions">
+                    <button id="loadDataBtn" class="btn btn-primary font-bold">LOAD DATABASE</button>
+                    <button id="reindexCacheBtn" class="btn btn-secondary" style="display: none;">REINDEX TOKEN MAP</button>
+                    <button id="clearDataBtn" class="btn btn-warning" style="display: none;">CLEAR ALL DATA</button>
                 </div>
+
+                <!-- Database Info -->
+                <div id="dataInfo" class="data-info"></div>
+
+                <!-- Database Details -->
+                <div id="dataInspection" class="data-inspection" style="display: none;">
+                    <div class="inspection-header">
+                        <span class="text-metric font-bold">DATABASE DETAILS</span>
+                    </div>
+                    <div id="inspectionContent" class="inspection-content"></div>
+                </div>
+
+                <p class="help-text">
+                    Sources: <span class="text-secondary">FAA NASR (US) + OurAirports (Worldwide)</span>
+                </p>
             </div>
-            <p class="help-text">
-                Sources: <span class="text-secondary">FAA NASR (US) + OurAirports (Worldwide)</span>
-            </p>
-        </div>
         </div>
         <!-- End Tab: Data & Cache -->
 

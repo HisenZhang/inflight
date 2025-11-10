@@ -17,6 +17,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         UIController.init();
         const elements = UIController.getElements();
 
+        // Initialize system checks (Internet, GPS)
+        UIController.initSystemChecks();
+
         // Check geodesy libraries
         RouteCalculator.checkLibraries();
 
@@ -29,9 +32,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Check for cached data
         const cacheResult = await DataManager.checkCachedData();
         if (cacheResult.loaded) {
-            UIController.updateStatus(cacheResult.status, cacheResult.type);
             UIController.showDataInfo();
             UIController.enableRouteInput();
+        } else {
+            UIController.updateDatabaseStatus('warning', 'NOT LOADED');
         }
 
         // Setup event listeners
@@ -39,6 +43,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Display query history
         UIController.displayQueryHistory();
+
+        // Start GPS automatically
+        if (window.VectorMap && window.VectorMap.startGPSTracking) {
+            window.VectorMap.startGPSTracking();
+        }
 
         // Check for saved navlog (crash recovery) - use FlightState instead of DataManager
         const savedNavlog = window.FlightState ? window.FlightState.loadFromStorage() : null;
@@ -241,12 +250,19 @@ async function handleLoadData() {
     const elements = UIController.getElements();
     elements.loadDataBtn.disabled = true;
 
+    // Update database status to loading
+    UIController.updateDatabaseStatus('checking', 'LOADING...');
+
     try {
-        await DataManager.loadData(UIController.updateStatus);
+        await DataManager.loadData((message, type) => {
+            // Don't update the old status box, just log progress
+            console.log(`[DataManager] ${message}`);
+        });
         UIController.showDataInfo();
         UIController.enableRouteInput();
     } catch (error) {
         console.error('Error loading data:', error);
+        UIController.updateDatabaseStatus('error', 'LOAD FAILED');
         elements.loadDataBtn.disabled = false;
     }
 }
@@ -270,26 +286,22 @@ async function handleClearCache() {
             await DataManager.clearCache();
             const elements = UIController.getElements();
 
-            UIController.updateStatus('[!] DATA CLEARED - RELOAD DATABASE', 'warning');
+            // Update database status
+            UIController.updateDatabaseStatus('warning', 'NOT LOADED');
 
-            // Clear Route tab elements
+            // Clear and reset UI
             elements.dataInfo.innerHTML = '';
-            elements.dataInspection.innerHTML = ''; // Clear inspection content
+            elements.dataInfo.style.display = 'none';
+            elements.dataInspection.style.display = 'none';
+            elements.dataInspection.innerHTML = '';
+
+            // Reset buttons
             elements.loadDataBtn.disabled = false;
             elements.loadDataBtn.style.display = 'inline-block';
+            elements.reindexCacheBtn.style.display = 'none';
+            elements.clearDataBtn.style.display = 'none';
+
             elements.resultsSection.style.display = 'none';
-
-            // Clear Data tab elements (if separate DATA tab exists)
-            const dataInfoData = document.getElementById('dataInfoData');
-            const dataInspectionData = document.getElementById('dataInspectionData');
-            const loadDataBtnData = document.getElementById('loadDataBtnData');
-
-            if (dataInfoData) dataInfoData.innerHTML = '';
-            if (dataInspectionData) dataInspectionData.innerHTML = '';
-            if (loadDataBtnData) {
-                loadDataBtnData.disabled = false;
-                loadDataBtnData.style.display = 'inline-block';
-            }
 
             UIController.disableRouteInput();
         } catch (error) {
