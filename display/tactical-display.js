@@ -18,6 +18,25 @@ let panStart = null;
 let svgDimensions = { width: 1000, height: 500 }; // Track SVG dimensions for pan limits
 let touchStartPositions = null; // Track touch positions for pan and pinch
 
+// Cached DOM elements for navigation display (avoid repeated querySelector calls)
+let navElements = null;
+
+function cacheNavElements() {
+    if (!navElements) {
+        navElements = {
+            nextWp: document.querySelector('.next-wp'),
+            reqHdg: document.querySelector('.req-hdg'),
+            dist: document.querySelector('.dist-nm'),
+            ete: document.querySelector('.ete-value'),
+            eta: document.querySelector('.eta-time'),
+            gs: document.querySelector('.gs-value'),
+            horizAcc: document.querySelector('.gps-horiz-acc'),
+            vertAcc: document.querySelector('.gps-vert-acc')
+        };
+    }
+    return navElements;
+}
+
 // ============================================
 // GPS TRACKING
 // ============================================
@@ -1014,11 +1033,11 @@ function showNearbyPointPopup(point, type, elementIndex) {
 function updateCurrentInstruction(firstLeg, options) {
     const toCode = window.RouteCalculator.getWaypointCode(firstLeg.to);
     const waypoint = firstLeg.to;
+    const els = cacheNavElements();
 
     // Set waypoint with color based on type
-    const nextWpEl = document.querySelector('.next-wp');
-    if (nextWpEl) {
-        nextWpEl.textContent = toCode;
+    if (els.nextWp) {
+        els.nextWp.textContent = toCode;
 
         // Apply waypoint color
         let color = '#ffffff'; // Default white for fixes
@@ -1029,74 +1048,69 @@ function updateCurrentInstruction(firstLeg, options) {
         } else if (waypoint.waypointType === 'fix') {
             color = waypoint.isReportingPoint ? '#ffbf00' : '#ffffff'; // Amber or White
         }
-        nextWpEl.style.color = color;
+        els.nextWp.style.color = color;
     }
 
     // Heading in cyan
     const heading = firstLeg.magHeading !== null ? Math.round(firstLeg.magHeading) : Math.round(firstLeg.trueCourse);
-    const reqHdgEl = document.querySelector('.req-hdg');
-    if (reqHdgEl) {
-        reqHdgEl.textContent = String(heading).padStart(3, '0') + '°';
-        reqHdgEl.style.color = '#00ffff'; // Cyan for heading
+    if (els.reqHdg) {
+        els.reqHdg.textContent = String(heading).padStart(3, '0') + '°';
+        els.reqHdg.style.color = '#00ffff'; // Cyan for heading
     }
 
     // Distance in green
-    const distEl = document.querySelector('.dist-nm');
-    if (distEl) {
-        distEl.textContent = firstLeg.distance.toFixed(1);
-        distEl.style.color = '#00ff00'; // Green
+    if (els.dist) {
+        els.dist.textContent = firstLeg.distance.toFixed(1);
+        els.dist.style.color = '#00ff00'; // Green
     }
 
     // ETE in green
-    const eteEl = document.querySelector('.ete-value');
-    if (eteEl) {
+    if (els.ete) {
         if (firstLeg.legTime !== undefined) {
             const hours = Math.floor(firstLeg.legTime / 60);
             const minutes = Math.round(firstLeg.legTime % 60);
-            eteEl.textContent = hours > 0 ? `${hours}H${minutes}M` : `${minutes}M`;
+            els.ete.textContent = hours > 0 ? `${hours}H${minutes}M` : `${minutes}M`;
         } else {
-            eteEl.textContent = '--';
+            els.ete.textContent = '--';
         }
-        eteEl.style.color = '#00ff00'; // Green
+        els.ete.style.color = '#00ff00'; // Green
     }
 
     // ETA in green
-    const etaEl = document.querySelector('.eta-time');
-    if (etaEl) {
+    if (els.eta) {
         if (firstLeg.legTime !== undefined) {
             const now = new Date();
             const etaMs = now.getTime() + firstLeg.legTime * 60 * 1000;
             const eta = new Date(etaMs);
             const hours = String(eta.getHours()).padStart(2, '0');
             const minutes = String(eta.getMinutes()).padStart(2, '0');
-            etaEl.textContent = `${hours}:${minutes}`;
+            els.eta.textContent = `${hours}:${minutes}`;
         } else {
-            etaEl.textContent = '--:--';
+            els.eta.textContent = '--:--';
         }
-        etaEl.style.color = '#00ff00'; // Green
+        els.eta.style.color = '#00ff00'; // Green
     }
 
     // Ground speed in green
-    const gsEl = document.querySelector('.gs-value');
-    if (gsEl) {
+    if (els.gs) {
         if (firstLeg.groundSpeed !== undefined) {
-            gsEl.textContent = Math.round(firstLeg.groundSpeed);
+            els.gs.textContent = Math.round(firstLeg.groundSpeed);
         } else {
-            gsEl.textContent = '--';
+            els.gs.textContent = '--';
         }
-        gsEl.style.color = '#00ff00'; // Green
+        els.gs.style.color = '#00ff00'; // Green
     }
 }
 
 function updateNavigationDisplay(navData) {
     const { nextWaypoint, distToNext, magHeading, eteNextWP, etaNextWP,
             gpsGroundSpeed, horizontalAccuracy, verticalAccuracy } = navData;
+    const els = cacheNavElements();
 
     // Update waypoint name with color
-    const nextWpEl = document.querySelector('.next-wp');
-    if (nextWpEl && nextWaypoint) {
+    if (els.nextWp && nextWaypoint) {
         const toCode = window.RouteCalculator.getWaypointCode(nextWaypoint);
-        nextWpEl.textContent = toCode;
+        els.nextWp.textContent = toCode;
 
         // Apply waypoint color
         let color = '#ffffff'; // Default white for fixes
@@ -1107,98 +1121,91 @@ function updateNavigationDisplay(navData) {
         } else if (nextWaypoint.waypointType === 'fix') {
             color = nextWaypoint.isReportingPoint ? '#ffbf00' : '#ffffff'; // Amber or White
         }
-        nextWpEl.style.color = color;
+        els.nextWp.style.color = color;
     }
 
     // Update distance to next waypoint (green)
-    const distEl = document.querySelector('.dist-nm');
-    if (distEl) {
-        distEl.textContent = distToNext.toFixed(1);
-        distEl.style.color = '#00ff00'; // Green
+    if (els.dist) {
+        els.dist.textContent = distToNext.toFixed(1);
+        els.dist.style.color = '#00ff00'; // Green
     }
 
     // Update magnetic heading (cyan)
-    const reqHdgEl = document.querySelector('.req-hdg');
-    if (reqHdgEl) {
+    if (els.reqHdg) {
         if (magHeading !== null) {
-            reqHdgEl.textContent = String(Math.round(magHeading)).padStart(3, '0') + '°';
+            els.reqHdg.textContent = String(Math.round(magHeading)).padStart(3, '0') + '°';
         } else {
-            reqHdgEl.textContent = '---°';
+            els.reqHdg.textContent = '---°';
         }
-        reqHdgEl.style.color = '#00ffff'; // Cyan for heading
+        els.reqHdg.style.color = '#00ffff'; // Cyan for heading
     }
 
     // Update ETE to next waypoint (green) - hide if ground speed < 5kt (likely noise)
-    const eteEl = document.querySelector('.ete-value');
-    if (eteEl && eteNextWP !== null && gpsGroundSpeed !== null && gpsGroundSpeed >= 5) {
+    if (els.ete && eteNextWP !== null && gpsGroundSpeed !== null && gpsGroundSpeed >= 5) {
         const hours = Math.floor(eteNextWP / 60);
         const minutes = Math.round(eteNextWP % 60);
-        eteEl.textContent = hours > 0 ? `${hours}H${minutes}M` : `${minutes}M`;
-        eteEl.style.color = '#00ff00'; // Green
-    } else if (eteEl) {
-        eteEl.textContent = '--';
-        eteEl.style.color = '#00ff00'; // Green
+        els.ete.textContent = hours > 0 ? `${hours}H${minutes}M` : `${minutes}M`;
+        els.ete.style.color = '#00ff00'; // Green
+    } else if (els.ete) {
+        els.ete.textContent = '--';
+        els.ete.style.color = '#00ff00'; // Green
     }
 
     // Update ETA (green) - hide if ground speed < 5kt (likely noise)
-    const etaEl = document.querySelector('.eta-time');
-    if (etaEl && etaNextWP && gpsGroundSpeed !== null && gpsGroundSpeed >= 5) {
+    if (els.eta && etaNextWP && gpsGroundSpeed !== null && gpsGroundSpeed >= 5) {
         const hours = String(etaNextWP.getHours()).padStart(2, '0');
         const minutes = String(etaNextWP.getMinutes()).padStart(2, '0');
-        etaEl.textContent = `${hours}:${minutes}`;
-        etaEl.style.color = '#00ff00'; // Green
-    } else if (etaEl) {
-        etaEl.textContent = '--:--';
-        etaEl.style.color = '#00ff00'; // Green
+        els.eta.textContent = `${hours}:${minutes}`;
+        els.eta.style.color = '#00ff00'; // Green
+    } else if (els.eta) {
+        els.eta.textContent = '--:--';
+        els.eta.style.color = '#00ff00'; // Green
     }
 
     // Update GPS ground speed (green)
-    const gsEl = document.querySelector('.gs-value');
-    if (gsEl && gpsGroundSpeed !== null) {
-        gsEl.textContent = Math.round(gpsGroundSpeed);
-        gsEl.style.color = '#00ff00'; // Green
-    } else if (gsEl) {
-        gsEl.textContent = '--';
-        gsEl.style.color = '#00ff00'; // Green
+    if (els.gs && gpsGroundSpeed !== null) {
+        els.gs.textContent = Math.round(gpsGroundSpeed);
+        els.gs.style.color = '#00ff00'; // Green
+    } else if (els.gs) {
+        els.gs.textContent = '--';
+        els.gs.style.color = '#00ff00'; // Green
     }
 
     // Update GPS accuracy with color coding (convert meters to feet)
-    const horizAccEl = document.querySelector('.gps-horiz-acc');
-    if (horizAccEl && horizontalAccuracy !== null) {
+    if (els.horizAcc && horizontalAccuracy !== null) {
         const accFeet = Math.round(horizontalAccuracy * 3.28084); // meters to feet
-        horizAccEl.textContent = `±${accFeet}FT`;
+        els.horizAcc.textContent = `±${accFeet}FT`;
 
         // Color code: green <164ft (50m), yellow 164-328ft (50-100m), red >328ft (100m)
-        horizAccEl.className = 'gps-horiz-acc';
+        els.horizAcc.className = 'gps-horiz-acc';
         if (accFeet < 164) {
-            horizAccEl.classList.add('text-metric'); // green
+            els.horizAcc.classList.add('text-metric'); // green
         } else if (accFeet < 328) {
-            horizAccEl.classList.add('text-warning'); // yellow
+            els.horizAcc.classList.add('text-warning'); // yellow
         } else {
-            horizAccEl.classList.add('text-error'); // red
+            els.horizAcc.classList.add('text-error'); // red
         }
-    } else if (horizAccEl) {
-        horizAccEl.textContent = '--';
-        horizAccEl.className = 'gps-horiz-acc text-secondary';
+    } else if (els.horizAcc) {
+        els.horizAcc.textContent = '--';
+        els.horizAcc.className = 'gps-horiz-acc text-secondary';
     }
 
-    const vertAccEl = document.querySelector('.gps-vert-acc');
-    if (vertAccEl && verticalAccuracy !== null) {
+    if (els.vertAcc && verticalAccuracy !== null) {
         const accFeet = Math.round(verticalAccuracy * 3.28084); // meters to feet
-        vertAccEl.textContent = `±${accFeet}FT`;
+        els.vertAcc.textContent = `±${accFeet}FT`;
 
         // Color code: green <164ft (50m), yellow 164-328ft (50-100m), red >328ft (100m)
-        vertAccEl.className = 'gps-vert-acc';
+        els.vertAcc.className = 'gps-vert-acc';
         if (accFeet < 164) {
-            vertAccEl.classList.add('text-metric'); // green
+            els.vertAcc.classList.add('text-metric'); // green
         } else if (accFeet < 328) {
-            vertAccEl.classList.add('text-warning'); // yellow
+            els.vertAcc.classList.add('text-warning'); // yellow
         } else {
-            vertAccEl.classList.add('text-error'); // red
+            els.vertAcc.classList.add('text-error'); // red
         }
-    } else if (vertAccEl) {
-        vertAccEl.textContent = '--';
-        vertAccEl.className = 'gps-vert-acc text-secondary';
+    } else if (els.vertAcc) {
+        els.vertAcc.textContent = '--';
+        els.vertAcc.className = 'gps-vert-acc text-secondary';
     }
 
     // Regenerate map with current position
