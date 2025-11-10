@@ -256,7 +256,8 @@
             <!-- Navigation Panel - Hidden when GPS is off -->
             <div id="navigationPanel" class="navigation-panel" style="display: none;">
                 <div id="navigationContent" class="navigation-content">
-                    <div class="nav-single-row">
+                    <!-- Primary row: WPT, HDG, DIST, ETE -->
+                    <div class="nav-primary-row">
                         <div class="nav-item">
                             <span class="nav-label">WPT</span>
                             <span class="nav-value next-wp"></span>
@@ -273,6 +274,10 @@
                             <span class="nav-label">ETE</span>
                             <span class="nav-value ete-value"></span>
                         </div>
+                    </div>
+
+                    <!-- Secondary row: GS, ETA, H-ACC, V-ACC -->
+                    <div class="nav-secondary-row">
                         <div class="nav-item">
                             <span class="nav-label">GS</span>
                             <span class="nav-value gs-value"></span>
@@ -282,10 +287,6 @@
                             <span class="nav-value eta-time"></span>
                         </div>
                         <div class="nav-item">
-                            <span class="nav-label">DEST</span>
-                            <span class="nav-value eta-dest-value">--:--</span>
-                        </div>
-                        <div class="nav-item">
                             <span class="nav-label">H-ACC</span>
                             <span class="nav-value gps-horiz-acc text-secondary">--</span>
                         </div>
@@ -293,10 +294,12 @@
                             <span class="nav-label">V-ACC</span>
                             <span class="nav-value gps-vert-acc text-secondary">--</span>
                         </div>
-                        <div class="nav-buttons">
-                            <button class="btn btn-secondary btn-sm" id="prevNavWptBtn">◄</button>
-                            <button class="btn btn-secondary btn-sm" id="nextNavWptBtn">►</button>
-                        </div>
+                    </div>
+
+                    <!-- Navigation buttons -->
+                    <div class="nav-buttons-row">
+                        <button class="btn btn-secondary" id="prevNavWptBtn">◄ PREV</button>
+                        <button class="btn btn-secondary" id="nextNavWptBtn">NEXT ►</button>
                     </div>
                 </div>
             </div>

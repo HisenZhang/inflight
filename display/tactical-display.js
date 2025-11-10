@@ -1004,24 +1004,54 @@ function showNearbyPointPopup(point, type, elementIndex) {
 
 function updateCurrentInstruction(firstLeg, options) {
     const toCode = window.RouteCalculator.getWaypointCode(firstLeg.to);
+    const waypoint = firstLeg.to;
 
+    // Set waypoint with color based on type
     const nextWpEl = document.querySelector('.next-wp');
     if (nextWpEl) {
         nextWpEl.textContent = toCode;
+
+        // Apply waypoint color
+        let color = '#ffffff'; // Default white for fixes
+        if (waypoint.waypointType === 'airport') {
+            color = '#00ffff'; // Cyan
+        } else if (waypoint.waypointType === 'navaid') {
+            color = '#ff00ff'; // Magenta
+        } else if (waypoint.waypointType === 'fix') {
+            color = waypoint.isReportingPoint ? '#ffbf00' : '#ffffff'; // Amber or White
+        }
+        nextWpEl.style.color = color;
     }
 
+    // Heading in cyan
     const heading = firstLeg.magHeading !== null ? Math.round(firstLeg.magHeading) : Math.round(firstLeg.trueCourse);
     const reqHdgEl = document.querySelector('.req-hdg');
     if (reqHdgEl) {
         reqHdgEl.textContent = String(heading).padStart(3, '0') + '°';
+        reqHdgEl.style.color = '#00ffff'; // Cyan for heading
     }
 
+    // Distance in green
     const distEl = document.querySelector('.dist-nm');
     if (distEl) {
         distEl.textContent = firstLeg.distance.toFixed(1);
+        distEl.style.color = '#00ff00'; // Green
     }
 
-    // ETA
+    // ETE in green
+    const eteEl = document.querySelector('.ete-value');
+    if (eteEl) {
+        if (firstLeg.legTime !== undefined) {
+            const hours = Math.floor(firstLeg.legTime / 60);
+            const minutes = Math.round(firstLeg.legTime % 60);
+            eteEl.textContent = hours > 0 ? `${hours}H${minutes}M` : `${minutes}M`;
+        } else {
+            eteEl.textContent = '--';
+        }
+        eteEl.style.color = '#00ff00'; // Green
+    }
+
+    // ETA in green
     const etaEl = document.querySelector('.eta-time');
     if (etaEl) {
         if (firstLeg.legTime !== undefined) {
@@ -1034,9 +1064,10 @@ function updateCurrentInstruction(firstLeg, options) {
         } else {
             etaEl.textContent = '--:--';
         }
+        etaEl.style.color = '#00ff00'; // Green
     }
 
-    // Ground speed
+    // Ground speed in green
     const gsEl = document.querySelector('.gs-value');
     if (gsEl) {
         if (firstLeg.groundSpeed !== undefined) {
@@ -1044,27 +1075,40 @@ function updateCurrentInstruction(firstLeg, options) {
         } else {
             gsEl.textContent = '--';
         }
+        gsEl.style.color = '#00ff00'; // Green
     }
 }
 
 function updateNavigationDisplay(navData) {
-    const { nextWaypoint, distToNext, magHeading, eteNextWP, etaNextWP, etaDestination,
+    const { nextWaypoint, distToNext, magHeading, eteNextWP, etaNextWP,
             gpsGroundSpeed, horizontalAccuracy, verticalAccuracy } = navData;
 
-    // Update waypoint name
+    // Update waypoint name with color
     const nextWpEl = document.querySelector('.next-wp');
     if (nextWpEl && nextWaypoint) {
         const toCode = window.RouteCalculator.getWaypointCode(nextWaypoint);
         nextWpEl.textContent = toCode;
+
+        // Apply waypoint color
+        let color = '#ffffff'; // Default white for fixes
+        if (nextWaypoint.waypointType === 'airport') {
+            color = '#00ffff'; // Cyan
+        } else if (nextWaypoint.waypointType === 'navaid') {
+            color = '#ff00ff'; // Magenta
+        } else if (nextWaypoint.waypointType === 'fix') {
+            color = nextWaypoint.isReportingPoint ? '#ffbf00' : '#ffffff'; // Amber or White
+        }
+        nextWpEl.style.color = color;
     }
 
-    // Update distance to next waypoint
+    // Update distance to next waypoint (green)
     const distEl = document.querySelector('.dist-nm');
     if (distEl) {
         distEl.textContent = distToNext.toFixed(1);
+        distEl.style.color = '#00ff00'; // Green
     }
 
-    // Update magnetic heading
+    // Update magnetic heading (cyan)
     const reqHdgEl = document.querySelector('.req-hdg');
     if (reqHdgEl) {
         if (magHeading !== null) {
@@ -1072,44 +1116,41 @@ function updateNavigationDisplay(navData) {
         } else {
             reqHdgEl.textContent = '---°';
         }
+        reqHdgEl.style.color = '#00ffff'; // Cyan for heading
     }
 
-    // Update ETE to next waypoint
+    // Update ETE to next waypoint (green)
     const eteEl = document.querySelector('.ete-value');
     if (eteEl && eteNextWP !== null) {
         const hours = Math.floor(eteNextWP / 60);
         const minutes = Math.round(eteNextWP % 60);
         eteEl.textContent = hours > 0 ? `${hours}H${minutes}M` : `${minutes}M`;
+        eteEl.style.color = '#00ff00'; // Green
     } else if (eteEl) {
         eteEl.textContent = '--';
+        eteEl.style.color = '#00ff00'; // Green
     }
 
-    // Update ETA to next waypoint
+    // Update ETA (green)
     const etaEl = document.querySelector('.eta-time');
     if (etaEl && etaNextWP) {
         const hours = String(etaNextWP.getHours()).padStart(2, '0');
         const minutes = String(etaNextWP.getMinutes()).padStart(2, '0');
         etaEl.textContent = `${hours}:${minutes}`;
+        etaEl.style.color = '#00ff00'; // Green
     } else if (etaEl) {
         etaEl.textContent = '--:--';
+        etaEl.style.color = '#00ff00'; // Green
     }
 
-    // Update ETA to destination
-    const etaDestEl = document.querySelector('.eta-dest-value');
-    if (etaDestEl && etaDestination) {
-        const hours = String(etaDestination.getHours()).padStart(2, '0');
-        const minutes = String(etaDestination.getMinutes()).padStart(2, '0');
-        etaDestEl.textContent = `${hours}:${minutes}`;
-    } else if (etaDestEl) {
-        etaDestEl.textContent = '--:--';
-    }
-
-    // Update GPS ground speed
+    // Update GPS ground speed (green)
     const gsEl = document.querySelector('.gs-value');
     if (gsEl && gpsGroundSpeed !== null) {
         gsEl.textContent = Math.round(gpsGroundSpeed);
+        gsEl.style.color = '#00ff00'; // Green
     } else if (gsEl) {
         gsEl.textContent = '--';
+        gsEl.style.color = '#00ff00'; // Green
     }
 
     // Update GPS accuracy with color coding (convert meters to feet)
