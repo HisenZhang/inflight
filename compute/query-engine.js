@@ -45,6 +45,68 @@ function init(airports, navaids, fixes, airways, tokenMap) {
  * @param {number} limit - Maximum number of results (default: 15)
  * @returns {Array} Array of matching waypoints with type and display info
  */
+/**
+ * Search airports only (for departure/destination autocomplete)
+ * @param {string} term - Search term
+ * @param {number} limit - Maximum results to return
+ * @returns {Array} Array of airport results
+ */
+function searchAirports(term, limit = 15) {
+    const upperTerm = term ? term.toUpperCase() : '';
+
+    // Arrays for different priority levels
+    const exactMatches = [];
+    const prefixMatches = [];
+    const substringMatches = [];
+    const descriptionMatches = [];
+
+    // Require at least 1 character
+    if (!upperTerm || upperTerm.length < 1) return [];
+
+    // Search airports only
+    if (qe_airportsData) {
+        for (const [code, airport] of qe_airportsData) {
+            const upperCode = code.toUpperCase();
+            const upperName = (airport.name || '').toUpperCase();
+            const iata = (airport.iata || '').toUpperCase();
+
+            const result = {
+                code: code,
+                name: airport.name || code,
+                type: 'AIRPORT',
+                waypointType: 'airport',
+                lat: airport.lat,
+                lon: airport.lon,
+                location: `${airport.municipality || ''}, ${airport.country || ''}`.trim()
+            };
+
+            if (upperCode === upperTerm || iata === upperTerm) {
+                exactMatches.push(result);
+            } else if (upperCode.startsWith(upperTerm) || iata.startsWith(upperTerm)) {
+                prefixMatches.push(result);
+            } else if (upperCode.includes(upperTerm) || iata.includes(upperTerm)) {
+                substringMatches.push(result);
+            } else if (upperName.includes(upperTerm)) {
+                descriptionMatches.push(result);
+            }
+        }
+    }
+
+    // Sort each group alphabetically by code
+    exactMatches.sort((a, b) => a.code.localeCompare(b.code));
+    prefixMatches.sort((a, b) => a.code.localeCompare(b.code));
+    substringMatches.sort((a, b) => a.code.localeCompare(b.code));
+    descriptionMatches.sort((a, b) => a.code.localeCompare(b.code));
+
+    // Combine results with priority: exact > prefix > substring > description
+    return [
+        ...exactMatches,
+        ...prefixMatches,
+        ...substringMatches,
+        ...descriptionMatches
+    ].slice(0, limit);
+}
+
 function searchWaypoints(term, previousToken = null, limit = 15) {
     const upperTerm = term ? term.toUpperCase() : '';
     const upperPrevToken = previousToken ? previousToken.toUpperCase() : null;
@@ -543,6 +605,7 @@ window.QueryEngine = {
 
     // Autocomplete and search
     searchWaypoints,
+    searchAirports,
     getTokenType,
 
     // Spatial queries

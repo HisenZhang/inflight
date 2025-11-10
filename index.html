@@ -78,23 +78,26 @@
             <!-- ICAO-Style Route Input (Required) -->
             <div class="route-input-icao">
                 <!-- Departure Airport -->
-                <div class="input-row">
-                    <label class="input-label font-medium">DEPARTURE:</label>
-                    <input
-                        type="text"
-                        id="departureInput"
-                        class="font-medium route-field"
-                        placeholder="KALB"
-                        maxlength="6"
-                        autocomplete="off"
-                        disabled
-                    >
+                <div class="input-group">
+                    <label class="text-sm font-medium text-secondary">DEPARTURE:</label>
+                    <div class="input-wrapper">
+                        <input
+                            type="text"
+                            id="departureInput"
+                            class="font-medium route-field"
+                            placeholder="KALB"
+                            maxlength="6"
+                            autocomplete="off"
+                            disabled
+                        >
+                        <div id="departureAutocompleteDropdown" class="autocomplete-dropdown"></div>
+                    </div>
                 </div>
 
                 <!-- Route (Optional) -->
-                <div class="input-row">
-                    <label class="input-label font-medium">ROUTE:</label>
-                    <div class="input-wrapper flex-grow">
+                <div class="input-group">
+                    <label class="text-sm font-medium text-secondary">ROUTE:</label>
+                    <div class="input-wrapper">
                         <input
                             type="text"
                             id="routeInput"
@@ -108,17 +111,20 @@
                 </div>
 
                 <!-- Destination Airport -->
-                <div class="input-row">
-                    <label class="input-label font-medium">DESTINATION:</label>
-                    <input
-                        type="text"
-                        id="destinationInput"
-                        class="font-medium route-field"
-                        placeholder="KORD"
-                        maxlength="6"
-                        autocomplete="off"
-                        disabled
-                    >
+                <div class="input-group">
+                    <label class="text-sm font-medium text-secondary">DESTINATION:</label>
+                    <div class="input-wrapper">
+                        <input
+                            type="text"
+                            id="destinationInput"
+                            class="font-medium route-field"
+                            placeholder="KORD"
+                            maxlength="6"
+                            autocomplete="off"
+                            disabled
+                        >
+                        <div id="destinationAutocompleteDropdown" class="autocomplete-dropdown"></div>
+                    </div>
                 </div>
 
                 <!-- Action Buttons -->

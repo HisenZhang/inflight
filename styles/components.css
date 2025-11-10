@@ -248,18 +248,16 @@ header {
     margin-bottom: var(--space-sm);
 }
 
-.route-input-icao .input-row {
-    display: grid;
-    grid-template-columns: 120px 1fr;
-    gap: var(--space-sm);
-    align-items: center;
+.route-input-icao .input-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    margin-bottom: var(--space-sm);
 }
 
-.route-input-icao .input-label {
+.route-input-icao .input-group label {
     color: var(--text-secondary);
-    font-size: 0.9rem;
     letter-spacing: 1px;
-    text-align: right;
 }
 
 .route-input-icao .button-row {
@@ -271,10 +269,6 @@ header {
 .input-wrapper {
     position: relative;
     width: 100%;
-}
-
-.flex-grow {
-    flex-grow: 1;
 }
 
 .route-field {
@@ -661,6 +655,8 @@ header {
     font-size: 1.1rem;
     font-weight: 700;
     letter-spacing: 2px;
+    word-break: break-all;
+    overflow-wrap: break-word;
 }
 
 .leg-info {

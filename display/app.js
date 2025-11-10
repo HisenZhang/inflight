@@ -181,15 +181,19 @@ function setupEventListeners() {
         });
     });
 
-    // Uppercase conversion for departure input
+    // Departure input with autocomplete
     elements.departureInput.addEventListener('input', (e) => {
         const start = e.target.selectionStart;
         const end = e.target.selectionEnd;
         e.target.value = e.target.value.toUpperCase();
         e.target.setSelectionRange(start, end);
+
+        // Trigger autocomplete
+        UIController.handleDepartureAutocompleteInput(e);
     });
     elements.departureInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !elements.calculateBtn.disabled) {
+        UIController.handleDepartureKeydown(e);
+        if (e.key === 'Enter' && !elements.departureAutocompleteDropdown.classList.contains('show') && !elements.calculateBtn.disabled) {
             handleCalculateRoute();
         }
     });
@@ -213,15 +217,19 @@ function setupEventListeners() {
         }
     });
 
-    // Uppercase conversion for destination input
+    // Destination input with autocomplete
     elements.destinationInput.addEventListener('input', (e) => {
         const start = e.target.selectionStart;
         const end = e.target.selectionEnd;
         e.target.value = e.target.value.toUpperCase();
         e.target.setSelectionRange(start, end);
+
+        // Trigger autocomplete
+        UIController.handleDestinationAutocompleteInput(e);
     });
     elements.destinationInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !elements.calculateBtn.disabled) {
+        UIController.handleDestinationKeydown(e);
+        if (e.key === 'Enter' && !elements.destinationAutocompleteDropdown.classList.contains('show') && !elements.calculateBtn.disabled) {
             handleCalculateRoute();
         }
     });
@@ -254,10 +262,50 @@ function setupEventListeners() {
         }
     };
 
+    // Departure autocomplete blur handling
+    let departureBlurTimeout = null;
+
+    elements.departureInput.addEventListener('blur', () => {
+        departureBlurTimeout = setTimeout(() => {
+            UIController.hideDepartureAutocomplete();
+        }, 200);
+    });
+
+    elements.departureAutocompleteDropdown.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        if (departureBlurTimeout) {
+            clearTimeout(departureBlurTimeout);
+            departureBlurTimeout = null;
+        }
+    });
+
+    // Destination autocomplete blur handling
+    let destinationBlurTimeout = null;
+
+    elements.destinationInput.addEventListener('blur', () => {
+        destinationBlurTimeout = setTimeout(() => {
+            UIController.hideDestinationAutocomplete();
+        }, 200);
+    });
+
+    elements.destinationAutocompleteDropdown.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        if (destinationBlurTimeout) {
+            clearTimeout(destinationBlurTimeout);
+            destinationBlurTimeout = null;
+        }
+    });
+
     // Click outside to close autocomplete
     document.addEventListener('click', (e) => {
         if (!elements.routeInput.contains(e.target) && !elements.autocompleteDropdown.contains(e.target)) {
             UIController.hideAutocomplete();
+        }
+        if (!elements.departureInput.contains(e.target) && !elements.departureAutocompleteDropdown.contains(e.target)) {
+            UIController.hideDepartureAutocomplete();
+        }
+        if (!elements.destinationInput.contains(e.target) && !elements.destinationAutocompleteDropdown.contains(e.target)) {
+            UIController.hideDestinationAutocomplete();
         }
     });
 }

@@ -7,6 +7,13 @@ let elements = {};
 let selectedAutocompleteIndex = -1;
 let autocompleteResults = [];
 
+// Airport autocomplete state (for departure/destination)
+let selectedDepartureIndex = -1;
+let departureResults = [];
+let selectedDestinationIndex = -1;
+let destinationResults = [];
+let isProcessingAirportSelection = false;
+
 // ============================================
 // INITIALIZATION
 // ============================================
@@ -52,6 +59,8 @@ function init() {
 
         // Autocomplete elements
         autocompleteDropdown: document.getElementById('autocompleteDropdown'),
+        departureAutocompleteDropdown: document.getElementById('departureAutocompleteDropdown'),
+        destinationAutocompleteDropdown: document.getElementById('destinationAutocompleteDropdown'),
 
         // History elements
         queryHistoryDiv: document.getElementById('queryHistory'),
@@ -740,6 +749,215 @@ function selectAutocompleteItem(index) {
 }
 
 // ============================================
+// AIRPORT AUTOCOMPLETE (DEPARTURE/DESTINATION)
+// ============================================
+
+function handleDepartureAutocompleteInput(e) {
+    const value = e.target.value.toUpperCase();
+
+    if (value.length < 1) {
+        hideDepartureAutocomplete();
+        return;
+    }
+
+    const results = window.QueryEngine?.searchAirports(value) || [];
+    departureResults = results;
+    displayDepartureAutocomplete(results);
+}
+
+function displayDepartureAutocomplete(results) {
+    if (results.length === 0) {
+        elements.departureAutocompleteDropdown.innerHTML = '<div class="autocomplete-empty">No airports found</div>';
+        elements.departureAutocompleteDropdown.classList.add('show');
+        return;
+    }
+
+    let html = '';
+    results.forEach((result, index) => {
+        html += `
+            <div class="autocomplete-item type-airport" data-index="${index}">
+                <span class="code">${result.code}</span>
+                <span class="name">${result.name !== result.code ? result.name : ''}</span>
+                <span class="location">${result.location}</span>
+            </div>
+        `;
+    });
+
+    elements.departureAutocompleteDropdown.innerHTML = html;
+    elements.departureAutocompleteDropdown.classList.add('show');
+    selectedDepartureIndex = -1;
+
+    elements.departureAutocompleteDropdown.querySelectorAll('.autocomplete-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const index = parseInt(item.getAttribute('data-index'));
+            selectDepartureItem(index);
+        });
+    });
+}
+
+function hideDepartureAutocomplete() {
+    if (isProcessingAirportSelection) return;
+    elements.departureAutocompleteDropdown.classList.remove('show');
+    elements.departureAutocompleteDropdown.innerHTML = '';
+    selectedDepartureIndex = -1;
+    departureResults = [];
+}
+
+function handleDepartureKeydown(e) {
+    if (!elements.departureAutocompleteDropdown.classList.contains('show')) {
+        return;
+    }
+
+    const items = elements.departureAutocompleteDropdown.querySelectorAll('.autocomplete-item');
+
+    if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        selectedDepartureIndex = Math.min(selectedDepartureIndex + 1, items.length - 1);
+        updateDepartureSelection(items);
+    } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        selectedDepartureIndex = Math.max(selectedDepartureIndex - 1, -1);
+        updateDepartureSelection(items);
+    } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (selectedDepartureIndex >= 0) {
+            selectDepartureItem(selectedDepartureIndex);
+        }
+    } else if (e.key === 'Escape') {
+        e.preventDefault();
+        hideDepartureAutocomplete();
+    }
+}
+
+function updateDepartureSelection(items) {
+    items.forEach((item, index) => {
+        if (index === selectedDepartureIndex) {
+            item.classList.add('selected');
+            item.scrollIntoView({ block: 'nearest' });
+        } else {
+            item.classList.remove('selected');
+        }
+    });
+}
+
+function selectDepartureItem(index) {
+    const result = departureResults[index];
+    if (!result) return;
+
+    isProcessingAirportSelection = true;
+    elements.departureInput.value = result.code;
+
+    setTimeout(() => {
+        isProcessingAirportSelection = false;
+        hideDepartureAutocomplete();
+        elements.departureInput.blur();
+    }, 100);
+}
+
+// Destination autocomplete functions
+function handleDestinationAutocompleteInput(e) {
+    const value = e.target.value.toUpperCase();
+
+    if (value.length < 1) {
+        hideDestinationAutocomplete();
+        return;
+    }
+
+    const results = window.QueryEngine?.searchAirports(value) || [];
+    destinationResults = results;
+    displayDestinationAutocomplete(results);
+}
+
+function displayDestinationAutocomplete(results) {
+    if (results.length === 0) {
+        elements.destinationAutocompleteDropdown.innerHTML = '<div class="autocomplete-empty">No airports found</div>';
+        elements.destinationAutocompleteDropdown.classList.add('show');
+        return;
+    }
+
+    let html = '';
+    results.forEach((result, index) => {
+        html += `
+            <div class="autocomplete-item type-airport" data-index="${index}">
+                <span class="code">${result.code}</span>
+                <span class="name">${result.name !== result.code ? result.name : ''}</span>
+                <span class="location">${result.location}</span>
+            </div>
+        `;
+    });
+
+    elements.destinationAutocompleteDropdown.innerHTML = html;
+    elements.destinationAutocompleteDropdown.classList.add('show');
+    selectedDestinationIndex = -1;
+
+    elements.destinationAutocompleteDropdown.querySelectorAll('.autocomplete-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const index = parseInt(item.getAttribute('data-index'));
+            selectDestinationItem(index);
+        });
+    });
+}
+
+function hideDestinationAutocomplete() {
+    if (isProcessingAirportSelection) return;
+    elements.destinationAutocompleteDropdown.classList.remove('show');
+    elements.destinationAutocompleteDropdown.innerHTML = '';
+    selectedDestinationIndex = -1;
+    destinationResults = [];
+}
+
+function handleDestinationKeydown(e) {
+    if (!elements.destinationAutocompleteDropdown.classList.contains('show')) {
+        return;
+    }
+
+    const items = elements.destinationAutocompleteDropdown.querySelectorAll('.autocomplete-item');
+
+    if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        selectedDestinationIndex = Math.min(selectedDestinationIndex + 1, items.length - 1);
+        updateDestinationSelection(items);
+    } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        selectedDestinationIndex = Math.max(selectedDestinationIndex - 1, -1);
+        updateDestinationSelection(items);
+    } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (selectedDestinationIndex >= 0) {
+            selectDestinationItem(selectedDestinationIndex);
+        }
+    } else if (e.key === 'Escape') {
+        e.preventDefault();
+        hideDestinationAutocomplete();
+    }
+}
+
+function updateDestinationSelection(items) {
+    items.forEach((item, index) => {
+        if (index === selectedDestinationIndex) {
+            item.classList.add('selected');
+            item.scrollIntoView({ block: 'nearest' });
+        } else {
+            item.classList.remove('selected');
+        }
+    });
+}
+
+function selectDestinationItem(index) {
+    const result = destinationResults[index];
+    if (!result) return;
+
+    isProcessingAirportSelection = true;
+    elements.destinationInput.value = result.code;
+
+    setTimeout(() => {
+        isProcessingAirportSelection = false;
+        hideDestinationAutocomplete();
+        elements.destinationInput.blur();
+    }, 100);
+}
+
+// ============================================
 // RESULTS DISPLAY
 // ============================================
 
@@ -1231,6 +1449,14 @@ window.UIController = {
     handleAutocompleteInput,
     handleAutocompleteKeydown,
     hideAutocomplete,
+
+    // Airport autocomplete (departure/destination)
+    handleDepartureAutocompleteInput,
+    handleDepartureKeydown,
+    hideDepartureAutocomplete,
+    handleDestinationAutocompleteInput,
+    handleDestinationKeydown,
+    hideDestinationAutocomplete,
 
     // Results
     displayResults,
