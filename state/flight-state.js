@@ -13,6 +13,9 @@ const HISTORY_STORAGE_KEY = 'route_history';
  */
 const flightPlan = {
     routeString: null,
+    departure: null,
+    destination: null,
+    routeMiddle: null,
     waypoints: [],
     legs: [],
     totalDistance: 0,
@@ -45,10 +48,13 @@ const navigation = {
 
 /**
  * Update flight plan with new data
- * @param {object} data - Flight plan data {routeString, waypoints, legs, totalDistance, totalTime, fuelStatus, options}
+ * @param {object} data - Flight plan data {routeString, departure, destination, routeMiddle, waypoints, legs, totalDistance, totalTime, fuelStatus, options}
  */
 function updateFlightPlan(data) {
     flightPlan.routeString = data.routeString || null;
+    flightPlan.departure = data.departure || null;
+    flightPlan.destination = data.destination || null;
+    flightPlan.routeMiddle = data.routeMiddle || null;
     flightPlan.waypoints = data.waypoints || [];
     flightPlan.legs = data.legs || [];
     flightPlan.totalDistance = data.totalDistance || 0;
@@ -65,6 +71,9 @@ function updateFlightPlan(data) {
  */
 function clearFlightPlan() {
     flightPlan.routeString = null;
+    flightPlan.departure = null;
+    flightPlan.destination = null;
+    flightPlan.routeMiddle = null;
     flightPlan.waypoints = [];
     flightPlan.legs = [];
     flightPlan.totalDistance = 0;
@@ -191,6 +200,9 @@ function saveToStorage() {
         const saveData = {
             timestamp: flightPlan.timestamp || Date.now(),
             routeString: flightPlan.routeString,
+            departure: flightPlan.departure,
+            destination: flightPlan.destination,
+            routeMiddle: flightPlan.routeMiddle,
             waypoints: flightPlan.waypoints,
             legs: flightPlan.legs,
             totalDistance: flightPlan.totalDistance,
@@ -279,6 +291,9 @@ function exportAsFile() {
             exportTimestamp: Date.now(),
             exportDate: new Date().toISOString(),
             routeString: flightPlan.routeString,
+            departure: flightPlan.departure,
+            destination: flightPlan.destination,
+            routeMiddle: flightPlan.routeMiddle,
             waypoints: flightPlan.waypoints,
             legs: flightPlan.legs,
             totalDistance: flightPlan.totalDistance,

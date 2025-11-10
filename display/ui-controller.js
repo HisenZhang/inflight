@@ -237,8 +237,12 @@ function initSystemChecks() {
 // ============================================
 
 function updateStatus(message, type) {
-    elements.statusText.textContent = message;
-    elements.statusBox.className = 'status-box status-' + type;
+    if (elements.statusText) {
+        elements.statusText.textContent = message;
+    }
+    if (elements.statusBox) {
+        elements.statusBox.className = 'status-box status-' + type;
+    }
 
     // Also update Data tab status
     const statusTextData = document.getElementById('statusTextData');
@@ -539,7 +543,16 @@ function displayQueryHistory() {
         item.className = 'history-item';
         item.textContent = query;
         item.addEventListener('click', () => {
-            elements.routeInput.value = query;
+            // Parse the route to extract departure, middle, and destination
+            const routeParts = query.trim().split(/\s+/);
+            if (routeParts.length >= 2) {
+                elements.departureInput.value = routeParts[0];
+                elements.destinationInput.value = routeParts[routeParts.length - 1];
+                elements.routeInput.value = routeParts.slice(1, -1).join(' ');
+            } else {
+                // Fallback: put everything in routeInput
+                elements.routeInput.value = query;
+            }
             elements.routeInput.focus();
         });
         elements.historyList.appendChild(item);
@@ -558,6 +571,40 @@ function handleAutocompleteInput(e) {
     const words = beforeCursor.split(/\s+/).filter(w => w.length > 0);
     const currentWord = words.length > 0 ? words[words.length - 1].toUpperCase() : '';
     const previousWord = words.length > 1 ? words[words.length - 2].toUpperCase() : null;
+
+    // Check if current word contains a dot (procedure.transition notation)
+    // e.g., "HIDEY1." or "HIDEY1.DR"
+    const dotMatch = currentWord.match(/^([A-Z]{3,}\d+)\.([A-Z]*)$/);
+    if (dotMatch) {
+        const [, procedureName, transitionPrefix] = dotMatch;
+        console.log(`[UI] Dot notation detected: ${procedureName}.${transitionPrefix}`);
+
+        // Show transitions for this procedure
+        const transitions = window.QueryEngine?.getProcedureTransitions(procedureName) || [];
+        console.log(`[UI] Found ${transitions.length} transitions for ${procedureName}`);
+
+        if (transitions.length > 0) {
+            const results = transitions
+                .filter(t => !transitionPrefix || t.transition.startsWith(transitionPrefix))
+                .map(t => ({
+                    code: t.display,
+                    name: t.display,
+                    type: t.type === 'DP' ? 'DP TRANSITION' : 'STAR TRANSITION',
+                    waypointType: 'procedure_transition',
+                    location: `${t.transition} transition`,
+                    contextHint: `${t.transition} transition for ${procedureName}`
+                }));
+
+            console.log(`[UI] Filtered to ${results.length} transition results`);
+            if (results.length > 0) {
+                autocompleteResults = results;
+                displayAutocomplete(results);
+                return;
+            }
+        }
+    } else if (currentWord.includes('.')) {
+        console.log(`[UI] Current word contains dot but doesn't match regex: "${currentWord}"`);
+    }
 
     // Check if cursor is at the end and last character is a space (just finished a waypoint)
     const justFinishedWaypoint = cursorPos === value.length && value.endsWith(' ') && currentWord === '';
