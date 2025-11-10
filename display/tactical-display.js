@@ -679,8 +679,17 @@ function showPopup(waypoint, legs, index) {
     const lon = window.Utils?.formatCoordinate(waypoint.lon, 'lon');
     const pos = `${lat} ${lon}`;
 
-    // Type display
-    const typeDisplay = waypoint.waypointType === 'airport' ? 'AIRPORT' : waypoint.type;
+    // Type display with reporting point indicator
+    let typeDisplay;
+    if (waypoint.waypointType === 'airport') {
+        typeDisplay = 'AIRPORT';
+    } else if (waypoint.waypointType === 'navaid') {
+        typeDisplay = waypoint.type || 'NAVAID';
+    } else if (waypoint.waypointType === 'fix') {
+        typeDisplay = waypoint.isReportingPoint ? 'REPORTING POINT' : 'FIX';
+    } else {
+        typeDisplay = waypoint.type || 'WAYPOINT';
+    }
 
     // Determine color based on waypoint type
     let colorClass = 'text-fix'; // Default white for unspecified

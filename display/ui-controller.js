@@ -729,7 +729,17 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelSt
             }
         }
 
-        const typeDisplay = waypoint.waypointType === 'airport' ? 'AIRPORT' : waypoint.type;
+        // Type display with reporting point indicator
+        let typeDisplay;
+        if (waypoint.waypointType === 'airport') {
+            typeDisplay = 'AIRPORT';
+        } else if (waypoint.waypointType === 'navaid') {
+            typeDisplay = waypoint.type || 'NAVAID';
+        } else if (waypoint.waypointType === 'fix') {
+            typeDisplay = waypoint.isReportingPoint ? 'REPORTING POINT' : 'FIX';
+        } else {
+            typeDisplay = waypoint.type || 'WAYPOINT';
+        }
 
         // Build elevation and magnetic variation line
         let elevMagLine = '';
