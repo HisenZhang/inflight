@@ -389,8 +389,10 @@ function handleAutocompleteInput(e) {
         }
     }
 
-    // Normal autocomplete behavior
-    if (currentWord.length < 1) {
+    // Normal autocomplete behavior - require at least 2 characters to reduce lag
+    // Exception: if we have context (previousWord), we can suggest airways/fixes after 1 char
+    const minChars = previousWord ? 1 : 2;
+    if (currentWord.length < minChars) {
         hideAutocomplete();
         return;
     }
