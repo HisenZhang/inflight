@@ -44,7 +44,8 @@ function expandRoute(routeString) {
 
         // Check if token is a lat/long coordinate (DDMM/DDDMM or DDMMSS/DDDMMSS format)
         // These are valid waypoints that don't exist in the database
-        const isCoordinate = /^(\d{4,6})\/(\d{5,7})([NS])?([EW])?$/.test(token);
+        // Supports: 4814/06848, 4814N/06848W, 4814/06848NW
+        const isCoordinate = /^(\d{4,6})([NS])?\/(\d{5,7})([EW])?$/.test(token);
         if (isCoordinate) {
             // Coordinate waypoint - pass through as-is (will be parsed by route calculator)
             expanded.push(token);

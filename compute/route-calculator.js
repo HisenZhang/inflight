@@ -46,8 +46,9 @@ function resolveWaypoints(routeString) {
     for (const code of finalRoute) {
         let waypoint = null;
 
-        // Check if this is a lat/long coordinate (FAA format: DDMM/DDDMM or DDMMSS/DDDMMSS)
-        const latLonMatch = code.match(/^(\d{4,6})\/(\d{5,7})([NS])?([EW])?$/);
+        // Check if this is a lat/long coordinate (FAA/ICAO format: DDMM/DDDMM or DDMMSS/DDDMMSS)
+        // Supports: 4814/06848, 4814N/06848W, 4814/06848NW
+        const latLonMatch = code.match(/^(\d{4,6})([NS])?\/(\d{5,7})([EW])?$/);
         if (latLonMatch) {
             waypoint = parseLatLonCoordinate(code, latLonMatch);
             if (waypoint) {
@@ -92,14 +93,14 @@ function resolveWaypoints(routeString) {
     };
 }
 
-// Parse FAA lat/long coordinate format
+// Parse FAA/ICAO lat/long coordinate format
 // Supports: DDMM/DDDMM (degrees+minutes) and DDMMSS/DDDMMSS (degrees+minutes+seconds)
-// Examples: 3407/10615 → 34°07'N 106°15'W, 340730/1061530 → 34°07'30"N 106°15'30"W
+// Examples: 3407/10615 → 34°07'N 106°15'W, 4814N/06848W → 48°14'N 68°48'W
 function parseLatLonCoordinate(code, match) {
     try {
         let latStr = match[1];
-        let lonStr = match[2];
-        const nsHemis = match[3] || null;
+        const nsHemis = match[2] || null;
+        let lonStr = match[3];
         const ewHemis = match[4] || null;
 
         // Parse latitude (DDMM or DDMMSS format)
