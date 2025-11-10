@@ -125,8 +125,8 @@
 
 .waypoint-label {
     font-family: 'Roboto Mono', monospace;
-    font-size: clamp(10px, 2vw, 12px); /* Responsive font size */
-    font-weight: 500;
+    font-size: clamp(24px, 2vw, 36px); /* Responsive font size */
+    font-weight: 700;
     pointer-events: none;
 }
 
@@ -139,8 +139,8 @@
 
 .route-line {
     fill: none;
-    stroke: #cccccc;
-    stroke-width: 2;
+    stroke: #cccccccc;
+    stroke-width: 10;
     stroke-linecap: round;
 }
 

@@ -406,11 +406,11 @@ function generateMap(waypoints, legs) {
     // Scaling factors for SVG elements
     // Desktop: 2x text (96px), 2x shapes (10px radius), 8px stroke
     // Mobile: 4x text (48px), 4x shapes (20px radius), 4px stroke
-    const textScaleFactor = isMobile ? 4 : 8; // Desktop: 12 * 8 = 96px, Mobile: 12 * 4 = 48px
+    const textScaleFactor = isMobile ? 4 : 4; // Desktop: 12 * 8 = 96px, Mobile: 12 * 4 = 48px
     const shapeScaleFactor = isMobile ? 4 : 2; // Desktop: half shape size of mobile
     const waypointLabelSize = 12 * textScaleFactor;
     const waypointRadius = 5 * shapeScaleFactor;
-    const strokeWidth = isMobile ? 4 : 8; // Desktop: double line width
+    const strokeWidth = isMobile ? 4 : 4; // Desktop: double line width
 
     // Calculate projection center (center of visible area)
     const centerLat = (bounds.minLat + bounds.maxLat) / 2;
@@ -565,8 +565,8 @@ function generateMap(waypoints, legs) {
 
         // Tall isosceles triangle (like old vector graphics)
         // Desktop: 4x size (160x80), Mobile: 2x size (80x40)
-        const triangleHeight = isMobile ? 80 : 160;
-        const triangleBaseWidth = isMobile ? 40 : 80;
+        const triangleHeight = isMobile ? 80 : 60;
+        const triangleBaseWidth = isMobile ? 40 : 30;
 
         // Triangle vertices in local coordinates (tip points up, unrotated)
         const tipLocalX = 0;
@@ -577,7 +577,7 @@ function generateMap(waypoints, legs) {
         const baseRightLocalY = 0;
 
         // Draw using CSS transform for smooth rotation (heading - 90 because SVG 0° is East)
-        const arrowStrokeWidth = isMobile ? 6 : 12;
+        const arrowStrokeWidth = 6;
         svg += `<g class="gps-arrow" transform="translate(${pos.x}, ${pos.y}) rotate(${heading - 90})">`;
         svg += `<polygon points="${tipLocalX},${tipLocalY} ${baseLeftLocalX},${baseLeftLocalY} ${baseRightLocalX},${baseRightLocalY}"
                 fill="#00ff00" stroke="#ffffff" stroke-width="${arrowStrokeWidth}" stroke-linejoin="miter"/>`;
