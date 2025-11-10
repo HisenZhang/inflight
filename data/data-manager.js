@@ -421,34 +421,83 @@ function buildTokenTypeMap() {
     }
 
     // Index STARs and DPs (both full name and short suffix)
-    for (const [id, star] of starsData) {
-        if (!tokenTypeMap.has(id)) {
-            tokenTypeMap.set(id, 'PROCEDURE');
+    // STARs and DPs can be either arrays or objects with {body, transitions}
+    // Index STARs - now using standardized structure with { name, computerCode, type, body, transitions }
+    try {
+        const starsIndexed = new Set();
+        for (const [id, star] of starsData) {
+            // Index by key (both procName and computerCode)
+            if (!tokenTypeMap.has(id)) {
+                tokenTypeMap.set(id, 'PROCEDURE');
+            }
+
+            // If value is an object (new structure), index by name property
+            if (star && typeof star === 'object' && star.name) {
+                if (!tokenTypeMap.has(star.name)) {
+                    tokenTypeMap.set(star.name, 'PROCEDURE');
+                    starsIndexed.add(star.name);
+                }
+            }
         }
-        // Also index short form: MIP.MIP4 -> also index MIP4
-        const match = id.match(/\.([A-Z]{3,}\d+)$/);
-        if (match && !tokenTypeMap.has(match[1])) {
-            tokenTypeMap.set(match[1], 'PROCEDURE');
-        }
+        console.log(`[DataManager] Indexed ${starsIndexed.size} unique STAR procedures`);
+    } catch (error) {
+        console.error('[DataManager] Error indexing STARs:', error);
     }
-    for (const [id, dp] of dpsData) {
-        if (!tokenTypeMap.has(id)) {
-            tokenTypeMap.set(id, 'PROCEDURE');
+
+    // Index DPs - now using standardized structure with { name, computerCode, type, body, transitions }
+    try {
+        const dpsIndexed = new Set();
+        const hideyKeys = [];
+
+        for (const [id, dp] of dpsData) {
+            // Track all keys that contain HIDEY for debugging
+            if (id.includes('HIDEY')) {
+                hideyKeys.push(id);
+            }
+
+            // Index by key (both procName and computerCode)
+            if (!tokenTypeMap.has(id)) {
+                tokenTypeMap.set(id, 'PROCEDURE');
+            }
+
+            // If value is an object (new structure), index by name property
+            if (dp && typeof dp === 'object' && dp.name) {
+                if (!tokenTypeMap.has(dp.name)) {
+                    tokenTypeMap.set(dp.name, 'PROCEDURE');
+                    dpsIndexed.add(dp.name);
+                }
+            }
         }
-        // Also index short form: MIP.MIP4 -> also index MIP4
-        const match = id.match(/\.([A-Z]{3,}\d+)$/);
-        if (match && !tokenTypeMap.has(match[1])) {
-            tokenTypeMap.set(match[1], 'PROCEDURE');
+
+        console.log(`[DataManager] Indexed ${dpsIndexed.size} unique DP procedures:`, Array.from(dpsIndexed).slice(0, 10).join(', '));
+        console.log(`[DataManager] Total DP keys in database: ${dpsData.size}`);
+
+        if (hideyKeys.length > 0) {
+            console.log(`[DataManager] Found ${hideyKeys.length} HIDEY-related keys:`, hideyKeys.slice(0, 5));
         }
+
+        // Check if HIDEY1 was indexed
+        if (tokenTypeMap.has('HIDEY1')) {
+            console.log(`[DataManager] ✓ HIDEY1 indexed as: ${tokenTypeMap.get('HIDEY1')}`);
+        } else {
+            console.warn(`[DataManager] ✗ HIDEY1 NOT indexed in token type map`);
+        }
+    } catch (error) {
+        console.error('[DataManager] Error indexing DPs:', error);
     }
 
     console.log(`[DataManager] Token type map built: ${tokenTypeMap.size} entries`);
 }
 
 async function rebuildTokenTypeMap() {
-    console.log('[DataManager] Rebuilding token type map...');
-    buildTokenTypeMap();
-    console.log('[DataManager] Token type map rebuilt successfully');
+    try {
+        console.log('[DataManager] Rebuilding token type map...');
+        buildTokenTypeMap();
+        console.log('[DataManager] Token type map rebuilt successfully');
+    } catch (error) {
+        console.error('[DataManager] Error rebuilding token type map:', error);
+        throw error;
+    }
 }
 
 function getFileStatus() {
@@ -1015,6 +1064,8 @@ window.DataManager = {
     getFrequencies,
     getRunways,
     getDataStats,
+    getDpsData: () => dpsData,
+    getStarsData: () => starsData,
 
     // DEPRECATED: Use QueryEngine instead
     searchWaypoints: (query) => {

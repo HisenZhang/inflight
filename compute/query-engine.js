@@ -114,6 +114,11 @@ function searchWaypoints(term, previousToken = null, limit = 15) {
     // Check previous token type for context-aware suggestions
     const prevTokenType = upperPrevToken ? getTokenType(upperPrevToken) : null;
 
+    // Debug logging for procedure detection
+    if (upperPrevToken && /^[A-Z]{3,}\d+$/.test(upperPrevToken)) {
+        console.log(`[QueryEngine] Autocomplete - Previous token: ${upperPrevToken}, Type: ${prevTokenType}, Search term: "${upperTerm}"`);
+    }
+
     // Arrays for different priority levels
     const exactMatches = [];
     const prefixMatches = [];
@@ -184,6 +189,39 @@ function searchWaypoints(term, previousToken = null, limit = 15) {
         }
     }
 
+    // Special case: if previous token is a procedure, suggest transitions
+    if (prevTokenType === 'PROCEDURE') {
+        const transitions = getProcedureTransitions(upperPrevToken);
+        if (transitions.length > 0) {
+            for (const trans of transitions) {
+                if (exactMatches.length + prefixMatches.length >= limit) break;
+
+                const result = {
+                    code: trans.display,
+                    name: trans.display,
+                    type: trans.type === 'DP' ? 'DP TRANSITION' : 'STAR TRANSITION',
+                    waypointType: 'procedure_transition',
+                    location: `${trans.transition} transition`,
+                    contextHint: `${trans.transition} transition for ${upperPrevToken}`
+                };
+
+                // If no search term, show all transitions
+                if (!upperTerm || upperTerm.length === 0) {
+                    prefixMatches.push(result);
+                } else if (trans.transition.startsWith(upperTerm)) {
+                    // Prefix match on transition name
+                    prefixMatches.push(result);
+                } else if (trans.display.toUpperCase().startsWith(upperTerm)) {
+                    // Prefix match on full display name
+                    prefixMatches.push(result);
+                }
+            }
+
+            // Return procedure-specific suggestions
+            return [...exactMatches, ...prefixMatches].slice(0, limit);
+        }
+    }
+
     // Special case: if previous token is a fix or navaid, suggest airways containing that waypoint
     if ((prevTokenType === 'FIX' || prevTokenType === 'NAVAID') && qe_airwaysData) {
         for (const [airwayId, airway] of qe_airwaysData) {
@@ -242,6 +280,52 @@ function searchWaypoints(term, previousToken = null, limit = 15) {
 
     // If no search term and no context-aware suggestions, return empty
     if (!upperTerm || upperTerm.length < 1) return [];
+
+    // Check if search term looks like a procedure (e.g., HIDEY1, CHPPR1)
+    // If so, search for matching procedures
+    if (/^[A-Z]{3,}\d+$/.test(upperTerm)) {
+        // Search for procedures that match this pattern
+        const dpsData = window.DataManager?.getDpsData?.() || new Map();
+        const starsData = window.DataManager?.getStarsData?.() || new Map();
+
+        // Extract base name for searching
+        const match = upperTerm.match(/^([A-Z]{3,})(\d+)$/);
+        if (match) {
+            const [, name, number] = match;
+
+            // Search DPs
+            for (const [key, data] of dpsData) {
+                // Match patterns like: HIDEY.HIDEY1, HIDEY1.HIDEY
+                if (key.toUpperCase().includes(upperTerm)) {
+                    prefixMatches.push({
+                        code: upperTerm,
+                        name: upperTerm,
+                        type: 'DP',
+                        waypointType: 'procedure',
+                        location: 'Departure Procedure',
+                        contextHint: 'Type . (dot) to see transitions'
+                    });
+                    break; // Only add once
+                }
+            }
+
+            // Search STARs
+            for (const [key, data] of starsData) {
+                // Match patterns like: CHPPR.CHPPR1, CHPPR1.CHPPR
+                if (key.toUpperCase().includes(upperTerm)) {
+                    prefixMatches.push({
+                        code: upperTerm,
+                        name: upperTerm,
+                        type: 'STAR',
+                        waypointType: 'procedure',
+                        location: 'Arrival Procedure',
+                        contextHint: 'Type . (dot) to see transitions'
+                    });
+                    break; // Only add once
+                }
+            }
+        }
+    }
 
     // Standard search with improved ranking
     // Search airports
@@ -359,6 +443,50 @@ function getTokenType(token) {
         console.debug(`[QueryEngine] Token found: ${upperToken} = ${result}`);
     }
     return result || null;
+}
+
+/**
+ * Get available transitions for a procedure
+ * @param {string} procedureName - Procedure name (e.g., HIDEY1, CHPPR1)
+ * @returns {Array} Array of transition objects {transition, type}
+ */
+function getProcedureTransitions(procedureName) {
+    if (!window.DataManager) return [];
+
+    const upperProc = procedureName.toUpperCase();
+    const transitions = [];
+
+    // Get DPs and STARs data
+    const dpsData = window.DataManager.getDpsData?.() || new Map();
+    const starsData = window.DataManager.getStarsData?.() || new Map();
+
+    // Try to find procedure in DPs by name
+    const dpProc = dpsData.get(upperProc);
+    if (dpProc && dpProc.transitions && Array.isArray(dpProc.transitions)) {
+        for (const trans of dpProc.transitions) {
+            transitions.push({
+                transition: trans.name,
+                type: 'DP',
+                entryFix: trans.entryFix,
+                display: `${upperProc}.${trans.name}`
+            });
+        }
+    }
+
+    // Try to find procedure in STARs by name
+    const starProc = starsData.get(upperProc);
+    if (starProc && starProc.transitions && Array.isArray(starProc.transitions)) {
+        for (const trans of starProc.transitions) {
+            transitions.push({
+                transition: trans.name,
+                type: 'STAR',
+                entryFix: trans.entryFix,
+                display: `${upperProc}.${trans.name}`
+            });
+        }
+    }
+
+    return transitions;
 }
 
 // ============================================
@@ -607,6 +735,7 @@ window.QueryEngine = {
     searchWaypoints,
     searchAirports,
     getTokenType,
+    getProcedureTransitions,
 
     // Spatial queries
     getPointsNearRoute,
