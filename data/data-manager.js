@@ -22,6 +22,7 @@ let starsData = new Map();           // STARs (NASR only)
 let dpsData = new Map();             // DPs (NASR only)
 let tokenTypeMap = new Map();        // Fast lookup: token -> type (AIRPORT/NAVAID/FIX/AIRWAY/PROCEDURE)
 let fileMetadata = new Map();        // Track individual file load times and validity
+let rawCSVData = {};                 // Raw CSV data for reindexing
 let db = null;
 let dataTimestamp = null;
 let dataSources = [];                // Track which sources were loaded
@@ -54,7 +55,7 @@ function saveToCache() {
 
         // Serialize Maps to arrays for storage
         const data = {
-            id: 'flightdata_cache_v8',
+            id: 'flightdata_cache_v9',
             airports: Array.from(airportsData.entries()),
             iataToIcao: Array.from(iataToIcao.entries()),
             navaids: Array.from(navaidsData.entries()),
@@ -66,9 +67,11 @@ function saveToCache() {
             dps: Array.from(dpsData.entries()),
             dataSources: dataSources,
             timestamp: Date.now(),
-            version: 8,
+            version: 9,
             // Track individual file metadata
-            fileMetadata: Object.fromEntries(fileMetadata)
+            fileMetadata: Object.fromEntries(fileMetadata),
+            // Store raw CSV data for reindexing
+            rawCSV: rawCSVData
         };
 
         const request = store.put(data);
@@ -81,7 +84,7 @@ function loadFromCacheDB() {
     return new Promise((resolve, reject) => {
         const transaction = db.transaction([STORE_NAME], 'readonly');
         const store = transaction.objectStore(STORE_NAME);
-        const request = store.get('flightdata_cache_v8');
+        const request = store.get('flightdata_cache_v9');
         request.onsuccess = () => resolve(request.result);
         request.onerror = () => reject(request.error);
     });
@@ -98,7 +101,8 @@ function clearCacheDB() {
             store.delete('flightdata_cache_v5'),
             store.delete('flightdata_cache_v6'),
             store.delete('flightdata_cache_v7'),
-            store.delete('flightdata_cache_v8')
+            store.delete('flightdata_cache_v8'),
+            store.delete('flightdata_cache_v9')
         ];
         Promise.all(requests.map(r => new Promise((res) => {
             r.onsuccess = () => res();
@@ -142,6 +146,11 @@ async function loadData(onStatusUpdate) {
                     fileMetadata.set(id, metadata);
                 }
             }
+
+            // Store raw CSV data for reindexing
+            if (nasrData.rawCSV) {
+                rawCSVData = { ...rawCSVData, ...nasrData.rawCSV };
+            }
         } else {
             console.warn('NASR loading failed:', results[0].reason);
             onStatusUpdate('[!] NASR UNAVAILABLE - USING FALLBACK', 'warning');
@@ -156,6 +165,11 @@ async function loadData(onStatusUpdate) {
                 for (const [id, metadata] of ourairportsData.fileMetadata) {
                     fileMetadata.set(id, metadata);
                 }
+            }
+
+            // Store raw CSV data for reindexing
+            if (ourairportsData.rawCSV) {
+                rawCSVData = { ...rawCSVData, ...ourairportsData.rawCSV };
             }
         } else {
             console.warn('OurAirports loading failed:', results[1].reason);
@@ -187,6 +201,77 @@ async function loadData(onStatusUpdate) {
         onStatusUpdate(`[ERR] ${error.message}`, 'error');
         throw error;
     }
+}
+
+// Re-parse data from cached raw CSV files
+async function reparseFromRawCSV(onStatusUpdate) {
+    // Create mock data objects with parsed data from raw CSV
+    const nasrData = { data: {} };
+    const ourairportsData = { data: {} };
+
+    // Parse NASR data if available
+    if (rawCSVData.airportsCSV) {
+        onStatusUpdate('[...] PARSING NASR AIRPORTS', 'loading');
+        nasrData.data.airports = window.NASRAdapter.parseNASRAirports(rawCSVData.airportsCSV);
+    }
+    if (rawCSVData.runwaysCSV) {
+        onStatusUpdate('[...] PARSING NASR RUNWAYS', 'loading');
+        nasrData.data.runways = window.NASRAdapter.parseNASRRunways(rawCSVData.runwaysCSV);
+    }
+    if (rawCSVData.navaidsCSV) {
+        onStatusUpdate('[...] PARSING NASR NAVAIDS', 'loading');
+        nasrData.data.navaids = window.NASRAdapter.parseNASRNavaids(rawCSVData.navaidsCSV);
+    }
+    if (rawCSVData.fixesCSV) {
+        onStatusUpdate('[...] PARSING NASR FIXES', 'loading');
+        nasrData.data.fixes = window.NASRAdapter.parseNASRFixes(rawCSVData.fixesCSV);
+    }
+    if (rawCSVData.frequenciesCSV) {
+        onStatusUpdate('[...] PARSING NASR FREQUENCIES', 'loading');
+        nasrData.data.frequencies = window.NASRAdapter.parseNASRFrequencies(rawCSVData.frequenciesCSV);
+    }
+    if (rawCSVData.airwaysCSV) {
+        onStatusUpdate('[...] PARSING NASR AIRWAYS', 'loading');
+        nasrData.data.airways = window.NASRAdapter.parseNASRAirways(rawCSVData.airwaysCSV);
+    }
+    if (rawCSVData.starsCSV) {
+        onStatusUpdate('[...] PARSING NASR STARS', 'loading');
+        nasrData.data.stars = window.NASRAdapter.parseNASRSTARs(rawCSVData.starsCSV);
+    }
+    if (rawCSVData.dpsCSV) {
+        onStatusUpdate('[...] PARSING NASR DPS', 'loading');
+        nasrData.data.dps = window.NASRAdapter.parseNASRDPs(rawCSVData.dpsCSV);
+    }
+
+    // Parse OurAirports data if available
+    if (rawCSVData.oa_airportsCSV) {
+        onStatusUpdate('[...] PARSING OURAIRPORTS AIRPORTS', 'loading');
+        ourairportsData.data.airports = window.OurAirportsAdapter.parseOurAirportsAirports(rawCSVData.oa_airportsCSV);
+    }
+    if (rawCSVData.oa_frequenciesCSV) {
+        onStatusUpdate('[...] PARSING OURAIRPORTS FREQUENCIES', 'loading');
+        ourairportsData.data.frequencies = window.OurAirportsAdapter.parseOurAirportsFrequencies(rawCSVData.oa_frequenciesCSV);
+    }
+    if (rawCSVData.oa_runwaysCSV) {
+        onStatusUpdate('[...] PARSING OURAIRPORTS RUNWAYS', 'loading');
+        ourairportsData.data.runways = window.OurAirportsAdapter.parseOurAirportsRunways(rawCSVData.oa_runwaysCSV);
+    }
+    if (rawCSVData.oa_navaidsCSV) {
+        onStatusUpdate('[...] PARSING OURAIRPORTS NAVAIDS', 'loading');
+        ourairportsData.data.navaids = window.OurAirportsAdapter.parseOurAirportsNavaids(rawCSVData.oa_navaidsCSV);
+    }
+    if (rawCSVData.oa_iataCodesCSV) {
+        onStatusUpdate('[...] PARSING IATA CODES', 'loading');
+        ourairportsData.data.iataToIcao = window.OurAirportsAdapter.parseIATACodes(rawCSVData.oa_iataCodesCSV);
+    }
+
+    // Merge the reparsed data
+    onStatusUpdate('[...] MERGING REPARSED DATA', 'loading');
+    mergeDataSources(
+        Object.keys(nasrData.data).length > 0 ? nasrData : null,
+        Object.keys(ourairportsData.data).length > 0 ? ourairportsData : null,
+        onStatusUpdate
+    );
 }
 
 function mergeDataSources(nasrData, ourairportsData, onStatusUpdate = null) {
@@ -322,7 +407,7 @@ function mergeDataSources(nasrData, ourairportsData, onStatusUpdate = null) {
 async function checkCachedData() {
     try {
         const cachedData = await loadFromCacheDB();
-        if (cachedData && (cachedData.version === 8 || cachedData.version === 7) && cachedData.timestamp) {
+        if (cachedData && (cachedData.version === 9 || cachedData.version === 8 || cachedData.version === 7) && cachedData.timestamp) {
             const age = Date.now() - cachedData.timestamp;
             const daysOld = Math.floor(age / (24 * 60 * 60 * 1000));
 
@@ -375,6 +460,11 @@ async function loadFromCache(onStatusUpdate) {
             fileMetadata = new Map(Object.entries(cachedData.fileMetadata));
         }
 
+        // Restore raw CSV data for reindexing
+        if (cachedData.rawCSV) {
+            rawCSVData = cachedData.rawCSV;
+        }
+
         // Build token type lookup map
         buildTokenTypeMap();
 
@@ -392,7 +482,7 @@ async function loadFromCache(onStatusUpdate) {
         return;
     }
 
-    // New behavior: Load from IndexedDB and reparse
+    // New behavior: Load from IndexedDB and reparse from raw CSV
     if (!onStatusUpdate) {
         onStatusUpdate = (msg, type) => console.log(`[DataManager] ${msg}`);
     }
@@ -405,17 +495,13 @@ async function loadFromCache(onStatusUpdate) {
             throw new Error('No cached data found');
         }
 
-        // Deserialize cached parsed data
-        onStatusUpdate('[...] DESERIALIZING CACHED DATA', 'loading');
-        airportsData = new Map(cachedData.airports || []);
-        iataToIcao = new Map(cachedData.iataToIcao || []);
-        navaidsData = new Map(cachedData.navaids || []);
-        fixesData = new Map(cachedData.fixes || []);
-        frequenciesData = new Map(cachedData.frequencies || []);
-        runwaysData = new Map(cachedData.runways || []);
-        airwaysData = new Map(cachedData.airways || []);
-        starsData = new Map(cachedData.stars || []);
-        dpsData = new Map(cachedData.dps || []);
+        // Check if raw CSV data is available for reindexing
+        if (!cachedData.rawCSV || Object.keys(cachedData.rawCSV).length === 0) {
+            throw new Error('No raw CSV data found in cache - please reload data from internet');
+        }
+
+        // Restore raw CSV data
+        rawCSVData = cachedData.rawCSV;
         dataSources = cachedData.dataSources || [];
         dataTimestamp = cachedData.timestamp;
 
@@ -423,6 +509,10 @@ async function loadFromCache(onStatusUpdate) {
         if (cachedData.fileMetadata) {
             fileMetadata = new Map(Object.entries(cachedData.fileMetadata));
         }
+
+        // Re-parse from raw CSV with current parser code
+        onStatusUpdate('[...] REPARSING RAW DATA WITH UPDATED PARSERS', 'loading');
+        await reparseFromRawCSV(onStatusUpdate);
 
         // Build token type lookup map with updated parser logic
         onStatusUpdate('[...] REBUILDING TOKEN TYPE MAP', 'loading');
@@ -441,6 +531,10 @@ async function loadFromCache(onStatusUpdate) {
             window.RouteExpander.setStarsData(starsData);
             window.RouteExpander.setDpsData(dpsData);
         }
+
+        // Save reparsed data back to cache
+        onStatusUpdate('[...] SAVING REPARSED DATA TO CACHE', 'loading');
+        await saveToCache();
 
         const stats = getDataStats();
         const sourceStr = dataSources.join(' + ');
@@ -648,7 +742,8 @@ function clearInMemoryData() {
     fileMetadata.clear();
     dataTimestamp = null;
     dataSources = [];
-    console.log('[DataManager] In-memory data cleared');
+    // Note: rawCSVData is NOT cleared - it's needed for reindexing
+    console.log('[DataManager] In-memory data cleared (rawCSV preserved)');
 }
 
 // ============================================
