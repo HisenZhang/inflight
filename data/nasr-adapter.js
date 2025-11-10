@@ -419,8 +419,10 @@ function parseNASRSTARs(csvText) {
                 transFixNames.reverse();
 
                 // After reversal, first fix is the external entry point
+                // Strip " TRANSITION" suffix from transition name (e.g., "RAMRD TRANSITION" -> "RAMRD")
+                const transName = transKey.split('|')[2].replace(/\s+TRANSITION$/i, '');
                 transitions.push({
-                    name: transKey.split('|')[2],
+                    name: transName,
                     entryFix: transFixNames[0],
                     fixes: transFixNames
                 });
@@ -536,8 +538,10 @@ function parseNASRDPs(csvText) {
                 transFixNames.reverse();
 
                 // After reversal, first fix is the external entry point
+                // Strip " TRANSITION" suffix from transition name (e.g., "RAMRD TRANSITION" -> "RAMRD")
+                const transName = transKey.split('|')[2].replace(/\s+TRANSITION$/i, '');
                 transitions.push({
-                    name: transKey.split('|')[2],
+                    name: transName,
                     entryFix: transFixNames[0],
                     fixes: transFixNames
                 });
