@@ -5,28 +5,8 @@
 
 /* Header */
 header {
-    text-align: center;
-    border: 2px solid var(--border-color);
-    background: var(--bg-primary);
-    padding: 12px;
+    padding: 0;
     margin-bottom: var(--space-md);
-}
-
-header h1 {
-    letter-spacing: 4px;
-}
-
-@media (max-width: 1024px) {
-    header {
-        padding: 0;
-        margin-bottom: 0;
-        border: none;
-        background: transparent;
-    }
-
-    header h1 {
-        display: none;
-    }
 }
 
 /* Status Box */
@@ -562,4 +542,116 @@ header h1 {
 .leg-item {
     margin-right: 15px;
     color: var(--text-secondary);
+}
+
+/* ============================================
+   STATS TAB
+   ============================================ */
+.stats-section {
+    background: var(--bg-primary);
+    border: 2px solid var(--border-color);
+    padding: var(--space-md);
+}
+
+.stats-section h2 {
+    margin-bottom: var(--space-md);
+    font-size: 1rem;
+    letter-spacing: 2px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 5px;
+}
+
+.stats-card {
+    background: var(--bg-panel);
+    border: 2px solid var(--border-color);
+    padding: var(--space-md);
+    margin-bottom: var(--space-md);
+}
+
+.stats-card-title {
+    font-size: 0.85rem;
+    letter-spacing: 2px;
+    margin-bottom: var(--space-md);
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: var(--space-xs);
+}
+
+.stat-item-large {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-md) 0;
+}
+
+.stat-item-large .stat-value {
+    font-size: 1.8rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-md);
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+
+.stat-label {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    letter-spacing: 1px;
+    font-weight: 500;
+}
+
+.stat-value {
+    font-size: 1.2rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--text-primary);
+}
+
+.time-entry-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-md);
+}
+
+.time-entry-item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+
+.time-entry-row {
+    display: flex;
+    gap: var(--space-xs);
+}
+
+.time-input {
+    flex: 1;
+    padding: 6px var(--space-sm);
+    border: 2px solid var(--border-color);
+    background: var(--bg-primary);
+    color: var(--color-airport);
+    font-size: 0.95rem;
+    font-family: inherit;
+    letter-spacing: 1px;
+}
+
+.time-input:focus {
+    outline: none;
+    border-color: var(--color-metric);
+}
+
+.stats-actions {
+    display: flex;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
 }

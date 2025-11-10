@@ -39,6 +39,22 @@ function startGPSTracking() {
                 heading: position.coords.heading, // true heading in degrees
                 speed: position.coords.speed // m/s
             };
+
+            // Feed data to Flight Tracker
+            if (window.FlightTracker) {
+                const groundSpeedKt = position.coords.speed ? position.coords.speed * 1.94384 : 0;
+                window.FlightTracker.updateFlightState(groundSpeedKt);
+                window.FlightTracker.recordGPSPoint({
+                    lat: position.coords.latitude,
+                    lon: position.coords.longitude,
+                    altitude: position.coords.altitude,
+                    speed: groundSpeedKt,
+                    heading: position.coords.heading,
+                    accuracy: position.coords.accuracy,
+                    verticalAccuracy: position.coords.altitudeAccuracy
+                });
+            }
+
             updateLiveNavigation();
         },
         (error) => {

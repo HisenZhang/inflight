@@ -391,6 +391,11 @@ async function handleCalculateRoute() {
         // Display vector map
         VectorMap.displayMap(waypoints, legs, options);
 
+        // Update Flight Tracker with fuel data
+        if (window.FlightTracker && fuelEnabled) {
+            window.FlightTracker.setFuel(usableFuelValue, burnRateValue, taxiFuelValue || 0);
+        }
+
         // Auto-switch to NAVLOG tab after calculation
         switchTab('navlog');
 

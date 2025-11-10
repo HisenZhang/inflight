@@ -16,14 +16,13 @@
 <body>
     <div class="container">
         <header>
-            <h1 class="text-xl font-bold text-primary">FLIGHT PLANNING SYSTEM</h1>
-
             <!-- Tab Navigation -->
             <div class="tab-navigation">
                 <button class="tab-btn active" data-tab="data">DATA</button>
                 <button class="tab-btn" data-tab="route">ROUTE</button>
                 <button class="tab-btn" data-tab="navlog">NAVLOG</button>
                 <button class="tab-btn" data-tab="map">MAP</button>
+                <button class="tab-btn" data-tab="stats">STATS</button>
             </div>
         </header>
 
@@ -307,6 +306,118 @@
         </div>
         <!-- End Tab: Map -->
 
+        <!-- Tab: Stats -->
+        <div class="tab-content" id="tab-stats">
+            <div class="stats-section">
+                <h2 class="font-bold text-primary">FLIGHT STATISTICS</h2>
+
+                <!-- Flight Status -->
+                <div class="stats-card">
+                    <div class="stat-item-large">
+                        <span class="stat-label">STATUS</span>
+                        <span class="stat-value" id="flightStatus">ON GROUND</span>
+                    </div>
+                </div>
+
+                <!-- Time Statistics -->
+                <div class="stats-card">
+                    <h3 class="stats-card-title">TIME</h3>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <span class="stat-label">FLIGHT TIME</span>
+                            <span class="stat-value text-metric" id="flightTime">--:--:--</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">AVG GROUND SPEED</span>
+                            <span class="stat-value text-metric" id="avgGroundSpeed">-- KT</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Fuel Statistics -->
+                <div class="stats-card" id="fuelStatsCard" style="display: none;">
+                    <h3 class="stats-card-title">FUEL</h3>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <span class="stat-label">FUEL ON BOARD</span>
+                            <span class="stat-value text-metric" id="fuelOnBoard">-- GAL</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">FUEL USED</span>
+                            <span class="stat-value" id="fuelUsed">-- GAL</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">FUEL REMAINING</span>
+                            <span class="stat-value" id="fuelRemaining">-- GAL</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">ENDURANCE</span>
+                            <span class="stat-value" id="endurance">--:--</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Manual Time Entry -->
+                <div class="stats-card">
+                    <h3 class="stats-card-title">MANUAL TIME ENTRY</h3>
+                    <div class="time-entry-grid">
+                        <div class="time-entry-item">
+                            <label class="stat-label">HOBBS START</label>
+                            <div class="time-entry-row">
+                                <input type="number" id="hobbsStart" class="time-input" placeholder="0.0" step="0.1" min="0">
+                                <button class="btn btn-secondary btn-sm" id="hobbsStartNow">NOW</button>
+                            </div>
+                        </div>
+                        <div class="time-entry-item">
+                            <label class="stat-label">HOBBS END</label>
+                            <div class="time-entry-row">
+                                <input type="number" id="hobbsEnd" class="time-input" placeholder="0.0" step="0.1" min="0">
+                                <button class="btn btn-secondary btn-sm" id="hobbsEndNow">NOW</button>
+                            </div>
+                        </div>
+                        <div class="time-entry-item">
+                            <label class="stat-label">HOBBS TOTAL</label>
+                            <span class="stat-value" id="hobbsTotal">-- HR</span>
+                        </div>
+                    </div>
+                    <div class="time-entry-grid mt-md">
+                        <div class="time-entry-item">
+                            <label class="stat-label">TACH START</label>
+                            <input type="number" id="tachStart" class="time-input" placeholder="0.0" step="0.1" min="0">
+                        </div>
+                        <div class="time-entry-item">
+                            <label class="stat-label">TACH END</label>
+                            <input type="number" id="tachEnd" class="time-input" placeholder="0.0" step="0.1" min="0">
+                        </div>
+                        <div class="time-entry-item">
+                            <label class="stat-label">TACH TOTAL</label>
+                            <span class="stat-value" id="tachTotal">-- HR</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- GPS Track Info -->
+                <div class="stats-card">
+                    <h3 class="stats-card-title">GPS TRACK</h3>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <span class="stat-label">TRACK POINTS</span>
+                            <span class="stat-value" id="trackPoints">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">RECORDING</span>
+                            <span class="stat-value" id="recordingStatus">INACTIVE</span>
+                        </div>
+                    </div>
+                    <div class="stats-actions mt-sm">
+                        <button class="btn btn-secondary" id="exportTrackBtn">EXPORT TRACK</button>
+                        <button class="btn btn-warning" id="clearTrackBtn">CLEAR TRACK</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- End Tab: Stats -->
+
     </div>
 
     <!-- Scripts - Load modules in order (3-Engine Architecture) -->
@@ -331,9 +442,11 @@
 
     <!-- State Management -->
     <script src="state/flight-state.js"></script>       <!-- Flight plan & navigation state -->
+    <script src="state/flight-tracker.js"></script>     <!-- Flight time & GPS tracking -->
 
     <!-- Display Layer -->
     <script src="display/ui-controller.js"></script>    <!-- UI interactions module -->
+    <script src="display/stats-controller.js"></script> <!-- Stats tab controller -->
     <script src="display/tactical-display.js"></script> <!-- Vector map & GPS tracking -->
     <script src="display/app.js"></script>              <!-- Main application coordinator -->
 </body>
