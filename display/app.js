@@ -364,15 +364,35 @@ async function handleLoadData() {
 }
 
 async function handleReindexCache() {
+    if (!confirm('This will re-parse all cached data files with the latest parser code.\n\nAny parser changes will be applied.\n\nContinue?')) {
+        return;
+    }
+
+    const elements = UIController.getElements();
+    elements.reindexCacheBtn.disabled = true;
+
     try {
-        UIController.updateStatus('[...] REINDEXING TOKEN MAP', 'loading');
-        await DataManager.rebuildTokenTypeMap();
-        UIController.updateStatus('[✓] DATABASE READY', 'success');
+        // Clear in-memory data structures but keep cached files
+        UIController.updateStatus('[...] CLEARING IN-MEMORY DATA', 'loading');
+        await DataManager.clearInMemoryData?.();
+
+        // Re-parse cached files with updated parser
+        UIController.updateStatus('[...] RE-PARSING CACHED FILES', 'loading');
+        await DataManager.loadFromCache((message, type) => {
+            UIController.updateStatus(message, type);
+            console.log(`[DataManager] ${message}`);
+        });
+
+        UIController.updateStatus('[✓] DATABASE REINDEXED', 'success');
         UIController.showDataInfo();
-        alert('Token map reindexed successfully!');
+        UIController.enableRouteInput();
+        alert('Database reindexed successfully!\n\nCached data has been re-parsed with updated code.');
     } catch (error) {
         console.error('Error reindexing:', error);
-        alert('ERROR: REINDEX OPERATION FAILED');
+        UIController.updateStatus('[✗] REINDEX FAILED', 'error');
+        alert('ERROR: REINDEX OPERATION FAILED\n\n' + error.message);
+    } finally {
+        elements.reindexCacheBtn.disabled = false;
     }
 }
 

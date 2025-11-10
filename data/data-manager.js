@@ -353,38 +353,104 @@ async function checkCachedData() {
     return { loaded: false };
 }
 
-function loadFromCache(cachedData) {
-    // Deserialize arrays back to Maps (instant - no parsing/indexing needed!)
-    airportsData = new Map(cachedData.airports || []);
-    iataToIcao = new Map(cachedData.iataToIcao || []);
-    navaidsData = new Map(cachedData.navaids || []);
-    fixesData = new Map(cachedData.fixes || []);
-    frequenciesData = new Map(cachedData.frequencies || []);
-    runwaysData = new Map(cachedData.runways || []);
-    airwaysData = new Map(cachedData.airways || []);
-    starsData = new Map(cachedData.stars || []);
-    dpsData = new Map(cachedData.dps || []);
-    dataSources = cachedData.dataSources || [];
-    dataTimestamp = cachedData.timestamp;
+async function loadFromCache(onStatusUpdate) {
+    // If called with cachedData object directly (old behavior from checkCachedData)
+    if (onStatusUpdate && typeof onStatusUpdate === 'object' && !onStatusUpdate.call) {
+        const cachedData = onStatusUpdate;
+        // Deserialize arrays back to Maps (instant - no parsing/indexing needed!)
+        airportsData = new Map(cachedData.airports || []);
+        iataToIcao = new Map(cachedData.iataToIcao || []);
+        navaidsData = new Map(cachedData.navaids || []);
+        fixesData = new Map(cachedData.fixes || []);
+        frequenciesData = new Map(cachedData.frequencies || []);
+        runwaysData = new Map(cachedData.runways || []);
+        airwaysData = new Map(cachedData.airways || []);
+        starsData = new Map(cachedData.stars || []);
+        dpsData = new Map(cachedData.dps || []);
+        dataSources = cachedData.dataSources || [];
+        dataTimestamp = cachedData.timestamp;
 
-    // Restore file metadata if available
-    if (cachedData.fileMetadata) {
-        fileMetadata = new Map(Object.entries(cachedData.fileMetadata));
+        // Restore file metadata if available
+        if (cachedData.fileMetadata) {
+            fileMetadata = new Map(Object.entries(cachedData.fileMetadata));
+        }
+
+        // Build token type lookup map
+        buildTokenTypeMap();
+
+        // Initialize QueryEngine with data references
+        if (typeof window.QueryEngine !== 'undefined') {
+            window.QueryEngine.init(airportsData, navaidsData, fixesData, airwaysData, tokenTypeMap);
+        }
+
+        // Initialize RouteExpander with data
+        if (typeof window.RouteExpander !== 'undefined') {
+            window.RouteExpander.setAirwaysData(airwaysData);
+            window.RouteExpander.setStarsData(starsData);
+            window.RouteExpander.setDpsData(dpsData);
+        }
+        return;
     }
 
-    // Build token type lookup map
-    buildTokenTypeMap();
-
-    // Initialize QueryEngine with data references
-    if (typeof window.QueryEngine !== 'undefined') {
-        window.QueryEngine.init(airportsData, navaidsData, fixesData, airwaysData, tokenTypeMap);
+    // New behavior: Load from IndexedDB and reparse
+    if (!onStatusUpdate) {
+        onStatusUpdate = (msg, type) => console.log(`[DataManager] ${msg}`);
     }
 
-    // Initialize RouteExpander with data
-    if (typeof window.RouteExpander !== 'undefined') {
-        window.RouteExpander.setAirwaysData(airwaysData);
-        window.RouteExpander.setStarsData(starsData);
-        window.RouteExpander.setDpsData(dpsData);
+    try {
+        onStatusUpdate('[...] LOADING CACHED DATA FROM DATABASE', 'loading');
+        const cachedData = await loadFromCacheDB();
+
+        if (!cachedData) {
+            throw new Error('No cached data found');
+        }
+
+        // Deserialize cached parsed data
+        onStatusUpdate('[...] DESERIALIZING CACHED DATA', 'loading');
+        airportsData = new Map(cachedData.airports || []);
+        iataToIcao = new Map(cachedData.iataToIcao || []);
+        navaidsData = new Map(cachedData.navaids || []);
+        fixesData = new Map(cachedData.fixes || []);
+        frequenciesData = new Map(cachedData.frequencies || []);
+        runwaysData = new Map(cachedData.runways || []);
+        airwaysData = new Map(cachedData.airways || []);
+        starsData = new Map(cachedData.stars || []);
+        dpsData = new Map(cachedData.dps || []);
+        dataSources = cachedData.dataSources || [];
+        dataTimestamp = cachedData.timestamp;
+
+        // Restore file metadata if available
+        if (cachedData.fileMetadata) {
+            fileMetadata = new Map(Object.entries(cachedData.fileMetadata));
+        }
+
+        // Build token type lookup map with updated parser logic
+        onStatusUpdate('[...] REBUILDING TOKEN TYPE MAP', 'loading');
+        buildTokenTypeMap();
+
+        // Initialize QueryEngine with data references
+        if (typeof window.QueryEngine !== 'undefined') {
+            onStatusUpdate('[...] INITIALIZING QUERY ENGINE', 'loading');
+            window.QueryEngine.init(airportsData, navaidsData, fixesData, airwaysData, tokenTypeMap);
+        }
+
+        // Initialize RouteExpander with data
+        if (typeof window.RouteExpander !== 'undefined') {
+            onStatusUpdate('[...] INITIALIZING ROUTE EXPANDER', 'loading');
+            window.RouteExpander.setAirwaysData(airwaysData);
+            window.RouteExpander.setStarsData(starsData);
+            window.RouteExpander.setDpsData(dpsData);
+        }
+
+        const stats = getDataStats();
+        const sourceStr = dataSources.join(' + ');
+        onStatusUpdate(
+            `[OK] ${stats.airports} AIRPORTS | ${stats.navaids} NAVAIDS | ${stats.fixes} FIXES (${sourceStr})`,
+            'success'
+        );
+    } catch (error) {
+        onStatusUpdate(`[ERR] Failed to load from cache: ${error.message}`, 'error');
+        throw error;
     }
 }
 
@@ -564,6 +630,25 @@ async function clearCache() {
     fileMetadata.clear();
     dataTimestamp = null;
     dataSources = [];
+}
+
+// Clear in-memory data structures only (keeps IndexedDB cache for reindexing)
+function clearInMemoryData() {
+    console.log('[DataManager] Clearing in-memory data structures...');
+    airportsData.clear();
+    iataToIcao.clear();
+    navaidsData.clear();
+    fixesData.clear();
+    frequenciesData.clear();
+    runwaysData.clear();
+    airwaysData.clear();
+    starsData.clear();
+    dpsData.clear();
+    tokenTypeMap.clear();
+    fileMetadata.clear();
+    dataTimestamp = null;
+    dataSources = [];
+    console.log('[DataManager] In-memory data cleared');
 }
 
 // ============================================
@@ -1052,6 +1137,8 @@ window.DataManager = {
     // Data loading
     loadData,
     clearCache,
+    clearInMemoryData,
+    loadFromCache,
     rebuildTokenTypeMap,
     getFileStatus,
 
