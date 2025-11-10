@@ -13,7 +13,7 @@ This document summarizes the implementation of missing IFR flight planning featu
 **File**: [route-calculator.js](route-calculator.js)
 
 **Implementation**:
-- Added `parseLatLonCoordinate()` function to parse FAA coordinate formats
+- Added `parseLatLonCoordinate()` function to parse FAA/ICAO coordinate formats
 - Supports both DDMM/DDDMM and DDMMSS/DDDMMSS formats
 - Handles hemisphere designators (N/S/E/W) with US-centric defaults (N/W)
 - Creates virtual waypoints with type "COORDINATE"
@@ -22,7 +22,8 @@ This document summarizes the implementation of missing IFR flight planning featu
 **Formats Supported**:
 - `DDMM/DDDMM` → Example: `3407/10615` = 34°07'N 106°15'W
 - `DDMMSS/DDDMMSS` → Example: `340730/1061530` = 34°07'30"N 106°15'30"W
-- Optional hemisphere suffix: `3407/10615N/W`
+- `DDMMN/DDDMMW` (ICAO format) → Example: `4814N/06848W` = 48°14'N 68°48'W
+- Mixed formats: `4814N/06848`, `4814/06848W` (partial hemisphere designators)
 
 **Test Routes**:
 ```
@@ -182,9 +183,13 @@ The app is now fully compliant with FAA IFR flight plan routing formats! 🎉
 
 ### Coordinate Parsing Algorithm
 
-1. Regex match: `/^(\d{4,6})\/(\d{5,7})([NS])?([EW])?$/`
-2. Parse latitude (DD or DDMMSS)
-3. Parse longitude (DDD or DDDMMSS)
+1. Regex match: `/^(\d{4,6})([NS])?\/(\d{5,7})([EW])?$/`
+   - Group 1: Latitude digits (4-6 digits)
+   - Group 2: Latitude hemisphere (N/S, optional)
+   - Group 3: Longitude digits (5-7 digits)
+   - Group 4: Longitude hemisphere (E/W, optional)
+2. Parse latitude (DDMM or DDMMSS)
+3. Parse longitude (DDDMM or DDDMMSS)
 4. Validate ranges (lat: 0-90°, lon: 0-180°, min/sec: 0-59)
 5. Convert to decimal degrees
 6. Apply hemisphere (default: N/W for US)

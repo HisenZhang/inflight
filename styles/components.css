@@ -232,7 +232,7 @@ header {
     padding-bottom: 5px;
 }
 
-/* Route Input */
+/* Route Input (Legacy - kept for backwards compatibility) */
 .route-input {
     display: grid;
     grid-template-columns: 1fr auto auto;
@@ -240,10 +240,65 @@ header {
     margin-bottom: var(--space-sm);
 }
 
-.input-wrapper {
-    position: relative;
+/* ICAO-Style Route Input (Separate departure/route/destination) */
+.route-input-icao {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-sm);
 }
 
+.route-input-icao .input-row {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    gap: var(--space-sm);
+    align-items: center;
+}
+
+.route-input-icao .input-label {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    letter-spacing: 1px;
+    text-align: right;
+}
+
+.route-input-icao .button-row {
+    display: flex;
+    gap: var(--space-sm);
+    margin-top: var(--space-xs);
+}
+
+.input-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.flex-grow {
+    flex-grow: 1;
+}
+
+.route-field {
+    width: 100%;
+    padding: var(--space-sm);
+    border: 2px solid var(--border-color);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    font-family: inherit;
+    letter-spacing: 2px;
+}
+
+.route-field:focus {
+    outline: none;
+    border-color: var(--color-metric);
+}
+
+.route-field:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+/* Legacy route input styling */
 .route-input input {
     width: 100%;
     padding: var(--space-sm);
@@ -643,6 +698,24 @@ header {
 }
 
 @media (max-width: 1024px) {
+    /* Mobile-friendly ICAO route input layout */
+    .route-input-icao .input-row {
+        grid-template-columns: 100px 1fr;
+        gap: var(--space-xs);
+    }
+
+    .route-input-icao .input-label {
+        font-size: 0.85rem;
+    }
+
+    .route-input-icao .button-row {
+        flex-direction: column;
+    }
+
+    .route-input-icao .button-row button {
+        width: 100%;
+    }
+
     .stats-section {
         border: none;
         padding: var(--space-md);

@@ -235,55 +235,60 @@ async function loadOurAirportsData(onStatusUpdate, onFileLoaded) {
         const parsedData = {};
         const rawCSV = {};
 
-        // Download and parse each file individually
-        for (const fileInfo of filesToDownload) {
-            const startTime = Date.now();
-            onStatusUpdate(`[...] DOWNLOADING OURAIRPORTS ${fileInfo.label}`, 'loading');
+        // Download and parse all files in parallel
+        onStatusUpdate('[...] DOWNLOADING OURAIRPORTS FILES IN PARALLEL', 'loading');
 
+        const downloadPromises = filesToDownload.map(async (fileInfo) => {
+            const startTime = Date.now();
             const response = await fetch(fileInfo.url);
             if (!response.ok) throw new Error(`HTTP ${response.status} for ${fileInfo.label}`);
             const csvData = await response.text();
             const downloadTime = Date.now() - startTime;
 
-            onStatusUpdate(`[...] PARSING OURAIRPORTS ${fileInfo.label}`, 'loading');
             const parseStartTime = Date.now();
             const parsed = fileInfo.parser(csvData);
             const parseTime = Date.now() - parseStartTime;
 
-            // Store parsed data
-            const dataKey = fileInfo.id.replace('oa_', '');
+            return { fileInfo, csvData, parsed, downloadTime, parseTime };
+        });
+
+        const results = await Promise.all(downloadPromises);
+
+        // Process results and build metadata
+        for (const result of results) {
+            const dataKey = result.fileInfo.id.replace('oa_', '');
 
             // Handle different parser return types
-            if (fileInfo.id === 'oa_airports') {
-                parsedData.airports = parsed.airports;
-                parsedData.iataToIcao = parsed.iataToIcao;
-                rawCSV.airportsCSV = csvData;
+            if (result.fileInfo.id === 'oa_airports') {
+                parsedData.airports = result.parsed.airports;
+                parsedData.iataToIcao = result.parsed.iataToIcao;
+                rawCSV.airportsCSV = result.csvData;
             } else {
-                parsedData[dataKey] = parsed;
-                rawCSV[`${dataKey}CSV`] = csvData;
+                parsedData[dataKey] = result.parsed;
+                rawCSV[`${dataKey}CSV`] = result.csvData;
             }
 
             // Track file metadata
-            const recordCount = parsed.size || (parsed.airports ? parsed.airports.size : 0);
+            const recordCount = result.parsed.size || (result.parsed.airports ? result.parsed.airports.size : 0);
             const metadata = {
-                id: fileInfo.id,
-                label: fileInfo.label,
+                id: result.fileInfo.id,
+                label: result.fileInfo.label,
                 timestamp: Date.now(),
-                downloadTime,
-                parseTime,
+                downloadTime: result.downloadTime,
+                parseTime: result.parseTime,
                 recordCount,
-                sizeBytes: csvData.length,
+                sizeBytes: result.csvData.length,
                 source: 'OurAirports'
             };
 
-            fileMetadata.set(fileInfo.id, metadata);
+            fileMetadata.set(result.fileInfo.id, metadata);
 
             // Notify about file completion
             if (onFileLoaded) {
                 onFileLoaded(metadata);
             }
 
-            onStatusUpdate(`[OK] OURAIRPORTS ${fileInfo.label} (${recordCount} RECORDS)`, 'success');
+            onStatusUpdate(`[OK] OURAIRPORTS ${result.fileInfo.label} (${recordCount} RECORDS)`, 'success');
         }
 
         onStatusUpdate('[OK] OURAIRPORTS DATA LOADED', 'success');
