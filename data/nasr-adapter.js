@@ -400,38 +400,59 @@ function parseNASRSTARs(csvText) {
     console.log(`[NASR] Processing ${bodyRoutes.size} STAR body routes, ${transitionRoutes.size} transitions`);
 
     // Store STARs with their body and transitions
+    // Store all route variants, not just the first one
     for (const [key, fixes] of bodyRoutes) {
         const [starCode, routeType, routeName, bodySeq] = key.split('|');
 
-        // Only use the first BODY route per STAR
-        if (!stars.has(starCode)) {
-            fixes.sort((a, b) => a.seq - b.seq);
-            const fixNames = fixes.map(f => f.fix);
-            // REVERSE - NASR stores procedures from endpoint to startpoint
-            fixNames.reverse();
+        fixes.sort((a, b) => a.seq - b.seq);
+        const fixNames = fixes.map(f => f.fix);
+        // REVERSE - NASR stores procedures from endpoint to startpoint
+        fixNames.reverse();
 
-            // Collect all transitions for this STAR
-            const transitions = [];
-            for (const [transKey, transFixes] of transitionRoutes) {
-                if (transKey.startsWith(`${starCode}|TRANSITION|`)) {
-                    transFixes.sort((a, b) => a.seq - b.seq);
-                    const transFixNames = transFixes.map(f => f.fix);
-                    // REVERSE - NASR stores transitions from endpoint to startpoint
-                    transFixNames.reverse();
+        // Collect all transitions for this specific STAR route variant
+        const transitions = [];
+        for (const [transKey, transFixes] of transitionRoutes) {
+            if (transKey.startsWith(`${starCode}|TRANSITION|`)) {
+                transFixes.sort((a, b) => a.seq - b.seq);
+                const transFixNames = transFixes.map(f => f.fix);
+                // REVERSE - NASR stores transitions from endpoint to startpoint
+                transFixNames.reverse();
 
-                    // After reversal, first fix is the external entry point
-                    transitions.push({
-                        name: transKey.split('|')[2],
-                        entryFix: transFixNames[0],
-                        fixes: transFixNames
-                    });
-                }
+                // After reversal, first fix is the external entry point
+                transitions.push({
+                    name: transKey.split('|')[2],
+                    entryFix: transFixNames[0],
+                    fixes: transFixNames
+                });
             }
+        }
 
-            stars.set(starCode, {
-                body: fixNames,
-                transitions: transitions
-            });
+        // Extract procedure name from STAR_COMPUTER_CODE format: ENTRYFIX.PROCCODE
+        // Example: GLAND.BLUMS5 -> entryFix=GLAND, procName=BLUMS5
+        const dotPos = starCode.indexOf('.');
+        const entryFix = dotPos > 0 ? starCode.substring(0, dotPos) : routeName;
+        const procName = dotPos > 0 ? starCode.substring(dotPos + 1) : starCode;
+
+        // Store with standardized structure
+        const starData = {
+            computerCode: starCode,
+            name: procName,
+            type: 'STAR',
+            body: {
+                name: entryFix,
+                fixes: fixNames
+            },
+            transitions: transitions
+        };
+
+        // Index by procedure name (e.g., BLUMS5)
+        if (!stars.has(procName)) {
+            stars.set(procName, starData);
+        }
+
+        // Also index by full computer code (e.g., GLAND.BLUMS5)
+        if (!stars.has(starCode)) {
+            stars.set(starCode, starData);
         }
     }
 
@@ -451,7 +472,8 @@ function parseNASRDPs(csvText) {
     const pointIdx = headers.indexOf('POINT');
 
     const dps = new Map();
-    const bodyRoutes = new Map();
+    const bodyRoutes = new Map(); // BODY portions
+    const transitionRoutes = new Map(); // TRANSITION portions
 
     for (let i = 1; i < lines.length; i++) {
         if (!lines[i].trim()) continue;
@@ -465,31 +487,83 @@ function parseNASRDPs(csvText) {
             const pointSeq = parseInt(values[pointSeqIdx]);
             const point = values[pointIdx]?.trim().toUpperCase();
 
-            if (!dpCode || routeType !== 'BODY' || !point || !routeName) continue;
+            if (!dpCode || !point || !routeName) continue;
+            if (routeType !== 'BODY' && routeType !== 'TRANSITION') continue;
 
-            // Key by DP_CODE, ROUTE_NAME, and BODY_SEQ (same as STARs)
             const key = `${dpCode}|${routeType}|${routeName}|${bodySeq}`;
 
-            if (!bodyRoutes.has(key)) {
-                bodyRoutes.set(key, []);
+            if (routeType === 'BODY') {
+                if (!bodyRoutes.has(key)) {
+                    bodyRoutes.set(key, []);
+                }
+                bodyRoutes.get(key).push({ seq: pointSeq, fix: point });
+            } else if (routeType === 'TRANSITION') {
+                if (!transitionRoutes.has(key)) {
+                    transitionRoutes.set(key, []);
+                }
+                transitionRoutes.get(key).push({ seq: pointSeq, fix: point });
             }
-
-            bodyRoutes.get(key).push({ seq: pointSeq, fix: point });
         } catch (error) {
             continue;
         }
     }
 
-    // Pick the first transition for each DP
+    console.log(`[NASR] Processing ${bodyRoutes.size} DP body routes, ${transitionRoutes.size} transitions`);
+
+    // Store DPs with their body and transitions using standardized structure
+    // DP_COMPUTER_CODE format: PROCCODE.EXITFIX (e.g., HIDEY1.HIDEY)
     for (const [key, fixes] of bodyRoutes) {
-        const [dpCode] = key.split('|');
+        const [dpCode, routeType, routeName, bodySeq] = key.split('|');
 
-        // Only use the first route per DP
+        fixes.sort((a, b) => a.seq - b.seq);
+        const fixNames = fixes.map(f => f.fix);
+        // REVERSE - NASR stores DPs from endpoint (runway) to startpoint (entry fix)
+        fixNames.reverse();
+
+        // Extract procedure name from DP_COMPUTER_CODE format: PROCCODE.EXITFIX
+        // Example: HIDEY1.HIDEY -> procName=HIDEY1, exitFix=HIDEY
+        const dotPos = dpCode.indexOf('.');
+        const procName = dotPos > 0 ? dpCode.substring(0, dotPos) : dpCode;
+        const exitFix = dotPos > 0 ? dpCode.substring(dotPos + 1) : routeName;
+
+        // Collect all transitions for this DP
+        const transitions = [];
+        for (const [transKey, transFixes] of transitionRoutes) {
+            if (transKey.startsWith(`${dpCode}|TRANSITION|`)) {
+                transFixes.sort((a, b) => a.seq - b.seq);
+                const transFixNames = transFixes.map(f => f.fix);
+                // REVERSE - NASR stores transitions from endpoint to startpoint
+                transFixNames.reverse();
+
+                // After reversal, first fix is the external entry point
+                transitions.push({
+                    name: transKey.split('|')[2],
+                    entryFix: transFixNames[0],
+                    fixes: transFixNames
+                });
+            }
+        }
+
+        // Store with standardized structure
+        const dpData = {
+            computerCode: dpCode,
+            name: procName,
+            type: 'DP',
+            body: {
+                name: exitFix,
+                fixes: fixNames
+            },
+            transitions: transitions
+        };
+
+        // Index by procedure name (e.g., HIDEY1)
+        if (!dps.has(procName)) {
+            dps.set(procName, dpData);
+        }
+
+        // Also index by full computer code (e.g., HIDEY1.HIDEY)
         if (!dps.has(dpCode)) {
-            fixes.sort((a, b) => a.seq - b.seq);
-            const fixNames = fixes.map(f => f.fix);
-
-            dps.set(dpCode, fixNames);
+            dps.set(dpCode, dpData);
         }
     }
 
