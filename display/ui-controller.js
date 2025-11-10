@@ -23,8 +23,10 @@ function init() {
         dataInspection: document.getElementById('dataInspection'),
         inspectionContent: document.getElementById('inspectionContent'),
 
-        // Input elements
+        // Input elements (ICAO-style: departure/route/destination)
+        departureInput: document.getElementById('departureInput'),
         routeInput: document.getElementById('routeInput'),
+        destinationInput: document.getElementById('destinationInput'),
         calculateBtn: document.getElementById('calculateBtn'),
         clearRouteBtn: document.getElementById('clearRouteBtn'),
 
@@ -396,7 +398,9 @@ function populateInspection() {
 // ============================================
 
 function enableRouteInput() {
+    elements.departureInput.disabled = false;
     elements.routeInput.disabled = false;
+    elements.destinationInput.disabled = false;
     elements.calculateBtn.disabled = false;
 
     // Enable inputs based on feature toggles (if they're enabled)
@@ -420,7 +424,9 @@ function disableRouteInput() {
 }
 
 function clearRoute() {
+    elements.departureInput.value = '';
     elements.routeInput.value = '';
+    elements.destinationInput.value = '';
     elements.resultsSection.style.display = 'none';
     hideAutocomplete();
 }
@@ -1125,8 +1131,25 @@ function displayWindAltitudeTable(legs, filedAltitude) {
 function restoreNavlog(navlogData) {
     const { routeString, waypoints, legs, totalDistance, totalTime, fuelStatus, options } = navlogData;
 
-    // Restore route input
-    elements.routeInput.value = routeString;
+    // Restore ICAO-style route inputs (departure/route/destination)
+    // Check if saved data has separate fields (new format) or single routeString (legacy)
+    if (navlogData.departure && navlogData.destination) {
+        // New format: restore to separate fields
+        elements.departureInput.value = navlogData.departure;
+        elements.routeInput.value = navlogData.routeMiddle || '';
+        elements.destinationInput.value = navlogData.destination;
+    } else {
+        // Legacy format: parse routeString to extract departure and destination
+        const routeParts = routeString.trim().split(/\s+/);
+        if (routeParts.length >= 2) {
+            elements.departureInput.value = routeParts[0];
+            elements.destinationInput.value = routeParts[routeParts.length - 1];
+            elements.routeInput.value = routeParts.slice(1, -1).join(' ');
+        } else {
+            // Fallback: put everything in routeInput for backward compatibility
+            elements.routeInput.value = routeString;
+        }
+    }
 
     // Restore optional feature settings
     if (options.enableWinds) {

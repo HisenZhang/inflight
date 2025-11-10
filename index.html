@@ -75,24 +75,60 @@
         <div class="input-section">
             <h2 class="font-bold text-primary">ROUTE ENTRY</h2>
 
-            <!-- Basic Route Input (Required) -->
-            <div class="route-input">
-                <div class="input-wrapper">
+            <!-- ICAO-Style Route Input (Required) -->
+            <div class="route-input-icao">
+                <!-- Departure Airport -->
+                <div class="input-row">
+                    <label class="input-label font-medium">DEPARTURE:</label>
                     <input
                         type="text"
-                        id="routeInput"
-                        class="font-medium"
-                        placeholder="KALB PAYGE Q822 FNT WYNDE3 KORD"
+                        id="departureInput"
+                        class="font-medium route-field"
+                        placeholder="KALB"
+                        maxlength="6"
                         autocomplete="off"
                         disabled
                     >
-                    <div id="autocompleteDropdown" class="autocomplete-dropdown"></div>
                 </div>
-                <button id="calculateBtn" class="btn btn-primary font-bold" disabled>CALCULATE</button>
-                <button id="clearRouteBtn" class="btn btn-secondary">CLEAR</button>
+
+                <!-- Route (Optional) -->
+                <div class="input-row">
+                    <label class="input-label font-medium">ROUTE:</label>
+                    <div class="input-wrapper flex-grow">
+                        <input
+                            type="text"
+                            id="routeInput"
+                            class="font-medium route-field"
+                            placeholder="PAYGE Q822 FNT WYNDE3 (or leave blank for DCT)"
+                            autocomplete="off"
+                            disabled
+                        >
+                        <div id="autocompleteDropdown" class="autocomplete-dropdown"></div>
+                    </div>
+                </div>
+
+                <!-- Destination Airport -->
+                <div class="input-row">
+                    <label class="input-label font-medium">DESTINATION:</label>
+                    <input
+                        type="text"
+                        id="destinationInput"
+                        class="font-medium route-field"
+                        placeholder="KORD"
+                        maxlength="6"
+                        autocomplete="off"
+                        disabled
+                    >
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="button-row">
+                    <button id="calculateBtn" class="btn btn-primary font-bold" disabled>CALCULATE</button>
+                    <button id="clearRouteBtn" class="btn btn-secondary">CLEAR</button>
+                </div>
             </div>
             <p class="help-text mb-md">
-                Airports (ICAO), NavAids, Fixes, Airways, SID/STAR
+                Airports (ICAO), NavAids, Fixes, Airways, SID/STAR. Route is optional - leave blank for direct (DCT).
             </p>
 
             <!-- Optional Features -->

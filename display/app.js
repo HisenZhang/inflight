@@ -181,7 +181,20 @@ function setupEventListeners() {
         });
     });
 
-    // Autocomplete
+    // Uppercase conversion for departure input
+    elements.departureInput.addEventListener('input', (e) => {
+        const start = e.target.selectionStart;
+        const end = e.target.selectionEnd;
+        e.target.value = e.target.value.toUpperCase();
+        e.target.setSelectionRange(start, end);
+    });
+    elements.departureInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !elements.calculateBtn.disabled) {
+            handleCalculateRoute();
+        }
+    });
+
+    // Route input with autocomplete
     elements.routeInput.addEventListener('input', (e) => {
         // Force uppercase
         const start = e.target.selectionStart;
@@ -196,6 +209,19 @@ function setupEventListeners() {
         UIController.handleAutocompleteKeydown(e);
         // Handle Enter key for calculation
         if (e.key === 'Enter' && !elements.autocompleteDropdown.classList.contains('show') && !elements.calculateBtn.disabled) {
+            handleCalculateRoute();
+        }
+    });
+
+    // Uppercase conversion for destination input
+    elements.destinationInput.addEventListener('input', (e) => {
+        const start = e.target.selectionStart;
+        const end = e.target.selectionEnd;
+        e.target.value = e.target.value.toUpperCase();
+        e.target.setSelectionRange(start, end);
+    });
+    elements.destinationInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !elements.calculateBtn.disabled) {
             handleCalculateRoute();
         }
     });
@@ -336,10 +362,32 @@ async function handleClearCache() {
 async function handleCalculateRoute() {
     try {
         const elements = UIController.getElements();
-        const routeValue = elements.routeInput.value;
+
+        // Get ICAO-style inputs (departure/route/destination)
+        const departure = elements.departureInput.value.trim();
+        const routeMiddle = elements.routeInput.value.trim();
+        const destination = elements.destinationInput.value.trim();
+
+        // Validate that at least departure and destination are provided
+        if (!departure || !destination) {
+            alert('ERROR: DEPARTURE AND DESTINATION REQUIRED\n\nEnter departure airport and destination airport');
+            return;
+        }
+
+        // Build complete route string
+        // If route is empty, assume DCT (direct)
+        let fullRoute;
+        if (routeMiddle) {
+            fullRoute = `${departure} ${routeMiddle} ${destination}`;
+        } else {
+            fullRoute = `${departure} ${destination}`;
+            console.log('[Route] No route specified - using DCT (direct)');
+        }
+
+        console.log(`[Route] Full route: ${fullRoute}`);
 
         // Resolve waypoints
-        const resolutionResult = RouteCalculator.resolveWaypoints(routeValue);
+        const resolutionResult = RouteCalculator.resolveWaypoints(fullRoute);
         if (resolutionResult.error) {
             alert(resolutionResult.error);
             return;
@@ -406,13 +454,16 @@ async function handleCalculateRoute() {
 
         // Save to history - use FlightState instead of DataManager
         if (window.FlightState) {
-            window.FlightState.saveToHistory(routeValue.trim().toUpperCase());
+            window.FlightState.saveToHistory(fullRoute.trim().toUpperCase());
         }
         UIController.displayQueryHistory();
 
-        // Store current navlog data
+        // Store current navlog data (including separate departure/destination for crash recovery)
         currentNavlogData = {
-            routeString: routeValue.trim().toUpperCase(),
+            routeString: fullRoute.trim().toUpperCase(),
+            departure: departure,
+            destination: destination,
+            routeMiddle: routeMiddle,
             waypoints,
             legs,
             totalDistance,
