@@ -68,7 +68,7 @@ function checkInternetConnection() {
     // Check if online
     if (!navigator.onLine) {
         statusEl.textContent = 'OFFLINE';
-        statusEl.className = 'check-status status-error';
+        statusEl.style.color = 'var(--color-error)';
         return;
     }
 
@@ -78,50 +78,108 @@ function checkInternetConnection() {
         cache: 'no-cache'
     })
     .then(() => {
-        statusEl.textContent = 'CONNECTED';
-        statusEl.className = 'check-status status-ok';
+        statusEl.textContent = 'ONLINE';
+        statusEl.style.color = 'var(--color-metric)';
     })
     .catch(() => {
         statusEl.textContent = 'NO ACCESS';
-        statusEl.className = 'check-status status-error';
+        statusEl.style.color = 'var(--color-error)';
     });
 }
 
 function checkGPSAvailability() {
     const statusEl = document.getElementById('gpsStatus');
+    const horizEl = document.getElementById('gpsHorizStatus');
+    const vertEl = document.getElementById('gpsVertStatus');
+
     if (!statusEl) return;
 
     if (!navigator.geolocation) {
         statusEl.textContent = 'NOT AVAILABLE';
-        statusEl.className = 'check-status status-error';
+        statusEl.style.color = 'var(--color-error)';
+        if (horizEl) {
+            horizEl.textContent = '--';
+            horizEl.style.color = 'var(--text-secondary)';
+        }
+        if (vertEl) {
+            vertEl.textContent = '--';
+            vertEl.style.color = 'var(--text-secondary)';
+        }
         return;
     }
 
     // Try to get GPS position
     navigator.geolocation.getCurrentPosition(
         (position) => {
-            const accuracy = position.coords.accuracy;
-            if (accuracy < 50) {
-                statusEl.textContent = 'EXCELLENT';
-                statusEl.className = 'check-status status-ok';
-            } else if (accuracy < 100) {
-                statusEl.textContent = 'GOOD';
-                statusEl.className = 'check-status status-ok';
-            } else {
-                statusEl.textContent = 'POOR';
-                statusEl.className = 'check-status status-warning';
+            // Horizontal accuracy in feet (convert from meters)
+            const horizAccuracyFt = Math.round(position.coords.accuracy * 3.28084);
+            // Vertical accuracy in feet (if available)
+            const vertAccuracyFt = position.coords.altitudeAccuracy
+                ? Math.round(position.coords.altitudeAccuracy * 3.28084)
+                : null;
+
+            // Update horizontal accuracy
+            if (horizEl) {
+                if (horizAccuracyFt < 65) { // <20m
+                    horizEl.textContent = `±${horizAccuracyFt}FT`;
+                    horizEl.style.color = 'var(--color-metric)';
+                } else if (horizAccuracyFt < 165) { // <50m
+                    horizEl.textContent = `±${horizAccuracyFt}FT`;
+                    horizEl.style.color = 'var(--color-metric)';
+                } else if (horizAccuracyFt < 330) { // <100m
+                    horizEl.textContent = `±${horizAccuracyFt}FT`;
+                    horizEl.style.color = 'var(--color-warning)';
+                } else {
+                    horizEl.textContent = `±${horizAccuracyFt}FT`;
+                    horizEl.style.color = 'var(--color-warning)';
+                }
             }
+
+            // Update vertical accuracy
+            if (vertEl) {
+                if (vertAccuracyFt !== null) {
+                    if (vertAccuracyFt < 100) {
+                        vertEl.textContent = `±${vertAccuracyFt}FT`;
+                        vertEl.style.color = 'var(--color-metric)';
+                    } else if (vertAccuracyFt < 200) {
+                        vertEl.textContent = `±${vertAccuracyFt}FT`;
+                        vertEl.style.color = 'var(--color-warning)';
+                    } else {
+                        vertEl.textContent = `±${vertAccuracyFt}FT`;
+                        vertEl.style.color = 'var(--color-warning)';
+                    }
+                } else {
+                    vertEl.textContent = 'N/A';
+                    vertEl.style.color = 'var(--text-secondary)';
+                }
+            }
+
+            // Update status
+            statusEl.textContent = 'ACTIVE';
+            statusEl.style.color = 'var(--color-metric)';
         },
         (error) => {
+            if (horizEl) {
+                horizEl.textContent = '--';
+                horizEl.style.color = 'var(--text-secondary)';
+            }
+            if (vertEl) {
+                vertEl.textContent = '--';
+                vertEl.style.color = 'var(--text-secondary)';
+            }
+
             if (error.code === error.PERMISSION_DENIED) {
-                statusEl.textContent = 'PERMISSION DENIED';
-                statusEl.className = 'check-status status-error';
+                statusEl.textContent = 'DENIED';
+                statusEl.style.color = 'var(--color-error)';
             } else if (error.code === error.POSITION_UNAVAILABLE) {
-                statusEl.textContent = 'UNAVAILABLE';
-                statusEl.className = 'check-status status-error';
+                statusEl.textContent = 'NO SIGNAL';
+                statusEl.style.color = 'var(--color-error)';
+            } else if (error.code === error.TIMEOUT) {
+                statusEl.textContent = 'NO FIX';
+                statusEl.style.color = 'var(--color-error)';
             } else {
-                statusEl.textContent = 'TIMEOUT';
-                statusEl.className = 'check-status status-warning';
+                statusEl.textContent = 'ERROR';
+                statusEl.style.color = 'var(--color-error)';
             }
         },
         {
@@ -144,12 +202,23 @@ function initSystemChecks() {
     checkInternetConnection();
     checkGPSAvailability();
 
-    // Recheck internet connection every 30 seconds
-    setInterval(checkInternetConnection, 30000);
+    // Recheck internet connection every 60 seconds (less aggressive)
+    setInterval(checkInternetConnection, 60000);
 
-    // Listen for online/offline events
-    window.addEventListener('online', checkInternetConnection);
-    window.addEventListener('offline', checkInternetConnection);
+    // Also check when online/offline events fire
+    window.addEventListener('online', () => {
+        checkInternetConnection();
+        console.log('[SystemCheck] Network connection restored');
+    });
+
+    window.addEventListener('offline', () => {
+        const statusEl = document.getElementById('internetStatus');
+        if (statusEl) {
+            statusEl.textContent = 'OFFLINE';
+            statusEl.style.color = 'var(--color-error)';
+        }
+        console.log('[SystemCheck] Network connection lost');
+    });
 }
 
 // ============================================
@@ -1097,6 +1166,15 @@ function restoreNavlog(navlogData) {
     // Display vector map
     if (typeof window.VectorMap !== 'undefined') {
         window.VectorMap.displayMap(waypoints, legs, options);
+    }
+
+    // Restore FlightTracker fuel settings
+    if (window.FlightTracker && options.enableFuel) {
+        window.FlightTracker.setFuel(
+            options.usableFuel || 0,
+            options.burnRate || 0,
+            options.taxiFuel || 0
+        );
     }
 
     console.log('[UIController] Navlog restored:', routeString);

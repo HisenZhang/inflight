@@ -11,11 +11,20 @@ const FlightTracker = (() => {
     // GPS track recording
     let gpsTrack = [];
     let isRecording = false;
+    let currentTrackId = null;
+    let recordingMode = 'auto'; // 'auto' or 'manual'
 
     // Speed tracking for average calculation
     let speedSamples = [];
     const TAKEOFF_SPEED_THRESHOLD = 40; // knots
     const MIN_SPEED_FOR_FLIGHT = 40; // knots
+
+    // Distance tracking
+    let totalDistance = 0; // nautical miles
+    let lastPosition = null;
+
+    // Track storage
+    const TRACKS_STORAGE_KEY = 'flight_tracks';
 
     // Fuel tracking
     let initialFuel = 0;
@@ -34,21 +43,27 @@ const FlightTracker = (() => {
 
         const now = Date.now();
 
-        // Detect takeoff
+        // Detect takeoff (start recording automatically when >40kt) - only in AUTO mode
         if (!isInFlight && groundSpeed >= TAKEOFF_SPEED_THRESHOLD) {
             isInFlight = true;
             takeoffTime = now;
             lastUpdateTime = now;
             startFlightTimer();
+            if (recordingMode === 'auto') {
+                startRecording(); // Auto-start recording
+            }
             console.log('[FlightTracker] Takeoff detected at', new Date(now).toISOString());
         }
 
-        // Detect landing
+        // Detect landing (stop recording automatically when <40kt) - only in AUTO mode
         if (isInFlight && groundSpeed < MIN_SPEED_FOR_FLIGHT) {
             // Require sustained low speed to avoid false landing detection
             if (lastUpdateTime && (now - lastUpdateTime) > 10000) { // 10 seconds
                 isInFlight = false;
                 stopFlightTimer();
+                if (recordingMode === 'auto') {
+                    stopRecording(); // Auto-stop recording and save track
+                }
                 console.log('[FlightTracker] Landing detected at', new Date(now).toISOString());
             }
         }
@@ -108,40 +123,182 @@ const FlightTracker = (() => {
         };
 
         gpsTrack.push(point);
+
+        // Calculate distance flown if we have a previous position
+        if (lastPosition && isInFlight) {
+            const distance = calculateDistance(
+                lastPosition.lat,
+                lastPosition.lon,
+                position.lat,
+                position.lon
+            );
+            totalDistance += distance;
+        }
+
+        lastPosition = { lat: position.lat, lon: position.lon };
+    }
+
+    // Haversine formula for distance calculation (in nautical miles)
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+        const R = 3440.065; // Earth radius in nautical miles
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                  Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
     }
 
     function startRecording() {
+        if (isRecording) return;
+
         isRecording = true;
-        console.log('[FlightTracker] GPS recording started');
+        gpsTrack = [];
+        totalDistance = 0;
+        lastPosition = null;
+        currentTrackId = Date.now(); // Use timestamp as track ID
+        console.log('[FlightTracker] GPS recording started, track ID:', currentTrackId);
     }
 
     function stopRecording() {
+        if (!isRecording) return;
+
         isRecording = false;
+
+        // Save track to storage if it has points
+        if (gpsTrack.length > 0 && currentTrackId) {
+            saveCurrentTrack();
+        }
+
         console.log('[FlightTracker] GPS recording stopped');
     }
 
     function clearTrack() {
         gpsTrack = [];
+        currentTrackId = null;
         console.log('[FlightTracker] GPS track cleared');
     }
 
-    function exportTrack() {
-        const trackData = {
-            version: '1.0',
-            aircraft: 'Unknown',
-            date: new Date().toISOString(),
-            takeoffTime: takeoffTime ? new Date(takeoffTime).toISOString() : null,
-            flightDuration: flightDuration,
-            points: gpsTrack
+    // ============================================
+    // TRACK STORAGE MANAGEMENT
+    // ============================================
+
+    function saveCurrentTrack() {
+        if (gpsTrack.length === 0 || !currentTrackId) return false;
+
+        try {
+            const tracks = loadTracksFromStorage();
+
+            const track = {
+                id: currentTrackId,
+                timestamp: currentTrackId,
+                date: new Date(currentTrackId).toISOString(),
+                takeoffTime: takeoffTime ? new Date(takeoffTime).toISOString() : null,
+                landingTime: new Date().toISOString(),
+                flightDuration: flightDuration,
+                pointCount: gpsTrack.length,
+                points: gpsTrack
+            };
+
+            tracks.push(track);
+            localStorage.setItem(TRACKS_STORAGE_KEY, JSON.stringify(tracks));
+
+            console.log('[FlightTracker] Track saved:', track.id, `(${track.pointCount} points)`);
+            return true;
+        } catch (error) {
+            console.error('[FlightTracker] Failed to save track:', error);
+            return false;
+        }
+    }
+
+    function loadTracksFromStorage() {
+        try {
+            const stored = localStorage.getItem(TRACKS_STORAGE_KEY);
+            return stored ? JSON.parse(stored) : [];
+        } catch (error) {
+            console.error('[FlightTracker] Failed to load tracks:', error);
+            return [];
+        }
+    }
+
+    function getSavedTracks() {
+        return loadTracksFromStorage();
+    }
+
+    function deleteTrack(trackId) {
+        try {
+            let tracks = loadTracksFromStorage();
+            tracks = tracks.filter(t => t.id !== trackId);
+            localStorage.setItem(TRACKS_STORAGE_KEY, JSON.stringify(tracks));
+            console.log('[FlightTracker] Track deleted:', trackId);
+            return true;
+        } catch (error) {
+            console.error('[FlightTracker] Failed to delete track:', error);
+            return false;
+        }
+    }
+
+    function clearAllTracks() {
+        try {
+            localStorage.removeItem(TRACKS_STORAGE_KEY);
+            console.log('[FlightTracker] All tracks cleared');
+            return true;
+        } catch (error) {
+            console.error('[FlightTracker] Failed to clear tracks:', error);
+            return false;
+        }
+    }
+
+    function exportTrackAsGeoJSON(track) {
+        // Convert track to GeoJSON format
+        const geojson = {
+            type: "Feature",
+            properties: {
+                name: `Flight Track ${new Date(track.timestamp).toLocaleString()}`,
+                timestamp: track.timestamp,
+                date: track.date,
+                takeoffTime: track.takeoffTime,
+                landingTime: track.landingTime,
+                flightDuration: track.flightDuration,
+                pointCount: track.pointCount
+            },
+            geometry: {
+                type: "LineString",
+                coordinates: track.points.map(p => [p.lon, p.lat, p.alt || 0])
+            }
         };
 
-        const blob = new Blob([JSON.stringify(trackData, null, 2)], { type: 'application/json' });
+        const filename = `flight-track-${new Date(track.timestamp).toISOString().replace(/[:.]/g, '-')}.geojson`;
+        const blob = new Blob([JSON.stringify(geojson, null, 2)], { type: 'application/geo+json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `flight-track-${new Date().toISOString().split('T')[0]}.json`;
+        a.download = filename;
         a.click();
         URL.revokeObjectURL(url);
+
+        console.log('[FlightTracker] Track exported as GeoJSON:', filename);
+    }
+
+    function exportCurrentTrack() {
+        if (gpsTrack.length === 0) {
+            console.warn('[FlightTracker] No track data to export');
+            return;
+        }
+
+        const track = {
+            id: currentTrackId || Date.now(),
+            timestamp: currentTrackId || Date.now(),
+            date: new Date().toISOString(),
+            takeoffTime: takeoffTime ? new Date(takeoffTime).toISOString() : null,
+            landingTime: new Date().toISOString(),
+            flightDuration: flightDuration,
+            pointCount: gpsTrack.length,
+            points: gpsTrack
+        };
+
+        exportTrackAsGeoJSON(track);
     }
 
     // ============================================
@@ -161,7 +318,11 @@ const FlightTracker = (() => {
     }
 
     function getFuelRemaining() {
-        return Math.max(0, initialFuel - getFuelUsed());
+        // Initial fuel available for flight = usable fuel - taxi fuel
+        const initialAvailable = Math.max(0, initialFuel - taxiFuel);
+        // Subtract fuel burned during flight
+        const flightFuelUsed = burnRate && flightDuration ? (flightDuration / 3600) * burnRate : 0;
+        return Math.max(0, initialAvailable - flightFuelUsed);
     }
 
     function getEndurance() {
@@ -201,11 +362,30 @@ const FlightTracker = (() => {
             flightTimeEl.textContent = formatDuration(flightDuration);
         }
 
+        // Takeoff time
+        const takeoffTimeEl = document.getElementById('takeoffTime');
+        if (takeoffTimeEl && takeoffTime) {
+            const date = new Date(takeoffTime);
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            takeoffTimeEl.textContent = `${hours}:${minutes}`;
+            takeoffTimeEl.style.color = 'var(--color-metric)';
+        } else if (takeoffTimeEl) {
+            takeoffTimeEl.textContent = '--:--';
+            takeoffTimeEl.style.color = 'var(--text-secondary)';
+        }
+
         // Average ground speed
         const avgSpeedEl = document.getElementById('avgGroundSpeed');
         if (avgSpeedEl) {
             const avgSpeed = getAverageGroundSpeed();
             avgSpeedEl.textContent = avgSpeed > 0 ? `${avgSpeed} KT` : '-- KT';
+        }
+
+        // Distance flown
+        const distanceEl = document.getElementById('distanceFlown');
+        if (distanceEl) {
+            distanceEl.textContent = totalDistance > 0 ? `${totalDistance.toFixed(1)} NM` : '-- NM';
         }
 
         // Fuel stats (only if fuel tracking is enabled)
@@ -251,10 +431,9 @@ const FlightTracker = (() => {
     // ============================================
 
     function init() {
-        // Start recording automatically when GPS is enabled
-        startRecording();
-
-        console.log('[FlightTracker] Initialized');
+        // Recording will start automatically when takeoff is detected (>40kt GS)
+        // No need to start recording manually
+        console.log('[FlightTracker] Initialized - waiting for takeoff (>40kt)');
     }
 
     // ============================================
@@ -268,8 +447,14 @@ const FlightTracker = (() => {
         startRecording,
         stopRecording,
         clearTrack,
-        exportTrack,
+        exportCurrentTrack,
         updateUI,
+
+        // Track storage management
+        getSavedTracks,
+        deleteTrack,
+        clearAllTracks,
+        exportTrackAsGeoJSON,
 
         // Fuel configuration
         setFuel: (fuel, rate, taxi) => {
@@ -278,6 +463,25 @@ const FlightTracker = (() => {
             taxiFuel = taxi || 0;
             updateUI();
         },
+
+        // Recording mode management
+        setRecordingMode: (mode) => {
+            if (mode !== 'auto' && mode !== 'manual') {
+                console.error('[FlightTracker] Invalid recording mode:', mode);
+                return false;
+            }
+            recordingMode = mode;
+            console.log('[FlightTracker] Recording mode set to:', mode);
+
+            // If switching to auto while recording manually, stop recording
+            if (mode === 'auto' && isRecording && !isInFlight) {
+                stopRecording();
+            }
+
+            return true;
+        },
+        getRecordingMode: () => recordingMode,
+        isRecording: () => isRecording,
 
         // Getters
         isInFlight: () => isInFlight,

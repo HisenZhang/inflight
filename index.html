@@ -22,52 +22,49 @@
                 <button class="tab-btn" data-tab="route">ROUTE</button>
                 <button class="tab-btn" data-tab="navlog">NAVLOG</button>
                 <button class="tab-btn" data-tab="map">MAP</button>
+                <button class="tab-btn" data-tab="chklst">CHKLST</button>
                 <button class="tab-btn" data-tab="stats">STATS</button>
             </div>
         </header>
 
         <!-- Tab: Data & Cache -->
         <div class="tab-content active" id="tab-data">
-            <div class="data-status">
-                <h2 class="font-bold text-primary">SYSTEM STATUS</h2>
+            <!-- Database Section -->
+            <div class="data-section">
+                <h3 class="section-header">DATABASE</h3>
 
-                <!-- System Checks -->
-                <div class="system-checks">
-                    <div class="check-item" id="internetCheck">
-                        <span class="check-label">INTERNET</span>
-                        <span class="check-status" id="internetStatus">CHECKING...</span>
-                    </div>
-                    <div class="check-item" id="gpsCheck">
-                        <span class="check-label">GPS</span>
-                        <span class="check-status" id="gpsStatus">CHECKING...</span>
-                    </div>
-                    <div class="check-item" id="databaseCheck">
-                        <span class="check-label">DATABASE</span>
-                        <span class="check-status" id="databaseStatus">NOT LOADED</span>
-                    </div>
+                <div class="check-item" id="databaseCheck">
+                    <span class="check-label">STATUS</span>
+                    <span class="check-status" id="databaseStatus">NOT LOADED</span>
                 </div>
 
-                <!-- Action Buttons -->
-                <div class="data-actions">
-                    <button id="loadDataBtn" class="btn btn-primary font-bold">LOAD DATABASE</button>
-                    <button id="reindexCacheBtn" class="btn btn-secondary" style="display: none;">REINDEX TOKEN MAP</button>
-                    <button id="clearDataBtn" class="btn btn-warning" style="display: none;">CLEAR ALL DATA</button>
-                </div>
-
-                <!-- Database Info -->
                 <div id="dataInfo" class="data-info"></div>
 
-                <!-- Database Details -->
-                <div id="dataInspection" class="data-inspection" style="display: none;">
-                    <div class="inspection-header">
-                        <span class="text-metric font-bold">DATABASE DETAILS</span>
-                    </div>
-                    <div id="inspectionContent" class="inspection-content"></div>
+                <div class="data-actions">
+                    <button id="loadDataBtn" class="btn btn-primary font-bold">LOAD DATABASE</button>
+                    <button id="reindexCacheBtn" class="btn btn-secondary" style="display: none;">REINDEX</button>
+                    <button id="clearDataBtn" class="btn btn-warning" style="display: none;">CLEAR ALL</button>
                 </div>
 
                 <p class="help-text">
-                    Sources: <span class="text-secondary">FAA NASR (US) + OurAirports (Worldwide)</span>
+                    <span class="text-secondary">FAA NASR (US) + OurAirports (Worldwide)</span>
                 </p>
+            </div>
+
+            <!-- Advanced Details Section (Collapsible) -->
+            <div id="dataInspection" class="data-section" style="display: none;">
+                <h3 class="section-header">ADVANCED</h3>
+                <div id="inspectionContent" class="inspection-content"></div>
+            </div>
+
+            <!-- Flight Tracks Section -->
+            <div class="data-section">
+                <h3 class="section-header">FLIGHT TRACKS</h3>
+                <div id="flightTracksList" class="flight-tracks-list"></div>
+                <div class="data-actions">
+                    <button id="refreshTracksBtn" class="btn btn-secondary">REFRESH</button>
+                    <button id="clearAllTracksBtn" class="btn btn-warning" style="display: none;">CLEAR ALL TRACKS</button>
+                </div>
             </div>
         </div>
         <!-- End Tab: Data & Cache -->
@@ -85,7 +82,7 @@
                         type="text"
                         id="routeInput"
                         class="font-medium"
-                        placeholder="Waypoints (space separated)"
+                        placeholder="KALB PAYGE Q822 FNT WYNDE3 KORD"
                         autocomplete="off"
                         disabled
                     >
@@ -95,7 +92,7 @@
                 <button id="clearRouteBtn" class="btn btn-secondary">CLEAR</button>
             </div>
             <p class="help-text mb-md">
-                Enter airports (ICAO/IATA), navaids (VOR/NDB/DME), or fixes separated by spaces
+                Airports (ICAO), NavAids, Fixes, Airways, SID/STAR
             </p>
 
             <!-- Optional Features -->
@@ -320,12 +317,468 @@
         </div>
         <!-- End Tab: Map -->
 
+        <!-- Tab: Checklist -->
+        <div class="tab-content" id="tab-chklst">
+            <div class="checklist-section">
+                <h2 class="font-bold text-primary">PIPER CHEROKEE 140 CHECKLIST</h2>
+
+                <!-- Before Start -->
+                <div class="checklist-card" data-section="0">
+                    <h3 class="checklist-title checklist-title-collapsible">
+                        <span>BEFORE START</span>
+                        <span class="checklist-chevron">▼</span>
+                    </h3>
+                    <div class="checklist-items">
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Passenger / crew briefing - COMPLETE</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Fuel selector - DESIRED TANK</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Mixture - FULL RICH</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Throttle - OPEN 1/4"</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Carb heat - OFF</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Avionics - OFF</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Beacon - ON</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Circuit breakers - IN</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Parking brake - SET</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Seatbelts - FASTENED</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Engine Start -->
+                <div class="checklist-card collapsed" data-section="1">
+                    <h3 class="checklist-title checklist-title-collapsible">
+                        <span>ENGINE START</span>
+                        <span class="checklist-chevron">►</span>
+                    </h3>
+                    <div class="checklist-items" style="display: none;">
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Master switch - ON</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Fuel pump - ON</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Prime - AS REQUIRED</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Prop area - CLEAR</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Starter - ENGAGE</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Throttle - 1000 RPM</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Oil pressure - CHECK</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Fuel pump - OFF</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Engine instruments - CHECK</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Mixture - AS REQUIRED</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Before Taxi -->
+                <div class="checklist-card collapsed" data-section="2">
+                    <h3 class="checklist-title checklist-title-collapsible">
+                        <span>BEFORE TAXI</span>
+                        <span class="checklist-chevron">►</span>
+                    </h3>
+                    <div class="checklist-items" style="display: none;">
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Avionics / radios - ON / SET</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Instruments - CHECKED / SET</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Lights - AS REQUIRED</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Parking brake - RELEASE</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Brakes - TEST</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Run-up -->
+                <div class="checklist-card collapsed" data-section="3">
+                    <h3 class="checklist-title checklist-title-collapsible">
+                        <span>RUN-UP</span>
+                        <span class="checklist-chevron">►</span>
+                    </h3>
+                    <div class="checklist-items" style="display: none;">
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Parking brake - SET</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Flight controls - FREE / CORRECT</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Fuel selector - OPPOSITE TANK</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Mixture - FULL RICH</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Throttle - 2000 RPM</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Magnetos (125 / 50) - CHECK</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Carb heat - TEST</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Engine instruments - CHECK</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Annunciator lights - CHECK</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Ammeter - CHECK</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Throttle - IDLE</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Carb heat - TEST</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Throttle - 1000 RPM</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Mixture - AS REQUIRED</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Parking brake - AS REQUIRED</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Before Takeoff -->
+                <div class="checklist-card collapsed" data-section="4">
+                    <h3 class="checklist-title checklist-title-collapsible">
+                        <span>BEFORE TAKEOFF</span>
+                        <span class="checklist-chevron">►</span>
+                    </h3>
+                    <div class="checklist-items" style="display: none;">
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Briefing - COMPLETE</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Seatbelts - FASTENED</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Cabin doors - CLOSED / LOCKED</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Elevator trim - SET</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Flaps - AS REQUIRED</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Instruments / radios - SET</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Fuel pump - ON</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Lights - ON</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Pitot heat - AS REQUIRED</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Mixture - FULL RICH</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Climb -->
+                <div class="checklist-card collapsed" data-section="5">
+                    <h3 class="checklist-title checklist-title-collapsible">
+                        <span>CLIMB</span>
+                        <span class="checklist-chevron">►</span>
+                    </h3>
+                    <div class="checklist-items" style="display: none;">
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Flaps - RETRACT</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Climb power - SET</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Mixture - AS REQUIRED</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Fuel pump - OFF</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Landing light - OFF</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Engine instruments - CHECK</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cruise -->
+                <div class="checklist-card collapsed" data-section="6">
+                    <h3 class="checklist-title checklist-title-collapsible">
+                        <span>CRUISE</span>
+                        <span class="checklist-chevron">►</span>
+                    </h3>
+                    <div class="checklist-items" style="display: none;">
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Cruise power - SET</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Elevator trim - SET</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Mixture - LEAN</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Engine instruments - MONITOR</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Fuel quantity - MONITOR</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Descent -->
+                <div class="checklist-card collapsed" data-section="7">
+                    <h3 class="checklist-title checklist-title-collapsible">
+                        <span>DESCENT</span>
+                        <span class="checklist-chevron">►</span>
+                    </h3>
+                    <div class="checklist-items" style="display: none;">
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Briefing - COMPLETE</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Seatbelts - FASTENED</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Fuel selector - DESIRED TANK</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Fuel pump - ON</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Lights - ON</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Pitot heat - AS REQUIRED</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Carb heat - AS REQUIRED</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Mixture - FULL RICH</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Instruments - SET</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Brakes - TEST</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- After Landing -->
+                <div class="checklist-card collapsed" data-section="8">
+                    <h3 class="checklist-title checklist-title-collapsible">
+                        <span>AFTER LANDING</span>
+                        <span class="checklist-chevron">►</span>
+                    </h3>
+                    <div class="checklist-items" style="display: none;">
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Fuel pump - OFF</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Lights - AS REQUIRED</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Pitot heat - OFF</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Carb heat - OFF</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Mixture - AS REQUIRED</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Flaps - UP</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Elevator trim - SET TAKEOFF</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Shutdown -->
+                <div class="checklist-card collapsed" data-section="9">
+                    <h3 class="checklist-title checklist-title-collapsible">
+                        <span>SHUTDOWN</span>
+                        <span class="checklist-chevron">►</span>
+                    </h3>
+                    <div class="checklist-items" style="display: none;">
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Parking brake - SET</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Avionics - OFF</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Throttle - 1000 RPM</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Mixture - IDLE CUTOFF</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Ignition switch - OFF</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Lights - OFF</span>
+                        </div>
+                        <div class="checklist-item">
+                            <div class="checkbox-toggle checklist-checkbox"></div>
+                            <span>Master switch - OFF</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="checklist-actions">
+                    <button class="btn btn-secondary" id="resetChecklistBtn">RESET ALL</button>
+                </div>
+
+                <p class="help-text mt-md text-center">
+                    <span class="text-secondary">*This checklist is not intended to replace manufacturer procedures*</span>
+                </p>
+            </div>
+        </div>
+        <!-- End Tab: Checklist -->
+
         <!-- Tab: Stats -->
         <div class="tab-content" id="tab-stats">
             <div class="stats-section">
                 <h2 class="font-bold text-primary">FLIGHT STATISTICS</h2>
 
-                <!-- Flight Status -->
+                <!-- Flight Status (Most Important) -->
                 <div class="stats-card">
                     <div class="stat-item-large">
                         <span class="stat-label">STATUS</span>
@@ -333,61 +786,114 @@
                     </div>
                 </div>
 
-                <!-- Time Statistics -->
+                <!-- System Status -->
                 <div class="stats-card">
-                    <h3 class="stats-card-title">TIME</h3>
-                    <div class="stats-grid">
+                    <h3 class="stats-card-title">SYSTEM</h3>
+                    <div class="stats-grid-compact">
                         <div class="stat-item">
-                            <span class="stat-label">FLIGHT TIME</span>
-                            <span class="stat-value text-metric" id="flightTime">--:--:--</span>
+                            <span class="stat-label">INTERNET</span>
+                            <span class="stat-value" id="internetStatus">CHECKING...</span>
                         </div>
                         <div class="stat-item">
-                            <span class="stat-label">AVG GROUND SPEED</span>
-                            <span class="stat-value text-metric" id="avgGroundSpeed">-- KT</span>
+                            <span class="stat-label">GPS H-ACC</span>
+                            <span class="stat-value" id="gpsHorizStatus">--</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">GPS V-ACC</span>
+                            <span class="stat-value" id="gpsVertStatus">--</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">GPS STATUS</span>
+                            <span class="stat-value" id="gpsStatus">CHECKING...</span>
                         </div>
                     </div>
                 </div>
 
-                <!-- Fuel Statistics -->
+                <!-- Fuel Statistics (Critical for safety) -->
                 <div class="stats-card" id="fuelStatsCard" style="display: none;">
                     <h3 class="stats-card-title">FUEL</h3>
-                    <div class="stats-grid">
+                    <div class="stats-grid-compact">
                         <div class="stat-item">
-                            <span class="stat-label">FUEL ON BOARD</span>
-                            <span class="stat-value text-metric" id="fuelOnBoard">-- GAL</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-label">FUEL USED</span>
-                            <span class="stat-value" id="fuelUsed">-- GAL</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-label">FUEL REMAINING</span>
+                            <span class="stat-label">REM</span>
                             <span class="stat-value" id="fuelRemaining">-- GAL</span>
                         </div>
                         <div class="stat-item">
-                            <span class="stat-label">ENDURANCE</span>
+                            <span class="stat-label">ENDUR</span>
                             <span class="stat-value" id="endurance">--:--</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">USED</span>
+                            <span class="stat-value" id="fuelUsed">-- GAL</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">START</span>
+                            <span class="stat-value text-secondary" id="fuelOnBoard">-- GAL</span>
                         </div>
                     </div>
                 </div>
 
-                <!-- Manual Time Entry -->
+                <!-- Flight Time & Performance -->
                 <div class="stats-card">
-                    <h3 class="stats-card-title">MANUAL TIME ENTRY</h3>
+                    <h3 class="stats-card-title">FLIGHT TIME</h3>
+                    <div class="stats-grid-compact">
+                        <div class="stat-item">
+                            <span class="stat-label">TIME</span>
+                            <span class="stat-value text-metric" id="flightTime">--:--:--</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">T/O</span>
+                            <span class="stat-value text-secondary" id="takeoffTime">--:--</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">AVG GS</span>
+                            <span class="stat-value text-metric" id="avgGroundSpeed">-- KT</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">DIST</span>
+                            <span class="stat-value text-metric" id="distanceFlown">-- NM</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- GPS Track Recording -->
+                <div class="stats-card">
+                    <h3 class="stats-card-title">GPS TRACK</h3>
+                    <div class="stats-grid-compact">
+                        <div class="stat-item">
+                            <span class="stat-label">MODE</span>
+                            <span class="stat-value" id="trackMode">AUTO</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">REC</span>
+                            <span class="stat-value" id="recordingStatus">INACTIVE</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">PTS</span>
+                            <span class="stat-value" id="trackPoints">0</span>
+                        </div>
+                    </div>
+                    <div class="stats-actions mt-sm">
+                        <button class="btn btn-secondary btn-sm" id="toggleModeBtn">MANUAL</button>
+                        <button class="btn btn-primary btn-sm" id="startRecBtn" style="display: none;">START</button>
+                        <button class="btn btn-warning btn-sm" id="stopRecBtn" style="display: none;">STOP</button>
+                    </div>
+                    <div class="stats-actions mt-sm">
+                        <button class="btn btn-secondary btn-sm" id="exportTrackBtn">EXPORT</button>
+                        <button class="btn btn-warning btn-sm" id="clearTrackBtn">CLEAR</button>
+                    </div>
+                </div>
+
+                <!-- Manual Time Entry (Logbook) -->
+                <div class="stats-card">
+                    <h3 class="stats-card-title">LOGBOOK TIMES</h3>
                     <div class="time-entry-grid">
                         <div class="time-entry-item">
                             <label class="stat-label">HOBBS START</label>
-                            <div class="time-entry-row">
-                                <input type="number" id="hobbsStart" class="time-input" placeholder="0.0" step="0.1" min="0">
-                                <button class="btn btn-secondary btn-sm" id="hobbsStartNow">NOW</button>
-                            </div>
+                            <input type="number" id="hobbsStart" class="time-input" placeholder="0.0" step="0.1" min="0">
                         </div>
                         <div class="time-entry-item">
                             <label class="stat-label">HOBBS END</label>
-                            <div class="time-entry-row">
-                                <input type="number" id="hobbsEnd" class="time-input" placeholder="0.0" step="0.1" min="0">
-                                <button class="btn btn-secondary btn-sm" id="hobbsEndNow">NOW</button>
-                            </div>
+                            <input type="number" id="hobbsEnd" class="time-input" placeholder="0.0" step="0.1" min="0">
                         </div>
                         <div class="time-entry-item">
                             <label class="stat-label">HOBBS TOTAL</label>
@@ -407,25 +913,6 @@
                             <label class="stat-label">TACH TOTAL</label>
                             <span class="stat-value" id="tachTotal">-- HR</span>
                         </div>
-                    </div>
-                </div>
-
-                <!-- GPS Track Info -->
-                <div class="stats-card">
-                    <h3 class="stats-card-title">GPS TRACK</h3>
-                    <div class="stats-grid">
-                        <div class="stat-item">
-                            <span class="stat-label">TRACK POINTS</span>
-                            <span class="stat-value" id="trackPoints">0</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-label">RECORDING</span>
-                            <span class="stat-value" id="recordingStatus">INACTIVE</span>
-                        </div>
-                    </div>
-                    <div class="stats-actions mt-sm">
-                        <button class="btn btn-secondary" id="exportTrackBtn">EXPORT TRACK</button>
-                        <button class="btn btn-warning" id="clearTrackBtn">CLEAR TRACK</button>
                     </div>
                 </div>
             </div>
@@ -459,9 +946,10 @@
     <script src="state/flight-tracker.js"></script>     <!-- Flight time & GPS tracking -->
 
     <!-- Display Layer -->
-    <script src="display/ui-controller.js"></script>    <!-- UI interactions module -->
-    <script src="display/stats-controller.js"></script> <!-- Stats tab controller -->
-    <script src="display/tactical-display.js"></script> <!-- Vector map & GPS tracking -->
-    <script src="display/app.js"></script>              <!-- Main application coordinator -->
+    <script src="display/ui-controller.js"></script>       <!-- UI interactions module -->
+    <script src="display/stats-controller.js"></script>    <!-- Stats tab controller -->
+    <script src="display/checklist-controller.js"></script><!-- Checklist tab controller -->
+    <script src="display/tactical-display.js"></script>    <!-- Vector map & GPS tracking -->
+    <script src="display/app.js"></script>                 <!-- Main application coordinator -->
 </body>
 </html>

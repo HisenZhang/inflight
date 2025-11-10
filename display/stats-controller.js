@@ -19,8 +19,6 @@ const StatsController = (() => {
             // Hobbs inputs
             hobbsStart: document.getElementById('hobbsStart'),
             hobbsEnd: document.getElementById('hobbsEnd'),
-            hobbsStartNow: document.getElementById('hobbsStartNow'),
-            hobbsEndNow: document.getElementById('hobbsEndNow'),
             hobbsTotal: document.getElementById('hobbsTotal'),
 
             // Tach inputs
@@ -28,28 +26,17 @@ const StatsController = (() => {
             tachEnd: document.getElementById('tachEnd'),
             tachTotal: document.getElementById('tachTotal'),
 
-            // GPS track buttons
+            // GPS track mode and controls
+            trackMode: document.getElementById('trackMode'),
+            toggleModeBtn: document.getElementById('toggleModeBtn'),
+            startRecBtn: document.getElementById('startRecBtn'),
+            stopRecBtn: document.getElementById('stopRecBtn'),
             exportTrackBtn: document.getElementById('exportTrackBtn'),
             clearTrackBtn: document.getElementById('clearTrackBtn')
         };
     }
 
     function setupEventListeners() {
-        // Hobbs "NOW" buttons - use current Hobbs from aircraft (simulated)
-        elements.hobbsStartNow.addEventListener('click', () => {
-            // In real implementation, this would read from aircraft Hobbs meter
-            // For now, use elapsed flight time as a proxy
-            const currentHobbs = getCurrentHobbsReading();
-            elements.hobbsStart.value = currentHobbs.toFixed(1);
-            calculateHobbsTotal();
-        });
-
-        elements.hobbsEndNow.addEventListener('click', () => {
-            const currentHobbs = getCurrentHobbsReading();
-            elements.hobbsEnd.value = currentHobbs.toFixed(1);
-            calculateHobbsTotal();
-        });
-
         // Calculate Hobbs total when inputs change
         elements.hobbsStart.addEventListener('input', calculateHobbsTotal);
         elements.hobbsEnd.addEventListener('input', calculateHobbsTotal);
@@ -58,13 +45,27 @@ const StatsController = (() => {
         elements.tachStart.addEventListener('input', calculateTachTotal);
         elements.tachEnd.addEventListener('input', calculateTachTotal);
 
+        // GPS track mode toggle
+        elements.toggleModeBtn.addEventListener('click', toggleRecordingMode);
+
+        // Manual recording controls
+        elements.startRecBtn.addEventListener('click', () => {
+            window.FlightTracker.startRecording();
+            updateRecordingUI();
+        });
+
+        elements.stopRecBtn.addEventListener('click', () => {
+            window.FlightTracker.stopRecording();
+            updateRecordingUI();
+        });
+
         // GPS track buttons
         elements.exportTrackBtn.addEventListener('click', () => {
-            window.FlightTracker.exportTrack();
+            window.FlightTracker.exportCurrentTrack();
         });
 
         elements.clearTrackBtn.addEventListener('click', () => {
-            if (confirm('Clear GPS track? This cannot be undone.')) {
+            if (confirm('Clear current GPS track? This cannot be undone.')) {
                 window.FlightTracker.clearTrack();
                 window.FlightTracker.updateUI();
             }
@@ -81,17 +82,48 @@ const StatsController = (() => {
     }
 
     // ============================================
-    // HOBBS/TACH CALCULATIONS
+    // GPS RECORDING MODE CONTROL
     // ============================================
 
-    function getCurrentHobbsReading() {
-        // Simulate Hobbs meter reading
-        // In real implementation, this would come from aircraft systems
-        // For now, use a base value + flight time
-        const baseHobbs = 1000; // Example base Hobbs
-        const flightHours = window.FlightTracker.getFlightDuration() / 3600;
-        return baseHobbs + flightHours;
+    function toggleRecordingMode() {
+        const currentMode = window.FlightTracker.getRecordingMode();
+        const newMode = currentMode === 'auto' ? 'manual' : 'auto';
+
+        window.FlightTracker.setRecordingMode(newMode);
+        updateRecordingUI();
     }
+
+    function updateRecordingUI() {
+        const mode = window.FlightTracker.getRecordingMode();
+        const isRecording = window.FlightTracker.isRecording();
+
+        // Update mode display
+        elements.trackMode.textContent = mode.toUpperCase();
+        elements.trackMode.style.color = mode === 'auto' ? 'var(--color-metric)' : 'var(--color-warning)';
+
+        // Update toggle button
+        elements.toggleModeBtn.textContent = mode === 'auto' ? 'MANUAL' : 'AUTO';
+
+        // Show/hide manual controls
+        if (mode === 'manual') {
+            if (isRecording) {
+                elements.startRecBtn.style.display = 'none';
+                elements.stopRecBtn.style.display = 'inline-block';
+            } else {
+                elements.startRecBtn.style.display = 'inline-block';
+                elements.stopRecBtn.style.display = 'none';
+            }
+        } else {
+            elements.startRecBtn.style.display = 'none';
+            elements.stopRecBtn.style.display = 'none';
+        }
+
+        window.FlightTracker.updateUI();
+    }
+
+    // ============================================
+    // HOBBS/TACH CALCULATIONS
+    // ============================================
 
     function calculateHobbsTotal() {
         const start = parseFloat(elements.hobbsStart.value) || 0;

@@ -49,6 +49,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             window.VectorMap.startGPSTracking();
         }
 
+        // Load flight tracks list
+        updateFlightTracksList();
+
         // Check for saved navlog (crash recovery) - use FlightState instead of DataManager
         const savedNavlog = window.FlightState ? window.FlightState.loadFromStorage() : null;
         if (savedNavlog && cacheResult.loaded) {
@@ -58,6 +61,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (confirm(`SAVED NAVLOG FOUND\n\nRoute: ${savedNavlog.routeString}\nSaved: ${ageText}\n\nRestore this flight plan?`)) {
                 UIController.restoreNavlog(savedNavlog);
+
+                // Restore currentNavlogData so export works
+                currentNavlogData = savedNavlog;
+
+                // Restore FlightState
+                if (window.FlightState) {
+                    window.FlightState.restoreFlightPlan(savedNavlog);
+                }
             } else {
                 if (window.FlightState) window.FlightState.clearStorage();
             }
@@ -142,6 +153,23 @@ function setupEventListeners() {
         });
 
         importNavlogInput.addEventListener('change', handleImportNavlog);
+    }
+
+    // Flight tracks management
+    const refreshTracksBtn = document.getElementById('refreshTracksBtn');
+    const clearAllTracksBtn = document.getElementById('clearAllTracksBtn');
+
+    if (refreshTracksBtn) {
+        refreshTracksBtn.addEventListener('click', updateFlightTracksList);
+    }
+
+    if (clearAllTracksBtn) {
+        clearAllTracksBtn.addEventListener('click', () => {
+            if (confirm('Delete ALL saved flight tracks? This cannot be undone.')) {
+                window.FlightTracker.clearAllTracks();
+                updateFlightTracksList();
+            }
+        });
     }
 
     // Tab navigation
@@ -463,6 +491,89 @@ async function handleImportNavlog(event) {
         // Clear file input
         event.target.value = '';
     }
+}
+
+// ============================================
+// FLIGHT TRACKS MANAGEMENT
+// ============================================
+
+function updateFlightTracksList() {
+    const tracksListDiv = document.getElementById('flightTracksList');
+    const clearAllBtn = document.getElementById('clearAllTracksBtn');
+
+    if (!tracksListDiv) return;
+
+    const tracks = window.FlightTracker.getSavedTracks();
+
+    if (tracks.length === 0) {
+        tracksListDiv.innerHTML = '<p class="help-text">No saved flight tracks</p>';
+        if (clearAllBtn) clearAllBtn.style.display = 'none';
+        return;
+    }
+
+    // Show clear all button if there are tracks
+    if (clearAllBtn) clearAllBtn.style.display = 'inline-block';
+
+    // Sort tracks by timestamp (newest first)
+    tracks.sort((a, b) => b.timestamp - a.timestamp);
+
+    // Build tracks list HTML
+    let html = '<div class="tracks-table">';
+
+    tracks.forEach(track => {
+        const date = new Date(track.timestamp);
+        const dateStr = date.toLocaleDateString();
+        const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const duration = formatDuration(track.flightDuration || 0);
+
+        html += `
+            <div class="track-item" data-track-id="${track.id}">
+                <div class="track-info">
+                    <div class="track-date text-primary font-bold">${dateStr} ${timeStr}</div>
+                    <div class="track-stats text-secondary text-xs">
+                        ${track.pointCount} points | ${duration} flight time
+                    </div>
+                </div>
+                <div class="track-actions">
+                    <button class="btn btn-secondary btn-sm export-track-btn" data-track-id="${track.id}">EXPORT</button>
+                    <button class="btn btn-warning btn-sm delete-track-btn" data-track-id="${track.id}">DELETE</button>
+                </div>
+            </div>
+        `;
+    });
+
+    html += '</div>';
+    tracksListDiv.innerHTML = html;
+
+    // Attach event listeners to export/delete buttons
+    tracksListDiv.querySelectorAll('.export-track-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const trackId = parseInt(btn.getAttribute('data-track-id'));
+            const track = tracks.find(t => t.id === trackId);
+            if (track) {
+                window.FlightTracker.exportTrackAsGeoJSON(track);
+            }
+        });
+    });
+
+    tracksListDiv.querySelectorAll('.delete-track-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const trackId = parseInt(btn.getAttribute('data-track-id'));
+            if (confirm('Delete this flight track? This cannot be undone.')) {
+                window.FlightTracker.deleteTrack(trackId);
+                updateFlightTracksList();
+            }
+        });
+    });
+}
+
+function formatDuration(seconds) {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    if (hours > 0) {
+        return `${hours}:${String(minutes).padStart(2, '0')}`;
+    }
+    return `${minutes}m`;
 }
 
 // ============================================
