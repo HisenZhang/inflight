@@ -18,7 +18,6 @@ function init() {
         statusBox: document.getElementById('dataStatus'),
         dataInfo: document.getElementById('dataInfo'),
         loadDataBtn: document.getElementById('loadDataBtn'),
-        inspectDbBtn: document.getElementById('inspectDbBtn'),
         reindexCacheBtn: document.getElementById('reindexCacheBtn'),
         clearDataBtn: document.getElementById('clearDataBtn'),
         dataInspection: document.getElementById('dataInspection'),
@@ -105,10 +104,8 @@ function showDataInfo() {
     const dataInfoData = document.getElementById('dataInfoData');
     if (dataInfoData) dataInfoData.innerHTML = infoHTML;
 
-    // Show inspect button (both tabs)
-    elements.inspectDbBtn.style.display = 'inline-block';
-    const inspectDbBtnData = document.getElementById('inspectDbBtnData');
-    if (inspectDbBtnData) inspectDbBtnData.style.display = 'inline-block';
+    // Automatically populate inspection details (always visible)
+    populateInspection();
 }
 
 function populateInspection() {

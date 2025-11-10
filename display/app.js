@@ -71,41 +71,15 @@ function setupEventListeners() {
     elements.loadDataBtn.addEventListener('click', handleLoadData);
     elements.reindexCacheBtn.addEventListener('click', handleReindexCache);
     elements.clearDataBtn.addEventListener('click', handleClearCache);
-    elements.inspectDbBtn.addEventListener('click', () => {
-        const isHidden = elements.dataInspection.classList.contains('hidden');
-        if (isHidden) {
-            elements.dataInspection.classList.remove('hidden');
-            elements.inspectDbBtn.textContent = 'CLOSE';
-            UIController.populateInspection();
-        } else {
-            elements.dataInspection.classList.add('hidden');
-            elements.inspectDbBtn.textContent = 'INSPECT';
-        }
-    });
 
-    // Data management - Data tab buttons
+    // Data management - Data tab buttons (if separate DATA tab exists)
     const loadDataBtnData = document.getElementById('loadDataBtnData');
     const reindexCacheBtnData = document.getElementById('reindexCacheBtnData');
     const clearDataBtnData = document.getElementById('clearDataBtnData');
-    const inspectDbBtnData = document.getElementById('inspectDbBtnData');
 
     if (loadDataBtnData) loadDataBtnData.addEventListener('click', handleLoadData);
     if (reindexCacheBtnData) reindexCacheBtnData.addEventListener('click', handleReindexCache);
     if (clearDataBtnData) clearDataBtnData.addEventListener('click', handleClearCache);
-    if (inspectDbBtnData) inspectDbBtnData.addEventListener('click', () => {
-        const dataInspectionData = document.getElementById('dataInspectionData');
-        if (dataInspectionData) {
-            const isHidden = dataInspectionData.classList.contains('hidden');
-            if (isHidden) {
-                dataInspectionData.classList.remove('hidden');
-                inspectDbBtnData.textContent = 'CLOSE';
-                UIController.populateInspection();
-            } else {
-                dataInspectionData.classList.add('hidden');
-                inspectDbBtnData.textContent = 'INSPECT';
-            }
-        }
-    });
 
     // Route calculation
     elements.calculateBtn.addEventListener('click', handleCalculateRoute);
@@ -300,21 +274,18 @@ async function handleClearCache() {
 
             // Clear Route tab elements
             elements.dataInfo.innerHTML = '';
-            elements.inspectDbBtn.style.display = 'none';
-            elements.dataInspection.classList.add('hidden');
+            elements.dataInspection.innerHTML = ''; // Clear inspection content
             elements.loadDataBtn.disabled = false;
             elements.loadDataBtn.style.display = 'inline-block';
             elements.resultsSection.style.display = 'none';
 
-            // Clear Data tab elements
+            // Clear Data tab elements (if separate DATA tab exists)
             const dataInfoData = document.getElementById('dataInfoData');
-            const inspectDbBtnData = document.getElementById('inspectDbBtnData');
             const dataInspectionData = document.getElementById('dataInspectionData');
             const loadDataBtnData = document.getElementById('loadDataBtnData');
 
             if (dataInfoData) dataInfoData.innerHTML = '';
-            if (inspectDbBtnData) inspectDbBtnData.style.display = 'none';
-            if (dataInspectionData) dataInspectionData.classList.add('hidden');
+            if (dataInspectionData) dataInspectionData.innerHTML = '';
             if (loadDataBtnData) {
                 loadDataBtnData.disabled = false;
                 loadDataBtnData.style.display = 'inline-block';
