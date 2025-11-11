@@ -62,13 +62,15 @@ A route consists of:
                         | <waypoint>
 
 <airport> ::= <icao_code>
-            | <iata_code>
+            | <iata_code>  (* Only for airports without ICAO codes *)
 
 <icao_code> ::= <letter> <letter> <letter> <letter>
-              (* 4-letter ICAO code: KORD, KLGA, KATL *)
+              (* 4-letter ICAO code: KORD, KLGA, KATL - PREFERRED *)
 
 <iata_code> ::= <letter> <letter> <letter>
               (* 3-letter IATA code: ORD, LGA, ATL *)
+              (* AMBIGUOUS: May conflict with navaids (e.g., ALB = KALB airport OR ALB VORTAC) *)
+              (* Use ONLY for airports without ICAO codes (small municipal airports) *)
 
 <waypoint> ::= <fix>
              | <navaid>
@@ -77,7 +79,8 @@ A route consists of:
         (* 5-character fix: PAYGE, GONZZ, MOBLE *)
 
 <navaid> ::= <letter>+
-           (* VOR/DME/NDB: MIP, ORD, FNT *)
+           (* VOR/DME/NDB: MIP, ORD, FNT, ALB *)
+           (* AMBIGUOUS: May conflict with IATA codes (e.g., ALB = ALB VORTAC OR KALB airport) *)
 
 <airway> ::= <airway_prefix> <digit>+
 
@@ -243,6 +246,33 @@ The parser uses dual detection:
 2. **QueryEngine token type** - Database lookup (if available)
 
 This allows the parser to work in both production (with database) and test environments (without database).
+
+### IATA Airport Code vs. Navaid
+
+The pattern `ALB` (3 letters) is ambiguous:
+- `<iata_code>` (KALB airport - Albany International)
+- `<navaid>` (ALB VORTAC - Albany VOR/TACAN)
+
+**Resolution Strategy:**
+
+1. **Prefer ICAO codes** - Users should use `KALB` instead of `ALB` to avoid ambiguity
+2. **Autocomplete disambiguation** - When user types `ALB`, show both options:
+   - `KALB` (Albany International Airport)
+   - `ALB` (Albany VORTAC)
+3. **Database resolution** - The resolver checks both airports and navaids:
+   - If token is 3 letters AND position is start/end of route → prefer airport
+   - If token is 3 letters AND has ICAO equivalent → suggest ICAO code
+   - If token is 3 letters AND no ICAO equivalent → accept as IATA airport (small municipal)
+   - Otherwise → treat as navaid
+
+**Best Practice:**
+
+Always use 4-letter ICAO codes for airports. Only use 3-letter IATA codes for small municipal airports without ICAO codes.
+
+```
+✓ KALB (unambiguous - ICAO airport code)
+✗ ALB (ambiguous - could be airport or navaid)
+```
 
 ## Grammar Extensions
 

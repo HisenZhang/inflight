@@ -38,19 +38,30 @@ KORD DROPA.HIDEY1 PAYGE Q822 GONZZ DCT 4814N/06848W HAMTN.WYNDE3 KLGA
 
 ### 1. Airports
 
-**ICAO codes** (4 letters):
+**ICAO codes** (4 letters) - **PREFERRED**:
 ```
 KORD    (Chicago O'Hare)
 KLGA    (LaGuardia)
 KATL    (Atlanta)
+KALB    (Albany International)
 ```
 
-**IATA codes** (3 letters):
+**IATA codes** (3 letters) - **Use only for airports without ICAO codes**:
 ```
-ORD     (Chicago O'Hare)
-LGA     (LaGuardia)
-ATL     (Atlanta)
+ORD     (Chicago O'Hare - but prefer KORD)
+LGA     (LaGuardia - but prefer KLGA)
+ATL     (Atlanta - but prefer KATL)
 ```
+
+**⚠️ AMBIGUITY WARNING:** 3-letter codes can conflict with navaids!
+```
+ALB     → Could be KALB airport OR ALB VORTAC
+ORD     → Could be KORD airport OR ORD VOR/DME
+```
+
+**Recommendation:** Always use 4-letter ICAO codes for airports. Only use 3-letter IATA codes for small municipal airports that don't have ICAO codes.
+
+When using autocomplete, if you type a 3-letter code, you'll see both the airport and navaid options to choose from.
 
 ### 2. Airways
 
@@ -335,13 +346,20 @@ Include entry and exit waypoints:
 ✗ Q822
 ```
 
-### 3. Use ICAO Codes
+### 3. Use ICAO Codes (Critical!)
 
-Prefer 4-letter ICAO over 3-letter IATA:
+**Always** prefer 4-letter ICAO over 3-letter IATA to avoid ambiguity:
 ```
-✓ KORD
-✗ ORD
+✓ KORD   (unambiguous airport)
+✗ ORD    (could be airport or navaid)
+
+✓ KALB   (unambiguous airport)
+✗ ALB    (ALB VORTAC or KALB airport?)
 ```
+
+**Exception:** Only use 3-letter IATA codes for small municipal airports without ICAO codes.
+
+**Autocomplete helps:** When typing a 3-letter code, the suggestion list will show both the ICAO airport code and any matching navaids, allowing you to choose the correct one.
 
 ### 4. Validate Procedures
 
