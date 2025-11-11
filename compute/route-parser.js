@@ -42,6 +42,22 @@ class RouteParser {
             const node = this.parseToken();
             if (node) {
                 this.parseTree.push(node);
+
+                // Special case: after parsing airway segment, we're positioned at the 'to' waypoint
+                // Only parse it if it starts a new airway segment (chained airways)
+                // Otherwise skip it to avoid duplication
+                if (node.type === 'AIRWAY_SEGMENT') {
+                    const next1 = this.peek(1);
+                    const next2 = this.peek(2);
+                    const isNextAirway = next1 && next2 &&
+                        (this.match(TokenPatterns.AIRWAY, 1) ||
+                         (window.QueryEngine?.getTokenType(next1.text) === 'AIRWAY'));
+
+                    // If next pattern is NOT an airway, skip the 'to' waypoint
+                    if (!isNextAirway) {
+                        this.cursor++; // Move past the 'to' waypoint
+                    }
+                }
             }
         }
 
@@ -70,7 +86,11 @@ class RouteParser {
 
         // PATTERN 2: AIRWAY SEGMENT (3-token lookahead)
         // Structure: WAYPOINT AIRWAY WAYPOINT
-        if (next1 && next2 && this.match(TokenPatterns.AIRWAY, 1)) {
+        // Check both regex pattern AND QueryEngine token type (if available)
+        const isAirwayPattern = this.match(TokenPatterns.AIRWAY, 1);
+        const isAirwayType = next1 && window.QueryEngine?.getTokenType(next1.text) === 'AIRWAY';
+
+        if (next1 && next2 && (isAirwayPattern || isAirwayType)) {
             return this.parseAirwaySegment();
         }
 
@@ -107,9 +127,10 @@ class RouteParser {
         const airway = this.tokens[this.cursor + 1];
         const to = this.tokens[this.cursor + 2];
 
-        // Advance to 'to' waypoint (not past it) to allow chaining
-        // Example: PAYGE Q822 GONZZ Q822 FNT
-        // After parsing PAYGE-GONZZ, cursor at GONZZ for next iteration
+        // Advance to 'to' waypoint position (not past it)
+        // For chained airways like "PAYGE Q822 GONZZ Q822 FNT",
+        // after parsing PAYGE-Q822-GONZZ, cursor is at GONZZ
+        // Next iteration will match GONZZ-Q822-FNT pattern
         this.cursor += 2;
 
         return {

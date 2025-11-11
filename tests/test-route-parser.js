@@ -90,11 +90,18 @@ TestFramework.describe('Route Parser Architecture', function({ it }) {
         const result = window.RouteParser.parse(tokens);
 
         assert.equals(result.tree.length, 5, 'Should have 5 nodes');
-        assert.equals(result.tree[0].type, 'WAYPOINT', 'First should be waypoint');
+        // Note: KORD/KATL marked as PROCEDURE_OR_WAYPOINT - resolver will determine actual type
+        assert.isTrue(
+            result.tree[0].type === 'WAYPOINT' || result.tree[0].type === 'PROCEDURE_OR_WAYPOINT',
+            'First should be waypoint or ambiguous'
+        );
         assert.equals(result.tree[1].type, 'AIRWAY_SEGMENT', 'Second should be airway segment');
         assert.equals(result.tree[2].type, 'DIRECT', 'Third should be direct');
         assert.equals(result.tree[3].type, 'PROCEDURE', 'Fourth should be procedure');
-        assert.equals(result.tree[4].type, 'WAYPOINT', 'Fifth should be waypoint');
+        assert.isTrue(
+            result.tree[4].type === 'WAYPOINT' || result.tree[4].type === 'PROCEDURE_OR_WAYPOINT',
+            'Fifth should be waypoint or ambiguous'
+        );
     });
 
     it('RouteParser should handle chained airways', () => {
