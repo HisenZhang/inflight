@@ -32,7 +32,7 @@
         <div class="tab-content active" id="tab-welcome">
             <!-- Title -->
             <div class="data-section">
-                <h3 class="section-header" style="text-align: center; border: none; letter-spacing: 4px;">INFLIGHT</h3>
+                <h1 class="section-header" style="text-align: center; border: none; letter-spacing: 2px;">INFLIGHT</h1>
                 <p class="help-text" style="text-align: center; margin: 0;">FLIGHT PLANNING & NAVIGATION TOOL</p>
             </div>
 
@@ -40,10 +40,7 @@
             <div class="data-section" style="border-color: var(--color-warning);">
                 <h3 class="section-header" style="color: var(--color-warning);">⚠ DISCLAIMER</h3>
                 <div class="data-info">
-                    <p style="font-weight: 700; color: var(--color-warning);">NOT FOR ACTUAL NAVIGATION</p>
-                    <p>This tool is NOT FAA APPROVED and is for EDUCATIONAL PURPOSES ONLY.</p>
-                    <p>DO NOT use this application for actual flight planning or navigation. Always use official FAA-approved charts, NOTAMs, and flight planning tools.</p>
-                    <p style="margin-bottom: 0;">Data may be incomplete, outdated, or inaccurate. Verify all information with official sources.</p>
+                    <p style="font-weight: 700; color: var(--color-warning); margin-bottom: 0;">NOT FOR ACTUAL NAVIGATION — EDUCATIONAL USE ONLY</p>
                 </div>
             </div>
 
@@ -51,23 +48,11 @@
             <div class="data-section">
                 <h3 class="section-header">FEATURES</h3>
                 <div class="data-info">
-                    <p><span style="color: var(--color-airport);">ROUTE PLANNING</span><br>
-                    Parse and expand aviation routes with airways, SID/STARs, and direct routing</p>
-
-                    <p><span style="color: var(--color-airport);">NAVIGATION LOG</span><br>
-                    Automatic navlog generation with winds aloft, fuel calculations, and ETAs</p>
-
-                    <p><span style="color: var(--color-airport);">MOVING MAP</span><br>
-                    Real-time GPS tracking with vector-based tactical display</p>
-
-                    <p><span style="color: var(--color-airport);">DATABASE</span><br>
-                    FAA NASR (US) + OurAirports (Worldwide) data with offline caching</p>
-
-                    <p><span style="color: var(--color-airport);">FLIGHT TRACKING</span><br>
-                    Save and export flight tracks in GPX format</p>
-
-                    <p style="margin-bottom: 0;"><span style="color: var(--color-airport);">CHECKLISTS</span><br>
-                    Customizable in-flight checklists</p>
+                    <p><span style="color: var(--color-airport);">•</span> Route planning with airways, SID/STARs, direct routing</p>
+                    <p><span style="color: var(--color-airport);">•</span> Navigation log with winds aloft, fuel calculations, ETAs</p>
+                    <p><span style="color: var(--color-airport);">•</span> Moving map with real-time GPS tracking</p>
+                    <p><span style="color: var(--color-airport);">•</span> FAA NASR (US) + OurAirports (Worldwide) database</p>
+                    <p style="margin-bottom: 0;"><span style="color: var(--color-airport);">•</span> Flight tracking with GPX export</p>
                 </div>
             </div>
 
@@ -75,22 +60,10 @@
             <div class="data-section">
                 <h3 class="section-header">QUICK START</h3>
                 <div class="data-info">
-                    <p><span style="color: var(--color-metric);">1. DATA TAB</span><br>
-                    Load the aviation database (required first step)</p>
-
-                    <p><span style="color: var(--color-metric);">2. ROUTE TAB</span><br>
-                    Enter your route using ICAO format<br>
-                    Example: <code>KORD PAYGE Q822 GONZZ KLGA</code><br>
-                    Supports: Airways (Q822, V123, J45), SIDs/STARs (KAYYS.WYNDE3), Direct (DCT)</p>
-
-                    <p><span style="color: var(--color-metric);">3. NAVLOG TAB</span><br>
-                    Review your flight plan, add aircraft performance data</p>
-
-                    <p><span style="color: var(--color-metric);">4. MAP TAB</span><br>
-                    Enable GPS tracking for real-time navigation</p>
-
-                    <p style="margin-bottom: 0;"><span style="color: var(--color-metric);">5. STATS TAB</span><br>
-                    Monitor flight progress and statistics</p>
+                    <p><span style="color: var(--color-metric);">1.</span> DATA — Load aviation database</p>
+                    <p><span style="color: var(--color-metric);">2.</span> ROUTE — Enter route (e.g., <code>KORD PAYGE Q822 GONZZ KLGA</code>)</p>
+                    <p><span style="color: var(--color-metric);">3.</span> NAVLOG — Review flight plan</p>
+                    <p style="margin-bottom: 0;"><span style="color: var(--color-metric);">4.</span> MAP — Enable GPS tracking</p>
                 </div>
             </div>
 
@@ -98,18 +71,17 @@
             <div class="data-section">
                 <h3 class="section-header">ROUTE SYNTAX</h3>
                 <div class="data-info">
-                    <p><span style="color: var(--text-primary); font-weight: 700;">AIRPORTS:</span> Use ICAO codes (KORD, KLGA) - preferred over IATA codes</p>
-                    <p><span style="color: var(--text-primary); font-weight: 700;">AIRWAYS:</span> WAYPOINT AIRWAY WAYPOINT (e.g., PAYGE Q822 GONZZ)</p>
-                    <p><span style="color: var(--text-primary); font-weight: 700;">PROCEDURES:</span> TRANSITION.PROCEDURE (e.g., KAYYS.WYNDE3, DROPA.HIDEY1)</p>
-                    <p><span style="color: var(--text-primary); font-weight: 700;">DIRECT:</span> DCT keyword or implicit (KORD MOBLE KLGA)</p>
-                    <p style="margin-bottom: 0;">See documentation in <code>docs/</code> for complete syntax reference</p>
+                    <p><span style="color: var(--text-primary); font-weight: 700;">AIRPORTS:</span> ICAO codes (KORD, KLGA)</p>
+                    <p><span style="color: var(--text-primary); font-weight: 700;">AIRWAYS:</span> PAYGE Q822 GONZZ</p>
+                    <p><span style="color: var(--text-primary); font-weight: 700;">PROCEDURES:</span> KAYYS.WYNDE3, DROPA.HIDEY1</p>
+                    <p style="margin-bottom: 0;"><span style="color: var(--text-primary); font-weight: 700;">DIRECT:</span> DCT or implicit</p>
                 </div>
             </div>
 
             <!-- Get Started -->
             <div class="data-section" style="text-align: center;">
                 <button class="btn btn-primary font-bold" onclick="document.querySelector('[data-tab=data]').click()">
-                    GET STARTED →
+                    GET STARTED
                 </button>
                 <p class="help-text" style="margin-top: var(--space-md); margin-bottom: 0;">
                     <span class="text-secondary">Built with Claude Code | Data: FAA NASR, OurAirports, NOAA</span>
