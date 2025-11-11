@@ -82,9 +82,42 @@ function resolveWaypoints(routeString) {
     }
 
     if (notFound.length > 0) {
-        return {
-            error: `ERROR: WAYPOINT(S) NOT IN DATABASE\n\n${notFound.join(', ')}\n\nVERIFY WAYPOINT IDENTIFIERS OR COORDINATE FORMAT`
-        };
+        // Classify unknown waypoints
+        const oceanic = [];
+        const natTracks = [];
+        const unknown = [];
+
+        for (const code of notFound) {
+            // NAT Track identifiers: N###X format (e.g., N257B, NATX)
+            if (/^N\d{2,3}[A-Z]$/.test(code) || code === 'NATX') {
+                natTracks.push(code);
+            }
+            // Likely oceanic waypoints: 5 uppercase letters
+            else if (/^[A-Z]{5}$/.test(code)) {
+                oceanic.push(code);
+            }
+            // Unknown format
+            else {
+                unknown.push(code);
+            }
+        }
+
+        let errorMsg = 'ERROR: WAYPOINT(S) NOT IN DATABASE\n\n';
+
+        if (oceanic.length > 0) {
+            errorMsg += `OCEANIC/INTERNATIONAL: ${oceanic.join(', ')}\n`;
+        }
+        if (natTracks.length > 0) {
+            errorMsg += `NAT TRACKS: ${natTracks.join(', ')}\n`;
+        }
+        if (unknown.length > 0) {
+            errorMsg += `UNKNOWN: ${unknown.join(', ')}\n`;
+        }
+
+        errorMsg += '\nDATABASE: US (FAA NASR) + Worldwide airports (OurAirports)\n';
+        errorMsg += 'NOTE: Oceanic waypoints and NAT tracks are not included';
+
+        return { error: errorMsg };
     }
 
     return {
