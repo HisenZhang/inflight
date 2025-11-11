@@ -468,7 +468,7 @@ function getProcedureTransitions(procedureName) {
                 transition: trans.name,
                 type: 'DP',
                 entryFix: trans.entryFix,
-                display: `${upperProc}.${trans.name}`
+                display: `${trans.name}.${upperProc}`  // FAA chart standard: TRANSITION.PROCEDURE
             });
         }
     }
@@ -481,7 +481,7 @@ function getProcedureTransitions(procedureName) {
                 transition: trans.name,
                 type: 'STAR',
                 entryFix: trans.entryFix,
-                display: `${upperProc}.${trans.name}`
+                display: `${trans.name}.${upperProc}`  // FAA chart standard: TRANSITION.PROCEDURE
             });
         }
     }

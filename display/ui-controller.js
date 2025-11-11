@@ -573,47 +573,72 @@ function handleAutocompleteInput(e) {
     const previousWord = words.length > 1 ? words[words.length - 2].toUpperCase() : null;
 
     // ============================================
-    // PROCEDURE TRANSITION AUTOCOMPLETE
+    // PROCEDURE TRANSITION AUTOCOMPLETE (FAA CHART STANDARD)
     // ============================================
-    // Detects when user types "PROCNAME." and shows available transitions
-    // Supports both numbered (HIDEY1, CHPPR1) and non-numbered (CHPPR) procedures
+    // Detects when user types "TRANSITION." and shows matching procedures
+    // Follows FAA chart standard: TRANSITION.PROCEDURE (e.g., KAYYS.WYNDE3)
     //
     // Examples:
-    //   "HIDEY1."      -> Shows all HIDEY1 transitions (DROPA, KEAVY, etc.)
-    //   "HIDEY1.DR"    -> Filters to transitions starting with "DR" (DROPA)
-    //   "CHPPR."       -> Shows all CHPPR transitions
-    //   "CHPPR.KE"     -> Filters to transitions starting with "KE" (KEAVY)
+    //   "KAYYS."       -> Shows all procedures with KAYYS transition
+    //   "KAYYS.WY"     -> Filters to procedures starting with "WY" (WYNDE3)
+    //   "MTHEW."       -> Shows all procedures with MTHEW transition
+    //   "MTHEW.CH"     -> Filters to procedures starting with "CH" (CHPPR1)
     //
-    // Pattern: /^([A-Z]{3,}\d*)\.([A-Z]*)$/
-    //   - [A-Z]{3,}  = 3+ uppercase letters (procedure name)
-    //   - \d*        = 0+ digits (optional number)
+    // Pattern: /^([A-Z]{3,})\.([A-Z]*)$/
+    //   - [A-Z]{3,}  = 3+ uppercase letters (transition name)
     //   - \.         = literal dot
-    //   - [A-Z]*     = 0+ uppercase letters (transition prefix for filtering)
+    //   - [A-Z]*     = 0+ uppercase letters (procedure prefix for filtering)
 
-    const dotMatch = currentWord.match(/^([A-Z]{3,}\d*)\.([A-Z]*)$/);
+    const dotMatch = currentWord.match(/^([A-Z]{3,})\.([A-Z]*)$/);
     if (dotMatch) {
-        const [, procedureName, transitionPrefix] = dotMatch;
+        const [, transitionName, procedurePrefix] = dotMatch;
 
-        // Query all transitions for this procedure (both DP and STAR)
-        const transitions = window.QueryEngine?.getProcedureTransitions(procedureName) || [];
+        // Get all procedures that have this transition
+        // We need to search through all procedures to find ones with this transition
+        const results = [];
+        const dpsData = window.DataManager?.getDpsData?.() || new Map();
+        const starsData = window.DataManager?.getStarsData?.() || new Map();
 
-        if (transitions.length > 0) {
-            const results = transitions
-                .filter(t => !transitionPrefix || t.transition.startsWith(transitionPrefix))
-                .map(t => ({
-                    code: t.display,
-                    name: t.display,
-                    type: t.type === 'DP' ? 'DP TRANSITION' : 'STAR TRANSITION',
-                    waypointType: 'procedure_transition',
-                    location: `${t.transition} transition`,
-                    contextHint: `${t.transition} transition for ${procedureName}`
-                }));
-
-            if (results.length > 0) {
-                autocompleteResults = results;
-                displayAutocomplete(results);
-                return;
+        // Search DPs
+        for (const [procName, procData] of dpsData.entries()) {
+            if (procData.transitions && Array.isArray(procData.transitions)) {
+                const hasTransition = procData.transitions.some(t => t.name === transitionName);
+                if (hasTransition && (!procedurePrefix || procName.startsWith(procedurePrefix))) {
+                    results.push({
+                        code: `${transitionName}.${procName}`,
+                        name: `${transitionName}.${procName}`,
+                        type: 'DP TRANSITION',
+                        waypointType: 'procedure_transition',
+                        location: `${transitionName} transition`,
+                        contextHint: `${transitionName} transition for ${procName} DP`
+                    });
+                }
             }
+        }
+
+        // Search STARs
+        for (const [procName, procData] of starsData.entries()) {
+            if (procData.transitions && Array.isArray(procData.transitions)) {
+                const hasTransition = procData.transitions.some(t => t.name === transitionName);
+                if (hasTransition && (!procedurePrefix || procName.startsWith(procedurePrefix))) {
+                    results.push({
+                        code: `${transitionName}.${procName}`,
+                        name: `${transitionName}.${procName}`,
+                        type: 'STAR TRANSITION',
+                        waypointType: 'procedure_transition',
+                        location: `${transitionName} transition`,
+                        contextHint: `${transitionName} transition for ${procName} STAR`
+                    });
+                }
+            }
+        }
+
+        if (results.length > 0) {
+            // Sort alphabetically by procedure name
+            results.sort((a, b) => a.code.localeCompare(b.code));
+            autocompleteResults = results;
+            displayAutocomplete(results);
+            return;
         }
     }
 
