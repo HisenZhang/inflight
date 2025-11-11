@@ -245,15 +245,16 @@ function expandAirway(fromFix, airwayId, toFix) {
 
 function expandProcedure(procedureName, previousFix = null, contextAirport = null, nextFix = null) {
     // ============================================
-    // EXPLICIT TRANSITION: "PROCNAME.TRANSITION"
+    // EXPLICIT TRANSITION: FAA CHART STANDARD "TRANSITION.PROCEDURE"
     // ============================================
-    // Pattern: /^([A-Z]{3,}\d*)\.([A-Z]+)$/
-    // Examples: HIDEY1.DROPA, CHPPR.KEAVY
+    // Pattern: /^([A-Z]+)\.([A-Z]{3,}\d*)$/
+    // Examples: DROPA.HIDEY1, KEAVY.CHPPR1, KAYYS.WYNDE3
+    // Matches FAA chart notation: "MTHEW TRANSITION (MTHEW.CHPPR1)"
 
-    const transitionMatch = procedureName.match(/^([A-Z]{3,}\d*)\.([A-Z]+)$/);
+    const transitionMatch = procedureName.match(/^([A-Z]+)\.([A-Z]{3,}\d*)$/);
     if (transitionMatch) {
-        const [, procName, transitionName] = transitionMatch;
-        console.log(`[RouteExpander] User specified transition: ${procName}.${transitionName}`);
+        const [, transitionName, procName] = transitionMatch;
+        console.log(`[RouteExpander] User specified FAA chart standard: ${transitionName}.${procName}`);
 
         // Try to find the procedure by name and then select the specific transition
         const dp = localDpsData.get(procName);

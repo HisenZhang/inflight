@@ -6,7 +6,8 @@
 // ============================================
 
 const TokenPatterns = {
-    // Chart standard: TRANSITION.PROCEDURE (e.g., MTHEW.CHPPR1)
+    // FAA chart standard: TRANSITION.PROCEDURE (e.g., MTHEW.CHPPR1, KAYYS.WYNDE3)
+    // Group 1: Transition name (3+ letters), Group 2: Procedure name (3+ letters + optional number)
     PROCEDURE_WITH_TRANSITION: /^([A-Z]{3,})\.([A-Z]{3,}\d*)$/,
 
     // Base procedure: HIDEY1, WYNDE3, CHPPR (auto-select transition)
