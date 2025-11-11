@@ -18,7 +18,8 @@
         <header>
             <!-- Tab Navigation -->
             <div class="tab-navigation">
-                <button class="tab-btn active" data-tab="data">DATA</button>
+                <button class="tab-btn active" data-tab="welcome">WELCOME</button>
+                <button class="tab-btn" data-tab="data">DATA</button>
                 <button class="tab-btn" data-tab="route">ROUTE</button>
                 <button class="tab-btn" data-tab="navlog">NAVLOG</button>
                 <button class="tab-btn" data-tab="map">MAP</button>
@@ -27,8 +28,79 @@
             </div>
         </header>
 
+        <!-- Tab: Welcome -->
+        <div class="tab-content active" id="tab-welcome">
+            <div class="data-section">
+                <h2 style="text-align: center; margin-bottom: 1rem; color: #00aaff;">InFlight</h2>
+                <p style="text-align: center; margin-bottom: 2rem; color: #888;">Flight Planning & Navigation Tool</p>
+
+                <!-- Disclaimer -->
+                <div style="background: rgba(255, 200, 0, 0.1); border: 1px solid rgba(255, 200, 0, 0.3); border-radius: 4px; padding: 1rem; margin-bottom: 2rem;">
+                    <h3 style="color: #ffcc00; margin-top: 0;">⚠️ DISCLAIMER</h3>
+                    <p style="margin-bottom: 0.5rem;"><strong>NOT FOR ACTUAL NAVIGATION</strong></p>
+                    <p style="margin-bottom: 0.5rem;">This tool is <strong>NOT FAA approved</strong> and is for <strong>educational purposes only</strong>.</p>
+                    <p style="margin-bottom: 0.5rem;">DO NOT use this application for actual flight planning or navigation. Always use official FAA-approved charts, NOTAMs, and flight planning tools.</p>
+                    <p style="margin-bottom: 0;">Data may be incomplete, outdated, or inaccurate. Verify all information with official sources.</p>
+                </div>
+
+                <!-- Features -->
+                <div style="margin-bottom: 2rem;">
+                    <h3 style="color: #00aaff;">Features</h3>
+                    <ul style="line-height: 1.8;">
+                        <li><strong>Route Planning:</strong> Parse and expand aviation routes with airways, SID/STARs, and direct routing</li>
+                        <li><strong>Navigation Log:</strong> Automatic navlog generation with winds aloft, fuel calculations, and ETAs</li>
+                        <li><strong>Moving Map:</strong> Real-time GPS tracking with vector-based tactical display</li>
+                        <li><strong>Database:</strong> FAA NASR (US) + OurAirports (Worldwide) data with offline caching</li>
+                        <li><strong>Flight Tracking:</strong> Save and export flight tracks in GPX format</li>
+                        <li><strong>Checklists:</strong> Customizable in-flight checklists</li>
+                    </ul>
+                </div>
+
+                <!-- Quick Start -->
+                <div style="margin-bottom: 2rem;">
+                    <h3 style="color: #00aaff;">Quick Start</h3>
+                    <ol style="line-height: 1.8;">
+                        <li><strong>DATA Tab:</strong> Load the aviation database (required first step)</li>
+                        <li><strong>ROUTE Tab:</strong> Enter your route using ICAO format
+                            <ul style="margin-top: 0.5rem; margin-left: 1.5rem;">
+                                <li>Example: <code>KORD PAYGE Q822 GONZZ KLGA</code></li>
+                                <li>Supports: Airways (Q822, V123, J45), SIDs/STARs (KAYYS.WYNDE3), Direct (DCT)</li>
+                            </ul>
+                        </li>
+                        <li><strong>NAVLOG Tab:</strong> Review your flight plan, add aircraft performance data</li>
+                        <li><strong>MAP Tab:</strong> Enable GPS tracking for real-time navigation</li>
+                        <li><strong>STATS Tab:</strong> Monitor flight progress and statistics</li>
+                    </ol>
+                </div>
+
+                <!-- Route Syntax Guide -->
+                <div style="margin-bottom: 2rem;">
+                    <h3 style="color: #00aaff;">Route Syntax</h3>
+                    <div style="background: rgba(255, 255, 255, 0.05); border-radius: 4px; padding: 1rem;">
+                        <p style="margin-bottom: 0.5rem;"><strong>Airports:</strong> Use ICAO codes (KORD, KLGA) - preferred over IATA codes</p>
+                        <p style="margin-bottom: 0.5rem;"><strong>Airways:</strong> WAYPOINT AIRWAY WAYPOINT (e.g., PAYGE Q822 GONZZ)</p>
+                        <p style="margin-bottom: 0.5rem;"><strong>Procedures:</strong> TRANSITION.PROCEDURE (e.g., KAYYS.WYNDE3, DROPA.HIDEY1)</p>
+                        <p style="margin-bottom: 0.5rem;"><strong>Direct:</strong> DCT keyword or implicit (KORD MOBLE KLGA)</p>
+                        <p style="margin-bottom: 0;">See documentation in <code>docs/</code> for complete syntax reference</p>
+                    </div>
+                </div>
+
+                <!-- Get Started Button -->
+                <div style="text-align: center; margin-top: 2rem;">
+                    <button class="btn btn-primary font-bold" onclick="document.querySelector('[data-tab=data]').click()" style="padding: 0.75rem 2rem; font-size: 1.1em;">
+                        GET STARTED →
+                    </button>
+                </div>
+
+                <!-- Footer -->
+                <div style="margin-top: 3rem; padding-top: 1rem; border-top: 1px solid rgba(255, 255, 255, 0.1); text-align: center; color: #666; font-size: 0.9em;">
+                    <p>Built with Claude Code | Data: FAA NASR, OurAirports, NOAA</p>
+                </div>
+            </div>
+        </div>
+
         <!-- Tab: Data & Cache -->
-        <div class="tab-content active" id="tab-data">
+        <div class="tab-content" id="tab-data">
             <!-- Database Section -->
             <div class="data-section">
                 <h3 class="section-header">DATABASE</h3>
