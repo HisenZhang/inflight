@@ -40,7 +40,7 @@
             <div class="data-section" style="border-color: var(--color-warning);">
                 <h3 class="section-header" style="color: var(--color-warning);">⚠ DISCLAIMER</h3>
                 <div class="data-info">
-                    <p style="font-weight: 700; color: var(--color-warning); margin-bottom: 0;">NOT FOR ACTUAL NAVIGATION — EDUCATIONAL USE ONLY</p>
+                    <p style="font-weight: 700; color: var(--color-warning); margin-bottom: 0;">NOT FAA APPROVED — EDUCATIONAL USE ONLY</p>
                 </div>
             </div>
 
@@ -51,8 +51,19 @@
                     <p><span style="color: var(--color-airport);">•</span> Route planning with airways, SID/STARs, direct routing</p>
                     <p><span style="color: var(--color-airport);">•</span> Navigation log with winds aloft, fuel calculations, ETAs</p>
                     <p><span style="color: var(--color-airport);">•</span> Moving map with real-time GPS tracking</p>
-                    <p><span style="color: var(--color-airport);">•</span> FAA NASR (US) + OurAirports (Worldwide) database</p>
+                    <p><span style="color: var(--color-airport);">•</span> FAA NASR + OurAirports database</p>
                     <p style="margin-bottom: 0;"><span style="color: var(--color-airport);">•</span> Flight tracking with GPX export</p>
+                </div>
+            </div>
+
+            <!-- Limitations -->
+            <div class="data-section">
+                <h3 class="section-header">LIMITATIONS</h3>
+                <div class="data-info">
+                    <p><span style="color: var(--color-error);">•</span> US domestic waypoints only (no oceanic/NAT tracks)</p>
+                    <p><span style="color: var(--color-error);">•</span> Data may be outdated — always verify with official sources</p>
+                    <p><span style="color: var(--color-error);">•</span> No NOTAM, TFR, or airspace restrictions</p>
+                    <p style="margin-bottom: 0;"><span style="color: var(--color-error);">•</span> GPS accuracy depends on device capabilities</p>
                 </div>
             </div>
 
@@ -65,27 +76,11 @@
                     <p><span style="color: var(--color-metric);">3.</span> NAVLOG — Review flight plan</p>
                     <p style="margin-bottom: 0;"><span style="color: var(--color-metric);">4.</span> MAP — Enable GPS tracking</p>
                 </div>
-            </div>
-
-            <!-- Route Syntax -->
-            <div class="data-section">
-                <h3 class="section-header">ROUTE SYNTAX</h3>
-                <div class="data-info">
-                    <p><span style="color: var(--text-primary); font-weight: 700;">AIRPORTS:</span> ICAO codes (KORD, KLGA)</p>
-                    <p><span style="color: var(--text-primary); font-weight: 700;">AIRWAYS:</span> PAYGE Q822 GONZZ</p>
-                    <p><span style="color: var(--text-primary); font-weight: 700;">PROCEDURES:</span> KAYYS.WYNDE3, DROPA.HIDEY1</p>
-                    <p style="margin-bottom: 0;"><span style="color: var(--text-primary); font-weight: 700;">DIRECT:</span> DCT or implicit</p>
-                </div>
-            </div>
-
-            <!-- Get Started -->
-            <div class="data-section" style="text-align: center;">
+                <div style="text-align: center;">
                 <button class="btn btn-primary font-bold" onclick="document.querySelector('[data-tab=data]').click()">
                     GET STARTED
                 </button>
-                <p class="help-text" style="margin-top: var(--space-md); margin-bottom: 0;">
-                    <span class="text-secondary">Built with Claude Code | Data: FAA NASR, OurAirports, NOAA</span>
-                </p>
+                </div>
             </div>
         </div>
 
