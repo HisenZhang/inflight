@@ -68,15 +68,50 @@ function expandRoute(routeString) {
             const contextAirport = (i <= 2) ? departureAirport : destinationAirport;
             const procedure = expandProcedure(token, previousFix, contextAirport, nextFix);
             if (procedure.expanded) {
+                // For DP procedures: Skip transition identifier waypoints at the start
+                // Example: HIDEY1 with RAMRD transition might include [HIDEY, RAMRD, BAALK, ...]
+                // but HIDEY and RAMRD are just identifiers, the actual route starts at BAALK
+                let procedureFixes = procedure.fixes;
+
+                if (procedure.type === 'DP' && procedure.transition && nextFix) {
+                    // Find where the actual route waypoints start (after transition identifiers)
+                    // Skip waypoints that match the procedure name or transition name
+                    const procBaseName = token.match(/^([A-Z]+)/)?.[1];  // Extract base name (HIDEY from HIDEY1)
+                    let startIdx = 0;
+
+                    for (let j = 0; j < procedureFixes.length; j++) {
+                        const fix = procedureFixes[j];
+                        // Skip if this waypoint matches procedure base name or transition name
+                        if (fix === procBaseName || fix === nextFix || fix === procedure.transition) {
+                            startIdx = j + 1;
+                        } else {
+                            // Found first "real" waypoint
+                            break;
+                        }
+                    }
+
+                    if (startIdx > 0) {
+                        console.log(`[RouteExpander] Skipping ${startIdx} transition identifier waypoint(s) for DP ${token}`);
+                        procedureFixes = procedureFixes.slice(startIdx);
+                    }
+                }
+
                 // Check if first fix is already the last element (connecting fix)
                 const lastFix = expanded[expanded.length - 1];
-                if (lastFix === procedure.fixes[0]) {
+                if (lastFix === procedureFixes[0]) {
                     // Don't duplicate the connecting fix
-                    expanded.push(...procedure.fixes.slice(1));
+                    expanded.push(...procedureFixes.slice(1));
                 } else {
-                    expanded.push(...procedure.fixes);
+                    expanded.push(...procedureFixes);
                 }
-                i++;
+
+                // If nextFix was used to select a transition, it's now part of the procedure expansion
+                // Skip the nextFix token to avoid duplication
+                if (nextFix && procedure.fixes.includes(nextFix)) {
+                    i += 2;  // Skip both procedure and nextFix tokens
+                } else {
+                    i++;  // Just skip procedure token
+                }
                 continue;
             } else if (tokenType === 'PROCEDURE') {
                 // Only error if it was explicitly marked as a procedure but failed to expand
@@ -191,15 +226,31 @@ function expandAirway(fromFix, airwayId, toFix) {
 // ============================================
 // PROCEDURE EXPANSION (STAR/DP)
 // ============================================
+// Expands procedure names into waypoint sequences
+//
+// STRUCTURE:
+//   {
+//     name: "HIDEY1",
+//     computerCode: "HIDEY1.HIDEY",
+//     type: "DP" or "STAR",
+//     body: { name: "HIDEY", fixes: ["FIX1", "FIX2", ...] },
+//     transitions: [{ name: "DROPA", entryFix: "DROPA", fixes: [...] }]
+//   }
+//
+// MODES:
+//   1. Auto-transition: "HIDEY1" -> selects closest transition or body only
+//   2. Manual transition: "HIDEY1.DROPA" -> uses specific transition
+//
+// SUPPORTS: HIDEY1, CHPPR, WYNDE3 (numbered & non-numbered)
 
 function expandProcedure(procedureName, previousFix = null, contextAirport = null, nextFix = null) {
-    // Try to match STAR or DP with number suffix
-    // E.g., WYNDE3 -> try to find WYNDE.WYNDE3 or similar variations
-    // Also handles formats like: HIDEY1, CHPPR1
-    // And transition-specific formats like: HIDEY1.DROPA, CHPPR1.KEAVY
+    // ============================================
+    // EXPLICIT TRANSITION: "PROCNAME.TRANSITION"
+    // ============================================
+    // Pattern: /^([A-Z]{3,}\d*)\.([A-Z]+)$/
+    // Examples: HIDEY1.DROPA, CHPPR.KEAVY
 
-    // Check if user specified a transition (e.g., HIDEY1.DROPA)
-    const transitionMatch = procedureName.match(/^([A-Z]{3,}\d+)\.([A-Z]+)$/);
+    const transitionMatch = procedureName.match(/^([A-Z]{3,}\d*)\.([A-Z]+)$/);
     if (transitionMatch) {
         const [, procName, transitionName] = transitionMatch;
         console.log(`[RouteExpander] User specified transition: ${procName}.${transitionName}`);
@@ -242,7 +293,7 @@ function expandProcedure(procedureName, previousFix = null, contextAirport = nul
         console.warn(`[RouteExpander] Transition ${transitionName} not found for procedure ${procName}`);
     }
 
-    const match = procedureName.match(/^([A-Z]{3,})(\d+)$/);
+    const match = procedureName.match(/^([A-Z]{3,})(\d*)$/);
     if (!match) {
         return { expanded: false };
     }
@@ -284,7 +335,6 @@ function expandProcedure(procedureName, previousFix = null, contextAirport = nul
         // Try STAR first
         const star = localStarsData.get(pattern);
         if (star) {
-            // New structure: {name, computerCode, type, body: {name, fixes}, transitions: [{name, entryFix, fixes}]}
             if (star.body && star.body.fixes && Array.isArray(star.body.fixes)) {
                 const result = selectBestTransition(star, previousFix, nextFix);
                 candidates.push({
@@ -296,22 +346,11 @@ function expandProcedure(procedureName, previousFix = null, contextAirport = nul
                     pattern
                 });
             }
-            // Old structure: just array of fixes
-            else if (Array.isArray(star) && star.length > 0) {
-                candidates.push({
-                    expanded: true,
-                    fixes: star,
-                    type: 'STAR',
-                    name: pattern,
-                    pattern
-                });
-            }
         }
 
         // Try DP
         const dp = localDpsData.get(pattern);
         if (dp) {
-            // New structure: {name, computerCode, type, body: {name, fixes}, transitions: [{name, entryFix, fixes}]}
             if (dp.body && dp.body.fixes && Array.isArray(dp.body.fixes)) {
                 const result = selectBestTransition(dp, previousFix, nextFix);
                 candidates.push({
@@ -320,16 +359,6 @@ function expandProcedure(procedureName, previousFix = null, contextAirport = nul
                     type: 'DP',
                     name: pattern,
                     transition: result.transition,
-                    pattern
-                });
-            }
-            // Old structure: just array of fixes
-            else if (Array.isArray(dp) && dp.length > 0) {
-                candidates.push({
-                    expanded: true,
-                    fixes: dp,
-                    type: 'DP',
-                    name: pattern,
                     pattern
                 });
             }
@@ -374,26 +403,40 @@ function expandProcedure(procedureName, previousFix = null, contextAirport = nul
     return { expanded: false };
 }
 
-// Select best procedure transition based on previous fix or explicit nextFix
-// Handles new structure: {body: {name, fixes}, transitions: [{name, entryFix, fixes}]}
+// ============================================
+// AUTO-SELECT BEST TRANSITION
+// ============================================
+// When user doesn't specify a transition (e.g., "HIDEY1" instead of "HIDEY1.DROPA"),
+// this function selects the best transition based on:
+//   1. nextFix if explicitly provided
+//   2. Proximity to previousFix (closest transition entry point)
+//   3. No transition if none available or no previousFix
+//
+// ALGORITHM:
+//   1. If nextFix matches a transition name -> use that transition
+//   2. If no previousFix -> use body only (no transition)
+//   3. If previousFix matches body start -> use body only
+//   4. Otherwise -> find closest transition to previousFix using Haversine distance
+//
+// RETURNS: { fixes: [...waypoints], transition: "NAME" or null }
+
 function selectBestTransition(procedure, previousFix, nextFix) {
     const bodyFixes = procedure.body.fixes;
 
-    // If no transitions, just use body
+    // No transitions available -> use body only
     if (!procedure.transitions || procedure.transitions.length === 0) {
         return { fixes: bodyFixes, transition: null };
     }
 
-    // If nextFix is specified, try to find a transition that matches it
+    // Priority 1: If nextFix matches a transition name, use it
     if (nextFix) {
         for (const trans of procedure.transitions) {
-            // Check if this transition's name matches the nextFix
             if (trans.name === nextFix) {
-                // Combine transition + body, removing duplicate connection point
+                // Combine: transition fixes + body fixes (remove duplicate if present)
                 const combined = [...trans.fixes];
                 const bodyStart = bodyFixes[0];
                 if (combined[combined.length - 1] === bodyStart) {
-                    combined.push(...bodyFixes.slice(1));
+                    combined.push(...bodyFixes.slice(1));  // Skip duplicate connection point
                 } else {
                     combined.push(...bodyFixes);
                 }
@@ -403,17 +446,17 @@ function selectBestTransition(procedure, previousFix, nextFix) {
         }
     }
 
-    // If no previous fix, just use body
+    // Priority 2: No previous waypoint -> use body only
     if (!previousFix) {
         return { fixes: bodyFixes, transition: null };
     }
 
-    // If previous fix is already the start of the procedure body, don't add transition
+    // Priority 3: Previous waypoint is already at procedure body start -> no transition needed
     if (previousFix === bodyFixes[0]) {
         return { fixes: bodyFixes, transition: null };
     }
 
-    // Get coordinates of previous fix from global data
+    // Priority 4: Find closest transition entry point to previous waypoint
     const prevCoords = window.DataManager?.getFixCoordinates(previousFix);
 
     if (!prevCoords) {

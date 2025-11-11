@@ -262,10 +262,10 @@ async function loadOurAirportsData(onStatusUpdate, onFileLoaded) {
             if (result.fileInfo.id === 'oa_airports') {
                 parsedData.airports = result.parsed.airports;
                 parsedData.iataToIcao = result.parsed.iataToIcao;
-                rawCSV.airportsCSV = result.csvData;
+                rawCSV[`${result.fileInfo.id}CSV`] = result.csvData;  // Use full ID to avoid collision with NASR
             } else {
                 parsedData[dataKey] = result.parsed;
-                rawCSV[`${dataKey}CSV`] = result.csvData;
+                rawCSV[`${result.fileInfo.id}CSV`] = result.csvData;  // Use full ID to avoid collision with NASR
             }
 
             // Track file metadata

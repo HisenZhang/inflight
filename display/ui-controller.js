@@ -572,16 +572,30 @@ function handleAutocompleteInput(e) {
     const currentWord = words.length > 0 ? words[words.length - 1].toUpperCase() : '';
     const previousWord = words.length > 1 ? words[words.length - 2].toUpperCase() : null;
 
-    // Check if current word contains a dot (procedure.transition notation)
-    // e.g., "HIDEY1." or "HIDEY1.DR"
-    const dotMatch = currentWord.match(/^([A-Z]{3,}\d+)\.([A-Z]*)$/);
+    // ============================================
+    // PROCEDURE TRANSITION AUTOCOMPLETE
+    // ============================================
+    // Detects when user types "PROCNAME." and shows available transitions
+    // Supports both numbered (HIDEY1, CHPPR1) and non-numbered (CHPPR) procedures
+    //
+    // Examples:
+    //   "HIDEY1."      -> Shows all HIDEY1 transitions (DROPA, KEAVY, etc.)
+    //   "HIDEY1.DR"    -> Filters to transitions starting with "DR" (DROPA)
+    //   "CHPPR."       -> Shows all CHPPR transitions
+    //   "CHPPR.KE"     -> Filters to transitions starting with "KE" (KEAVY)
+    //
+    // Pattern: /^([A-Z]{3,}\d*)\.([A-Z]*)$/
+    //   - [A-Z]{3,}  = 3+ uppercase letters (procedure name)
+    //   - \d*        = 0+ digits (optional number)
+    //   - \.         = literal dot
+    //   - [A-Z]*     = 0+ uppercase letters (transition prefix for filtering)
+
+    const dotMatch = currentWord.match(/^([A-Z]{3,}\d*)\.([A-Z]*)$/);
     if (dotMatch) {
         const [, procedureName, transitionPrefix] = dotMatch;
-        console.log(`[UI] Dot notation detected: ${procedureName}.${transitionPrefix}`);
 
-        // Show transitions for this procedure
+        // Query all transitions for this procedure (both DP and STAR)
         const transitions = window.QueryEngine?.getProcedureTransitions(procedureName) || [];
-        console.log(`[UI] Found ${transitions.length} transitions for ${procedureName}`);
 
         if (transitions.length > 0) {
             const results = transitions
@@ -595,15 +609,12 @@ function handleAutocompleteInput(e) {
                     contextHint: `${t.transition} transition for ${procedureName}`
                 }));
 
-            console.log(`[UI] Filtered to ${results.length} transition results`);
             if (results.length > 0) {
                 autocompleteResults = results;
                 displayAutocomplete(results);
                 return;
             }
         }
-    } else if (currentWord.includes('.')) {
-        console.log(`[UI] Current word contains dot but doesn't match regex: "${currentWord}"`);
     }
 
     // Check if cursor is at the end and last character is a space (just finished a waypoint)

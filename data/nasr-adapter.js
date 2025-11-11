@@ -625,7 +625,7 @@ async function loadNASRData(onStatusUpdate, onFileLoaded) {
         for (const result of results) {
             const dataKey = result.fileInfo.id.replace('nasr_', '');
             parsedData[dataKey] = result.parsed;
-            rawCSV[`${dataKey}CSV`] = result.csvData;
+            rawCSV[`${result.fileInfo.id}CSV`] = result.csvData;  // Use full ID to avoid collision with OurAirports
 
             // Track file metadata
             const metadata = {

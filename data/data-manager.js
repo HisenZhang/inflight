@@ -210,62 +210,60 @@ async function reparseFromRawCSV(onStatusUpdate) {
     const ourairportsData = { data: {} };
 
     // Parse NASR data if available
-    if (rawCSVData.airportsCSV) {
+    if (rawCSVData.nasr_airportsCSV) {
         onStatusUpdate('[...] PARSING NASR AIRPORTS', 'loading');
-        nasrData.data.airports = window.NASRAdapter.parseNASRAirports(rawCSVData.airportsCSV);
+        nasrData.data.airports = window.NASRAdapter.parseNASRAirports(rawCSVData.nasr_airportsCSV);
     }
-    if (rawCSVData.runwaysCSV) {
+    if (rawCSVData.nasr_runwaysCSV) {
         onStatusUpdate('[...] PARSING NASR RUNWAYS', 'loading');
-        nasrData.data.runways = window.NASRAdapter.parseNASRRunways(rawCSVData.runwaysCSV);
+        nasrData.data.runways = window.NASRAdapter.parseNASRRunways(rawCSVData.nasr_runwaysCSV);
     }
-    if (rawCSVData.navaidsCSV) {
+    if (rawCSVData.nasr_navaidsCSV) {
         onStatusUpdate('[...] PARSING NASR NAVAIDS', 'loading');
-        nasrData.data.navaids = window.NASRAdapter.parseNASRNavaids(rawCSVData.navaidsCSV);
+        nasrData.data.navaids = window.NASRAdapter.parseNASRNavaids(rawCSVData.nasr_navaidsCSV);
     }
-    if (rawCSVData.fixesCSV) {
+    if (rawCSVData.nasr_fixesCSV) {
         onStatusUpdate('[...] PARSING NASR FIXES', 'loading');
-        nasrData.data.fixes = window.NASRAdapter.parseNASRFixes(rawCSVData.fixesCSV);
+        nasrData.data.fixes = window.NASRAdapter.parseNASRFixes(rawCSVData.nasr_fixesCSV);
     }
-    if (rawCSVData.frequenciesCSV) {
+    if (rawCSVData.nasr_frequenciesCSV) {
         onStatusUpdate('[...] PARSING NASR FREQUENCIES', 'loading');
-        nasrData.data.frequencies = window.NASRAdapter.parseNASRFrequencies(rawCSVData.frequenciesCSV);
+        nasrData.data.frequencies = window.NASRAdapter.parseNASRFrequencies(rawCSVData.nasr_frequenciesCSV);
     }
-    if (rawCSVData.airwaysCSV) {
+    if (rawCSVData.nasr_airwaysCSV) {
         onStatusUpdate('[...] PARSING NASR AIRWAYS', 'loading');
-        nasrData.data.airways = window.NASRAdapter.parseNASRAirways(rawCSVData.airwaysCSV);
+        nasrData.data.airways = window.NASRAdapter.parseNASRAirways(rawCSVData.nasr_airwaysCSV);
     }
-    if (rawCSVData.starsCSV) {
+    if (rawCSVData.nasr_starsCSV) {
         onStatusUpdate('[...] PARSING NASR STARS', 'loading');
-        nasrData.data.stars = window.NASRAdapter.parseNASRSTARs(rawCSVData.starsCSV);
+        nasrData.data.stars = window.NASRAdapter.parseNASRSTARs(rawCSVData.nasr_starsCSV);
     }
-    if (rawCSVData.dpsCSV) {
+    if (rawCSVData.nasr_dpsCSV) {
         onStatusUpdate('[...] PARSING NASR DPS', 'loading');
-        nasrData.data.dps = window.NASRAdapter.parseNASRDPs(rawCSVData.dpsCSV);
+        nasrData.data.dps = window.NASRAdapter.parseNASRDPs(rawCSVData.nasr_dpsCSV);
     }
 
     // Parse OurAirports data if available
     if (rawCSVData.oa_airportsCSV) {
         onStatusUpdate('[...] PARSING OURAIRPORTS AIRPORTS', 'loading');
-        ourairportsData.data.airports = window.OurAirportsAdapter.parseOurAirportsAirports(rawCSVData.oa_airportsCSV);
+        const result = window.OurAirportsAdapter.parseOAAirports(rawCSVData.oa_airportsCSV);
+        ourairportsData.data.airports = result.airports;
+        ourairportsData.data.iataToIcao = result.iataToIcao;
     }
     if (rawCSVData.oa_frequenciesCSV) {
         onStatusUpdate('[...] PARSING OURAIRPORTS FREQUENCIES', 'loading');
-        ourairportsData.data.frequencies = window.OurAirportsAdapter.parseOurAirportsFrequencies(rawCSVData.oa_frequenciesCSV);
+        ourairportsData.data.frequencies = window.OurAirportsAdapter.parseOAFrequencies(rawCSVData.oa_frequenciesCSV);
     }
     if (rawCSVData.oa_runwaysCSV) {
         onStatusUpdate('[...] PARSING OURAIRPORTS RUNWAYS', 'loading');
-        ourairportsData.data.runways = window.OurAirportsAdapter.parseOurAirportsRunways(rawCSVData.oa_runwaysCSV);
+        ourairportsData.data.runways = window.OurAirportsAdapter.parseOARunways(rawCSVData.oa_runwaysCSV);
     }
     if (rawCSVData.oa_navaidsCSV) {
         onStatusUpdate('[...] PARSING OURAIRPORTS NAVAIDS', 'loading');
-        ourairportsData.data.navaids = window.OurAirportsAdapter.parseOurAirportsNavaids(rawCSVData.oa_navaidsCSV);
-    }
-    if (rawCSVData.oa_iataCodesCSV) {
-        onStatusUpdate('[...] PARSING IATA CODES', 'loading');
-        ourairportsData.data.iataToIcao = window.OurAirportsAdapter.parseIATACodes(rawCSVData.oa_iataCodesCSV);
+        ourairportsData.data.navaids = window.OurAirportsAdapter.parseOANavaids(rawCSVData.oa_navaidsCSV);
     }
 
-    // Merge the reparsed data
+    // Merge the reparsed data - mergeDataSources will rebuild dataSources array
     onStatusUpdate('[...] MERGING REPARSED DATA', 'loading');
     mergeDataSources(
         Object.keys(nasrData.data).length > 0 ? nasrData : null,
@@ -407,7 +405,7 @@ function mergeDataSources(nasrData, ourairportsData, onStatusUpdate = null) {
 async function checkCachedData() {
     try {
         const cachedData = await loadFromCacheDB();
-        if (cachedData && (cachedData.version === 9 || cachedData.version === 8 || cachedData.version === 7) && cachedData.timestamp) {
+        if (cachedData && cachedData.version === 9 && cachedData.timestamp) {
             const age = Date.now() - cachedData.timestamp;
             const daysOld = Math.floor(age / (24 * 60 * 60 * 1000));
 
@@ -502,6 +500,7 @@ async function loadFromCache(onStatusUpdate) {
 
         // Restore raw CSV data
         rawCSVData = cachedData.rawCSV;
+        console.log('[DataManager] Raw CSV keys in cache:', Object.keys(rawCSVData));
         dataSources = cachedData.dataSources || [];
         dataTimestamp = cachedData.timestamp;
 
@@ -580,22 +579,25 @@ function buildTokenTypeMap() {
         }
     }
 
-    // Index STARs and DPs (both full name and short suffix)
-    // STARs and DPs can be either arrays or objects with {body, transitions}
-    // Index STARs - now using standardized structure with { name, computerCode, type, body, transitions }
+    // Index Procedures (STARs and DPs)
+    // Structure: { name, computerCode, type, body: {name, fixes}, transitions: [{name, entryFix, fixes}] }
+    // Indexed by both computerCode (e.g., "HIDEY1.HIDEY") and procedure name (e.g., "HIDEY1")
+    // Supports both numbered (HIDEY1, CHPPR1) and non-numbered (CHPPR) procedure names
+
+    // Index STARs (Standard Terminal Arrival Routes)
     try {
         const starsIndexed = new Set();
         for (const [id, star] of starsData) {
-            // Index by key (both procName and computerCode)
+            // Index by key (computerCode like "GLAND.BLUMS5")
             if (!tokenTypeMap.has(id)) {
                 tokenTypeMap.set(id, 'PROCEDURE');
             }
 
-            // If value is an object (new structure), index by name property
+            // Index by procedure name (e.g., "BLUMS5") for autocomplete
             if (star && typeof star === 'object' && star.name) {
+                starsIndexed.add(star.name);
                 if (!tokenTypeMap.has(star.name)) {
                     tokenTypeMap.set(star.name, 'PROCEDURE');
-                    starsIndexed.add(star.name);
                 }
             }
         }
@@ -604,44 +606,24 @@ function buildTokenTypeMap() {
         console.error('[DataManager] Error indexing STARs:', error);
     }
 
-    // Index DPs - now using standardized structure with { name, computerCode, type, body, transitions }
+    // Index DPs (Departure Procedures / SIDs)
     try {
         const dpsIndexed = new Set();
-        const hideyKeys = [];
-
         for (const [id, dp] of dpsData) {
-            // Track all keys that contain HIDEY for debugging
-            if (id.includes('HIDEY')) {
-                hideyKeys.push(id);
-            }
-
-            // Index by key (both procName and computerCode)
+            // Index by key (computerCode like "HIDEY1.HIDEY")
             if (!tokenTypeMap.has(id)) {
                 tokenTypeMap.set(id, 'PROCEDURE');
             }
 
-            // If value is an object (new structure), index by name property
+            // Index by procedure name (e.g., "HIDEY1") for autocomplete
             if (dp && typeof dp === 'object' && dp.name) {
+                dpsIndexed.add(dp.name);
                 if (!tokenTypeMap.has(dp.name)) {
                     tokenTypeMap.set(dp.name, 'PROCEDURE');
-                    dpsIndexed.add(dp.name);
                 }
             }
         }
-
-        console.log(`[DataManager] Indexed ${dpsIndexed.size} unique DP procedures:`, Array.from(dpsIndexed).slice(0, 10).join(', '));
-        console.log(`[DataManager] Total DP keys in database: ${dpsData.size}`);
-
-        if (hideyKeys.length > 0) {
-            console.log(`[DataManager] Found ${hideyKeys.length} HIDEY-related keys:`, hideyKeys.slice(0, 5));
-        }
-
-        // Check if HIDEY1 was indexed
-        if (tokenTypeMap.has('HIDEY1')) {
-            console.log(`[DataManager] ✓ HIDEY1 indexed as: ${tokenTypeMap.get('HIDEY1')}`);
-        } else {
-            console.warn(`[DataManager] ✗ HIDEY1 NOT indexed in token type map`);
-        }
+        console.log(`[DataManager] Indexed ${dpsIndexed.size} unique DP procedures`);
     } catch (error) {
         console.error('[DataManager] Error indexing DPs:', error);
     }
