@@ -187,6 +187,11 @@ function updateLiveNavigation() {
         currentLegIndex++;
         console.log(`[VectorMap] Advanced to leg ${currentLegIndex + 1}/${legs.length}`);
 
+        // Vibrate device to indicate waypoint passage
+        if (navigator.vibrate) {
+            navigator.vibrate([100, 50, 100]); // Two short pulses
+        }
+
         // Update button labels for new waypoint
         updateNavButtonLabels();
 
