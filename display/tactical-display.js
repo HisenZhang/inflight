@@ -192,6 +192,50 @@ function updateLiveNavigation() {
             navigator.vibrate([100, 50, 100]); // Two short pulses
         }
 
+        // Announce waypoint passage with TTS
+        if ('speechSynthesis' in window) {
+            // Helper function to format waypoint names for speech (spell out each character)
+            const formatWaypointForSpeech = (code) => {
+                return code.split('').join(' ');
+            };
+
+            // Get waypoint information
+            const passedWaypoint = waypoints[currentLegIndex];
+            const nextWaypoint = waypoints[currentLegIndex + 1];
+            const currentLeg = legs[currentLegIndex];
+
+            const passedCode = formatWaypointForSpeech(window.RouteCalculator.getWaypointCode(passedWaypoint));
+            const nextCode = formatWaypointForSpeech(window.RouteCalculator.getWaypointCode(nextWaypoint));
+
+            // Calculate magnetic heading
+            const magHeading = currentLeg.magVar !== null && currentLeg.magVar !== undefined
+                ? Math.round((currentLeg.trueCourse - currentLeg.magVar + 360) % 360)
+                : Math.round(currentLeg.trueCourse);
+
+            // Build announcement message
+            let message = `Approaching ${passedCode}. Next waypoint ${nextCode}, `;
+            message += `heading ${magHeading}, `;
+            message += `distance ${Math.round(currentLeg.distance)} nautical miles`;
+
+            // Add ETE if available (might not be if user opted out of wind correction)
+            if (currentLeg.legTime !== undefined && currentLeg.legTime !== null) {
+                const hours = Math.floor(currentLeg.legTime / 60);
+                const minutes = Math.round(currentLeg.legTime % 60);
+                if (hours > 0) {
+                    message += `, E T E ${hours} hour${hours > 1 ? 's' : ''} ${minutes} minute${minutes !== 1 ? 's' : ''}`;
+                } else {
+                    message += `, E T E ${minutes} minute${minutes !== 1 ? 's' : ''}`;
+                }
+            }
+
+            // Speak the announcement
+            const utterance = new SpeechSynthesisUtterance(message);
+            utterance.rate = 1.0;
+            utterance.pitch = 1.0;
+            utterance.volume = 1.0;
+            window.speechSynthesis.speak(utterance);
+        }
+
         // Update button labels for new waypoint
         updateNavButtonLabels();
 
