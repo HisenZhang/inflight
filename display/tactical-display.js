@@ -212,9 +212,12 @@ function updateLiveNavigation() {
                 ? Math.round((currentLeg.trueCourse - currentLeg.magVar + 360) % 360)
                 : Math.round(currentLeg.trueCourse);
 
+            // Format heading with leading zeros and spell out each digit
+            const headingFormatted = String(magHeading).padStart(3, '0').split('').join(' ');
+
             // Build announcement message
             let message = `Approaching ${passedCode}. Next waypoint ${nextCode}, `;
-            message += `heading ${magHeading}, `;
+            message += `heading ${headingFormatted}, `;
             message += `distance ${Math.round(currentLeg.distance)} nautical miles`;
 
             // Add ETE if available (might not be if user opted out of wind correction)
