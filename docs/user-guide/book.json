@@ -1,0 +1,43 @@
+{
+  "title": "InFlight User Guide",
+  "description": "Comprehensive user guide for InFlight flight planning and navigation tool",
+  "author": "InFlight Contributors",
+  "language": "en",
+  "gitbook": "3.2.3",
+  "root": ".",
+  "structure": {
+    "readme": "README.md",
+    "summary": "SUMMARY.md"
+  },
+  "plugins": [
+    "search",
+    "back-to-top-button",
+    "expandable-chapters",
+    "github",
+    "anchors",
+    "copy-code-button",
+    "-lunr",
+    "-sharing"
+  ],
+  "pluginsConfig": {
+    "github": {
+      "url": "https://github.com/HisenZhang/inflight"
+    },
+    "theme-default": {
+      "showLevel": true,
+      "styles": {
+        "website": "styles/website.css"
+      }
+    }
+  },
+  "variables": {
+    "appName": "InFlight",
+    "version": "1.0.0"
+  },
+  "links": {
+    "sidebar": {
+      "GitHub Repository": "https://github.com/HisenZhang/inflight",
+      "Report an Issue": "https://github.com/HisenZhang/inflight/issues"
+    }
+  }
+}
