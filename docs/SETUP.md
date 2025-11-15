@@ -2,38 +2,47 @@
 
 This guide explains how to publish the InFlight user documentation.
 
-## Option 1: GitHub Pages (Recommended - Free & Simple)
+## Option 1: Cloudflare Pages (Recommended - Best Performance)
 
-GitHub Pages with Docsify provides a beautiful, searchable documentation site without any build step.
+**⭐ RECOMMENDED**: Cloudflare Pages offers the best performance and features for free.
 
-### Enable GitHub Pages
+### Quick Setup (5 Minutes)
 
-1. Go to your repository on GitHub: `https://github.com/HisenZhang/inflight`
-2. Click **Settings** (top right)
-3. Scroll to **Pages** section (left sidebar)
-4. Under **Source**, select:
-   - Branch: `main` (or your default branch)
-   - Folder: `/docs`
-5. Click **Save**
-6. Wait 1-2 minutes for deployment
+See **[Complete Cloudflare Deployment Guide](CLOUDFLARE_DEPLOYMENT.md)** for detailed instructions.
 
-### Access Your Documentation
+**Quick steps:**
 
-Once deployed, your documentation will be available at:
+1. Go to https://pages.cloudflare.com
+2. Sign in and click "Create a project"
+3. Connect to GitHub → Select `HisenZhang/inflight`
+4. Configure:
+   - **Build command**: (leave empty)
+   - **Build output directory**: `docs`
+5. Deploy!
 
+**Your docs will be at:**
 ```
-https://hisenzhang.github.io/inflight/
+https://inflight-docs.pages.dev
 ```
 
-**Features:**
-- ✅ Instant search
-- ✅ Beautiful theme
-- ✅ Mobile responsive
-- ✅ No build step required
-- ✅ Auto-updates when you push to GitHub
-- ✅ Free hosting
+**Why Cloudflare Pages:**
+- ✅ **Unlimited bandwidth** - No traffic limits
+- ✅ **200+ CDN locations** - Blazing fast globally
+- ✅ **Branch previews** - Every PR gets a preview URL
+- ✅ **DDoS protection** - Built-in security
+- ✅ **Analytics** - Built-in traffic insights
+- ✅ **Auto-deploys** - Updates on every push
+- ✅ **Free SSL** - Automatic HTTPS
+- ✅ **Custom domains** - Add your own domain for free
+- ✅ **No build needed** - Static Docsify site
 
-## Option 2: GitBook.com (Premium Features)
+## Option 2: GitHub Pages (Not Available - Custom Domain Conflict)
+
+> ⚠️ **Note**: GitHub Pages won't work if you have a custom CNAME set up for your personal blog. The CNAME affects all repository pages, causing `/inflight/` to redirect to your custom domain where it doesn't exist.
+>
+> **Use Cloudflare Pages, Netlify, or Vercel instead.**
+
+## Option 3: GitBook.com (Premium Features)
 
 GitBook.com offers a professional documentation platform with advanced features.
 
@@ -79,49 +88,49 @@ The `book.json` file in `/docs/user-guide/` contains GitBook settings:
 - Theme configuration
 - Table of contents structure
 
-## Option 3: ReadTheDocs (Free for Open Source)
+## Option 4: Netlify or Vercel (Alternative Free Options)
 
-Another popular option for open-source projects.
+Both are excellent alternatives to Cloudflare Pages:
 
-### Setup Steps
+**Netlify:**
+- Go to https://netlify.com
+- Import from GitHub
+- Build output: `docs`
+- URL: `https://inflight-docs.netlify.app`
 
-1. Go to https://readthedocs.org/
-2. Sign in with GitHub
-3. Import `HisenZhang/inflight` repository
-4. Configure to use `/docs/user-guide/`
-5. Build and publish
-
-**ReadTheDocs Features:**
-- ✅ Free for open source
-- ✅ Version hosting (multiple versions)
-- ✅ Search
-- ✅ PDF/ePub export
-- ✅ Custom domains
+**Vercel:**
+- Go to https://vercel.com
+- Import from GitHub
+- Output directory: `docs`
+- URL: `https://inflight-docs.vercel.app`
 
 ## Comparison
 
-| Feature | GitHub Pages | GitBook.com | ReadTheDocs |
-|---------|--------------|-------------|-------------|
-| **Cost** | Free | Free tier limited | Free (OSS) |
-| **Setup Time** | 5 minutes | 10 minutes | 15 minutes |
-| **Build Step** | None (Docsify) | Automatic | Automatic |
-| **Custom Domain** | Yes (free) | Yes (paid) | Yes (free) |
-| **Search** | Yes | Yes | Yes |
-| **Analytics** | Via Google | Built-in (paid) | Built-in |
-| **PDF Export** | No | Yes | Yes |
-| **Collaboration** | Git-based | Built-in | Git-based |
+| Feature | Cloudflare Pages | Netlify | Vercel | GitBook.com |
+|---------|------------------|---------|--------|-------------|
+| **Cost** | Free | Free | Free | Free tier limited |
+| **Setup Time** | 5 minutes | 5 minutes | 5 minutes | 10 minutes |
+| **Build Step** | None | None | None | Automatic |
+| **Custom Domain** | Yes (free) | Yes (free) | Yes (free) | Yes (paid) |
+| **Bandwidth** | Unlimited | 100GB/mo | 100GB/mo | Limited |
+| **CDN Locations** | 200+ | 100+ | 100+ | N/A |
+| **Branch Previews** | ✅ Unlimited | ✅ Limited | ✅ Limited | ✅ |
+| **Analytics** | ✅ Built-in | Add-on | Add-on | Built-in |
+| **DDoS Protection** | ✅ | Add-on | Add-on | N/A |
 
 ## Recommended Approach
 
-**For quick setup:** Use **GitHub Pages** (Option 1)
-- Already configured with Docsify
-- Works immediately after enabling
-- No account needed beyond GitHub
+**⭐ Best choice:** Use **Cloudflare Pages** (Option 1)
+- Unlimited bandwidth
+- Best performance (200+ CDN locations)
+- Built-in analytics and DDoS protection
+- Free forever
+- 5-minute setup
 
-**For premium features:** Use **GitBook.com** (Option 2)
+**For premium docs features:** Use **GitBook.com** (Option 3)
 - If you need PDF export
-- If you want analytics
-- If you need team collaboration
+- If you want advanced analytics
+- If you need team collaboration features
 
 ## Testing Locally
 
