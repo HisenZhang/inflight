@@ -1232,7 +1232,7 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelSt
             <tr class="wpt-row">
                 <td class="wpt-num text-primary font-bold">${waypointNumber}</td>
                 <td class="wpt-info-cell">
-                    <div class="${colorClass} wpt-code">${code}</div>
+                    <div class="${colorClass} wpt-code">${waypoint.waypointType === 'airport' ? `<a href="https://www.airnav.com/airport/${code}" target="_blank" rel="noopener noreferrer" class="airport-link">${code}</a>` : code}</div>
                     <div class="text-xs text-secondary">${typeDisplay}</div>
                 </td>
                 <td colspan="2">
