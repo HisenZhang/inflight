@@ -174,11 +174,19 @@ After landing, go to [**DATA**](tab-data) tab:
 
 For a simple VFR flight, the process is even easier:
 
-**ROUTE tab:**
+**ROUTE tab (traditional mode):**
 - **Departure:** `KSFO`
 - **Route:** (leave blank for direct)
 - **Destination:** `KHAF`
 - Click **COMPUTE**
+
+**Or use waypoint-only mode (faster):**
+- **Departure:** (blank)
+- **Route:** `KSFO KHAF`
+- **Destination:** (blank)
+- Click **COMPUTE**
+
+Both methods produce the same result!
 
 **Add winds manually in NAVLOG tab** (if no internet):
 - Click "Add Wind" button
@@ -240,6 +248,7 @@ Great for remote airports or in-flight use.
 ## Tips for New Users
 
 **Route Entry:**
+- **Quick entry:** Just type waypoints in the Route field (first = departure, last = destination)
 - You can use `DCT` for direct routing: `KSFO DCT KOAK` means direct from SFO to Oakland
 - Separate waypoints with spaces, not commas
 - Airport codes can be ICAO (KSFO) or IATA (SFO)—both work

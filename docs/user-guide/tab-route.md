@@ -4,29 +4,51 @@ The ROUTE tab is where you enter your flight plan and let InFlight do the heavy 
 
 **What makes this different from other flight planners:** The autocomplete actually understands routing context. After you enter a fix, it shows airways departing from that fix. After you enter an airway, it shows fixes on that airway. This is how FMS route entry works, not how most websites work.
 
-## The Three Required Fields
+## Input Modes: Two Ways to Enter Routes
 
-### Departure Airport
-**What to enter:** ICAO or IATA code
+InFlight supports two input modes for maximum flexibility:
 
-Examples: `KSFO`, `SFO`, `KBOS`, `BOS`
+### Mode 1: Traditional Three-Field Input (Recommended for IFR)
+
+**Departure Airport + Route + Destination Airport**
+
+- **Departure Airport:** ICAO or IATA code (examples: `KSFO`, `SFO`, `KBOS`, `BOS`)
+- **Route:** Space-separated waypoints, airways, procedures (leave blank for direct)
+- **Destination Airport:** ICAO or IATA code (same as departure)
 
 **Autocomplete:** Start typing and suggestions appear. Airport names, city names, and identifiers all work.
 
 **Pro tip:** For Class B/C airports, just type the 3-letter code—`SFO` is faster than `KSFO` and works identically.
 
-### Route (Optional but Useful)
-**What to enter:** Space-separated waypoints, airways, procedures
+### Mode 2: Waypoint-Only Input (Quick Entry)
 
-Leave blank for direct routing. Otherwise, build your route using any combination of:
-- Waypoints (fixes, navaids, airports)
-- Airways (V-routes, J-routes, Q-routes)
-- Procedures (SIDs, STARs)
+**Just use the Route field—leave Departure and Destination blank**
+
+Enter waypoints in the route field only. InFlight automatically treats:
+- **First waypoint** as departure
+- **Last waypoint** as destination
+
+**Example:**
+```text
+Departure: (blank)
+Route: KSFO KHAF KOAK
+Destination: (blank)
+```
+
+This is equivalent to:
+```text
+Departure: KSFO
+Route: KHAF
+Destination: KOAK
+```
+
+**When to use waypoint-only mode:**
+- Quick VFR planning (just type the waypoints)
+- Simple direct routes
+- When copying routes from other sources
+- Faster entry for straightforward flights
 
 **The magic:** InFlight auto-expands everything. You type the shorthand, it generates the full route.
-
-### Destination Airport
-**What to enter:** ICAO or IATA code (same as departure)
 
 ## Route Syntax: What Actually Works
 
@@ -364,10 +386,19 @@ If you've calculated routes before, you'll see a **RECENT ROUTES** list below th
 ## Real-World Route Examples
 
 ### VFR Cross-Country (Northern California)
+
+**Traditional mode:**
 ```text
 Departure: KSFO
 Route: KHAF
 Destination: KHAF
+```
+
+**Waypoint-only mode (faster):**
+```text
+Departure: (blank)
+Route: KSFO KHAF
+Destination: (blank)
 ```
 
 San Francisco → Half Moon Bay (short coastal flight)

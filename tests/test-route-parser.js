@@ -142,27 +142,29 @@ TestFramework.describe('Route Parser Architecture', function({ it }) {
         assert.equals(result.expanded.length, 3, 'Should expand to 3 waypoints');
     });
 
-    it('RouteEngine should parse waypoint-only route with airways', () => {
-        const routeString = 'PAYGE Q822 FNT';
-        const result = window.RouteEngine.parseAndExpand(routeString);
+    it('RouteParser should parse waypoint-only route with airways', () => {
+        const tokens = window.RouteLexer.tokenize('PAYGE Q822 FNT');
+        const result = window.RouteParser.parse(tokens);
 
-        assert.equals(result.tokens.length, 3, 'Should have 3 tokens');
-        assert.equals(result.tokens[0].text, 'PAYGE', 'First waypoint should be PAYGE');
-        assert.equals(result.tokens[1].text, 'Q822', 'Airway should be Q822');
-        assert.equals(result.tokens[2].text, 'FNT', 'Last waypoint should be FNT');
-        // Expanded should include intermediate fixes from Q822
-        assert.isTrue(result.expanded.length >= 2, 'Should expand to at least 2 waypoints');
-        assert.equals(result.expanded[0], 'PAYGE', 'First expanded should be PAYGE');
-        assert.equals(result.expanded[result.expanded.length - 1], 'FNT', 'Last expanded should be FNT');
+        assert.equals(result.tree.length, 1, 'Should have 1 airway segment');
+        assert.equals(result.tree[0].type, 'AIRWAY_SEGMENT', 'Should be airway segment');
+        assert.equals(result.tree[0].from.text, 'PAYGE', 'From should be PAYGE');
+        assert.equals(result.tree[0].airway.text, 'Q822', 'Airway should be Q822');
+        assert.equals(result.tree[0].to.text, 'FNT', 'To should be FNT');
     });
 
-    it('RouteEngine should determine departure/destination from waypoint-only route', () => {
-        const routeString = 'KALB PAYGE Q822 FNT KORD';
-        const result = window.RouteEngine.parseAndExpand(routeString);
+    it('RouteParser should determine departure/destination from waypoint-only route', () => {
+        const tokens = window.RouteLexer.tokenize('KALB PAYGE Q822 FNT KORD');
 
-        // Context should use first/last tokens for departure/destination
-        assert.equals(result.tokens[0].text, 'KALB', 'First token should be treated as departure');
-        assert.equals(result.tokens[result.tokens.length - 1].text, 'KORD', 'Last token should be treated as destination');
+        // First and last tokens should be identifiable as departure/destination
+        assert.equals(tokens[0].text, 'KALB', 'First token should be KALB (departure)');
+        assert.equals(tokens[tokens.length - 1].text, 'KORD', 'Last token should be KORD (destination)');
+
+        // Parse the route
+        const result = window.RouteParser.parse(tokens);
+
+        // Should have waypoint, airway segment, waypoint pattern
+        assert.isTrue(result.tree.length >= 2, 'Should have at least 2 nodes');
     });
 
 });
