@@ -1,496 +1,153 @@
 # STATS Tab
 
-The STATS tab monitors real-time flight statistics, system status, and GPS track recording.
-
-## Overview
-
-The STATS tab provides comprehensive flight monitoring including:
-- Flight status and timing
-- GPS and internet connectivity
-- Fuel tracking (if fuel planning enabled)
-- Flight time and distance
-- GPS track recording controls
-- Logbook time entry
+Real-time flight monitoring, GPS tracking, and fuel calculations.
 
 ## Flight Status
 
-### Status Display
+**Large indicator at top:**
 
-Large, prominent display at top of tab:
+- **ON GROUND:** GPS < 40 knots or no GPS
+- **IN FLIGHT:** GPS > 40 knots (auto-detected)
 
-**ON GROUND** (Default):
-- Aircraft not moving
-- GPS shows < 30 knots ground speed
-- Or GPS not active
-
-**IN FLIGHT** (Automatic):
-- Detected when ground speed > 30 knots
-- Triggers automatic tracking
-- Flight timer starts
-- Fuel tracking begins (if enabled)
-
-> 💡 **Automatic Detection**: No manual start required - system detects takeoff automatically
+Automatic. No button to press.
 
 ## System Status
 
-### Internet Connectivity
+**Internet:** ONLINE / OFFLINE / CHECKING...
 
-Shows current internet status:
+**GPS:** CHECKING... / ACTIVE / DENIED / UNAVAILABLE
 
-**ONLINE** (Green):
-- Active internet connection
-- Can fetch wind data
-- AirNav links will work
+**GPS H-ACC:** Horizontal accuracy (±feet) - lower is better
 
-**OFFLINE** (Red):
-- No internet connection
-- Cached data still works
-- Cannot download winds
-- Limited functionality
+**GPS V-ACC:** Vertical accuracy (±feet) - lower is better
 
-**CHECKING...** (Yellow):
-- Initial status
-- Testing connection
-- Wait a few seconds
-
-### GPS Status
-
-**CHECKING...** (Yellow):
-- Initializing GPS
-- Waiting for permission
-- Wait for status update
-
-**ACTIVE** (Green):
-- GPS successfully tracking
-- Position updates available
-- Accuracy being measured
-
-**DENIED** (Red):
-- Location permission denied
-- GPS cannot activate
-- See [MAP Tab](tab-map.md#gps-permission-denied) for fixing
-
-**UNAVAILABLE** (Red):
-- Device doesn't support GPS
-- Browser too old
-- Hardware issue
-
-### GPS Accuracy
-
-**GPS H-ACC** (Horizontal Accuracy):
-```
-±12 M    (Good)
-±50 M    (Marginal)
-±100 M   (Poor)
-```
-
-**GPS V-ACC** (Vertical Accuracy):
-```
-±18 M    (Good)
-±50 M    (Marginal)
-±100 M   (Poor)
-```
-
-Lower numbers = better accuracy.
+Typical in-flight: ±10-50 feet horizontal.
 
 ## Fuel Statistics
 
-Appears only when fuel planning is enabled in ROUTE tab.
+**Only shows if fuel planning enabled in ROUTE tab.**
 
-### Fuel Card Display
+**REM (Remaining):** Fuel left right now (gallons)
 
-**REM** (Remaining):
-- Fuel currently remaining
-- Updates in real-time during flight
-- Example: `18.5 GAL`
+**ENDUR (Endurance):** How long you can fly on remaining fuel (H:MM)
 
-**ENDUR** (Endurance):
-- Flight time possible with remaining fuel
-- Accounts for reserve requirement
-- Example: `1:15` (1 hour 15 minutes)
+**USED:** Fuel burned since takeoff (gallons)
 
-**USED** (Fuel Used):
-- Fuel burned since takeoff
-- Cumulative total
-- Example: `12.5 GAL`
+**START:** Fuel on board at engine start (gallons)
 
-**START** (Fuel on Board):
-- Initial fuel at engine start
-- Does not change during flight
-- Reference value
-- Example: `31.0 GAL`
+**Auto-calculated** using:
+- Flight time
+- Burn rate from ROUTE tab
+- Updates every second in flight
 
-### Fuel Tracking
+**Color coding:**
+- Green: Remaining > reserve + 30 min
+- Yellow: Remaining < reserve + 30 min
+- Red: Remaining < reserve (land immediately)
 
-**How It Works:**
-
-1. Flight detected (>30 KT ground speed)
-2. Timer starts
-3. Fuel burn calculated: `(Time ÷ 60) × Burn Rate`
-4. Remaining updated: `Start Fuel - Used Fuel`
-5. Endurance calculated: `(Remaining - Reserve) ÷ Burn Rate × 60`
-
-**Fuel Warnings:**
-
-Low fuel situations are highlighted:
-
-**Adequate** (Normal color):
-- Fuel remaining > reserve + 30 minutes
-
-**Low** (Yellow):
-- Fuel remaining < reserve + 30 minutes
-- Monitor closely
-
-**Critical** (Red):
-- Fuel remaining < reserve
-- Land immediately
-- Not enough fuel for legal flight
-
-> ⚠️ **Important**: Fuel calculations are **estimates only**. Always monitor actual fuel gauges and follow aircraft procedures.
+**This is an estimate.** Always monitor actual fuel gauges.
 
 ## Flight Time & Performance
 
-### Flight Time
+**TIME:** Flight duration since takeoff (HH:MM:SS)
 
-**TIME** (Flight Time):
-- Time since takeoff detected
-- HH:MM:SS format
-- Example: `02:15:30` (2 hours, 15 minutes, 30 seconds)
+**T/O:** Takeoff time (24-hour local time)
 
-**T/O** (Takeoff Time):
-- Local time when flight started
-- 24-hour format
-- Example: `14:23` (2:23 PM)
+**AVG GS:** Average ground speed since takeoff (knots)
 
-### Performance Metrics
+**DIST:** Total distance traveled from GPS track (nautical miles)
 
-**AVG GS** (Average Ground Speed):
-- Mean ground speed since takeoff
-- Calculated from GPS data
-- Example: `118 KT`
-- Useful for fuel and time estimates
-
-**DIST** (Distance Flown):
-- Total distance traveled
-- Calculated from GPS track
-- Example: `234.5 NM`
-- Great circle distance, not route distance
+All auto-calculated from GPS data.
 
 ## GPS Track Recording
 
-Controls for recording your flight path.
+**Mode: AUTO (default) or MANUAL**
 
-### Recording Modes
+**AUTO mode:**
+- Starts recording when airborne (>40kt)
+- Stops when landed (<40kt for 10+ seconds)
+- Zero pilot workload
 
-**AUTO** (Default):
-- Automatically starts recording when airborne
-- Stops when on ground
-- No manual intervention required
-- Recommended for most users
+**MANUAL mode:**
+- Click **START** to begin recording
+- Click **STOP** to end recording
+- Use for ground testing or specific segments
 
-**MANUAL**:
-- You control start/stop
-- Click START button to begin recording
-- Click STOP button to end recording
-- Useful for ground testing or specific segments
+**REC status:**
+- INACTIVE: Not recording
+- ACTIVE (red): Recording GPS track
 
-**Toggle Mode:**
-- Click **MANUAL** button to switch to manual mode
-- Click **AUTO** button to return to automatic
+**PTS (Points):** Number of GPS positions logged
 
-### Recording Status
+**Buttons:**
+- **EXPORT:** Download current track as GeoJSON file
+- **CLEAR:** Delete current track (saved tracks stay in DATA tab)
 
-**REC** (Recording Status):
-
-**INACTIVE** (Default):
-- Not currently recording
-- Waiting for takeoff (AUTO mode)
-- Or waiting for START (MANUAL mode)
-
-**ACTIVE** (Red):
-- Currently recording GPS track
-- Position being logged
-- Points accumulating
-
-**PTS** (Track Points):
-- Number of GPS positions recorded
-- Example: `1,247`
-- More points = higher resolution track
-
-### Manual Recording Controls
-
-In MANUAL mode:
-
-**START Button**:
-- Begin recording GPS track
-- Status changes to ACTIVE
-- Points start accumulating
-
-**STOP Button**:
-- End recording
-- Save track to storage
-- Status returns to INACTIVE
-
-> 💡 **Tip**: Use AUTO mode for normal operations - it handles everything automatically
-
-### Track Management
-
-**EXPORT Button**:
-- Download current/last track as GPX file
-- Opens save dialog
-- File named with date/time
-
-**CLEAR Button**:
-- Delete current track points
-- Does not delete saved tracks (see DATA tab)
-- Confirmation required
-
-**REFRESH** (implicit):
-- Track automatically updates in real-time
-- No manual refresh needed
+Track format: GeoJSON LineString with timestamp, position, altitude, speed, heading, accuracy.
 
 ## Logbook Times
 
-Manual entry fields for recording aircraft times.
+**Manual entry fields:**
 
-### Hobbs Time
+**Hobbs Start/End:** Engine hour meter before/after flight
 
-Engine hour meter reading.
+**Tach Start/End:** Tachometer reading before/after flight
 
-**HOBBS START**:
-- Engine hour meter before flight
-- Example: `2,456.3`
+**Totals auto-calculate:** END - START
 
-**HOBBS END**:
-- Engine hour meter after flight
-- Example: `2,459.5`
+Use these for logbook entries and maintenance tracking.
 
-**HOBBS TOTAL**:
-- Automatically calculated
-- END - START
-- Example: `3.2 HR`
+## How It All Works
 
-### Tachometer Time
+**Takeoff detection:** GPS speed > 40 knots → starts flight timer and fuel tracking
 
-Engine tachometer reading.
+**In-flight updates:** Every 1 second while flying
 
-**TACH START**:
-- Tach reading before flight
-- Example: `1,823.7`
+**Landing detection:** GPS speed < 40 knots for 10+ seconds → stops timer, saves track
 
-**TACH END**:
-- Tach reading after flight
-- Example: `1,826.4`
+**Track saved to:** localStorage (view/export in DATA tab)
 
-**TACH TOTAL**:
-- Automatically calculated
-- END - START
-- Example: `2.7 HR`
+**No internet required** except for initial database load.
 
-### Using Logbook Times
+## Typical Workflow
 
-**Recording Procedure:**
-
-1. Before flight: Record Hobbs and Tach START
-2. After landing: Record Hobbs and Tach END
-3. TOTAL automatically calculates
-4. Use for logbook entries
-5. Export track for additional records
-
-**Logbook Entry:**
-- Copy HOBBS TOTAL to logbook
-- Or use TACH TOTAL if required
-- Add to personal flight log
-- Track for maintenance intervals
-
-> 💡 **Tip**: Take photo of meters before/after flight as backup
-
-## Real-Time Updates
-
-The STATS tab updates automatically while visible:
-
-**Update Frequencies:**
-- Flight status: 1 second
-- GPS accuracy: 2 seconds
-- Fuel remaining: 1 second (during flight)
-- Flight time: 1 second
-- Track points: Per GPS update (~1-5 seconds)
-
-**Background Updates:**
-- Continue even when tab not visible
-- Flight tracking persists
-- Switch to other tabs freely
-
-## Using STATS In-Flight
-
-### Pre-Flight
-
+**Before flight:**
 1. Verify GPS is ACTIVE
-2. Check internet if you need wind data
-3. Enter HOBBS START and TACH START
-4. Set track mode to AUTO (or prepare MANUAL)
+2. Enter Hobbs/Tach START
+3. Set track mode (AUTO recommended)
 
-### During Flight
+**During flight:**
+1. Monitor fuel remaining vs. ETE
+2. Check track is recording (PTS increasing)
+3. Glance at AVG GS for performance check
 
-1. Monitor fuel remaining (if enabled)
-2. Check endurance vs. ETE
-3. Verify track is recording (PTS increasing)
-4. Glance at AVG GS for performance check
-
-### Post-Flight
-
-1. Verify recording stopped (AUTO mode)
-2. Enter HOBBS END and TACH END
-3. Note HOBBS TOTAL for logbook
-4. Click EXPORT to save track
-5. Clear track if desired (or keep for DATA tab)
-
-## Exporting Tracks
-
-GPX export for use in other applications.
-
-**GPX Format Includes:**
-- GPS coordinates (lat/lon)
-- Timestamps
-- Altitude (if available)
-- Track metadata
-
-**Compatible With:**
-- ForeFlight
-- Garmin Pilot
-- Google Earth
-- Strava / Fitness apps
-- GPX viewers
-- Flight analysis software
-
-**Export Process:**
-
-1. Click **EXPORT** button
-2. Save dialog appears
-3. Choose location/name
-4. File downloads: `track_20251115_142300.gpx`
-
-## Track Storage
-
-**Current Track:**
-- Held in memory during flight
-- Persists until cleared or page reload
-
-**Saved Tracks:**
-- Automatically saved to IndexedDB when flight ends
-- View and manage in DATA tab
-- Multiple flights stored
-- Export individually from DATA tab
+**After landing:**
+1. Track stops automatically (AUTO mode)
+2. Enter Hobbs/Tach END (totals auto-calculate)
+3. Click EXPORT to save track
+4. Check DIST and TIME for logbook
 
 ## Troubleshooting
 
-### Flight Status Stuck on "ON GROUND"
+**Flight status stuck ON GROUND:**
+- Check GPS is ACTIVE
+- Need >40kt ground speed
+- Wait 5-10 seconds after takeoff
 
-**Problem**: Status doesn't change to IN FLIGHT
+**No fuel stats:**
+- Enable fuel planning in ROUTE tab
+- Must have calculated route first
 
-**Solutions:**
-1. Check GPS is ACTIVE
-2. Verify ground speed > 30 KT
-3. May take 5-10 seconds after takeoff
-4. Ensure GPS has clear sky view
+**Track not recording:**
+- GPS must be ACTIVE
+- AUTO mode: need >40kt to start
+- MANUAL mode: click START button
 
-### Fuel Not Showing
-
-**Problem**: No fuel statistics displayed
-
-**Solutions:**
-1. Fuel planning must be enabled in ROUTE tab
-2. Route must be calculated
-3. Wind correction also required (for time calc)
-4. Reload route and enable options
-
-### Track Not Recording
-
-**Problem**: Points stay at 0
-
-**Solutions:**
-1. Check GPS is ACTIVE
-2. Verify recording status is ACTIVE
-3. In MANUAL mode, click START
-4. In AUTO mode, ensure airborne (>30 KT)
-5. Check browser permissions
-
-### Hobbs/Tach Totals Wrong
-
-**Problem**: Calculated totals incorrect
-
-**Solutions:**
-1. Check START value is less than END value
-2. Verify decimal placement
-3. Re-enter values carefully
-4. Clear and re-enter if needed
-
-### Export Fails
-
-**Problem**: GPX export doesn't work
-
-**Solutions:**
-1. Check browser allows downloads
-2. Verify track has points (PTS > 0)
-3. Try different browser
-4. Check disk space
-
-## Advanced Features
-
-### Flight Detection Sensitivity
-
-**Takeoff Threshold**: 30 knots ground speed
-**Landing Threshold**: < 30 knots for 10 seconds
-
-**Prevents False Triggers:**
-- Taxi operations don't start flight
-- Brief slowdowns don't end flight
-- Robust against GPS noise
-
-### Track Resolution
-
-**Point Recording:**
-- New point every GPS update
-- Typically 1-5 seconds
-- Higher frequency = better track detail
-- More storage used
-
-**Optimization:**
-- Points with insufficient movement filtered
-- Reduces file size
-- Maintains track accuracy
-
-## Best Practices
-
-1. **Check GPS before flight** - Ensure ACTIVE status
-2. **Use AUTO mode** - Less workload in cockpit
-3. **Monitor fuel closely** - Don't rely solely on estimates
-4. **Record Hobbs/Tach** - Habit for every flight
-5. **Export tracks regularly** - Backup before clearing
-6. **Verify track recording** - Check PTS incrementing
-7. **Don't fixate on screen** - Quick glances only
-
-## Privacy & Data
-
-**What's Stored:**
-- GPS coordinates and times
-- Flight statistics
-- Hobbs/Tach entries
-
-**What's NOT Stored:**
-- No personal information
-- No server uploads
-- All data local to device
-
-**Sharing:**
-- GPX exports contain only GPS data
-- No identifying information
-- Safe to share publicly
-
-## Next Steps
-
-- **[Data Management](tab-data.md)** - Managing saved tracks
+**GPS accuracy poor (>100ft):**
+- Move device to window
+- Wait for better satellite lock
+- Typical in-flight: ±10-50ft
 
 ---
 
-**Monitor your flight in real-time and track your progress with the STATS tab!**
+**Monitor your flight in real-time.** All data updates automatically—just fly the airplane.
