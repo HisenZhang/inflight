@@ -1,9 +1,9 @@
-name = "inflight-docs"
-compatibility_date = "2024-01-01"
+# Cloudflare Pages configuration
+# This file is primarily for documentation deployment via VitePress
+# The main app is deployed as a static site without build step
 
-[site]
-bucket = "./docs"
+name = "inflight"
+compatibility_date = "2025-11-01"
 
-# Cloudflare Pages build configuration
-# Note: This file is for reference. Actual Cloudflare Pages configuration
-# should be done through the Cloudflare Pages dashboard or wrangler CLI.
+# No [site] configuration needed - main app is static HTML/CSS/JS
+# Docs deployment should use: npm run docs:build && npx wrangler pages deploy docs/.vitepress/dist
