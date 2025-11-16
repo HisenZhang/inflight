@@ -63,13 +63,13 @@ For fixes:
 
 Before the waypoint list, you'll see a summary:
 
-```
+```text
 ROUTE: KSFO → KLAS
 WAYPOINTS: 18
 TOTAL DISTANCE: 391.2 NM
 TOTAL TIME: 3:18
 TOTAL FUEL: 28.1 GAL BURNED (9.9 GAL REMAINING)
-```
+```text
 
 **Quick sanity check:**
 - Does the distance match what you expected?
@@ -83,16 +83,16 @@ If any of these look wrong, go back to ROUTE tab and check your settings.
 ### Example: VFR Cross-Country Leg
 
 **Waypoint row:**
-```
+```text
 2  KHAF           N37°30.73' W122°30.06'
    APT             ELEV 66 FT | VAR 13.2°W
                    "Half Moon Bay Airport"
-```
+```text
 
 **Leg row:**
-```
+```text
 HDG(M) 258°  |  DIST 18.5 NM  |  ETE 9 MIN
-```
+```text
 
 **Translation:**
 - Waypoint #2 is KHAF (Half Moon Bay Airport)
@@ -104,17 +104,17 @@ HDG(M) 258°  |  DIST 18.5 NM  |  ETE 9 MIN
 ### Example: IFR Leg with Winds
 
 **Waypoint row:**
-```
+```text
 5  BSR            N36°18.54' W121°52.68'
    VOR 114.8      ELEV 2090 FT | VAR 12.9°W
-```
+```text
 
 **Leg row:**
-```
+```text
 TC 141°  WCA +5°  TH 146°  MH 133°  |  GS 125 KT  |  WIND 280/25
 DIST 97.4 NM  |  ETE 0:47  |  CUM 109.6 NM / 0:53  |  ETA 15:47Z
 FUEL: 6.7 GAL (9.9 CUM, 28.1 REM, 3:18 ENDUR)
-```
+```text
 
 **Translation:**
 - Waypoint #5 is Big Sur VOR on 114.8 MHz
@@ -141,21 +141,21 @@ FUEL: 6.7 GAL (9.9 CUM, 28.1 REM, 3:18 ENDUR)
 ### The WCA (Wind Correction Angle)
 
 **Positive WCA** means crab right:
-```
+```text
 TC 090°  WCA +8°  TH 098°
-```
+```text
 Wind is from the left, crab 8° right to track 090°.
 
 **Negative WCA** means crab left:
-```
+```text
 TC 270°  WCA -6°  TH 264°
-```
+```text
 Wind is from the right, crab 6° left to track 270°.
 
 **Zero WCA** means direct headwind or tailwind:
-```
+```text
 TC 180°  WCA 0°  TH 180°
-```
+```text
 Wind is aligned with course, no crab needed.
 
 ### The Four Headings
@@ -195,9 +195,9 @@ InFlight calculates the exact GS using vector math, not approximations.
 ### How InFlight Calculates Fuel
 
 For each leg:
-```
+```text
 Leg Fuel Burn = (ETE ÷ 60) × Burn Rate
-```
+```text
 
 Example:
 - ETE: 47 minutes
@@ -205,30 +205,30 @@ Example:
 - Fuel burn: (47 ÷ 60) × 8.5 = **6.7 gallons**
 
 Cumulative:
-```
+```text
 Total Burned = Sum of all leg burns
 Fuel Remaining = Starting Fuel - Total Burned - Taxi Fuel
 Endurance = (Remaining ÷ Burn Rate) × 60
-```
+```text
 
 ### Fuel Status Indicators
 
 **Green (OK):**
-```
+```text
 FUEL: 3.2 GAL (12.5 CUM, 19.5 REM, 2:18 ENDUR)
-```
+```text
 Remaining fuel is above reserve requirement. Good to go.
 
 **Yellow (Caution):**
-```
+```text
 FUEL: 5.1 GAL (25.8 CUM, 5.2 REM, 0:37 ENDUR)
-```
+```text
 Cutting it close. Check your math and consider fuel stop.
 
 **Red (Insufficient):**
-```
+```text
 ⚠️ INSUFFICIENT FUEL - RESERVE VIOLATED
-```
+```text
 You won't make it with required reserves. Options:
 1. Add fuel stop
 2. Reduce weight/distance
@@ -271,7 +271,7 @@ You don't lose your navlog—it opens in a new tab.
 
 When wind correction is enabled, you'll see a wind summary above the navlog:
 
-```
+```text
 FORECAST: 6-HOUR | ALTITUDE: 9500 FT
 
 Waypoint    Wind Dir    Wind Speed    Temperature
@@ -279,7 +279,7 @@ KSFO        280°        15 KT         4°C
 BSR         285°        25 KT         -2°C
 DRK         290°        30 KT         -8°C
 KLAS        295°        20 KT         -5°C
-```
+```text
 
 **What this tells you:**
 - Wind is generally from 280-295° (westerly)

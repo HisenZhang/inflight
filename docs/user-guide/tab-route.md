@@ -33,16 +33,16 @@ Leave blank for direct routing. Otherwise, build your route using any combinatio
 ### Direct Routing (VFR Cross-Country)
 **Simplest case:** Just enter waypoints with spaces between them.
 
-```
+```text
 KSFO KHAF
-```
+```text
 
 This means: San Francisco → Half Moon Bay (direct)
 
 You can optionally use `DCT` keyword:
-```
+```text
 KSFO DCT KHAF
-```
+```text
 
 But it's unnecessary—spaces imply direct routing.
 
@@ -50,9 +50,9 @@ But it's unnecessary—spaces imply direct routing.
 **How airways work:** You don't enter every fix on the airway. Just the entry point, airway identifier, and exit point. InFlight fills in the intermediate fixes.
 
 **Example:**
-```
+```text
 BSR V244 EHF V105 DVC
-```
+```text
 
 This means:
 1. Direct to Big Sur VOR (BSR)
@@ -71,25 +71,25 @@ InFlight auto-expands all the intermediate fixes on V244 and V105.
 **SID (Standard Instrument Departure):**
 Enter the procedure name right after departure airport (or as first route element).
 
-```
+```text
 KSFO JCOBY4 BSR J501 DRK
-```
+```text
 
 InFlight expands JCOBY4 to include all the departure fixes based on the active runway.
 
 **STAR (Standard Terminal Arrival):**
 Enter the procedure name right before destination airport (or as last route element).
 
-```
+```text
 BSR J501 DRK WYNDE3 KLAS
-```
+```text
 
 InFlight expands WYNDE3 to include the arrival fixes and automatically selects the correct transition.
 
 **Full IFR example with both:**
-```
+```text
 KSFO JCOBY4 BSR J501 DRK WYNDE3 KLAS
-```
+```text
 
 Breaks down to:
 - Depart KALB
@@ -101,16 +101,16 @@ Breaks down to:
 
 Some SIDs/STARs have multiple transitions. InFlight auto-selects based on your route:
 
-```
+```text
 KBOS PAYGE SSOXS V3 SAX
-```
+```text
 
 If you type `SSOXS` as the first fix after PAYGE, InFlight knows you want the SSOXS transition (not ROBUC or LBSTA).
 
 **You can also be explicit:**
-```
+```text
 WYNDE3.PAYGE
-```
+```text
 
 This forces the PAYGE transition variant of WYNDE3 (if available).
 
@@ -118,9 +118,9 @@ This forces the PAYGE transition variant of WYNDE3 (if available).
 
 Most IFR routes combine all of the above:
 
-```
+```text
 KALB JCOBY4 PAYGE Q822 FNT WYNDE3 KORD
-```
+```text
 
 Breakdown:
 - **KALB**: Departure (Albany, NY)
@@ -364,56 +364,56 @@ If you've calculated routes before, you'll see a **RECENT ROUTES** list below th
 ## Real-World Route Examples
 
 ### VFR Cross-Country (Northern California)
-```
+```text
 Departure: KSFO
 Route: KHAF
 Destination: KHAF
-```
+```text
 
 San Francisco → Half Moon Bay (short coastal flight)
 
 ### IFR Short Hop (Northeast Corridor)
-```
+```text
 Departure: KTEB
 Route: RUUDY4 PARKE V1 MERIT CCC ROBUC4
 Destination: KBOS
-```
+```text
 
 Teterboro → IFR routing via V1 → Boston
 
 ### IFR Cross-Country with Multiple Airways
-```
+```text
 Departure: KSFO
 Route: JCOBY4 BSR V244 EHF V105 DVC J58 KADDY WYNDE3
 Destination: KLAS
-```
+```text
 
 San Francisco → Las Vegas via multiple airway segments
 
 ### IFR High-Altitude Jet Route
-```
+```text
 Departure: KJFK
 Route: HAPIE7 SAX J70 ETG J121 WYNNS ROBUC4
 Destination: KBOS
-```
+```text
 
 New York JFK → Boston via jet routes (FL230+)
 
 ### Simple VFR Direct (Training Flight)
-```
+```text
 Departure: KSQL
 Route: (blank)
 Destination: KRHV
-```
+```text
 
 San Carlos → Reid-Hillview direct (no route needed)
 
 ### Complex IFR with Transition
-```
+```text
 Departure: KORD
 Route: OHARE6.KUBBS KUBBS J146 PETTY J29 DJB ZACHH1
 Destination: KDCA
-```
+```text
 
 Chicago → Washington National with explicit SID transition
 
@@ -510,9 +510,9 @@ Got an expected route from ForeFlight/fltplan.com? Paste it directly:
 If you're filing IFR, check FAA preferred routes first. Then enter that route into InFlight for fuel/time planning.
 
 Example: The preferred route for KSFO → KLAS might be:
-```
+```text
 KSFO JCOBY4 BSR J501 DRK WYNDE3 KLAS
-```
+```text
 
 Enter it exactly as published, hit COMPUTE, verify it makes sense.
 

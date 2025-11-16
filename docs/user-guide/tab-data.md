@@ -34,7 +34,7 @@ Before you can plan any routes, you need the airport and navaid database.
 
 After loading, you'll see:
 
-```
+```text
 STATUS: LOADED
 Airports: 70,412
 Navaids: 10,238
@@ -42,7 +42,7 @@ Fixes: 45,891
 Airways: 1,247
 Total Waypoints: 126,541
 Last Updated: 2025-01-15
-```
+```text
 
 **This confirms the database is ready.** You can now plan routes.
 
@@ -121,14 +121,14 @@ Each track shows:
 - **Points:** Number of GPS coordinates recorded (e.g., "487 points")
 
 **Example:**
-```
+```text
 KSFO → KHAF
 2025-01-15 14:23 PST
 Duration: 0:12
 Distance: 18.5 NM
 Points: 95
 [EXPORT GPX] [DELETE]
-```
+```text
 
 ### Exporting Flight Tracks
 
