@@ -27,7 +27,12 @@ This architecture maps directly to these phases while maintaining clear boundari
 ```
 inflight/
 ├── index.html                  # Entry point
-├── styles.css                  # Styling
+├── styles/                     # CSS modules
+│   ├── base.css
+│   ├── components.css
+│   ├── map.css
+│   ├── tokens.css
+│   └── utilities.css
 ├── manifest.json               # PWA manifest
 ├── service-worker.js           # Offline support
 │
@@ -46,22 +51,28 @@ inflight/
 │
 ├── compute/                    # COMPUTE ENGINE (Business Logic)
 │   ├── query-engine.js         # Spatial queries, search, autocomplete
+│   ├── route-engine.js         # Route orchestrator
+│   ├── route-lexer.js          # Tokenization
+│   ├── route-parser.js         # Parsing
+│   ├── route-resolver.js       # Semantic analysis
 │   ├── route-calculator.js     # Navigation calculations (distance, bearing, wind)
 │   ├── route-expander.js       # Airway/STAR/DP expansion
 │   └── winds-aloft.js          # Wind data fetching & interpolation
 │
 ├── state/                      # STATE MANAGEMENT
-│   └── flight-state.js         # Flight plan & navigation state, persistence
+│   ├── flight-state.js         # Flight plan & navigation state, persistence
+│   └── flight-tracker.js       # GPS tracking & logging
 │
 ├── display/                    # DISPLAY LAYER (Presentation)
 │   ├── app.js                  # Application coordinator, event handlers
 │   ├── ui-controller.js        # Form inputs, navlog table, status display
-│   └── tactical-display.js     # Vector map, GPS tracking, popups
+│   ├── tactical-display.js     # Vector map, GPS tracking, popups
+│   ├── checklist-controller.js # Interactive checklist
+│   └── stats-controller.js     # Flight statistics & monitoring
 │
 └── docs/                       # Documentation
-    ├── ARCHITECTURE.md         # This file
-    ├── README.md               # User-facing docs
-    └── QUICK_START.md          # Getting started tutorial
+    ├── user-guide/             # Pilot documentation
+    └── developer/              # Developer documentation
 ```
 
 ## Three-Engine Model
@@ -70,16 +81,31 @@ inflight/
 ┌─────────────────────────────────────────────────────────┐
 │ DISPLAY LAYER (Presentation)                           │
 │ ┌─────────────────────────────────────────────────────┐ │
-│ │ app.js          - Orchestration, event handling     │ │
-│ │ ui-controller.js - Forms, tables, status            │ │
+│ │ app.js              - Orchestration, event handling │ │
+│ │ ui-controller.js    - Forms, tables, status         │ │
 │ │ tactical-display.js - Vector map, GPS visualization │ │
+│ │ checklist-controller.js - Interactive checklist     │ │
+│ │ stats-controller.js - Flight monitoring             │ │
 │ └─────────────────────────────────────────────────────┘ │
 │                         ↑ (read outputs)                │
 └─────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────┐
+│ STATE MANAGEMENT                                        │
+│ ┌─────────────────────────────────────────────────────┐ │
+│ │ flight-state.js    - Flight plan state              │ │
+│ │ flight-tracker.js  - GPS tracking & logging         │ │
+│ └─────────────────────────────────────────────────────┘ │
+│                    ↑ (read/write) ↓                     │
+└─────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────┐
 │ COMPUTE ENGINE (Business Logic)                        │
 │ ┌─────────────────────────────────────────────────────┐ │
+│ │ route-engine.js      - Route orchestrator           │ │
+│ │ route-lexer.js       - Tokenization                 │ │
+│ │ route-parser.js      - Parsing                      │ │
+│ │ route-resolver.js    - Semantic analysis            │ │
 │ │ query-engine.js      - Spatial queries, search      │ │
 │ │ route-calculator.js  - Distance, bearing, wind calc │ │
 │ │ route-expander.js    - Airway/STAR/DP expansion     │ │
@@ -104,7 +130,7 @@ inflight/
 ### 1. Data Loading Phase (Bootstrap)
 
 ```
-User clicks "LOAD DATA"
+User clicks "LOAD DATABASE"
     ↓
 app.js (handleLoadData)
     ↓
@@ -126,7 +152,9 @@ User enters route + options
     ↓
 app.js (handleCalculateRoute)
     ↓
-RouteCalculator.resolveWaypoints()  ← calls DataManager.getAirport/getNavaid/getFix
+RouteEngine.processRoute()
+    ↓
+RouteLexer.tokenize() → RouteParser.parse() → RouteResolver.resolve()
     ↓
 RouteExpander.expandAirways()       ← expands "V25" to waypoint sequence
     ↓
@@ -140,42 +168,287 @@ FlightState.saveToStorage()         ← auto-save for crash recovery
     ↓
 UIController.displayResults()       ← render navlog table
     ↓
-VectorMap.displayMap()              ← render vector map
+TacticalDisplay.displayMap()        ← render vector map
 ```
 
 ### 3. Navigation Phase (In-Flight)
 
 ```
-User clicks "START GPS TRACKING"
+App initialization (automatic)
     ↓
-FlightState.startNavigation()
+TacticalDisplay.startGPSTracking()
     ↓
-GPS position updates arrive
+navigator.geolocation.watchPosition() (1Hz updates)
     ↓
-VectorMap.updateLiveNavigation()
+Position callback → currentPosition
     ↓
-RouteCalculator.calculateDistance/Bearing()
+FlightTracker.updateFlightState(groundSpeed)  ← detect takeoff/landing at 40kt threshold
     ↓
-FlightState.updateNavigation()      ← store real-time state
+FlightTracker.recordGPSPoint()                ← record GPS track point
     ↓
-VectorMap.updateNavigationDisplay() ← update heading, ETA, distance
+TacticalDisplay.updateLiveNavigation()        ← update map & navigation display
     ↓
-VectorMap.generateMap()             ← redraw with GPS position
+RouteCalculator.calculateDistance/Bearing()   ← compute to next waypoint
+    ↓
+FlightState.updateNavigation()                ← store real-time state
+    ↓
+TacticalDisplay.generateMap()                 ← redraw with GPS position
 ```
+
+## Map Projection System
+
+### Orthographic Projection
+
+InFlight uses **orthographic projection** for the moving map display. This is a perspective projection from an infinite distance that creates a planar view of the sphere.
+
+**Implementation:** [tactical-display.js:470-480](../display/tactical-display.js#L470-L480)
+
+```javascript
+// Orthographic projection formulas
+const projectToSphere = (lat, lon) => {
+    const latRad = lat * Math.PI / 180;
+    const lonRad = lon * Math.PI / 180;
+    const dLon = lonRad - centerLonRad;
+
+    const x = Math.cos(latRad) * Math.sin(dLon);
+    const y = Math.cos(centerLatRad) * Math.sin(latRad) -
+              Math.sin(centerLatRad) * Math.cos(latRad) * Math.cos(dLon);
+
+    return { x, y };
+};
+```
+
+**Mathematical Formula:**
+```
+x = cos(lat) * sin(dLon)
+y = cos(centerLat) * sin(lat) - sin(centerLat) * cos(lat) * cos(dLon)
+
+where:
+  dLon = lon - centerLon (both in radians)
+  centerLat, centerLon = projection center (middle of visible bounds)
+```
+
+### Coordinate Transformation Pipeline
+
+The system converts geographic coordinates (lat/lon) to SVG pixel coordinates through a multi-step process:
+
+**1. Project to sphere** (spherical → projected plane)
+```javascript
+const {x, y} = projectToSphere(lat, lon);
+```
+
+**2. Scale and center** (projected plane → SVG viewport)
+```javascript
+const screenX = width/2 + (x - centerX) * scale;
+const screenY = height/2 - (y - centerY) * scale;  // Y-axis inverted for SVG
+```
+
+**3. Apply pan offset** (SVG viewport → panned view)
+```javascript
+<g id="mapContent" transform="translate(${panOffset.x}, ${panOffset.y})">
+```
+
+**Scale Calculation:** [tactical-display.js:500-507](../display/tactical-display.js#L500-L507)
+
+The scale factor ensures all waypoints fit in the viewport with 5% padding:
+
+```javascript
+const scaleX = width / (projRangeX * (1 + 2 * padding));
+const scaleY = height / (projRangeY * (1 + 2 * padding));
+const baseScale = Math.min(scaleX, scaleY);
+const scale = baseScale * zoomLevel; // Apply pinch zoom
+```
+
+### Aspect Ratio Handling
+
+InFlight adjusts for latitude-dependent longitude distances:
+
+**Implementation:** [tactical-display.js:422-429](../display/tactical-display.js#L422-L429)
+
+```javascript
+// One degree of longitude varies by latitude: 1° lon = 60nm * cos(latitude)
+const avgLat = (bounds.minLat + bounds.maxLat) / 2;
+const latToLonRatio = Math.cos(avgLat * Math.PI / 180);
+const physicalLonRange = lonRange * latToLonRatio;
+const routeAspectRatio = physicalLonRange / latRange;
+```
+
+SVG dimensions adapt to route orientation:
+- **Wide routes** (E-W): 1400×700px (landscape)
+- **Tall routes** (N-S): 700×1400px (portrait)
+- **Square routes**: 1400×980px (balanced)
+
+### Pan and Zoom
+
+**Zoom Range:** 1.0x (full view) to 3.0x (detailed view)
+
+**Pinch-to-Zoom:** [tactical-display.js:1164-1175](../display/tactical-display.js#L1164-L1175)
+```javascript
+const currentDistance = getPinchDistance(e.touches);
+const scale = currentDistance / initialPinchDistance;
+const newZoomLevel = Math.max(1.0, Math.min(3.0, zoomLevel * scale));
+```
+
+**Pan Limits:** [tactical-display.js:1142-1149](../display/tactical-display.js#L1142-L1149)
+```javascript
+// Allow panning proportional to zoom level
+const maxPanX = zoomLevel * svgDimensions.width / 2;
+const maxPanY = zoomLevel * svgDimensions.height / 2;
+
+panOffset.x = Math.max(-maxPanX, Math.min(maxPanX, panOffset.x));
+panOffset.y = Math.max(-maxPanY, Math.min(maxPanY, panOffset.y));
+```
+
+At 2x zoom, the user can pan by the full viewport width to explore all areas.
+
+## GPS Tracking System
+
+### Geolocation API Configuration
+
+InFlight uses `navigator.geolocation.watchPosition()` for continuous GPS tracking.
+
+**Implementation:** [tactical-display.js:44-90](../display/tactical-display.js#L44-L90)
+
+```javascript
+watchId = navigator.geolocation.watchPosition(
+    (position) => {
+        currentPosition = {
+            lat: position.coords.latitude,
+            lon: position.coords.longitude,
+            accuracy: position.coords.accuracy,          // horizontal accuracy (meters)
+            altitudeAccuracy: position.coords.altitudeAccuracy,  // vertical accuracy (meters)
+            altitude: position.coords.altitude,          // meters MSL
+            heading: position.coords.heading,            // true heading (degrees)
+            speed: position.coords.speed                 // m/s
+        };
+        // ... feed to FlightTracker
+    },
+    (error) => { console.error('[VectorMap] GPS error:', error); },
+    {
+        enableHighAccuracy: true,  // Use GPS instead of network location when available
+        maximumAge: 1000,          // Accept cached position up to 1 second old
+        timeout: 5000              // Wait 5 seconds for position before calling error callback
+    }
+);
+```
+
+**Options Explained:**
+- `enableHighAccuracy: true`: Requests GPS instead of network triangulation
+- `maximumAge: 1000`: Allows 1-second-old cached positions for performance
+- `timeout: 5000`: 5-second timeout prevents indefinite waiting
+
+### GPS vs Network Location
+
+The Geolocation API does not distinguish between GPS and network location. InFlight relies on:
+
+1. **`enableHighAccuracy: true` flag**: Requests GPS when available
+2. **Accuracy thresholds**: Infers signal quality from `position.coords.accuracy`
+
+**Accuracy Color Coding:** [tactical-display.js:1000-1035](../display/tactical-display.js#L1000-L1035)
+
+| Accuracy | Color | Likely Source |
+|----------|-------|---------------|
+| < 50m (164ft) | Green | GPS |
+| 50-100m (164-328ft) | Yellow | Degraded GPS or WiFi |
+| > 100m (328ft) | Red | Network triangulation |
+
+### Flight State Detection
+
+InFlight automatically detects takeoff and landing using a **40-knot speed threshold**.
+
+**Implementation:** [flight-tracker.js:41-87](../state/flight-tracker.js#L41-L87)
+
+```javascript
+const TAKEOFF_SPEED_THRESHOLD = 40; // knots
+const MIN_SPEED_FOR_FLIGHT = 40;    // knots
+
+function updateFlightState(groundSpeed) {
+    const now = Date.now();
+
+    // Detect takeoff (>40kt)
+    if (!isInFlight && groundSpeed >= TAKEOFF_SPEED_THRESHOLD) {
+        isInFlight = true;
+        takeoffTime = now;
+        if (recordingMode === 'auto') {
+            startRecording(); // Auto-start recording
+        }
+    }
+
+    // Detect landing (<40kt for 10+ seconds)
+    if (isInFlight && groundSpeed < MIN_SPEED_FOR_FLIGHT) {
+        if (lastUpdateTime && (now - lastUpdateTime) > 10000) { // 10 seconds
+            isInFlight = false;
+            if (recordingMode === 'auto') {
+                stopRecording(); // Auto-stop and save track
+            }
+        }
+    }
+}
+```
+
+**State Machine:**
+- **ON GROUND → IN FLIGHT**: `groundSpeed >= 40 knots`
+- **IN FLIGHT → ON GROUND**: `groundSpeed < 40 knots` for 10+ seconds
+
+The 10-second requirement prevents false landing detection from temporary speed dips (e.g., strong headwinds, slow flight).
+
+### GPS Track Recording
+
+**Track Point Structure:** [flight-tracker.js:111-139](../state/flight-tracker.js#L111-L139)
+
+```javascript
+const point = {
+    timestamp: Date.now(),              // Unix timestamp (milliseconds)
+    lat: position.lat,                  // Decimal degrees
+    lon: position.lon,                  // Decimal degrees
+    alt: position.altitude || null,     // meters MSL
+    speed: position.speed || null,      // knots
+    heading: position.heading || null,  // true heading (degrees)
+    accuracy: position.accuracy || null,          // horizontal accuracy (meters)
+    verticalAccuracy: position.verticalAccuracy || null  // vertical accuracy (meters)
+};
+
+gpsTrack.push(point);
+```
+
+**Storage:** localStorage under key `'flight_tracks'` [flight-tracker.js:187-213](../state/flight-tracker.js#L187-L213)
+
+**GeoJSON Export:** [flight-tracker.js:253-282](../state/flight-tracker.js#L253-L282)
+
+```javascript
+const geojson = {
+    type: "Feature",
+    properties: {
+        name: `Flight Track ${new Date(track.timestamp).toLocaleString()}`,
+        timestamp: track.timestamp,
+        date: track.date,
+        takeoffTime: track.takeoffTime,
+        landingTime: track.landingTime,
+        flightDuration: track.flightDuration,
+        pointCount: track.pointCount
+    },
+    geometry: {
+        type: "LineString",
+        coordinates: track.points.map(p => [p.lon, p.lat, p.alt || 0])  // [lon, lat, alt]
+    }
+};
+```
+
+**GeoJSON coordinates use `[longitude, latitude, altitude]` order** (GeoJSON standard), not `[lat, lon]`.
 
 ## State Management
 
 ### Flight Plan State (window.FlightState)
 
-Managed by `state/flight-state.js`:
+Managed by [state/flight-state.js](../state/flight-state.js):
 
 ```javascript
 flightPlan = {
-    routeString: "KSFO KSQL",
+    routeString: "KJFK RBV Q430 AIR CLPRR3 KCMH",
     waypoints: [...],
     legs: [...],
-    totalDistance: 25.3,
-    totalTime: 12.5,
+    totalDistance: 432.1,  // nautical miles
+    totalTime: 81.3,       // minutes
     fuelStatus: {...},
     options: {...},
     timestamp: 1699564823000
@@ -183,9 +456,9 @@ flightPlan = {
 ```
 
 **Lifecycle**:
-- Created: When user calculates route
-- Persisted: Auto-saved to `localStorage` for crash recovery
-- Cleared: When user clicks "CLEAR" or loads new route
+- **Created**: When user calculates route
+- **Persisted**: Auto-saved to `localStorage` for crash recovery
+- **Cleared**: When user clicks "CLEAR" or loads new route
 
 ### Navigation State (window.FlightState)
 
@@ -194,18 +467,34 @@ navigation = {
     isActive: false,
     currentPosition: {lat, lon, heading, speed, accuracy},
     activeLegIndex: 0,
-    distanceToNext: 12.3,
-    headingToNext: 045,
+    distanceToNext: 12.3,    // nautical miles
+    headingToNext: 045,      // degrees
     etaNext: Date,
     etaDest: Date,
-    groundSpeed: 110
+    groundSpeed: 110         // knots
 }
 ```
 
 **Lifecycle**:
-- Created: When user starts GPS tracking
-- Updated: Every GPS position update (~1 Hz)
-- Cleared: When user stops tracking
+- **Created**: When GPS tracking starts (automatic)
+- **Updated**: Every GPS position update (~1 Hz)
+- **Cleared**: Never explicitly cleared (updates continuously)
+
+### GPS Tracking State (window.FlightTracker)
+
+Managed by [state/flight-tracker.js](../state/flight-tracker.js):
+
+```javascript
+{
+    isInFlight: false,           // State: ON GROUND or IN FLIGHT
+    takeoffTime: null,           // Unix timestamp
+    flightDuration: 0,           // seconds
+    isRecording: false,          // Recording active (auto or manual)
+    recordingMode: 'auto',       // 'auto' or 'manual'
+    gpsTrack: [],                // Array of GPS points
+    totalDistance: 0             // nautical miles flown
+}
+```
 
 ## Module Communication
 
@@ -216,11 +505,13 @@ All modules export to `window` for universal browser compatibility:
 ```javascript
 // Each module exports a namespace
 window.DataManager = { ... };
+window.RouteEngine = { ... };
 window.RouteCalculator = { ... };
 window.QueryEngine = { ... };
 window.FlightState = { ... };
+window.FlightTracker = { ... };
 window.UIController = { ... };
-window.VectorMap = { ... };
+window.TacticalDisplay = { ... };
 window.Utils = { ... };
 ```
 
@@ -239,18 +530,20 @@ window.Utils = { ... };
 ### Dependency Graph
 
 ```
-Display Layer → Compute Engine → Data Engine
-     ↓               ↓               ↓
-State Management ← (read/write) → Utils
+Display Layer → State Management → Compute Engine → Data Engine
+     ↓               ↓                    ↓               ↓
+  (events)      (read/write)         (queries)       (CRUD)
+                                         ↓
+                                       Utils
 ```
 
-**Loading Order** (see index.html):
+**Loading Order** (see [index.html](../index.html)):
 1. External libraries (geodesy, wind-stations)
 2. Utilities (formatters)
 3. Data Engine (adapters, data-manager)
-4. Compute Engine (winds, expander, calculator, query)
-5. State Management (flight-state)
-6. Display Layer (ui-controller, tactical-display, app)
+4. Compute Engine (route-lexer, parser, resolver, expander, calculator, query, winds)
+5. State Management (flight-state, flight-tracker)
+6. Display Layer (ui-controller, checklist-controller, stats-controller, tactical-display, app)
 
 ## Key Design Patterns
 
@@ -292,15 +585,15 @@ UI components are stateless; they render from `FlightState`:
 ```javascript
 // app.js
 async function handleCalculateRoute() {
-    const result = await RouteCalculator.calculateRoute(...);
+    const result = await RouteEngine.processRoute(...);
 
     // Update centralized state
     FlightState.updateFlightPlan(result);
     FlightState.saveToStorage();
 
     // Display components read from state
-    UIController.displayResults();  // Reads FlightState.getFlightPlan()
-    VectorMap.displayMap();         // Reads FlightState.getFlightPlan()
+    UIController.displayResults();     // Reads FlightState.getFlightPlan()
+    TacticalDisplay.displayMap();      // Reads FlightState.getFlightPlan()
 }
 ```
 
@@ -312,7 +605,6 @@ async function handleCalculateRoute() {
 setupEventListeners() {
     calculateBtn.addEventListener('click', handleCalculateRoute);
     clearRouteBtn.addEventListener('click', handleClearRoute);
-    toggleGPSBtn.addEventListener('click', () => VectorMap.toggleGPS());
     // ... etc
 }
 ```
@@ -380,65 +672,21 @@ mapContent.setAttribute('transform', `translate(${newX}, ${newY})`);
 
 | Data Type | Storage | Lifespan | Size |
 |-----------|---------|----------|------|
-| Aviation database | IndexedDB | Until user clears | ~50MB |
-| Token type map | IndexedDB | Until user clears | ~2MB |
-| Flight plan (crash recovery) | LocalStorage | 24 hours | ~50KB |
-| Route history | LocalStorage | Permanent | ~1KB |
-| User preferences | (Future) LocalStorage | Permanent | <1KB |
-| GPS tracking session | Runtime only | Session | N/A |
+| Aviation database | IndexedDB | 7 days (cache) | ~50MB |
+| Token type map | IndexedDB | 7 days (cache) | ~2MB |
+| Flight plan (crash recovery) | LocalStorage | Session | ~50KB |
+| GPS tracks | LocalStorage | Permanent | ~100KB per track |
+| Checklist state | LocalStorage | Permanent | ~5KB |
 
 ## Testing Strategy
 
-### Manual Testing Checklist
+See [TESTING.md](TESTING.md) for comprehensive testing documentation.
 
-1. **Data Loading**
-   - Load NASR + OurAirports
-   - Verify stats display
-   - Check inspection panel
-
-2. **Route Planning**
-   - Simple route (airports only)
-   - Complex route (airways, fixes)
-   - IFR route (STAR/DP)
-   - Lat/lon coordinates
-   - Wind correction enabled
-   - Fuel planning enabled
-
-3. **Vector Map**
-   - Route rendering
-   - Zoom modes (full, to dest, 100nm)
-   - Pinch-to-zoom
-   - Pan (when zoomed)
-   - Waypoint popups
-   - Nearby points
-
-4. **GPS Navigation**
-   - Start tracking
-   - Position updates
-   - Waypoint passage (auto-advance)
-   - ETA calculations
-
-5. **Persistence**
-   - Crash recovery
-   - Export/import navlog
-   - Route history
-
-## Future Enhancements
-
-### Planned Architecture Changes
-
-1. **Plugin System**: Allow custom data sources, map layers
-2. **Worker Threads**: Move heavy computations (route expansion, spatial queries) to Web Workers
-3. **Streaming Data**: Use IndexedDB cursors for large result sets
-4. **Virtual Scrolling**: For long navlog tables
-5. **WebAssembly**: Geodesy calculations (if performance becomes issue)
-
-### Backward Compatibility
-
-When making architecture changes:
-- Maintain `window.X` exports for existing code
-- Use feature detection for new capabilities
-- Provide migration path for cached data
+**Test Coverage**:
+- `utils/formatters.js`: 100% ✅
+- `state/flight-state.js`: 95% ✅
+- `compute/route-parser.js`: 90% ✅
+- `compute/route-expansion.js`: 85% ✅
 
 ## Debugging Tips
 
@@ -447,7 +695,7 @@ When making architecture changes:
 ```javascript
 // In browser console
 Object.keys(window).filter(k =>
-    ['DataManager', 'RouteCalculator', 'FlightState', 'UIController', 'VectorMap'].includes(k)
+    ['DataManager', 'RouteEngine', 'FlightState', 'FlightTracker', 'UIController', 'TacticalDisplay'].includes(k)
 );
 // Should return all module names if loaded correctly
 ```
@@ -455,8 +703,10 @@ Object.keys(window).filter(k =>
 ### 2. Inspect Flight State
 
 ```javascript
-FlightState.getFlightPlan();      // See current route
-FlightState.getNavigationState(); // See GPS tracking state
+FlightState.getFlightPlan();        // See current route
+FlightState.getNavigationState();   // See GPS tracking state
+FlightTracker.getFlightState();     // See flight tracking state
+FlightTracker.getCurrentTrack();    // See GPS track points
 ```
 
 ### 3. Query Engine Diagnostics
@@ -473,15 +723,23 @@ DataManager.getDataStats();  // Check counts
 DataManager.getFileStatus(); // Check individual files
 ```
 
+### 5. GPS Tracking Diagnostics
+
+```javascript
+TacticalDisplay.getCurrentPosition();  // See current GPS position
+FlightTracker.getFlightState();       // See flight state (in flight or on ground)
+```
+
 ## Contributing Guidelines
 
 ### Adding New Features
 
-1. **Identify the right engine**: Data, Compute, or Display?
+1. **Identify the right engine**: Data, Compute, State, or Display?
 2. **Check dependencies**: Does it need new data? New calculations?
 3. **Update state if needed**: Does it require persistent state?
 4. **Write pure functions**: Avoid side effects in utilities
 5. **Document exports**: Add to `window.X` exports section
+6. **Add tests**: Write tests for new functionality
 
 ### Code Style
 
@@ -492,5 +750,5 @@ DataManager.getFileStatus(); // Check individual files
 
 ---
 
-**Last Updated**: November 2025
-**Architecture Version**: 3-Engine v1.0
+**Last Updated**: January 2025
+**Architecture Version**: 3-Engine v2.0
