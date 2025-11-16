@@ -6,7 +6,7 @@ Common questions about InFlight answered.
 
 ### Is InFlight approved for actual flight operations?
 
-**No.** InFlight is **not FAA approved** and is intended for **educational use only**. It should not be used for actual flight operations. Always use certified, approved navigation equipment and official aeronautical charts for real flights.
+**No.** InFlight is a planning tool, not FAA-certified equipment. Use it for flight planning and backup reference, but always verify data against current charts and NOTAMs. For primary navigation, use certified equipment and official aeronautical data.
 
 ### Does InFlight work offline?
 
@@ -89,7 +89,7 @@ See [Route Tab Guide](tab-route.md) for details.
 
 ### Can I plan IFR routes?
 
-**Yes**, but remember InFlight is for educational use only. You can plan IFR routes with airways and procedures, but you must file and fly using approved methods.
+**Yes.** InFlight parses IFR route syntax including airways, SIDs, and STARs. Use it for planning, practice, and understanding route structure. Always verify routes against current charts and file using official channels.
 
 ### Why can't I find a specific waypoint?
 
@@ -147,10 +147,10 @@ You can manually advance with NEXT button.
 
 ### Can I use InFlight for actual in-flight navigation?
 
-**No.** InFlight is for educational use only. Always use:
+**As backup reference only.** For primary navigation, always use:
 - Certified panel-mount GPS
-- Certified portable aviation GPS
 - Official aeronautical charts
+- Current approach plates
 - Proper VFR/IFR navigation procedures
 
 ### Do waypoint announcements work on all devices?
@@ -520,15 +520,14 @@ Very small private airports or recently added airports may not be included. Data
 
 ### Can InFlight replace ForeFlight/Garmin Pilot?
 
-**No.** InFlight is educational only. Professional apps like ForeFlight and Garmin Pilot offer:
-- FAA approval
+**No.** Professional EFBs offer features InFlight doesn't:
 - Current charts and plates
 - NOTAMs and TFRs
 - Weather integration
-- Certified navigation
-- Regular updates
+- Regular AIRAC updates
+- Certified data sources
 
-Use InFlight for learning and practice, not actual operations.
+Use InFlight for planning and backup, not as your primary EFB.
 
 ### Why don't I see NOTAMs or TFRs?
 

@@ -502,9 +502,9 @@ InFlight prints **only the currently active tab**. When you're on the NAVLOG tab
 3. Bring printout as backup to iPad/tablet
 4. Mark key frequencies with highlighter after printing
 
-**For IFR flight:**
-Most pilots use iPad, but a paper backup is smart:
-1. Print navlog before flight
+**For backup reference:**
+Having a paper copy can be useful:
+1. Print navlog as backup to primary EFB
 2. Highlight critical frequencies
 3. Note any special procedures
 4. Fold and keep in kneeboard pocket

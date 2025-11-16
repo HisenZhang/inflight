@@ -196,9 +196,9 @@ That's it. Print the navlog or keep it on your iPad.
 
 ## Common Workflows
 
-### Filing IFR: Build the Route String
+### Practice Building IFR Routes
 
-InFlight's autocomplete helps you build routes quickly:
+InFlight's autocomplete helps you learn route construction:
 
 1. Type departure airport: `KBOS`
 2. Type SID name: Start typing `SSOXS` → autocomplete shows PAYGE
@@ -211,27 +211,27 @@ InFlight's autocomplete helps you build routes quickly:
 
 **Result:** `KBOS PAYGE SSOXS V3 SAX J57 LRP LENDY6 KLGA`
 
-### Checking a Pre-Filed Route
+### Analyzing Routes from Other Sources
 
-Already have a route from ForeFlight/FltPlan? Paste it into InFlight to verify:
+Got a route from ForeFlight/FltPlan? Analyze it in InFlight:
 
 1. Copy route string from your EFB
 2. Paste into InFlight ROUTE tab
 3. Hit COMPUTE
-4. Compare navlog distance/times with your EFB
+4. Compare navlog distance/times to understand the route structure
 
-Useful as a cross-check before departure.
+Useful for learning how routes are constructed.
 
-### Planning Multiple Altitudes
+### Comparing Altitudes
 
-Want to see if 7,500 or 9,500 is better for winds?
+Want to see how winds affect different altitudes?
 
 1. Enter route with altitude `7500`, click COMPUTE
 2. Go to NAVLOG, note total time and fuel
 3. Go back to ROUTE, change altitude to `9500`, click COMPUTE
 4. Compare NAVLOG results
 
-Pick the most efficient altitude, then file.
+Learn how altitude selection affects flight time and fuel burn.
 
 ### Pre-Loading for Offline Use
 
@@ -271,8 +271,8 @@ Great for remote airports or in-flight use.
 - Fuel calculations assume constant power/mixture—adjust in cruise
 
 **Database Updates:**
-- Data from OurAirports (community-maintained)
-- Reload database weekly/monthly for updated info
+- Data from OurAirports and FAA NASR (periodically updated)
+- Not AIRAC-cycle certified
 - Always verify critical data (frequencies, runway lengths) against current charts
 
 ## What's Next?

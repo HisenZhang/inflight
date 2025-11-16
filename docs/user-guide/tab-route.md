@@ -524,9 +524,9 @@ Chicago → Washington National with explicit SID transition
 4. Export again
 5. Now you have both routes pre-planned
 
-### Building a Route from ATC Expected Route
+### Analyzing Expected Routes
 
-Got an expected route from ForeFlight/fltplan.com? Paste it directly:
+Got a route from ForeFlight/fltplan.com? Analyze it in InFlight:
 
 1. Copy: `KSFO JCOBY4 BSR J501 DRK WYNDE3 KLAS`
 2. Split into departure/route/destination:
@@ -534,18 +534,18 @@ Got an expected route from ForeFlight/fltplan.com? Paste it directly:
    - Route: `JCOBY4 BSR J501 DRK WYNDE3`
    - Destination: `KLAS`
 3. Hit COMPUTE
-4. Verify against expected route
+4. Review expanded waypoints and fuel calculations
 
-### Checking Preferred Routes
+### Understanding Preferred Routes
 
-If you're filing IFR, check FAA preferred routes first. Then enter that route into InFlight for fuel/time planning.
+Practice with FAA preferred routes to understand route structure:
 
-Example: The preferred route for KSFO → KLAS might be:
+Example: A typical route for KSFO → KLAS:
 ```text
 KSFO JCOBY4 BSR J501 DRK WYNDE3 KLAS
 ```
 
-Enter it exactly as published, hit COMPUTE, verify it makes sense.
+Enter it to see how SIDs, airways, and STARs connect.
 
 ## Performance Tips
 
