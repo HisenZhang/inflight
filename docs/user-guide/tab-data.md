@@ -42,7 +42,7 @@ Fixes: 45,891
 Airways: 1,247
 Total Waypoints: 126,541
 Last Updated: 2025-01-15
-```text
+```
 
 **This confirms the database is ready.** You can now plan routes.
 
@@ -128,7 +128,7 @@ Duration: 0:12
 Distance: 18.5 NM
 Points: 95
 [EXPORT GPX] [DELETE]
-```text
+```
 
 ### Exporting Flight Tracks
 

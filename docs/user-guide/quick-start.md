@@ -45,7 +45,7 @@ Click [**ROUTE**](tab-route) tab and enter:
 **Filed Route:**
 ```text
 KSFO JCOBY4 BSR J501 DRK WYNDE3 KLAS
-```text
+```
 
 **What this means:**
 - Depart KALB departure

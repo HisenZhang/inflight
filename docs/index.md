@@ -52,7 +52,7 @@ InFlight is a web-based flight planning tool that works like an EFB should: **in
 Type a route like:
 ```text
 KBOS PAYGE SSOXS V3 SAX J57 LRP LENDY6 KLGA
-```text
+```
 
 Hit COMPUTE and it:
 - Auto-expands the SID from KBOS runway 04R/22L
@@ -79,7 +79,7 @@ Enter winds at multiple altitudes:
 3000ft: 270/15
 6000ft: 280/25
 9000ft: 290/35
-```text
+```
 
 The app interpolates between altitudes for each leg. If you're climbing from 4,000 to 7,000 feet over a 40nm segment, it calculates the **blended wind** for that leg—not just one altitude's wind.
 

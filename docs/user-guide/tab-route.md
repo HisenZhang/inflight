@@ -35,14 +35,14 @@ Leave blank for direct routing. Otherwise, build your route using any combinatio
 
 ```text
 KSFO KHAF
-```text
+```
 
 This means: San Francisco → Half Moon Bay (direct)
 
 You can optionally use `DCT` keyword:
 ```text
 KSFO DCT KHAF
-```text
+```
 
 But it's unnecessary—spaces imply direct routing.
 
@@ -52,7 +52,7 @@ But it's unnecessary—spaces imply direct routing.
 **Example:**
 ```text
 BSR V244 EHF V105 DVC
-```text
+```
 
 This means:
 1. Direct to Big Sur VOR (BSR)
@@ -73,7 +73,7 @@ Enter the procedure name right after departure airport (or as first route elemen
 
 ```text
 KSFO JCOBY4 BSR J501 DRK
-```text
+```
 
 InFlight expands JCOBY4 to include all the departure fixes based on the active runway.
 
@@ -82,14 +82,14 @@ Enter the procedure name right before destination airport (or as last route elem
 
 ```text
 BSR J501 DRK WYNDE3 KLAS
-```text
+```
 
 InFlight expands WYNDE3 to include the arrival fixes and automatically selects the correct transition.
 
 **Full IFR example with both:**
 ```text
 KSFO JCOBY4 BSR J501 DRK WYNDE3 KLAS
-```text
+```
 
 Breaks down to:
 - Depart KALB
@@ -103,14 +103,14 @@ Some SIDs/STARs have multiple transitions. InFlight auto-selects based on your r
 
 ```text
 KBOS PAYGE SSOXS V3 SAX
-```text
+```
 
 If you type `SSOXS` as the first fix after PAYGE, InFlight knows you want the SSOXS transition (not ROBUC or LBSTA).
 
 **You can also be explicit:**
 ```text
 WYNDE3.PAYGE
-```text
+```
 
 This forces the PAYGE transition variant of WYNDE3 (if available).
 
@@ -120,7 +120,7 @@ Most IFR routes combine all of the above:
 
 ```text
 KALB JCOBY4 PAYGE Q822 FNT WYNDE3 KORD
-```text
+```
 
 Breakdown:
 - **KALB**: Departure (Albany, NY)
@@ -368,7 +368,7 @@ If you've calculated routes before, you'll see a **RECENT ROUTES** list below th
 Departure: KSFO
 Route: KHAF
 Destination: KHAF
-```text
+```
 
 San Francisco → Half Moon Bay (short coastal flight)
 
@@ -377,7 +377,7 @@ San Francisco → Half Moon Bay (short coastal flight)
 Departure: KTEB
 Route: RUUDY4 PARKE V1 MERIT CCC ROBUC4
 Destination: KBOS
-```text
+```
 
 Teterboro → IFR routing via V1 → Boston
 
@@ -386,7 +386,7 @@ Teterboro → IFR routing via V1 → Boston
 Departure: KSFO
 Route: JCOBY4 BSR V244 EHF V105 DVC J58 KADDY WYNDE3
 Destination: KLAS
-```text
+```
 
 San Francisco → Las Vegas via multiple airway segments
 
@@ -395,7 +395,7 @@ San Francisco → Las Vegas via multiple airway segments
 Departure: KJFK
 Route: HAPIE7 SAX J70 ETG J121 WYNNS ROBUC4
 Destination: KBOS
-```text
+```
 
 New York JFK → Boston via jet routes (FL230+)
 
@@ -404,7 +404,7 @@ New York JFK → Boston via jet routes (FL230+)
 Departure: KSQL
 Route: (blank)
 Destination: KRHV
-```text
+```
 
 San Carlos → Reid-Hillview direct (no route needed)
 
@@ -413,7 +413,7 @@ San Carlos → Reid-Hillview direct (no route needed)
 Departure: KORD
 Route: OHARE6.KUBBS KUBBS J146 PETTY J29 DJB ZACHH1
 Destination: KDCA
-```text
+```
 
 Chicago → Washington National with explicit SID transition
 
@@ -512,7 +512,7 @@ If you're filing IFR, check FAA preferred routes first. Then enter that route in
 Example: The preferred route for KSFO → KLAS might be:
 ```text
 KSFO JCOBY4 BSR J501 DRK WYNDE3 KLAS
-```text
+```
 
 Enter it exactly as published, hit COMPUTE, verify it makes sense.
 
