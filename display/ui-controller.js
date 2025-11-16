@@ -1046,18 +1046,47 @@ function selectDestinationItem(index) {
 
 function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelStatus = null, options = {}) {
     // Route summary
-    const routeCodes = waypoints.map(w => RouteCalculator.getWaypointCode(w)).join(' ');
+    const expandedRoute = waypoints.map(w => RouteCalculator.getWaypointCode(w)).join(' ');
+
+    // Get user input route from the form
+    const userRoute = `${elements.departureInput.value.trim()} ${elements.routeInput.value.trim()} ${elements.destinationInput.value.trim()}`.trim();
+
+    // Get current timestamp
+    const now = new Date();
+    const timestamp = now.toISOString().replace('T', ' ').substring(0, 19) + 'Z';
 
     let summaryHTML = `
         <div class="summary-item">
-            <span class="summary-label text-secondary text-sm">ROUTE</span>
-            <span class="summary-value text-navaid font-bold">${routeCodes}</span>
+            <span class="summary-label text-secondary text-sm">TIME GENERATED</span>
+            <span class="summary-value text-secondary">${timestamp}</span>
         </div>
         <div class="summary-item">
-            <span class="summary-label text-secondary text-sm">TOTAL DISTANCE</span>
+            <span class="summary-label text-secondary text-sm">USER ROUTE</span>
+            <span class="summary-value text-navaid font-bold">${userRoute}</span>
+        </div>
+        <div class="summary-item">
+            <span class="summary-label text-secondary text-sm">EXPANDED ROUTE</span>
+            <span class="summary-value text-secondary" style="font-size: 0.8rem; word-break: break-all;">${expandedRoute}</span>
+        </div>
+        <div class="summary-item">
+            <span class="summary-label text-secondary text-sm">DISTANCE</span>
             <span class="summary-value text-navaid font-bold">${totalDistance.toFixed(1)} NM</span>
         </div>
+        <div class="summary-item">
+            <span class="summary-label text-secondary text-sm">WAYPOINTS</span>
+            <span class="summary-value text-navaid font-bold">${waypoints.length}</span>
+        </div>
     `;
+
+    // Add filed altitude if available
+    if (options.altitude) {
+        summaryHTML += `
+        <div class="summary-item">
+            <span class="summary-label text-secondary text-sm">FILED ALTITUDE</span>
+            <span class="summary-value text-metric font-bold">${options.altitude} FT</span>
+        </div>
+        `;
+    }
 
     // Add total time if available
     if (totalTime !== null && options.enableTime) {
@@ -1065,22 +1094,11 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelSt
         const minutes = Math.round(totalTime % 60);
         summaryHTML += `
         <div class="summary-item">
-            <span class="summary-label text-secondary text-sm">TOTAL TIME</span>
+            <span class="summary-label text-secondary text-sm">TIME</span>
             <span class="summary-value text-navaid font-bold">${hours}H ${minutes}M</span>
         </div>
         `;
     }
-
-    summaryHTML += `
-        <div class="summary-item">
-            <span class="summary-label text-secondary text-sm">WAYPOINTS</span>
-            <span class="summary-value text-navaid font-bold">${waypoints.length}</span>
-        </div>
-        <div class="summary-item">
-            <span class="summary-label text-secondary text-sm">LEGS</span>
-            <span class="summary-value text-navaid font-bold">${legs.length}</span>
-        </div>
-    `;
 
     // Add fuel status if available
     if (fuelStatus) {
@@ -1312,8 +1330,13 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelSt
                 const windType = headwind >= 0 ? 'HEAD' : 'TAIL';
                 const windValue = Math.abs(Math.round(headwind));
 
+                // Temperature display (if available)
+                const tempDisplay = leg.windTemp !== null && leg.windTemp !== undefined
+                    ? `/${leg.windTemp > 0 ? '+' : ''}${leg.windTemp}°C`
+                    : '';
+
                 windSection = '<div class="leg-section">';
-                windSection += `<span class="leg-secondary">WIND <span class="text-airport">${windDir}°/${windSpd}KT</span></span>`;
+                windSection += `<span class="leg-secondary">WIND <span class="text-airport">${windDir}°/${windSpd}KT${tempDisplay}</span></span>`;
                 windSection += ` <span class="leg-secondary">• ${windType} <span class="text-metric">${windValue}KT</span></span>`;
 
                 // Wind correction angle
@@ -1372,7 +1395,6 @@ function displayWindAltitudeTable(legs, filedAltitude) {
     ];
 
     let tableHTML = `
-        <h2 class="font-bold text-primary">WINDS ALOFT AT ALTITUDE</h2>
         <table>
             <thead>
                 <tr>
@@ -1391,8 +1413,40 @@ function displayWindAltitudeTable(legs, filedAltitude) {
             <tbody>
     `;
 
-    // Add row for each leg
+    // Filter legs to show winds at 20% intervals (6 sample points: 0%, 20%, 40%, 60%, 80%, 100%)
+    // Calculate total route distance first
+    const totalDistance = legs.reduce((sum, leg) => sum + (leg.distance || 0), 0);
+
+    const filteredLegs = [];
+    let cumulativeDistance = 0;
+    const targetPercentages = [0, 20, 40, 60, 80, 100]; // 6 sample points
+    let nextTargetIndex = 0;
+
     legs.forEach((leg, index) => {
+        const isFirst = index === 0;
+        const isLast = index === legs.length - 1;
+        const percentComplete = totalDistance > 0 ? (cumulativeDistance / totalDistance) * 100 : 0;
+
+        // Check if we've reached or passed the next target percentage
+        if (nextTargetIndex < targetPercentages.length) {
+            const targetPercent = targetPercentages[nextTargetIndex];
+
+            if (isFirst || isLast || (percentComplete >= targetPercent && nextTargetIndex > 0)) {
+                filteredLegs.push({
+                    leg,
+                    index,
+                    distance: cumulativeDistance,
+                    percent: Math.round(percentComplete)
+                });
+                nextTargetIndex++;
+            }
+        }
+
+        cumulativeDistance += leg.distance || 0;
+    });
+
+    // Add row for each filtered leg
+    filteredLegs.forEach(({ leg, index }) => {
         const from = RouteCalculator.getWaypointCode(leg.from);
         const to = RouteCalculator.getWaypointCode(leg.to);
 
@@ -1406,8 +1460,11 @@ function displayWindAltitudeTable(legs, filedAltitude) {
                 const wind = leg.windsAtAltitudes[alt];
                 const dir = String(Math.round(wind.direction)).padStart(3, '0');
                 const spd = Math.round(wind.speed);
+                const temp = wind.temperature !== null && wind.temperature !== undefined
+                    ? `/${wind.temperature > 0 ? '+' : ''}${wind.temperature}°C`
+                    : '';
                 const cellClass = isFiledAlt ? 'filed-altitude text-metric font-bold' : 'text-secondary';
-                tableHTML += `<td class="wind-cell ${cellClass}">${dir}°/${spd}KT</td>`;
+                tableHTML += `<td class="wind-cell ${cellClass}">${dir}°/${spd}KT${temp}</td>`;
             } else {
                 tableHTML += `<td class="wind-cell text-secondary">-</td>`;
             }

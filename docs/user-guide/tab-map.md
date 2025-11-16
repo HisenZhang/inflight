@@ -116,8 +116,9 @@ Located at top-right of map.
 
 **ROUTE (default):**
 - Shows entire route from departure to destination
-- Good for: Pre-flight planning, overall route awareness
-- Use when: Checking the big picture
+- Frames only the route waypoints (current GPS position may be outside view)
+- Good for: Pre-flight planning, overall route awareness, consistent route overview
+- Use when: Checking the big picture or viewing the complete flight plan
 
 **DEST:**
 - Zooms to destination airport area

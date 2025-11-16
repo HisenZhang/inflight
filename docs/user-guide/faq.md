@@ -223,10 +223,176 @@ Currently, no. The checklist is fixed for Piper Cherokee 140. Future versions ma
 
 ### Can I print the checklist?
 
-Use browser print function (Ctrl+P / Cmd+P) or screenshot. For cockpit use, consider:
-- Mounting tablet with checklist visible
+**Yes.** Use browser print function (Ctrl+P / Cmd+P). InFlight automatically switches to a printer-friendly layout with:
+- High-contrast black text on white background
+- Hidden buttons and UI elements
+- Optimized formatting for paper
+
+For cockpit use, consider:
 - Printing from browser to PDF
+- Mounting tablet with checklist visible
 - Using paper POH checklist
+
+See [Printing Guide](#printing-questions) for details.
+
+## Printing Questions
+
+### Can I print my flight plan?
+
+**Yes.** InFlight has built-in printer-friendly formatting:
+
+**To print:**
+1. Open the tab(s) you want to print (NAVLOG, STATS, CHKLST, etc.)
+2. Press **Ctrl+P** (Windows/Linux) or **Cmd+P** (Mac)
+3. Review print preview
+4. Click Print or save as PDF
+
+### What gets printed?
+
+**InFlight prints only the currently active tab.** This gives you clean, focused output.
+
+**To print a specific tab:**
+1. Click on the tab you want (NAVLOG, STATS, CHKLST, etc.)
+2. Press **Ctrl+P / Cmd+P**
+3. Only that tab's content will appear in print preview
+
+**Available for printing:**
+- ✅ **WELCOME tab**: App info and disclaimer
+- ✅ **DATA tab**: Database status and system checks
+- ✅ **ROUTE tab**: Route input with departure, route, destination
+- ✅ **NAVLOG tab**: Complete navigation log table (most common!)
+- ✅ **STATS tab**: Flight statistics and fuel planning
+- ✅ **CHKLST tab**: All checklists (auto-expanded for printing)
+- ⚠️ **MAP tab**: Shows helpful message (canvas graphics can't print)
+
+**Automatically optimized for printing:**
+- Tab navigation buttons → Hidden
+- Input buttons (CALCULATE, CLEAR, etc.) → Hidden
+- Help text and instructions → Hidden
+- Action buttons → Hidden
+- Collapsed checklists → Auto-expanded
+- All UI chrome → Hidden
+
+### Does it work on color and black-and-white printers?
+
+**Yes!** InFlight's print styles work on both:
+
+**Color printers:**
+- Airports: Dark blue
+- Navaids: Dark magenta
+- Reporting points: Dark orange (underlined)
+- Other elements: Professional colors
+- Clear, vibrant output
+
+**Grayscale/B&W printers:**
+- Colors convert to different gray shades
+- High contrast maintained
+- All text remains readable
+- Reporting points underlined for visibility
+- Professional black-on-white appearance
+
+### How do I print just the navlog?
+
+**Easy!** InFlight automatically prints only the active tab:
+1. Click on **NAVLOG tab**
+2. Press **Ctrl+P / Cmd+P**
+3. Only the navlog will appear in print preview
+4. Print or save as PDF
+
+The printed navlog includes:
+- **Time generated** - When the navlog was calculated
+- **Filed altitude** - Your planned cruising altitude
+- **Route summary** - User route, expanded route, distance, waypoints
+- **Wind altitude table** - Winds and temperatures at different altitudes (if enabled)
+- **Complete waypoint table** - All waypoints with coordinates, frequencies, and leg details
+- Clean, borderless layout optimized for paper
+
+**Same for any tab:**
+- Want just the checklist? Click CHKLST tab, then print
+- Want just stats? Click STATS tab, then print
+- Want route details? Click ROUTE tab, then print
+
+**Tip:** Save as PDF for digital archival without using paper/ink.
+
+### Why does the print preview look different from the screen?
+
+InFlight uses special **print-only styles** that activate when printing:
+- **Screen**: Dark theme (black background, bright colors) optimized for displays
+- **Print**: Light theme (white background, dark text) optimized for paper
+
+This ensures:
+- Good contrast on white paper
+- Readable text (no light cyan/magenta on white)
+- Professional appearance
+- Efficient ink usage
+
+### What happens if I try to print the MAP tab?
+
+Instead of a blank page, you'll see a helpful message explaining that the interactive map cannot be printed (canvas graphics don't work on paper) and directing you to use the NAVLOG tab for a printable reference with all waypoint coordinates and headings.
+
+### Do collapsed checklists expand when printing?
+
+**Yes!** All checklists automatically expand when printing, even if they're collapsed on screen. This ensures you get the complete checklist on paper without having to manually expand each section first.
+
+### Why does the wind altitude table show fewer rows than legs?
+
+The wind altitude table displays winds and temperatures at **6 sample points** along your route (every 20% of total distance). This provides useful altitude planning data without overwhelming detail:
+
+**Sample points:**
+- 0% - Departure
+- 20% - First quarter
+- 40% - Midpoint area
+- 60% - Past midpoint
+- 80% - Final quarter
+- 100% - Destination
+
+Each wind cell shows **direction/speed/temperature** (e.g., "280°/25KT/-8°C") to help you choose the best altitude for favorable winds and comfortable temperatures.
+
+This gives you a clear picture of how winds and temperatures change at different altitudes as you progress along your route, without the clutter of showing every single leg.
+
+**For detailed leg-by-leg wind corrections**, the NAVLOG tab shows wind calculations (including temperature) for every individual segment.
+
+### Can I print in landscape orientation?
+
+**Yes.** In the print dialog:
+1. Look for "Layout" or "Orientation" setting
+2. Choose "Landscape"
+3. Print or save
+
+Landscape may work better for wide navlog tables.
+
+### The colors are too light when printed. What's wrong?
+
+If colors appear washed out:
+1. **Check printer settings**: Ensure "Print background colors" is enabled
+2. **Browser settings**: Chrome → Print dialog → More settings → Enable "Background graphics"
+3. **Printer quality**: Set to "Best" or "High Quality" mode
+4. **Ink levels**: Check if cartridges need replacement
+
+InFlight uses dark colors specifically to avoid this issue, but browser/printer settings can affect output.
+
+### Can I save the print output as PDF?
+
+**Yes.** In the print dialog:
+1. Look for "Destination" or "Printer" dropdown
+2. Select "Save as PDF" or "Microsoft Print to PDF"
+3. Choose location and filename
+4. Save
+
+**Benefits:**
+- Digital backup of flight plan
+- Easy sharing via email
+- Archive old flights
+- No paper/ink needed
+
+### Do I need to print every flight?
+
+**No.** Printing is optional. Many pilots prefer:
+- **Digital-only**: Keep tablet with InFlight open in cockpit
+- **PDF archive**: Save as PDF for records
+- **Hybrid**: Print critical flights, keep others digital
+
+For training/education, printing can be helpful for study and review.
 
 ## Flight Recording Questions
 

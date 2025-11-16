@@ -393,15 +393,9 @@ function generateMap(waypoints, legs) {
             maxLon: maxLon + effectiveLonRange * padding
         };
     } else {
-        // Full route view (default)
+        // Full route view (default) - show only route waypoints, not current position
         const lats = waypoints.map(w => w.lat);
         const lons = waypoints.map(w => w.lon);
-
-        // Include current position if available
-        if (currentPosition) {
-            lats.push(currentPosition.lat);
-            lons.push(currentPosition.lon);
-        }
 
         const minLat = Math.min(...lats);
         const maxLat = Math.max(...lats);

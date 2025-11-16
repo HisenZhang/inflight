@@ -514,8 +514,9 @@ header {
 }
 
 .route-summary {
-    padding: var(--space-md);
-    border: 1px solid var(--border-color);
+    padding: var(--space-md) 0;
+    border: none;
+    border-bottom: 2px solid var(--border-color);
     margin-bottom: var(--space-md);
 }
 
@@ -525,11 +526,15 @@ header {
     margin-bottom: var(--space-sm);
 }
 
+.summary-label {
+    font-weight: bold;
+}
+
 /* Wind Altitude Table */
 .wind-altitude-table {
     background: var(--bg-primary);
-    border: 2px solid var(--border-color);
-    padding: var(--space-md);
+    border: none;
+    padding: 0;
     margin-bottom: var(--space-md);
     overflow-x: auto;
 }
@@ -538,7 +543,7 @@ header {
     margin-bottom: var(--space-md);
     font-size: 1rem;
     letter-spacing: 2px;
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: none;
     padding-bottom: 5px;
 }
 

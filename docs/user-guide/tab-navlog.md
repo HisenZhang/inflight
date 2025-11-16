@@ -48,7 +48,7 @@ For fixes:
 - **TH**: True heading (where to point the nose)
 - **MH**: Magnetic heading (**this is what you fly**)
 - **GS**: Ground speed (accounting for wind)
-- **WIND**: Wind direction/speed at altitude
+- **WIND**: Wind direction/speed/temperature at altitude (e.g., 280°/25KT/-8°C)
 - **ETE**: Estimated time en route for this leg
 - **CUM DIST/TIME**: Cumulative from departure
 - **ETA**: Estimated time of arrival at waypoint
@@ -64,17 +64,33 @@ For fixes:
 Before the waypoint list, you'll see a summary:
 
 ```text
-ROUTE: KSFO → KLAS
-WAYPOINTS: 18
-TOTAL DISTANCE: 391.2 NM
-TOTAL TIME: 3:18
-TOTAL FUEL: 28.1 GAL BURNED (9.9 GAL REMAINING)
+TIME GENERATED: 2025-11-15 18:34:22Z
+USER ROUTE: KSFO V87 BSR V27 DRK KLAS
+EXPANDED ROUTE: KSFO ARCHI WWAVS ALTAM GRTFL FAITH CARME BSR PANOCHE SNS AVE LANDO DRK KLAS
+DISTANCE: 391.2 NM
+WAYPOINTS: 14
+FILED ALTITUDE: 9500 FT
+TIME: 3H 18M
+FUEL STATUS: ✓ SUFFICIENT
+FINAL FOB: 9.9 GAL (1.2H)
+FUEL RESERVE REQ: 4.3 GAL (30 MIN)
 ```
+
+**What this tells you:**
+- **Time generated**: When the navlog was calculated (UTC timestamp)
+- **User route**: What you typed in (with airways)
+- **Expanded route**: Full waypoint sequence (airways expanded)
+- **Distance**: Total nautical miles
+- **Waypoints**: Number of fixes/airports/navaids
+- **Filed altitude**: Your planned cruising altitude
+- **Time**: Total flight time (if wind correction enabled)
+- **Fuel status**: Whether you have sufficient fuel with required reserves
 
 **Quick sanity check:**
 - Does the distance match what you expected?
 - Do you have enough fuel (remaining > reserve)?
 - Does the time seem reasonable for your aircraft?
+- Is the filed altitude appropriate for direction of flight?
 
 If any of these look wrong, go back to ROUTE tab and check your settings.
 
@@ -111,7 +127,7 @@ HDG(M) 258°  |  DIST 18.5 NM  |  ETE 9 MIN
 
 **Leg row:**
 ```text
-TC 141°  WCA +5°  TH 146°  MH 133°  |  GS 125 KT  |  WIND 280/25
+TC 141°  WCA +5°  TH 146°  MH 133°  |  GS 125 KT  |  WIND 280/25KT/-8°C
 DIST 97.4 NM  |  ETE 0:47  |  CUM 109.6 NM / 0:53  |  ETA 15:47Z
 FUEL: 6.7 GAL (9.9 CUM, 28.1 REM, 3:18 ENDUR)
 ```
@@ -119,7 +135,7 @@ FUEL: 6.7 GAL (9.9 CUM, 28.1 REM, 3:18 ENDUR)
 **Translation:**
 - Waypoint #5 is Big Sur VOR on 114.8 MHz
 - You want to track 141° true course over the ground
-- Wind is from 280° at 25 knots, requiring +5° right crab
+- Wind is from 280° at 25 knots, temperature -8°C, requiring +5° right crab
 - Fly true heading 146° (141° + 5°)
 - Apply magnetic variation: fly magnetic heading 133°
 - Ground speed will be 125 knots
@@ -267,24 +283,29 @@ Click `KSFO` → Opens `https://www.airnav.com/airport/KSFO` in new tab
 
 You don't lose your navlog—it opens in a new tab.
 
-### Winds Aloft Table
+### Wind Altitude Table
 
-When wind correction is enabled, you'll see a wind summary above the navlog:
+When wind correction is enabled, you'll see a wind altitude table above the navlog showing winds and temperatures at different altitudes for **6 sample points** along your route (every 20% of distance):
 
 ```text
-FORECAST: 6-HOUR | ALTITUDE: 9500 FT
+WIND ALTITUDE TABLE
+FILED ALTITUDE: 9500 FT
 
-Waypoint    Wind Dir    Wind Speed    Temperature
-KSFO        280°        15 KT         4°C
-BSR         285°        25 KT         -2°C
-DRK         290°        30 KT         -8°C
-KLAS        295°        20 KT         -5°C
+LEG            7.5K FT         8.5K FT         9.5K FT         10.5K FT        11.5K FT
+KSFO→BSR       280°/15KT/+4°C  285°/20KT/+1°C  285°/25KT/-2°C  290°/28KT/-5°C  290°/30KT/-8°C
+BSR→DRK        285°/25KT/-2°C  290°/28KT/-5°C  290°/30KT/-8°C  295°/32KT/-11°C 295°/33KT/-14°C
+DRK→KLAS       290°/20KT/-5°C  295°/22KT/-8°C  295°/20KT/-11°C 300°/18KT/-14°C 300°/15KT/-17°C
 ```
 
+The filed altitude column (9.5K FT) is highlighted in green.
+
 **What this tells you:**
-- Wind is generally from 280-295° (westerly)
-- Wind strengthens mid-route (25-30 kt at BSR/DRK)
-- Temperature drops with altitude (standard atmosphere)
+- Wind is generally from 280-300° (westerly)
+- Wind strengthens mid-route (30-33 kt at BSR/DRK area)
+- Temperature drops with altitude and distance (standard atmosphere)
+- You can compare different altitudes to find favorable winds or comfortable temperatures
+
+**Format:** Each cell shows `direction°/speed KT/temperature°C`. Negative temperatures are shown with minus sign (e.g., `-8°C`), positive with plus sign (e.g., `+4°C`).
 
 **Cross-check:** Compare this with your weather briefing. If winds aloft forecast changed, recalculate the route.
 
@@ -443,21 +464,52 @@ If you're offline or NOAA winds are unavailable, you can manually enter winds:
 
 ## Printing the Navlog
 
-**For VFR cross-country:**
+InFlight automatically switches to a **printer-friendly layout** when you print:
 
-1. Use browser print (Ctrl+P / Cmd+P)
-2. Select landscape orientation
-3. Print to PDF or physical printer
-4. Bring printout as backup to iPad
+**What happens automatically:**
+- ✅ Dark theme → High-contrast black-on-white
+- ✅ Colors optimized for both color and grayscale printers
+- ✅ Buttons and UI elements hidden
+- ✅ Professional table formatting with clear borders
+- ✅ Page breaks optimized to avoid splitting important sections
+
+**To print:**
+1. Press **Ctrl+P** (Windows/Linux) or **Cmd+P** (Mac)
+2. Review print preview (should show clean black-on-white layout)
+3. Choose landscape or portrait orientation (landscape recommended for wide tables)
+4. Print to physical printer or save as PDF
+
+**What gets printed:**
+InFlight prints **only the currently active tab**. When you're on the NAVLOG tab and press Ctrl+P:
+- ✅ Complete navigation log table
+- ✅ All waypoint and leg data
+- ✅ Wind corrections and fuel calculations
+- ❌ Tab navigation (hidden)
+- ❌ Buttons and UI (hidden)
+
+**To print other content:** Click the desired tab (STATS, CHKLST, etc.) first, then print.
+
+**Color vs. Grayscale:**
+- **Color printers**: Waypoints shown in dark blue, magenta, orange (professional colors)
+- **B&W printers**: Colors convert to different gray shades for distinction
+- **Both work great** - all text remains readable
+
+**For VFR cross-country:**
+1. Print navlog to PDF or paper
+2. Landscape orientation works best for wide tables
+3. Bring printout as backup to iPad/tablet
+4. Mark key frequencies with highlighter after printing
 
 **For IFR flight:**
-
-Most pilots use iPad, but having a paper backup is smart:
-
-1. Print navlog
-2. Highlight key frequencies
+Most pilots use iPad, but a paper backup is smart:
+1. Print navlog before flight
+2. Highlight critical frequencies
 3. Note any special procedures
 4. Fold and keep in kneeboard pocket
+
+**Pro tip:** Save as PDF for digital archival - no ink needed, easy to email or store.
+
+For more printing details, see [Printing FAQ](faq.md#printing-questions).
 
 ## Tips for Professional Use
 

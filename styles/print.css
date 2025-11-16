@@ -1,0 +1,623 @@
+/* ============================================
+   PRINT STYLES
+   ============================================
+   Printer-friendly overrides for navlog and other content.
+   Converts dark theme to high-contrast black-on-white for printing.
+   ============================================ */
+
+@media print {
+    /* ========================================
+       PRINT LAYOUT
+       ======================================== */
+
+    /* Hide non-essential UI elements */
+    header,
+    .tab-navigation,
+    .optional-features,
+    .data-actions,
+    .navlog-actions,
+    .btn,
+    .btn-primary,
+    .btn-secondary,
+    .btn-warning,
+    .btn-sm,
+    nav,
+    .stats-actions,
+    .track-actions,
+    .checklist-actions,
+    .inspection-actions,
+    .query-history,
+    .help-text {
+        display: none !important;
+    }
+
+    /* MAP tab - show message instead of blank page */
+    #tab-map .tactical-display,
+    #tab-map canvas,
+    #tab-map .tactical-header,
+    #tab-map .navigation-panel,
+    #tab-map .map-status-bar {
+        display: none !important;
+    }
+
+    /* Add print-only message for MAP tab */
+    #tab-map::before {
+        content: "MAP VIEW - NOT PRINTABLE";
+        display: block;
+        background: white;
+        border: 2px solid black;
+        padding: 40pt 20pt;
+        margin: 20pt;
+        text-align: center;
+        font-size: 14pt;
+        font-weight: bold;
+        color: #666;
+    }
+
+    #tab-map::after {
+        content: "The interactive map uses canvas graphics which cannot be printed. For a printable reference, use the NAVLOG tab which includes all waypoint coordinates, headings, and distances.";
+        display: block;
+        background: white;
+        border: 2px solid #ccc;
+        border-top: none;
+        padding: 20pt;
+        margin: 0 20pt 20pt 20pt;
+        text-align: center;
+        font-size: 10pt;
+        color: #666;
+        line-height: 1.6;
+    }
+
+    /* ONLY print the active tab */
+    .tab-content {
+        display: none !important;
+    }
+
+    .tab-content.active {
+        display: block !important;
+        page-break-before: avoid;
+    }
+
+    /* Reset page margins for better printing */
+    @page {
+        margin: 0.5in;
+        size: portrait;
+    }
+
+    body {
+        background: white !important;
+        color: black !important;
+        font-size: 10pt;
+        line-height: 1.3;
+    }
+
+    /* ========================================
+       WELCOME TAB
+       ======================================== */
+
+    #tab-welcome .data-section {
+        background: white !important;
+        border: 2px solid black !important;
+        padding: 8pt;
+        margin-bottom: 12pt;
+        page-break-inside: avoid;
+    }
+
+    #tab-welcome .section-header {
+        color: black !important;
+        border-bottom: 2px solid black !important;
+        font-size: 11pt !important;
+        padding-bottom: 4pt;
+    }
+
+    #tab-welcome .data-info,
+    #tab-welcome .data-info p {
+        color: black !important;
+        font-size: 9pt !important;
+    }
+
+    /* ========================================
+       DATA TAB
+       ======================================== */
+
+    #tab-data .data-section,
+    #tab-data .data-status {
+        background: white !important;
+        border: 2px solid black !important;
+        padding: 8pt;
+        margin-bottom: 12pt;
+        page-break-inside: avoid;
+    }
+
+    #tab-data .section-header {
+        color: black !important;
+        border-bottom: 2px solid black !important;
+        font-size: 11pt !important;
+    }
+
+    #tab-data .check-item {
+        color: black !important;
+        margin-bottom: 6pt;
+    }
+
+    #tab-data .check-label {
+        color: #333 !important;
+        font-size: 8pt !important;
+    }
+
+    #tab-data .check-status {
+        color: black !important;
+        font-weight: bold !important;
+    }
+
+    #tab-data .status-box {
+        background: white !important;
+        border: 1px solid black !important;
+        padding: 6pt;
+        margin-bottom: 6pt;
+    }
+
+    #tab-data .data-info {
+        color: #333 !important;
+        font-size: 9pt !important;
+    }
+
+    /* ========================================
+       ROUTE TAB
+       ======================================== */
+
+    #tab-route .input-section {
+        display: block !important;
+        background: white !important;
+        border: 2px solid black !important;
+        padding: 8pt;
+        margin-bottom: 12pt;
+        page-break-inside: avoid;
+    }
+
+    #tab-route .input-section h2 {
+        color: black !important;
+        border-bottom: 2px solid black !important;
+        font-size: 11pt !important;
+        margin-bottom: 6pt;
+    }
+
+    #tab-route .route-input-icao {
+        display: block !important;
+    }
+
+    #tab-route .input-group label {
+        color: black !important;
+        font-weight: bold !important;
+        font-size: 9pt !important;
+        display: block;
+        margin-bottom: 2pt;
+    }
+
+    #tab-route .route-field {
+        display: block !important;
+        width: 100% !important;
+        border: 1px solid #666 !important;
+        background: white !important;
+        color: black !important;
+        padding: 4pt !important;
+        margin-bottom: 6pt;
+        font-size: 9pt !important;
+    }
+
+    /* Hide input buttons but show the route values */
+    #tab-route .button-row {
+        display: none !important;
+    }
+
+    /* Show feature inputs without toggles */
+    #tab-route .feature-toggle {
+        display: none !important;
+    }
+
+    #tab-route .feature-inputs {
+        display: block !important;
+        margin-left: 0 !important;
+        padding: 6pt !important;
+        border-left: 2px solid #666 !important;
+    }
+
+    #tab-route .feature-inputs .input-row {
+        margin-bottom: 4pt;
+    }
+
+    #tab-route .feature-inputs label {
+        color: #333 !important;
+        font-size: 8pt !important;
+    }
+
+    #tab-route .feature-inputs input {
+        border: 1px solid #666 !important;
+        background: white !important;
+        color: black !important;
+        font-size: 9pt !important;
+        padding: 2pt 4pt !important;
+    }
+
+    /* ========================================
+       NAVLOG TABLE - HIGH CONTRAST
+       ======================================== */
+
+    .navlog-table {
+        width: 100%;
+        page-break-inside: avoid;
+    }
+
+    .navlog-table table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white !important;
+    }
+
+    /* Table headers - black text on white, bold borders */
+    .navlog-table th {
+        background: white !important;
+        color: black !important;
+        border-top: 2px solid black !important;
+        border-bottom: 2px solid black !important;
+        padding: 4pt 6pt;
+        font-weight: bold;
+        font-size: 9pt;
+        text-align: left;
+    }
+
+    /* Waypoint rows */
+    .navlog-table .wpt-row {
+        background: white !important;
+        border-top: 2px solid black !important;
+        page-break-inside: avoid;
+    }
+
+    .navlog-table .wpt-row td {
+        background: white !important;
+        color: black !important;
+        border-bottom: 1px solid #666 !important;
+        padding: 4pt 6pt;
+    }
+
+    /* Waypoint code - bold and larger */
+    .wpt-code {
+        font-size: 12pt !important;
+        font-weight: bold !important;
+    }
+
+    /* Waypoint colors preserved for color printing */
+    .text-airport.wpt-code {
+        color: var(--color-airport) !important;  /* Dark blue */
+    }
+
+    .text-navaid.wpt-code {
+        color: var(--color-navaid) !important;   /* Dark magenta */
+    }
+
+    .text-reporting.wpt-code {
+        color: var(--color-reporting) !important; /* Dark orange */
+        text-decoration: underline !important;
+    }
+
+    .text-fix.wpt-code {
+        color: var(--color-fix) !important;      /* Black */
+    }
+
+    /* Leg rows - light gray background for contrast */
+    .navlog-table .leg-row {
+        background: #f5f5f5 !important;
+        page-break-inside: avoid;
+    }
+
+    .navlog-table .leg-row td {
+        background: #f5f5f5 !important;
+        color: black !important;
+        padding: 4pt 6pt;
+    }
+
+    /* Leg section labels and data */
+    .leg-section {
+        color: black !important;
+        margin-bottom: 2pt;
+        line-height: 1.2;
+    }
+
+    .leg-section-label {
+        font-weight: bold !important;
+        color: black !important;
+    }
+
+    .leg-primary {
+        font-weight: bold !important;
+        color: black !important;
+        font-size: 9pt !important;
+    }
+
+    .leg-secondary {
+        color: #333 !important;
+        font-size: 8pt !important;
+    }
+
+    .leg-info {
+        font-size: 8pt !important;
+        color: #333 !important;
+    }
+
+    .leg-item {
+        color: #333 !important;
+    }
+
+    /* Airport links */
+    .navlog-table .airport-link {
+        color: black !important;
+        text-decoration: none !important;
+    }
+
+    /* ========================================
+       WIND ALTITUDE TABLE
+       ======================================== */
+
+    .wind-altitude-table {
+        width: 100%;
+        page-break-inside: avoid;
+        background: white !important;
+        border: none !important;
+        padding: 0;
+        margin-bottom: 12pt;
+    }
+
+    .wind-altitude-table h2 {
+        color: black !important;
+        border-bottom: none !important;
+        font-size: 11pt !important;
+        margin-bottom: 8pt;
+    }
+
+    .wind-altitude-table table {
+        background: white !important;
+        border: none !important;
+    }
+
+    .wind-altitude-table th {
+        background: white !important;
+        color: black !important;
+        border-bottom: 2px solid black !important;
+        padding: 4pt;
+        font-weight: bold;
+        font-size: 9pt;
+    }
+
+    .wind-altitude-table td {
+        background: white !important;
+        color: black !important;
+        border-bottom: 1px solid #666 !important;
+        padding: 4pt;
+    }
+
+    .wind-altitude-table .filed-altitude {
+        background: #e0e0e0 !important;
+        font-weight: bold !important;
+    }
+
+    /* ========================================
+       RESULTS SECTION
+       ======================================== */
+
+    .results-section {
+        background: white !important;
+        border: none !important;
+        padding: 0;
+        margin-bottom: 12pt;
+        page-break-inside: avoid;
+    }
+
+    .results-section h2 {
+        color: black !important;
+        border-bottom: none !important;
+        font-size: 11pt !important;
+    }
+
+    .route-summary {
+        background: white !important;
+        border: none !important;
+        border-bottom: 2px solid black !important;
+        padding: 0 0 8pt 0;
+        margin-bottom: 12pt;
+    }
+
+    .summary-item {
+        color: black !important;
+        margin-bottom: 3pt;
+    }
+
+    .summary-label {
+        font-weight: bold !important;
+    }
+
+    /* ========================================
+       STATS TAB
+       ======================================== */
+
+    .stats-section {
+        background: white !important;
+        border: 2px solid black !important;
+        padding: 8pt;
+        page-break-inside: avoid;
+    }
+
+    .stats-section h2 {
+        color: black !important;
+        border-bottom: 2px solid black !important;
+        font-size: 11pt !important;
+    }
+
+    .stats-card {
+        background: white !important;
+        border: 1px solid black !important;
+        padding: 6pt;
+        margin-bottom: 8pt;
+        page-break-inside: avoid;
+    }
+
+    .stats-card-title {
+        color: black !important;
+        border-bottom: 1px solid black !important;
+        font-size: 10pt !important;
+    }
+
+    .stat-label {
+        color: #333 !important;
+        font-size: 8pt !important;
+    }
+
+    .stat-value {
+        color: black !important;
+        font-weight: bold !important;
+    }
+
+    /* ========================================
+       CHECKLIST
+       ======================================== */
+
+    .checklist-section {
+        background: white !important;
+        color: black !important;
+        page-break-inside: avoid;
+    }
+
+    .checklist-card {
+        background: white !important;
+        border: 1px solid black !important;
+        padding: 6pt;
+        margin-bottom: 8pt;
+        page-break-inside: avoid;
+    }
+
+    /* Auto-expand all checklists for printing */
+    .checklist-card.collapsed .checklist-items {
+        display: flex !important;
+    }
+
+    .checklist-card.collapsed .checklist-title {
+        margin-bottom: var(--space-sm) !important;
+    }
+
+    /* Hide chevrons when printing */
+    .checklist-chevron {
+        display: none !important;
+    }
+
+    .checklist-title {
+        color: black !important;
+        font-size: 10pt !important;
+        font-weight: bold !important;
+        border-bottom: 1px solid #666 !important;
+        padding-bottom: 4pt !important;
+        margin-bottom: 6pt !important;
+    }
+
+    .checklist-items {
+        display: flex !important;
+        flex-direction: column;
+        gap: 3pt;
+    }
+
+    .checklist-item {
+        color: black !important;
+        display: flex;
+        align-items: flex-start;
+        gap: 6pt;
+        padding: 2pt 0;
+    }
+
+    .checklist-checkbox {
+        flex-shrink: 0;
+        width: 12pt;
+        height: 12pt;
+        border: 1px solid black !important;
+        background: white !important;
+    }
+
+    .checklist-item span {
+        color: black !important;
+        font-size: 9pt !important;
+        line-height: 1.4;
+    }
+
+    /* Show checkbox states clearly */
+    .checklist-item input:checked + span {
+        color: #666 !important;
+    }
+
+    /* ========================================
+       GENERAL TEXT & COLORS
+       ======================================== */
+
+    /* Override all color tokens for print */
+    * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
+    /* Convert screen colors to print-safe colors */
+    /* Works on both color and grayscale printers */
+    /* Dark, saturated colors that convert well to grayscale */
+    :root {
+        --color-airport: #0066cc !important;    /* Dark blue (was cyan) - 30% gray */
+        --color-navaid: #990099 !important;     /* Dark magenta (was magenta) - 40% gray */
+        --color-fix: #000000 !important;        /* Black (was white) - 0% gray */
+        --color-reporting: #cc6600 !important;  /* Dark orange (was amber) - 45% gray */
+        --color-metric: #006600 !important;     /* Dark green (was green) - 25% gray */
+        --color-warning: #cc8800 !important;    /* Dark gold (was yellow) - 60% gray */
+        --color-error: #cc0000 !important;      /* Dark red (was red) - 20% gray */
+        --text-primary: #000000 !important;
+        --text-secondary: #333333 !important;
+        --bg-primary: #ffffff !important;
+        --bg-panel: #f5f5f5 !important;
+        --border-color: #000000 !important;
+    }
+
+    /* Ensure all text is readable */
+    .text-primary,
+    .text-secondary {
+        color: black !important;
+    }
+
+    /* Remove backgrounds and adjust borders */
+    .bg-primary,
+    .bg-panel {
+        background: white !important;
+    }
+
+    .border-color {
+        border-color: black !important;
+    }
+
+    /* ========================================
+       PAGE BREAKS
+       ======================================== */
+
+    /* Avoid breaking inside these elements */
+    .navlog-table,
+    .wind-altitude-table,
+    .stats-card,
+    .checklist-card,
+    .route-summary {
+        page-break-inside: avoid;
+    }
+
+    /* Allow breaks between major sections */
+    .results-section,
+    .stats-section,
+    .checklist-section {
+        page-break-before: auto;
+        page-break-after: auto;
+    }
+
+    /* Force break before new major sections if needed */
+    .stats-section,
+    .checklist-section {
+        page-break-before: auto;
+    }
+}

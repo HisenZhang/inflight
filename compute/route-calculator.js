@@ -286,6 +286,7 @@ async function calculateRoute(waypoints, options = {}) {
                 if (windData) {
                     leg.windDir = windData.direction;
                     leg.windSpd = windData.speed;
+                    leg.windTemp = windData.temperature;
 
                     // Calculate wind components (headwind/crosswind)
                     const components = calculateWindComponents(windData.direction, windData.speed, trueCourse);

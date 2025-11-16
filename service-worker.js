@@ -1,9 +1,10 @@
 // Flight Planning Tool - Service Worker for Offline Support
-const CACHE_NAME = 'flight-planning-v47';
+const CACHE_NAME = 'flight-planning-v54';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
     './styles.css',
+    './styles/print.css',
     './manifest.json',
     // External Libraries
     './lib/geodesy.js',

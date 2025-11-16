@@ -106,13 +106,6 @@ This is how FMS autocomplete works. This is not how SkyVector works.
 
 ### Multi-Altitude Wind Interpolation
 
-Enter winds at multiple altitudes:
-```
-3000: 270/15
-6000: 280/25
-9000: 290/35
-```
-
 If you're climbing through 4,000-7,000 feet on a leg, InFlight calculates the **blended wind** for that segment—not just one altitude. This matters for accurate fuel planning.
 
 ### Automatic Flight Logging
