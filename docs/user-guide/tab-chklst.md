@@ -1,10 +1,10 @@
 # CHKLST Tab
 
-Interactive checklist for Piper Cherokee 140. Check off items as you complete them.
+The CHKLST tab provides an interactive checklist for the Piper Cherokee 140. You can check off items as you complete them.
 
-## What It Is
+## What It Includes
 
-**10 checklists** for normal operations:
+The checklist has 10 sections covering normal operations:
 
 1. Before Start (10 items)
 2. Engine Start (10 items)
@@ -17,32 +17,30 @@ Interactive checklist for Piper Cherokee 140. Check off items as you complete th
 9. After Landing (7 items)
 10. Shutdown (7 items)
 
-**Hard-coded for PA-28-140.** Not customizable.
+This checklist is hard-coded for the PA-28-140 and cannot be customized.
 
 ## How It Works
 
-**Check items:** Tap checkbox → saves state to localStorage.
+When you tap a checkbox, the item's state saves to localStorage and persists across browser sessions. Completed sections turn green and collapse automatically, while the next uncompleted section expands.
 
-**Auto-collapse:** Completed sections turn green and collapse. Next section auto-expands.
+The **RESET ALL** button unchecks everything and collapses all sections except Before Start.
 
-**Persistent:** Checkbox states survive browser restart.
+## Example
 
-**Reset:** Click **RESET ALL** → unchecks everything, collapses all except Before Start.
-
-## Disclaimer
-
-**Not FAA approved.** Always use your aircraft's official POH checklist. This is a training tool/reference only.
-
-Verify procedures against your specific aircraft—not all PA-28-140s are configured identically.
-
-## Example Item
+Each item follows the format "Control/action - EXPECTED STATE". For example:
 
 ```text
 ☐ Fuel selector - DESIRED TANK
 ```
 
-After you set fuel selector, tap checkbox. Item stays checked until you reset.
+After you set the fuel selector, tap the checkbox. The item stays checked until you reset the checklist.
+
+## Disclaimer
+
+This checklist is not FAA approved and should only be used as a training tool or reference. Always use your aircraft's official POH checklist for actual flight operations.
+
+Verify all procedures against your specific aircraft, as not all PA-28-140s are configured identically.
 
 ---
 
-**This is for practice/convenience.** Carry your POH checklist for actual flight operations.
+**This is for practice and convenience.** Always carry your POH checklist for actual flight operations.

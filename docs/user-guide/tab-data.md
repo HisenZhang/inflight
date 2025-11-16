@@ -1,12 +1,13 @@
 # DATA Tab
 
-Database management and GPS track storage.
+The DATA tab manages the aviation database and stores your GPS flight tracks.
 
 ## Database Loading
 
-**First time:** Click **LOAD DATABASE**. Downloads FAA + OurAirports data (~5MB), parses it, builds indexes. Takes 10-30 seconds.
+When you first use InFlight, click **LOAD DATABASE** to download FAA and OurAirports data. This downloads about 5MB and takes 10-30 seconds to parse and index.
 
-**Status shows:**
+Once loaded, the status panel shows the counts:
+
 ```text
 Airports: 70,412
 Navaids: 10,238
@@ -15,53 +16,32 @@ Airways: 1,247
 Total Waypoints: 126,541
 ```
 
-**Cached for 7 days.** Offline-capable after first load.
+The database is cached for 7 days, so InFlight works offline after the initial load.
 
 ## Database Buttons
 
-**LOAD DATABASE:** Fetches fresh data from internet. Use this first time or to update every 6 months.
+**LOAD DATABASE** fetches fresh data from the internet. Use this on first launch or every 6 months to get updates.
 
-**REINDEX:** Rebuilds indexes from cached data (no internet needed). Use after app updates if route parsing breaks.
+**REINDEX** rebuilds the indexes from cached data without downloading anything. This is useful after app updates if route parsing stops working.
 
-**CLEAR ALL:** Wipes everything—database cache AND saved flight tracks. You'll need to reload.
+**CLEAR ALL** wipes everything including the database cache and all saved flight tracks. You'll need to reload after this.
 
 ## Flight Tracks
 
-**List of saved GPS tracks** from STATS tab recordings.
+This section lists all GPS tracks saved from the STATS tab. Each track shows the route (if you entered departure/destination), date and time, flight duration, distance traveled, and the number of GPS points recorded.
 
-Each shows:
-- Route (if entered)
-- Date/time
-- Duration
-- Distance
-- Point count
-
-**EXPORT GPX:** Download individual track as GeoJSON file.
-
-**DELETE:** Remove track.
-
-**CLEAR ALL TRACKS:** Delete all saved tracks (keeps database).
+You can click **EXPORT GPX** to download an individual track as a GeoJSON file, or click **DELETE** to remove it. The **CLEAR ALL TRACKS** button deletes all saved tracks while keeping the database intact.
 
 ## What Gets Stored
 
-**IndexedDB (7-day cache):**
-- Raw CSV data from FAA/OurAirports
-- Parsed airports, navaids, fixes, airways, procedures
-- Spatial indexes for fast lookups
+InFlight uses IndexedDB to cache the raw CSV data from FAA and OurAirports, along with the parsed airports, navaids, fixes, airways, and procedures. It also builds spatial indexes for fast lookups. This cache lasts 7 days.
 
-**localStorage:**
-- Saved GPS flight tracks
-- Checklist states
-- Recent route queries
+Your browser's localStorage holds saved GPS flight tracks, checklist states, and recent route queries.
 
 ## When to Reload
 
-- Every 6-12 months (NASR/AIRAC cycle updates)
-- After clearing browser cache
-- If data seems outdated
-
-Don't reload constantly—it's cached for offline use.
+You should reload the database every 6-12 months when NASR and AIRAC cycles update, or after clearing your browser cache, or if the data seems outdated. You don't need to reload constantly since it's designed for offline use.
 
 ---
 
-**Database loaded?** Head to [ROUTE](tab-route.md) to plan your first flight.
+**Database loaded?** Head to the [ROUTE](tab-route.md) tab to plan your first flight.

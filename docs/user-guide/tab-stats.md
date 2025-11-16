@@ -1,153 +1,81 @@
 # STATS Tab
 
-Real-time flight monitoring, GPS tracking, and fuel calculations.
+The STATS tab provides real-time flight monitoring, GPS tracking, and fuel calculations.
 
 ## Flight Status
 
-**Large indicator at top:**
-
-- **ON GROUND:** GPS < 40 knots or no GPS
-- **IN FLIGHT:** GPS > 40 knots (auto-detected)
-
-Automatic. No button to press.
+A large indicator at the top of the screen shows your current status. It displays **ON GROUND** when GPS shows less than 40 knots or when GPS is unavailable, and automatically switches to **IN FLIGHT** when GPS exceeds 40 knots. This detection is automatic and requires no button press.
 
 ## System Status
 
-**Internet:** ONLINE / OFFLINE / CHECKING...
+The system status card shows your current internet connectivity (ONLINE, OFFLINE, or CHECKING), GPS status (CHECKING, ACTIVE, DENIED, or UNAVAILABLE), and GPS accuracy in both horizontal and vertical dimensions.
 
-**GPS:** CHECKING... / ACTIVE / DENIED / UNAVAILABLE
-
-**GPS H-ACC:** Horizontal accuracy (±feet) - lower is better
-
-**GPS V-ACC:** Vertical accuracy (±feet) - lower is better
-
-Typical in-flight: ±10-50 feet horizontal.
+**GPS H-ACC** shows horizontal accuracy in feet (lower is better), while **GPS V-ACC** shows vertical accuracy. Typical in-flight accuracy is ±10-50 feet horizontally.
 
 ## Fuel Statistics
 
-**Only shows if fuel planning enabled in ROUTE tab.**
+Fuel statistics only appear if you enabled fuel planning in the ROUTE tab.
 
-**REM (Remaining):** Fuel left right now (gallons)
+**REM (Remaining)** shows fuel currently left in gallons. **ENDUR (Endurance)** calculates how long you can fly on remaining fuel in hours and minutes. **USED** tracks fuel burned since takeoff, while **START** shows the initial fuel on board at engine start.
 
-**ENDUR (Endurance):** How long you can fly on remaining fuel (H:MM)
+These values auto-calculate using your flight time and the burn rate from the ROUTE tab, updating every second during flight.
 
-**USED:** Fuel burned since takeoff (gallons)
+The display uses color coding: green when remaining fuel exceeds reserve plus 30 minutes, yellow when below reserve plus 30 minutes, and red when below reserve (indicating you should land immediately).
 
-**START:** Fuel on board at engine start (gallons)
-
-**Auto-calculated** using:
-- Flight time
-- Burn rate from ROUTE tab
-- Updates every second in flight
-
-**Color coding:**
-- Green: Remaining > reserve + 30 min
-- Yellow: Remaining < reserve + 30 min
-- Red: Remaining < reserve (land immediately)
-
-**This is an estimate.** Always monitor actual fuel gauges.
+Remember that these are estimates only. Always monitor your actual fuel gauges.
 
 ## Flight Time & Performance
 
-**TIME:** Flight duration since takeoff (HH:MM:SS)
+**TIME** shows flight duration since takeoff in hours, minutes, and seconds. **T/O** displays takeoff time in 24-hour local time format.
 
-**T/O:** Takeoff time (24-hour local time)
+**AVG GS** calculates your average ground speed since takeoff in knots. **DIST** tracks total distance traveled from the GPS track in nautical miles.
 
-**AVG GS:** Average ground speed since takeoff (knots)
-
-**DIST:** Total distance traveled from GPS track (nautical miles)
-
-All auto-calculated from GPS data.
+All values auto-calculate from GPS data.
 
 ## GPS Track Recording
 
-**Mode: AUTO (default) or MANUAL**
+The tracker operates in two modes: AUTO (default) or MANUAL.
 
-**AUTO mode:**
-- Starts recording when airborne (>40kt)
-- Stops when landed (<40kt for 10+ seconds)
-- Zero pilot workload
+In **AUTO mode**, recording starts automatically when you're airborne (above 40 knots) and stops when you land (below 40 knots for 10+ seconds). This requires zero pilot workload.
 
-**MANUAL mode:**
-- Click **START** to begin recording
-- Click **STOP** to end recording
-- Use for ground testing or specific segments
+In **MANUAL mode**, you control recording by clicking **START** to begin and **STOP** to end. This is useful for ground testing or recording specific flight segments.
 
-**REC status:**
-- INACTIVE: Not recording
-- ACTIVE (red): Recording GPS track
+The **REC** status shows INACTIVE when not recording and ACTIVE (in red) when recording. **PTS (Points)** displays the number of GPS positions logged so far.
 
-**PTS (Points):** Number of GPS positions logged
+Two buttons are available: **EXPORT** downloads the current track as a GeoJSON file, while **CLEAR** deletes the current track (saved tracks remain in the DATA tab).
 
-**Buttons:**
-- **EXPORT:** Download current track as GeoJSON file
-- **CLEAR:** Delete current track (saved tracks stay in DATA tab)
-
-Track format: GeoJSON LineString with timestamp, position, altitude, speed, heading, accuracy.
+The track format is GeoJSON LineString, including timestamp, position, altitude, speed, heading, and accuracy for each point.
 
 ## Logbook Times
 
-**Manual entry fields:**
+You can manually enter engine hours in the logbook section. **Hobbs Start/End** fields record the engine hour meter before and after flight, while **Tach Start/End** fields record tachometer readings.
 
-**Hobbs Start/End:** Engine hour meter before/after flight
+The **Totals** (END minus START) calculate automatically. Use these values for logbook entries and maintenance tracking.
 
-**Tach Start/End:** Tachometer reading before/after flight
+## How It Works
 
-**Totals auto-calculate:** END - START
+The system detects takeoff when GPS speed exceeds 40 knots, which starts the flight timer and fuel tracking. During flight, all values update every 1 second. Landing is detected when GPS speed drops below 40 knots for 10+ seconds, which stops the timer and saves the track to localStorage.
 
-Use these for logbook entries and maintenance tracking.
-
-## How It All Works
-
-**Takeoff detection:** GPS speed > 40 knots → starts flight timer and fuel tracking
-
-**In-flight updates:** Every 1 second while flying
-
-**Landing detection:** GPS speed < 40 knots for 10+ seconds → stops timer, saves track
-
-**Track saved to:** localStorage (view/export in DATA tab)
-
-**No internet required** except for initial database load.
+No internet is required except for the initial database load.
 
 ## Typical Workflow
 
-**Before flight:**
-1. Verify GPS is ACTIVE
-2. Enter Hobbs/Tach START
-3. Set track mode (AUTO recommended)
+Before flight, verify GPS is ACTIVE, enter your Hobbs and Tach START values, and set the track mode (AUTO is recommended).
 
-**During flight:**
-1. Monitor fuel remaining vs. ETE
-2. Check track is recording (PTS increasing)
-3. Glance at AVG GS for performance check
+During flight, monitor fuel remaining versus ETE, check that the track is recording (PTS should be increasing), and glance at AVG GS for performance verification.
 
-**After landing:**
-1. Track stops automatically (AUTO mode)
-2. Enter Hobbs/Tach END (totals auto-calculate)
-3. Click EXPORT to save track
-4. Check DIST and TIME for logbook
+After landing, the track stops automatically in AUTO mode. Enter your Hobbs and Tach END values (totals calculate automatically), click EXPORT to save the track, and note DIST and TIME for your logbook.
 
 ## Troubleshooting
 
-**Flight status stuck ON GROUND:**
-- Check GPS is ACTIVE
-- Need >40kt ground speed
-- Wait 5-10 seconds after takeoff
+If flight status stays ON GROUND, check that GPS is ACTIVE and you're exceeding 40 knots ground speed. It may take 5-10 seconds after takeoff to detect.
 
-**No fuel stats:**
-- Enable fuel planning in ROUTE tab
-- Must have calculated route first
+If fuel stats don't appear, you need to enable fuel planning in the ROUTE tab and calculate a route first.
 
-**Track not recording:**
-- GPS must be ACTIVE
-- AUTO mode: need >40kt to start
-- MANUAL mode: click START button
+If the track isn't recording, verify GPS is ACTIVE. In AUTO mode, you need to exceed 40 knots to start. In MANUAL mode, click the START button.
 
-**GPS accuracy poor (>100ft):**
-- Move device to window
-- Wait for better satellite lock
-- Typical in-flight: ±10-50ft
+If GPS accuracy is poor (over 100 feet), move your device to a window and wait for better satellite lock. Typical in-flight accuracy is ±10-50 feet.
 
 ---
 
-**Monitor your flight in real-time.** All data updates automatically—just fly the airplane.
+**Monitor your flight in real-time.** All data updates automatically while you fly the airplane.

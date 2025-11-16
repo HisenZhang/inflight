@@ -1,25 +1,19 @@
 # WELCOME Tab
 
-Static landing page with app overview and disclaimer.
+The WELCOME tab is a static landing page that provides an app overview and legal disclaimer.
 
 ## What It Shows
 
-- **App title and tagline**
-- **Disclaimer:** "NOT FAA APPROVED — EDUCATIONAL USE ONLY"
-- **Feature list:** 5 capabilities (route planning, wind correction, GPS tracking, etc.)
-- **Limitations:** 4 key restrictions (not certified, no plates, no weather, etc.)
-- **Quick start guide:** 4-step getting started flow
+The page displays the app title and tagline, a prominent disclaimer stating "NOT FAA APPROVED — EDUCATIONAL USE ONLY," a list of 5 key capabilities, 4 important limitations, and a quick start guide with 4 steps.
 
 ## What You Can Do
 
-**One button:** "GET STARTED" → takes you to DATA tab to load the database.
-
-That's it. This is just the welcome screen.
+There is one button labeled "GET STARTED" that takes you to the DATA tab to load the database. That's the only interaction available on this screen.
 
 ## Why It Exists
 
-Legal disclaimer + quick orientation for first-time users. Read it once, then move on.
+This page serves as the legal disclaimer and provides quick orientation for first-time users. You can read it once and then move on to the actual planning tools.
 
 ---
 
-**Ready to start?** Click **GET STARTED** or go directly to [DATA](tab-data.md) tab.
+**Ready to start?** Click **GET STARTED** or go directly to the [DATA](tab-data.md) tab.
