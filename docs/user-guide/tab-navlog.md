@@ -70,6 +70,7 @@ EXPANDED ROUTE: KSFO ARCHI WWAVS ALTAM GRTFL FAITH CARME BSR PANOCHE SNS AVE LAN
 DISTANCE: 391.2 NM
 WAYPOINTS: 14
 FILED ALTITUDE: 9500 FT
+FILED SPEED: 120 KT
 TIME: 3H 18M
 FUEL STATUS: ✓ SUFFICIENT
 FINAL FOB: 9.9 GAL (1.2H)
@@ -83,6 +84,7 @@ FUEL RESERVE REQ: 4.3 GAL (30 MIN)
 - **Distance**: Total nautical miles
 - **Waypoints**: Number of fixes/airports/navaids
 - **Filed altitude**: Your planned cruising altitude
+- **Filed speed**: Your true airspeed (TAS) used for calculations
 - **Time**: Total flight time (if wind correction enabled)
 - **Fuel status**: Whether you have sufficient fuel with required reserves
 

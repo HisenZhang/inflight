@@ -302,6 +302,7 @@ See [Printing Guide](#printing-questions) for details.
 The printed navlog includes:
 - **Time generated** - When the navlog was calculated
 - **Filed altitude** - Your planned cruising altitude
+- **Filed speed** - Your true airspeed (TAS) used for calculations
 - **Route summary** - User route, expanded route, distance, waypoints
 - **Wind altitude table** - Winds and temperatures at different altitudes (if enabled)
 - **Complete waypoint table** - All waypoints with coordinates, frequencies, and leg details

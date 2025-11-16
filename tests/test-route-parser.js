@@ -117,4 +117,52 @@ TestFramework.describe('Route Parser Architecture', function({ it }) {
         assert.equals(result.tree[1].to.text, 'FNT', 'Second to should be FNT');
     });
 
+    // ============================================
+    // TEST WAYPOINT-ONLY ROUTES
+    // ============================================
+
+    it('RouteEngine should parse waypoint-only route (simple direct)', () => {
+        const routeString = 'KSFO KOAK';
+        const result = window.RouteEngine.parseAndExpand(routeString);
+
+        assert.equals(result.tokens.length, 2, 'Should have 2 tokens');
+        assert.equals(result.tokens[0].text, 'KSFO', 'First waypoint should be KSFO');
+        assert.equals(result.tokens[1].text, 'KOAK', 'Second waypoint should be KOAK');
+        assert.equals(result.expanded.length, 2, 'Should expand to 2 waypoints');
+    });
+
+    it('RouteEngine should parse waypoint-only route with intermediate points', () => {
+        const routeString = 'KSFO KHAF KOAK';
+        const result = window.RouteEngine.parseAndExpand(routeString);
+
+        assert.equals(result.tokens.length, 3, 'Should have 3 tokens');
+        assert.equals(result.tokens[0].text, 'KSFO', 'First waypoint should be KSFO');
+        assert.equals(result.tokens[1].text, 'KHAF', 'Second waypoint should be KHAF');
+        assert.equals(result.tokens[2].text, 'KOAK', 'Third waypoint should be KOAK');
+        assert.equals(result.expanded.length, 3, 'Should expand to 3 waypoints');
+    });
+
+    it('RouteEngine should parse waypoint-only route with airways', () => {
+        const routeString = 'PAYGE Q822 FNT';
+        const result = window.RouteEngine.parseAndExpand(routeString);
+
+        assert.equals(result.tokens.length, 3, 'Should have 3 tokens');
+        assert.equals(result.tokens[0].text, 'PAYGE', 'First waypoint should be PAYGE');
+        assert.equals(result.tokens[1].text, 'Q822', 'Airway should be Q822');
+        assert.equals(result.tokens[2].text, 'FNT', 'Last waypoint should be FNT');
+        // Expanded should include intermediate fixes from Q822
+        assert.isTrue(result.expanded.length >= 2, 'Should expand to at least 2 waypoints');
+        assert.equals(result.expanded[0], 'PAYGE', 'First expanded should be PAYGE');
+        assert.equals(result.expanded[result.expanded.length - 1], 'FNT', 'Last expanded should be FNT');
+    });
+
+    it('RouteEngine should determine departure/destination from waypoint-only route', () => {
+        const routeString = 'KALB PAYGE Q822 FNT KORD';
+        const result = window.RouteEngine.parseAndExpand(routeString);
+
+        // Context should use first/last tokens for departure/destination
+        assert.equals(result.tokens[0].text, 'KALB', 'First token should be treated as departure');
+        assert.equals(result.tokens[result.tokens.length - 1].text, 'KORD', 'Last token should be treated as destination');
+    });
+
 });

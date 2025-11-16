@@ -1088,6 +1088,16 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelSt
         `;
     }
 
+    // Add filed speed (TAS) if available
+    if (options.tas) {
+        summaryHTML += `
+        <div class="summary-item">
+            <span class="summary-label text-secondary text-sm">FILED SPEED</span>
+            <span class="summary-value text-metric font-bold">${options.tas} KT</span>
+        </div>
+        `;
+    }
+
     // Add total time if available
     if (totalTime !== null && options.enableTime) {
         const hours = Math.floor(totalTime / 60);

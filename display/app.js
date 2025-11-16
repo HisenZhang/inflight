@@ -436,20 +436,38 @@ async function handleCalculateRoute() {
         const routeMiddle = elements.routeInput.value.trim();
         const destination = elements.destinationInput.value.trim();
 
-        // Validate that at least departure and destination are provided
-        if (!departure || !destination) {
-            alert('ERROR: DEPARTURE AND DESTINATION REQUIRED\n\nEnter departure airport and destination airport');
-            return;
-        }
-
         // Build complete route string
-        // If route is empty, assume DCT (direct)
+        // Support three input modes:
+        // 1. All three fields: departure + route + destination (traditional)
+        // 2. Only departure and destination: direct routing
+        // 3. Only route field: first waypoint is departure, last is destination
         let fullRoute;
-        if (routeMiddle) {
-            fullRoute = `${departure} ${routeMiddle} ${destination}`;
+        let actualDeparture = departure;
+        let actualDestination = destination;
+
+        if (departure && destination) {
+            // Traditional mode: departure and destination provided
+            if (routeMiddle) {
+                fullRoute = `${departure} ${routeMiddle} ${destination}`;
+            } else {
+                fullRoute = `${departure} ${destination}`;
+                console.log('[Route] No route specified - using DCT (direct)');
+            }
+        } else if (!departure && !destination && routeMiddle) {
+            // Waypoint-only mode: treat first waypoint as departure, last as destination
+            const waypoints = routeMiddle.trim().split(/\s+/);
+            if (waypoints.length < 2) {
+                alert('ERROR: AT LEAST TWO WAYPOINTS REQUIRED\n\nEnter at least a departure and destination waypoint');
+                return;
+            }
+            actualDeparture = waypoints[0];
+            actualDestination = waypoints[waypoints.length - 1];
+            fullRoute = routeMiddle;
+            console.log(`[Route] Waypoint-only mode: ${actualDeparture} → ${actualDestination}`);
         } else {
-            fullRoute = `${departure} ${destination}`;
-            console.log('[Route] No route specified - using DCT (direct)');
+            // Invalid input: some fields filled but not in a valid combination
+            alert('ERROR: INVALID ROUTE INPUT\n\nEither:\n• Enter departure and destination\n• Or enter waypoints in the route field (first = departure, last = destination)');
+            return;
         }
 
         console.log(`[Route] Full route: ${fullRoute}`);
@@ -529,8 +547,8 @@ async function handleCalculateRoute() {
         // Store current navlog data (including separate departure/destination for crash recovery)
         currentNavlogData = {
             routeString: fullRoute.trim().toUpperCase(),
-            departure: departure,
-            destination: destination,
+            departure: actualDeparture,
+            destination: actualDestination,
             routeMiddle: routeMiddle,
             waypoints,
             legs,
