@@ -6,7 +6,7 @@ titleTemplate: Flight Planning & Navigation
 hero:
   name: InFlight
   text: Flight Planning & Navigation
-  tagline: Professional EFB capabilities in your browser—free, offline-capable, no subscription required
+  tagline: In-browser flight planning—works offline, open source, blazing fast. No signup required.
   actions:
     - theme: brand
       text: Quick Start
@@ -19,31 +19,31 @@ hero:
       link: https://github.com/HisenZhang/inflight
 
 features:
-  - icon: 🚀
-    title: Zero Friction
-    details: Just type the URL and start planning. No signup, no download, no trial period, no credit card. Load the database once and use it forever—even offline.
-  - icon: 📱
-    title: Works Everywhere
-    details: Any device with a browser. iPhone, iPad, Android, Windows, Mac, Linux. Same experience on all platforms. Install as PWA or just bookmark it.
+  - icon: 🌐
+    title: In-Browser, Works Offline
+    details: Everything runs in your browser. No servers, no cloud. Load the database once and use it forever—even with airplane mode on. 70,000+ airports and waypoints stored locally on your device.
   - icon: 💯
-    title: Actually Free
-    details: No subscription ($0/month forever). No "premium" features locked behind paywalls. No ads. Open source. The entire app is yours to use and modify.
+    title: Open Source & Free Forever
+    details: No subscription ($0/month forever). No "premium" features locked behind paywalls. No ads. Fully open source. The entire app is yours to use, audit, and modify.
   - icon: ⚡
     title: Blazing Fast
-    details: Pure JavaScript with no build step. Loads instantly. Route calculations in milliseconds. No waiting for server responses. Everything runs on your device.
+    details: Pure JavaScript with no build step. Loads instantly. Route calculations in milliseconds. No waiting for server responses. Context-aware autocomplete responds immediately.
+  - icon: 📱
+    title: Works Everywhere
+    details: Any device with a browser. iPhone, iPad, Android, Windows, Mac, Linux. Same experience on all platforms. Install as PWA or just bookmark it. No app store needed.
   - icon: 🧠
     title: FMS-Level Intelligence
-    details: Type "KBOS PAYGE SSOXS V3 SAX" and watch it auto-expand the SID, resolve airways, calculate courses. Context-aware autocomplete shows only relevant airways/fixes.
+    details: Type "KALB PAYGE Q822 FNT WYNDE3 KORD" and watch it auto-expand the SID/STAR, resolve all airway waypoints, and calculate wind-corrected headings. Just like a real FMS.
   - icon: ✈️
     title: Built by Pilots
-    details: Real IFR route syntax. Multi-altitude wind interpolation. Auto-waypoint advancement. One-tap diversions. Automatic flight logging. Features pilots actually need.
+    details: Real IFR route syntax. Multi-altitude wind interpolation. Auto-waypoint advancement. One-tap diversions. Automatic flight logging. Features pilots actually need, not marketing fluff.
 ---
 
 # InFlight: Your Free, Offline EFB
 
 **TL;DR:** If you've ever wanted ForeFlight's route planning without the subscription, or SkyVector's interface but offline-capable, this is it.
 
-InFlight is a web-based flight planning tool that works like an EFB should: **fast, offline-capable, and actually useful in the cockpit**. No login required, no credit card, no cloud sync nonsense. Just load the data once and you're good to go—even with airplane mode on.
+InFlight is a web-based flight planning tool that works like an EFB should: **in-browser, offline-capable, and actually useful in the cockpit**. No login required, no servers, no cloud sync nonsense. Just load the data once and you're good to go—even with airplane mode on. Open source and free forever.
 
 ## What Makes This Different?
 
@@ -111,7 +111,7 @@ No "start flight" button to forget. It just works.
 
 ### VFR Cross-Country Planning
 
-1. Enter route: `KPAO VPFYI KHWD`
+1. Enter route: `KSFO KHAF` (or any VFR route)
 2. Load winds aloft from your weather briefing
 3. Set aircraft performance (TAS, fuel burn)
 4. Get navlog with magnetic headings, times, and fuel for each leg
@@ -120,8 +120,8 @@ Print the navlog or keep it on your iPad. Works offline, no subscription.
 
 ### IFR with Procedures
 
-1. Enter filed route: `KSFO WESLA2 PYE Q7 AVE BDEGA2 KLAX`
-2. App expands SID/STAR based on departure/arrival runways
+1. Enter filed route: `KALB PAYGE Q822 FNT WYNDE3 KORD`
+2. App expands SID/STAR and resolves all airway waypoints
 3. Review the full route with all intermediate fixes
 4. Use the navlog for your flight plan form or tablet backup
 

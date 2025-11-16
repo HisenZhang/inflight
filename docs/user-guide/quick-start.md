@@ -6,6 +6,27 @@ This guide assumes you're a pilot who knows what a navlog is and has filed fligh
 
 We'll plan **KSFO → KLAS** with the OFFSHORE TWO departure and KEPEC THREE arrival.
 
+### Step 0: Install as Web App (Optional but Recommended)
+
+For the best experience, install InFlight as a Progressive Web App (PWA):
+
+**iOS (Safari):**
+1. Tap the Share button (square with arrow)
+2. Scroll down and tap "Add to Home Screen"
+3. [Detailed tutorial](https://support.apple.com/guide/iphone/bookmark-favorite-webpages-iph42ab2f3a7/ios#iph4f9a47bbc)
+
+**Android (Chrome):**
+1. Tap the three-dot menu
+2. Select "Install app" or "Add to Home Screen"
+3. [Detailed tutorial](https://support.google.com/chrome/answer/9658361)
+
+**Desktop (Chrome/Edge):**
+1. Look for the install icon (⊕ or computer icon) in the address bar
+2. Click it and confirm installation
+3. [Detailed tutorial](https://support.google.com/chrome/answer/9658361)
+
+**Benefits:** Faster launch, full-screen mode, works like a native app, better offline experience.
+
 ### Step 1: Load the Database (One-Time Setup)
 
 Before planning any route, you need the airport/navaid database:
@@ -149,14 +170,14 @@ After landing, go to [**DATA**](tab-data) tab:
 - Click **"Export"** to download GeoJSON
 - Import into Google Earth, ForeFlight, or other tools for post-flight analysis
 
-## VFR Example: Palo Alto to Hayward
+## VFR Example: San Francisco to Half Moon Bay
 
 For a simple VFR flight, the process is even easier:
 
 **ROUTE tab:**
-- **Departure:** `KPAO`
-- **Route:** `VPFYI` (visual checkpoint: Dumbarton Bridge)
-- **Destination:** `KHWD`
+- **Departure:** `KSFO`
+- **Route:** (leave blank for direct)
+- **Destination:** `KHAF`
 - Click **COMPUTE**
 
 **Add winds manually in NAVLOG tab** (if no internet):

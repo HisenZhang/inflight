@@ -34,14 +34,14 @@ Leave blank for direct routing. Otherwise, build your route using any combinatio
 **Simplest case:** Just enter waypoints with spaces between them.
 
 ```
-KPAO VPFYI KHWD
+KSFO KHAF
 ```
 
-This means: Palo Alto → Dumbarton Bridge visual checkpoint → Hayward
+This means: San Francisco → Half Moon Bay (direct)
 
 You can optionally use `DCT` keyword:
 ```
-KPAO DCT VPFYI DCT KHWD
+KSFO DCT KHAF
 ```
 
 But it's unnecessary—spaces imply direct routing.
@@ -365,12 +365,12 @@ If you've calculated routes before, you'll see a **RECENT ROUTES** list below th
 
 ### VFR Cross-Country (Northern California)
 ```
-Departure: KPAO
-Route: VPFYI VPSUN
-Destination: KHWD
+Departure: KSFO
+Route: KHAF
+Destination: KHAF
 ```
 
-Palo Alto → Dumbarton Bridge → Sunol visual checkpoint → Hayward
+San Francisco → Half Moon Bay (short coastal flight)
 
 ### IFR Short Hop (Northeast Corridor)
 ```

@@ -122,11 +122,11 @@ Each track shows:
 
 **Example:**
 ```
-KPAO → KHWD
+KSFO → KHAF
 2025-01-15 14:23 PST
-Duration: 0:18
-Distance: 22.3 NM
-Points: 124
+Duration: 0:12
+Distance: 18.5 NM
+Points: 95
 [EXPORT GPX] [DELETE]
 ```
 
@@ -142,7 +142,7 @@ Points: 124
 **How to export:**
 1. Find the flight in the list
 2. Click **EXPORT GPX** button
-3. File downloads: `track_KPAO_KHWD_20250115.gpx`
+3. File downloads: `track_KSFO_KHAF_20250115.gpx`
 4. Save to cloud/email to yourself
 
 **GPX format** is universal:

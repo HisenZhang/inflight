@@ -84,22 +84,22 @@ If any of these look wrong, go back to ROUTE tab and check your settings.
 
 **Waypoint row:**
 ```
-2  VPFYI           N37°30.12' W122°06.48'
-   FIX             VAR 13.8°W
-                   "Dumbarton Bridge visual checkpoint"
+2  KHAF           N37°30.73' W122°30.06'
+   APT             ELEV 66 FT | VAR 13.2°W
+                   "Half Moon Bay Airport"
 ```
 
 **Leg row:**
 ```
-HDG(M) 127°  |  DIST 18.3 NM  |  ETE 11 MIN
+HDG(M) 258°  |  DIST 18.5 NM  |  ETE 9 MIN
 ```
 
 **Translation:**
-- Waypoint #2 is VPFYI (Dumbarton Bridge visual checkpoint)
-- Located at 37°30.12'N, 122°06.48'W
-- Magnetic variation is 13.8° West
-- Fly magnetic heading 127° for 18.3 nautical miles
-- Should take about 11 minutes (at your planned TAS)
+- Waypoint #2 is KHAF (Half Moon Bay Airport)
+- Located at 37°30.73'N, 122°30.06'W
+- Field elevation 66 ft, magnetic variation 13.2° West
+- Fly magnetic heading 258° for 18.5 nautical miles
+- Should take about 9 minutes (at your planned TAS)
 
 ### Example: IFR Leg with Winds
 
