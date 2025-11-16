@@ -39,7 +39,7 @@ features:
     details: Real IFR route syntax. Multi-altitude wind interpolation. Auto-waypoint advancement. One-tap diversions. Automatic flight logging. Features pilots actually need, not marketing fluff.
 ---
 
-# InFlight: Your Free, Offline EFB
+# InFlight: Your Free, In-browser EFB
 
 **TL;DR:** If you've ever wanted ForeFlight's route planning without the subscription, or SkyVector's interface but offline-capable, this is it.
 
