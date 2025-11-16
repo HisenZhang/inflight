@@ -54,12 +54,12 @@ export default defineConfig({
           text: 'Developer Guide',
           collapsed: false,
           items: [
-            { text: '1. Design Principles', link: '/developer/01-design-principles' },
-            { text: '2. Architecture', link: '/developer/02-architecture' },
-            { text: '3. Data Management', link: '/developer/03-data' },
-            { text: '4. Route Processing', link: '/developer/04-route-processing' },
-            { text: '5. Navlog, Map & UI', link: '/developer/05-navlog-map-ui' },
-            { text: '6. Testing & Deployment', link: '/developer/06-testing-deployment' }
+            { text: 'Design Principles', link: '/developer/01-design-principles' },
+            { text: 'Architecture', link: '/developer/02-architecture' },
+            { text: 'Data Management', link: '/developer/03-data' },
+            { text: 'Route Processing', link: '/developer/04-route-processing' },
+            { text: 'Navlog, Map & UI', link: '/developer/05-navlog-map-ui' },
+            { text: 'Testing & Deployment', link: '/developer/06-testing-deployment' }
           ]
         },
         {
