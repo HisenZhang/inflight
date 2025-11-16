@@ -51,7 +51,7 @@ InFlight is a web-based flight planning tool that works like an EFB should: **in
 
 Type a route like:
 ```text
-KBOS PAYGE SSOXS V3 SAX J57 LRP LENDY6 KLGA
+KILN APE EWC ETG J217 HNK STELA1 KBDL
 ```
 
 Hit COMPUTE and it:
@@ -72,7 +72,7 @@ When you're building a route, the autocomplete **actually helps** instead of ove
 
 This is how FMS autocomplete works. This is **not** how most flight planning websites work.
 
-### Winds Aloft That Actually Work
+### Winds Aloft
 
 The app interpolates between altitudes for each leg. If you're climbing from 4,000 to 7,000 feet over a 40nm segment, it calculates the **blended wind** for that leg—not just one altitude's wind.
 

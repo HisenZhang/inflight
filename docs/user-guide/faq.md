@@ -541,4 +541,4 @@ InFlight does not include:
 
 ---
 
-**Didn't find your answer?** Check the [Troubleshooting](troubleshooting.md) guide or individual [tab guides](README.md).
+**Didn't find your answer?** Check the [Troubleshooting](troubleshooting.md) guide or [User Guide](index.md).

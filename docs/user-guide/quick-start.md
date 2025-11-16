@@ -2,9 +2,9 @@
 
 This guide assumes you're a pilot who knows what a navlog is and has filed flight plans before. If you just want to see how InFlight works, follow along with the example route below.
 
-## Example Flight: New York to Columbus (IFR)
+## Example Flight: Islip to Hartford (IFR)
 
-We'll plan **KJFK → KCMH** with the RBV transition and CLIPPER THREE arrival.
+We'll plan **KISP → KBDL** via J-route with STELA ONE arrival.
 
 ### Step 0: Install as Web App (Optional but Recommended)
 
@@ -44,26 +44,25 @@ Click [**ROUTE**](tab-route) tab and enter:
 
 **Filed Route:**
 ```text
-KJFK RBV Q430 AIR CLPRR3 KCMH
+KISP APE EWC ETG J217 HNK STELA1 KBDL
 ```
 
 **What this means:**
-- Depart KJFK (JFK Airport)
-- Proceed to RBV (Robbinsville VOR)
-- Fly Q430 (RNAV route) to AIR (Bellaire VOR)
-- Arrive KCMH via CLIPPER THREE arrival
+- Depart KISP (Islip/Long Island MacArthur)
+- Via APE, EWC, ETG waypoints
+- Fly J217 (jet route) to HNK (Montauk VOR)
+- Arrive KBDL (Hartford) via STELA ONE arrival
 
 **Enter it like this:**
-- **Departure:** `KJFK`
-- **Route:** `RBV Q430 AIR CLPRR3`
-- **Destination:** `KCMH`
+- **Departure:** `KISP`
+- **Route:** `APE EWC ETG J217 HNK STELA1`
+- **Destination:** `KBDL`
 
 Hit **COMPUTE**.
 
 **What happens:**
-- App auto-expands JCOBY4 SID (all transition fixes)
-- Expands all intermediate fixes on J501
-- Auto-expands WYNDE3 STAR
+- App expands all intermediate fixes on J217
+- Auto-expands STELA1 STAR with appropriate transition
 - Calculates distance/bearing for each leg
 - Applies magnetic variation (WMM2025)
 
@@ -143,11 +142,11 @@ You'll see your route plotted on an interactive map with:
 
 ### Step 7: Fly the Route (GPS Tracking)
 
-Once GPS is enabled:
+GPS is automatically enabled when you grant location permissions. The map shows:
 
 **Moving Map Features:**
 - **Auto-waypoint advancement:** App automatically switches to next waypoint when you pass within ~2nm
-- **TTS announcements:** Optional voice callouts ("Approaching GROVE, next waypoint BSR, heading 141")
+- **TTS announcements:** Optional voice callouts ("Approaching APE, next waypoint EWC, heading 075")
 - **Haptic feedback:** Device vibrates on waypoint passage (mobile devices)
 
 **Navigation Panel (left side):**
