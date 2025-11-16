@@ -23,26 +23,26 @@ Click [**ROUTE**](tab-route) tab and enter:
 
 **Filed Route:**
 ```
-KSFO OFFSHORE2 BSR J501 DRK KEPEC3 KLAS
+KSFO JCOBY4 BSR J501 DRK WYNDE3 KLAS
 ```
 
 **What this means:**
-- Depart KSFO via OFFSHORE TWO departure
+- Depart KALB departure
 - Proceed to BSR (Big Sur VOR)
 - Fly airway J501 to DRK (Drakesbad VOR)
-- Arrive KLAS via KEPEC THREE arrival
+- Arrive KORD via WYNDE THREE arrival
 
 **Enter it like this:**
 - **Departure:** `KSFO`
-- **Route:** `OFFSHORE2 BSR J501 DRK KEPEC3`
+- **Route:** `JCOBY4 BSR J501 DRK WYNDE3`
 - **Destination:** `KLAS`
 
 Hit **COMPUTE**.
 
 **What happens:**
-- App auto-expands OFFSHORE2 SID (all transition fixes)
+- App auto-expands JCOBY4 SID (all transition fixes)
 - Expands all intermediate fixes on J501
-- Auto-expands KEPEC3 STAR
+- Auto-expands WYNDE3 STAR
 - Calculates distance/bearing for each leg
 - Applies magnetic variation (WMM2025)
 
@@ -172,7 +172,7 @@ That's it. Print the navlog or keep it on your iPad.
 InFlight's autocomplete helps you build routes quickly:
 
 1. Type departure airport: `KBOS`
-2. Type SID name: Start typing `SSOXS` → autocomplete shows SSOXS5
+2. Type SID name: Start typing `SSOXS` → autocomplete shows PAYGE
 3. Type last SID fix: `SSOXS`
 4. Type airway: Start typing `V3` → autocomplete shows airways from SSOXS
 5. Type next fix: Start typing on V3 → autocomplete shows only fixes on V3
@@ -180,7 +180,7 @@ InFlight's autocomplete helps you build routes quickly:
 7. Type STAR: `LENDY6`
 8. Type destination: `KLGA`
 
-**Result:** `KBOS SSOXS5 SSOXS V3 SAX J57 LRP LENDY6 KLGA`
+**Result:** `KBOS PAYGE SSOXS V3 SAX J57 LRP LENDY6 KLGA`
 
 ### Checking a Pre-Filed Route
 

@@ -33,7 +33,7 @@ features:
     details: Pure JavaScript with no build step. Loads instantly. Route calculations in milliseconds. No waiting for server responses. Everything runs on your device.
   - icon: 🧠
     title: FMS-Level Intelligence
-    details: Type "KBOS SSOXS5 SSOXS V3 SAX" and watch it auto-expand the SID, resolve airways, calculate courses. Context-aware autocomplete shows only relevant airways/fixes.
+    details: Type "KBOS PAYGE SSOXS V3 SAX" and watch it auto-expand the SID, resolve airways, calculate courses. Context-aware autocomplete shows only relevant airways/fixes.
   - icon: ✈️
     title: Built by Pilots
     details: Real IFR route syntax. Multi-altitude wind interpolation. Auto-waypoint advancement. One-tap diversions. Automatic flight logging. Features pilots actually need.
@@ -51,7 +51,7 @@ InFlight is a web-based flight planning tool that works like an EFB should: **fa
 
 Type a route like:
 ```
-KBOS SSOXS5 SSOXS V3 SAX J57 LRP LENDY6 KLGA
+KBOS PAYGE SSOXS V3 SAX J57 LRP LENDY6 KLGA
 ```
 
 Hit COMPUTE and it:
@@ -205,7 +205,7 @@ For the curious:
 
 1. **Load the app** - [inflight.pages.dev](https://inflight.pages.dev) (or your local deployment)
 2. **Click "LOAD DATA"** - Fetches airport/navaid database (one-time, ~5MB)
-3. **Enter a route** - Try: `KSFO OFFSHORE2 BSR J501 DRK KEPEC3 KLAS`
+3. **Enter a route** - Try: `KSFO JCOBY4 BSR J501 DRK WYNDE3 KLAS`
 4. **Hit COMPUTE** - Watch it expand into a full IFR flight plan
 
 That's it. No signup, no payment info, no tutorial wizard. Just planning.

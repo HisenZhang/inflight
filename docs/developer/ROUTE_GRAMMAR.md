@@ -94,7 +94,7 @@ A route consists of:
                   | "R"  (* RNAV R route *)
 
 <procedure_name> ::= <letter>+ <digit>*
-                   (* HIDEY1, CHPPR1, WYNDE3, OFFSH9 *)
+                   (* JCOBY4, CHPPR1, WYNDE3, OFFSH9 *)
 
 <transition_name> ::= <letter>+
                     (* MTHEW, DROPA, HAMTN, RUTTH *)
@@ -176,35 +176,35 @@ The connection point `GONZZ` appears once in the expanded route.
 
 ```ebnf
 <route> ::= "KSDF" <procedure> <airway_segment> <procedure> "KATL"
-<procedure> ::= "DROPA.HIDEY1"  (* Explicit transition *)
+<procedure> ::= "DROPA.JCOBY4"  (* Explicit transition *)
 <airway_segment> ::= "PAYGE" "Q822" "GONZZ"
 <procedure> ::= "MTHEW.CHPPR1"  (* Explicit transition *)
 ```
 
 **Expands to:**
 ```
-KSDF → [DROPA.HIDEY1 waypoints] → PAYGE → [Q822 waypoints] → GONZZ → [MTHEW.CHPPR1 waypoints] → KATL
+KSDF → [DROPA.JCOBY4 waypoints] → PAYGE → [Q822 waypoints] → GONZZ → [MTHEW.CHPPR1 waypoints] → KATL
 ```
 
 ### Route with Auto-Transition
 
 ```ebnf
-<route> ::= "KSDF" "HIDEY1" "PAYGE" "Q822" "GONZZ" "CHPPR1" "KATL"
+<route> ::= "KSDF" "JCOBY4" "PAYGE" "Q822" "GONZZ" "CHPPR1" "KATL"
 ```
 
-The parser marks `HIDEY1` and `CHPPR1` as procedures with auto-transition. The resolver selects transitions based on proximity to adjacent waypoints.
+The parser marks `JCOBY4` and `CHPPR1` as procedures with auto-transition. The resolver selects transitions based on proximity to adjacent waypoints.
 
 ### Complex Route
 
 ```ebnf
-<route> ::= "KORD" "DROPA.HIDEY1" <airway_segment> "DCT" <coordinate> "HAMTN.WYNDE3" "KLGA"
+<route> ::= "KORD" "DROPA.JCOBY4" <airway_segment> "DCT" <coordinate> "HAMTN.WYNDE3" "KLGA"
 <airway_segment> ::= "PAYGE" "Q822" "GONZZ"
 <coordinate> ::= "4814N/06848W"
 ```
 
 **Parse tree:**
 1. KORD (waypoint/airport)
-2. DROPA.HIDEY1 (procedure with explicit transition)
+2. DROPA.JCOBY4 (procedure with explicit transition)
 3. PAYGE Q822 GONZZ (airway segment)
 4. DCT (direct keyword)
 5. 4814N/06848W (coordinate)

@@ -72,40 +72,40 @@ InFlight auto-expands all the intermediate fixes on V244 and V105.
 Enter the procedure name right after departure airport (or as first route element).
 
 ```
-KSFO OFFSHORE2 BSR J501 DRK
+KSFO JCOBY4 BSR J501 DRK
 ```
 
-InFlight expands OFFSHORE2 to include all the departure fixes based on the active runway.
+InFlight expands JCOBY4 to include all the departure fixes based on the active runway.
 
 **STAR (Standard Terminal Arrival):**
 Enter the procedure name right before destination airport (or as last route element).
 
 ```
-BSR J501 DRK KEPEC3 KLAS
+BSR J501 DRK WYNDE3 KLAS
 ```
 
-InFlight expands KEPEC3 to include the arrival fixes and automatically selects the correct transition.
+InFlight expands WYNDE3 to include the arrival fixes and automatically selects the correct transition.
 
 **Full IFR example with both:**
 ```
-KSFO OFFSHORE2 BSR J501 DRK KEPEC3 KLAS
+KSFO JCOBY4 BSR J501 DRK WYNDE3 KLAS
 ```
 
 Breaks down to:
-- Depart KSFO via OFFSHORE TWO
+- Depart KALB
 - Fly direct to Big Sur VOR
 - Follow J501 to Drakesbad VOR
-- Arrive KLAS via KEPEC THREE
+- Arrive KORD via WYNDE THREE
 
 ### Procedure Transitions
 
 Some SIDs/STARs have multiple transitions. InFlight auto-selects based on your route:
 
 ```
-KBOS SSOXS5 SSOXS V3 SAX
+KBOS PAYGE SSOXS V3 SAX
 ```
 
-If you type `SSOXS` as the first fix after SSOXS5, InFlight knows you want the SSOXS transition (not ROBUC or LBSTA).
+If you type `SSOXS` as the first fix after PAYGE, InFlight knows you want the SSOXS transition (not ROBUC or LBSTA).
 
 **You can also be explicit:**
 ```
@@ -119,12 +119,12 @@ This forces the PAYGE transition variant of WYNDE3 (if available).
 Most IFR routes combine all of the above:
 
 ```
-KALB HIDEY1 PAYGE Q822 FNT WYNDE3 KORD
+KALB JCOBY4 PAYGE Q822 FNT WYNDE3 KORD
 ```
 
 Breakdown:
 - **KALB**: Departure (Albany, NY)
-- **HIDEY1**: SID (HIDEY ONE departure)
+- **JCOBY4**: SID (HIDEY ONE departure)
 - **PAYGE**: Last fix on SID / first fix on airway
 - **Q822**: RNAV route
 - **FNT**: Flint VOR (exit Q822)
@@ -164,7 +164,7 @@ Example: Type `Q822` → autocomplete shows:
 Let's build **KBOS → KLGA** using autocomplete:
 
 1. **Type:** `KBOS` in departure → autocomplete shows Boston Logan
-2. **Type:** `SSOXS` in route → autocomplete shows SSOXS5 (the SID)
+2. **Type:** `SSOXS` in route → autocomplete shows PAYGE (the SID)
 3. **Type:** `SSOXS` again → autocomplete shows the fix (SID exit)
 4. **Type:** `V3` → autocomplete shows V3 airway
 5. **Type:** `SAX` → autocomplete shows Sparta VOR (on V3)
@@ -173,7 +173,7 @@ Let's build **KBOS → KLGA** using autocomplete:
 8. **Type:** `LENDY6` → autocomplete shows LENDY SIX STAR
 9. **Type:** `KLGA` in destination → autocomplete shows LaGuardia
 
-**Final route:** `KBOS SSOXS5 SSOXS V3 SAX J57 LRP LENDY6 KLGA`
+**Final route:** `KBOS PAYGE SSOXS V3 SAX J57 LRP LENDY6 KLGA`
 
 Hit COMPUTE and you get a full IFR flight plan with 30+ waypoints.
 
@@ -384,7 +384,7 @@ Teterboro → IFR routing via V1 → Boston
 ### IFR Cross-Country with Multiple Airways
 ```
 Departure: KSFO
-Route: OFFSHORE2 BSR V244 EHF V105 DVC J58 KADDY KEPEC3
+Route: JCOBY4 BSR V244 EHF V105 DVC J58 KADDY WYNDE3
 Destination: KLAS
 ```
 
@@ -452,7 +452,7 @@ Chicago → Washington National with explicit SID transition
 
 **Fix:**
 1. Check airport supports that procedure (verify with charts)
-2. Verify exact procedure name (OFFSHORE2 not OFFSHORE)
+2. Verify exact procedure name (JCOBY4 not OFFSHORE)
 3. Some small airports don't have procedures—file direct or airways only
 
 ### "Wind data unavailable"
@@ -497,10 +497,10 @@ Chicago → Washington National with explicit SID transition
 
 Got an expected route from ForeFlight/fltplan.com? Paste it directly:
 
-1. Copy: `KSFO OFFSHORE2 BSR J501 DRK KEPEC3 KLAS`
+1. Copy: `KSFO JCOBY4 BSR J501 DRK WYNDE3 KLAS`
 2. Split into departure/route/destination:
    - Departure: `KSFO`
-   - Route: `OFFSHORE2 BSR J501 DRK KEPEC3`
+   - Route: `JCOBY4 BSR J501 DRK WYNDE3`
    - Destination: `KLAS`
 3. Hit COMPUTE
 4. Verify against expected route
@@ -511,7 +511,7 @@ If you're filing IFR, check FAA preferred routes first. Then enter that route in
 
 Example: The preferred route for KSFO → KLAS might be:
 ```
-KSFO OFFSHORE2 BSR J501 DRK KEPEC3 KLAS
+KSFO JCOBY4 BSR J501 DRK WYNDE3 KLAS
 ```
 
 Enter it exactly as published, hit COMPUTE, verify it makes sense.

@@ -23,7 +23,7 @@ Think of InFlight as **the middle section of ForeFlight**—the route planning, 
 If you just want to get flying:
 
 1. **[Load the database](tab-data)** (one-time, ~5MB download)
-2. **[Enter a route](tab-route)** like `KSFO OFFSHORE2 BSR J501 DRK KEPEC3 KLAS`
+2. **[Enter a route](tab-route)** like `KSFO JCOBY4 BSR J501 DRK WYNDE3 KLAS`
 3. **Hit COMPUTE** and watch it auto-expand to a full IFR flight plan
 4. **[Review your navlog](tab-navlog)** with magnetic courses, distances, ETEs
 5. **[Enable GPS](tab-map)** for in-flight tracking (optional)
@@ -50,7 +50,7 @@ Filing IFR means dealing with airways, SIDs, and STARs. Most flight planning sit
 
 **InFlight understands FMS syntax:**
 ```
-KBOS SSOXS5 SSOXS V3 SAX J57 LRP LENDY6 KLGA
+KBOS PAYGE SSOXS V3 SAX J57 LRP LENDY6 KLGA
 ```
 
 Hit COMPUTE and it:

@@ -26,12 +26,12 @@ KORD PAYGE Q822 GONZZ Q822 FNT KLGA
 
 **With SID and STAR:**
 ```
-KSDF DROPA.HIDEY1 PAYGE Q822 GONZZ MTHEW.CHPPR1 KATL
+KSDF DROPA.JCOBY4 PAYGE Q822 GONZZ MTHEW.CHPPR1 KATL
 ```
 
 **Complex route:**
 ```
-KORD DROPA.HIDEY1 PAYGE Q822 GONZZ DCT 4814N/06848W HAMTN.WYNDE3 KLGA
+KORD DROPA.JCOBY4 PAYGE Q822 GONZZ DCT 4814N/06848W HAMTN.WYNDE3 KLGA
 ```
 
 ## Token Types
@@ -101,7 +101,7 @@ MTHEW TRANSITION (MTHEW.CHPPR1)
 
 **Examples:**
 ```
-DROPA.HIDEY1      (DROPA transition of HIDEY1 departure)
+DROPA.JCOBY4      (DROPA transition of JCOBY4 departure)
 MTHEW.CHPPR1      (MTHEW transition of CHPPR1 arrival)
 HAMTN.WYNDE3      (HAMTN transition of WYNDE3 arrival)
 ```
@@ -113,7 +113,7 @@ HAMTN.WYNDE3      (HAMTN transition of WYNDE3 arrival)
 Omit the transition to automatically select based on proximity:
 
 ```
-HIDEY1      (Auto-selects closest transition)
+JCOBY4      (Auto-selects closest transition)
 CHPPR1      (Auto-selects closest transition)
 WYNDE3      (Auto-selects closest transition)
 ```
@@ -218,12 +218,12 @@ AIRPORT SID WAYPOINT AIRWAY WAYPOINT STAR AIRPORT
 
 **Example:**
 ```
-KSDF HIDEY1 PAYGE Q822 GONZZ CHPPR1 KATL
+KSDF JCOBY4 PAYGE Q822 GONZZ CHPPR1 KATL
 ```
 
 **With explicit transitions:**
 ```
-KSDF DROPA.HIDEY1 PAYGE Q822 GONZZ MTHEW.CHPPR1 KATL
+KSDF DROPA.JCOBY4 PAYGE Q822 GONZZ MTHEW.CHPPR1 KATL
 ```
 
 ### Mixed Routes
@@ -231,12 +231,12 @@ KSDF DROPA.HIDEY1 PAYGE Q822 GONZZ MTHEW.CHPPR1 KATL
 Combine all elements:
 
 ```
-KORD DROPA.HIDEY1 PAYGE Q822 GONZZ DCT 4814N/06848W HAMTN.WYNDE3 KLGA
+KORD DROPA.JCOBY4 PAYGE Q822 GONZZ DCT 4814N/06848W HAMTN.WYNDE3 KLGA
 ```
 
 This route includes:
 1. Departure: KORD
-2. SID with transition: DROPA.HIDEY1
+2. SID with transition: DROPA.JCOBY4
 3. Airway segment: PAYGE Q822 GONZZ
 4. Direct routing: DCT
 5. Coordinate waypoint: 4814N/06848W
@@ -365,8 +365,8 @@ Include entry and exit waypoints:
 
 Verify procedures exist for your airport:
 ```
-✓ KSDF HIDEY1        (HIDEY1 exists at KSDF)
-✗ KORD HIDEY1        (HIDEY1 doesn't exist at KORD)
+✓ KSDF JCOBY4        (JCOBY4 exists at KSDF)
+✗ KORD JCOBY4        (JCOBY4 doesn't exist at KORD)
 ```
 
 ## Examples by Use Case
@@ -388,7 +388,7 @@ KATL DAWGS3 MAGIO Q123 LENDY CAMRN4 KMCO
 
 ### Complex IFR Route
 ```
-KSFO OFFSH9 FAITH Q1 PYE J501 ECA KEPEC3 KLAS
+KSFO OFFSH9 FAITH Q1 PYE J501 ECA WYNDE3 KLAS
 ```
 
 ### Training Route with Coordinates

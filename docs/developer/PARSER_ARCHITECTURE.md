@@ -9,7 +9,7 @@ The InFlight route parser uses a **4-stage pipeline** architecture that separate
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                    USER INPUT                            │
-│         "KORD DROPA.HIDEY1 PAYGE Q822 GONZZ"            │
+│         "KORD DROPA.JCOBY4 PAYGE Q822 GONZZ"            │
 └────────────────────┬────────────────────────────────────┘
                      │
                      ▼
@@ -21,7 +21,7 @@ The InFlight route parser uses a **4-stage pipeline** architecture that separate
 └────────────────────┬────────────────────────────────────┘
                      │
                      ▼
-          [KORD, DROPA.HIDEY1, PAYGE, Q822, GONZZ]
+          [KORD, DROPA.JCOBY4, PAYGE, Q822, GONZZ]
                      │
                      ▼
 ┌─────────────────────────────────────────────────────────┐
