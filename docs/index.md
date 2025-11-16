@@ -6,7 +6,7 @@ titleTemplate: Flight Planning & Navigation
 hero:
   name: InFlight
   text: Flight Planning & Navigation
-  tagline: Lightweight, offline-first web application for professional flight planning
+  tagline: Professional EFB capabilities in your browser—free, offline-capable, no subscription required
   actions:
     - theme: brand
       text: Quick Start
@@ -19,133 +19,199 @@ hero:
       link: https://github.com/HisenZhang/inflight
 
 features:
+  - icon: 🚀
+    title: Zero Friction
+    details: Just type the URL and start planning. No signup, no download, no trial period, no credit card. Load the database once and use it forever—even offline.
+  - icon: 📱
+    title: Works Everywhere
+    details: Any device with a browser. iPhone, iPad, Android, Windows, Mac, Linux. Same experience on all platforms. Install as PWA or just bookmark it.
+  - icon: 💯
+    title: Actually Free
+    details: No subscription ($0/month forever). No "premium" features locked behind paywalls. No ads. Open source. The entire app is yours to use and modify.
+  - icon: ⚡
+    title: Blazing Fast
+    details: Pure JavaScript with no build step. Loads instantly. Route calculations in milliseconds. No waiting for server responses. Everything runs on your device.
+  - icon: 🧠
+    title: FMS-Level Intelligence
+    details: Type "KBOS SSOXS5 SSOXS V3 SAX" and watch it auto-expand the SID, resolve airways, calculate courses. Context-aware autocomplete shows only relevant airways/fixes.
   - icon: ✈️
-    title: Offline-First
-    details: Works completely offline after initial load with PWA support. Cache all aviation data locally.
-  - icon: 🗺️
-    title: Professional Navigation Log
-    details: Airline-style navlog with comprehensive flight planning data, distances, bearings, and fuel calculations.
-  - icon: 🛰️
-    title: IFR Route Support
-    details: Parse airways, STARs, DPs, coordinates, and direct routing. Full route validation and waypoint resolution.
-  - icon: 📡
-    title: Real-time GPS Tracking
-    details: FMS-style moving map with live position updates, active leg indication, and ETA calculations.
-  - icon: 🌍
-    title: Global Database
-    details: 70,000+ airports and 10,000+ navaids worldwide with frequencies, runways, and detailed information.
-  - icon: 💨
-    title: Wind Correction
-    details: Calculate wind-corrected headings and ground speeds with WMM2025 magnetic variation model.
+    title: Built by Pilots
+    details: Real IFR route syntax. Multi-altitude wind interpolation. Auto-waypoint advancement. One-tap diversions. Automatic flight logging. Features pilots actually need.
 ---
 
-# InFlight Documentation
+# InFlight: Your Free, Offline EFB
 
-Welcome to the InFlight documentation! InFlight is a lightweight, offline-first flight planning web application with comprehensive navigation log and tactical display capabilities.
+**TL;DR:** If you've ever wanted ForeFlight's route planning without the subscription, or SkyVector's interface but offline-capable, this is it.
+
+InFlight is a web-based flight planning tool that works like an EFB should: **fast, offline-capable, and actually useful in the cockpit**. No login required, no credit card, no cloud sync nonsense. Just load the data once and you're good to go—even with airplane mode on.
+
+## What Makes This Different?
+
+### It Understands Your Routes
+
+Type a route like:
+```
+KBOS SSOXS5 SSOXS V3 SAX J57 LRP LENDY6 KLGA
+```
+
+Hit COMPUTE and it:
+- Auto-expands the SID from KBOS runway 04R/22L
+- Resolves the STAR transition into KLGA based on your arrival fix
+- Fills in all the intermediate fixes on V3 and J57
+- Calculates magnetic courses, distances, and fuel burn for each leg
+
+**No manual waypoint entry.** It's not a calculator you feed data into—it's a flight planner that does the work.
+
+### Context-Aware Autocomplete
+
+When you're building a route, the autocomplete **actually helps** instead of overwhelming you:
+
+- After typing a fix, it shows airways **that depart from that fix**
+- After typing an airway, it shows fixes **on that airway**
+- Want to file direct? Type `DCT` and pick any airport/navaid/waypoint
+
+This is how FMS autocomplete works. This is **not** how most flight planning websites work.
+
+### Winds Aloft That Actually Work
+
+Enter winds at multiple altitudes:
+```
+3000ft: 270/15
+6000ft: 280/25
+9000ft: 290/35
+```
+
+The app interpolates between altitudes for each leg. If you're climbing from 4,000 to 7,000 feet over a 40nm segment, it calculates the **blended wind** for that leg—not just one altitude's wind.
+
+This matters for fuel planning. A lot.
+
+### Real GPS Navigation
+
+Enable GPS and the map becomes a moving map display:
+
+- **Auto-waypoint advancement**: Switches to the next leg when you pass abeam the current fix
+- **Distance/bearing to active waypoint**: Updates in real-time
+- **TTS announcements**: Optional voice callouts for waypoint passage (great for single-pilot IFR)
+- **One-tap diversion**: Click any airport to compute a new route from your current position
+
+It's not trying to be a primary navigation instrument, but it's **way** better than fumbling with a paper chart in IMC.
+
+### Automatic Flight Logging
+
+When you enable GPS tracking:
+
+1. **Takeoff detection**: Starts logging when you hit 50+ knots groundspeed
+2. **Flight tracking**: Records actual track, times, and fuel burn
+3. **Landing detection**: Stops logging when you slow below 30 knots
+4. **GeoJSON export**: Download your actual flight path for analysis (import into Google Earth, flight debrief tools, etc.)
+
+No "start flight" button to forget. It just works.
+
+## Practical Workflows
+
+### VFR Cross-Country Planning
+
+1. Enter route: `KPAO VPFYI KHWD`
+2. Load winds aloft from your weather briefing
+3. Set aircraft performance (TAS, fuel burn)
+4. Get navlog with magnetic headings, times, and fuel for each leg
+
+Print the navlog or keep it on your iPad. Works offline, no subscription.
+
+### IFR with Procedures
+
+1. Enter filed route: `KSFO WESLA2 PYE Q7 AVE BDEGA2 KLAX`
+2. App expands SID/STAR based on departure/arrival runways
+3. Review the full route with all intermediate fixes
+4. Use the navlog for your flight plan form or tablet backup
+
+If ATC amends your route, just edit and recompute. Takes 10 seconds.
+
+### In-Flight Diversion Planning
+
+1. Enable GPS on the MAP tab
+2. Encounter weather/emergency
+3. Click nearest suitable airport
+4. App computes direct route with updated fuel/time
+5. Brief the approach while still navigating
+
+The fuel calculations update automatically based on your current fuel state.
+
+### Altitude Selection for Winds
+
+1. Load winds aloft for multiple altitudes
+2. Enter different cruising altitudes in the NAVLOG tab
+3. Compare actual ground speeds and fuel burn
+4. Pick the most efficient altitude before calling ATC
+
+Most online planners make you do this manually. InFlight just shows you the numbers.
+
+## What It's NOT
+
+Let's be clear about limitations:
+
+- **Not certified for primary navigation**: This is a planning tool, not an IFR-certified GPS
+- **Not a full EFB replacement**: No approach plates, A/FD, or weather imagery
+- **Not a cloud service**: Your flight plans live in your browser only (export as JSON to save)
+- **Not a weather briefer**: You bring the winds/weather; the app does the math
+
+Think of it as **the route planning and navlog part of ForeFlight**, but free and offline.
+
+## Who This Is For
+
+- **Student pilots** learning cross-country planning (beats the E6B for ground speed calculations)
+- **IFR pilots** who want a free route planner that understands airways and procedures
+- **CFIIs** teaching students how FMS route entry works
+- **Pilots with iPads** who want a backup EFB without paying for a second subscription
+- **International pilots** who need global airport/navaid data without regional restrictions
+
+If you've ever been frustrated by flight planning websites that:
+- Don't understand SID/STAR syntax
+- Make you click through 15 waypoints to file an airway
+- Don't work offline
+- Charge $99/year for basic features
+
+...then this might be your new favorite tool.
 
 ## Quick Links
 
-### For Users
-- [Quick Start Guide](user-guide/quick-start) - Get started with InFlight in minutes
-- [User Guide](user-guide/README) - Complete guide to all features
-- [FAQ](user-guide/faq) - Frequently asked questions
-- [Troubleshooting](user-guide/troubleshooting) - Common issues and solutions
+### For Pilots
+
+- **[Quick Start Guide](user-guide/quick-start)** - Get flying in 5 minutes
+- **[ROUTE Tab Guide](user-guide/tab-route)** - Master route entry syntax
+- **[NAVLOG Tab Guide](user-guide/tab-navlog)** - Customize your navigation log
+- **[MAP Tab Guide](user-guide/tab-map)** - Use GPS moving map features
+- **[FAQ](user-guide/faq)** - Common questions answered
 
 ### For Developers
-- [Architecture Overview](developer/ARCHITECTURE) - System design and structure
-- [Setup Guide](developer/SETUP) - Development environment setup
-- [Route Parser](developer/PARSER_ARCHITECTURE) - Route parsing internals
-- [Route Grammar](developer/ROUTE_GRAMMAR) - Complete route syntax specification
-- [Route Syntax Reference](developer/ROUTE_SYNTAX) - Quick syntax reference
-- [Deployment Guide](developer/CLOUDFLARE_DEPLOYMENT) - Deploy to Cloudflare Pages
 
-## What is InFlight?
+- **[Architecture Overview](developer/ARCHITECTURE)** - How it's built
+- **[Route Parser Internals](developer/PARSER_ARCHITECTURE)** - Parse tree structure
+- **[Deployment Guide](developer/CLOUDFLARE_DEPLOYMENT)** - Host your own instance
+- **[Contributing Guide](CONTRIBUTING)** - Submit improvements
 
-InFlight is a professional flight planning and navigation tool that runs entirely in your web browser. It features:
+## Technical Highlights
 
-- **Offline-First**: Works completely offline after initial load with PWA support
-- **Comprehensive Database**: Global airports, navaids, runways, and frequencies
-- **Professional Navigation Log**: Airline-style navlog with all flight planning data
-- **IFR Route Support**: Airways, STARs, DPs, coordinates, and direct routing
-- **Tactical Moving Map**: FMS-style display with real-time GPS tracking
-- **Wind Correction**: Calculate wind-corrected headings and ground speeds
-- **Mobile Optimized**: Touch-friendly interface for tablets and phones
+For the curious:
 
-## Features at a Glance
+- **Offline-first PWA**: Install it, load the data once, use it forever—even in airplane mode
+- **70,000+ airports**: Full global database (ICAO/IATA codes, frequencies, runways)
+- **10,000+ navaids**: VOR, NDB, DME, TACAN with accurate coordinates
+- **Vincenty's formula**: Proper geodetic distance on WGS84 ellipsoid (not flat-earth math)
+- **WMM2025 magnetic variation**: Accurate magnetic courses anywhere on Earth
+- **Client-side only**: No server, no login, no tracking. Your routes stay on your device.
 
-### Flight Planning
-- Parse complex IFR routes with airways, procedures, and coordinates
-- Calculate distances and bearings using WGS84 geodesy
-- Display magnetic variation with WMM2025 model
-- Export and import flight plans in JSON format
-- Route validation and waypoint resolution
+## Get Started
 
-### Navigation
-- Real-time GPS tracking with position updates
-- Active leg indication with distance/bearing to next waypoint
-- Estimated time en route (ETE) and time of arrival (ETA)
-- Ground speed and track calculations
-- Moving map display with tactical navigation
+1. **Load the app** - [inflight.pages.dev](https://inflight.pages.dev) (or your local deployment)
+2. **Click "LOAD DATA"** - Fetches airport/navaid database (one-time, ~5MB)
+3. **Enter a route** - Try: `KSFO OFFSHORE2 BSR J501 DRK KEPEC3 KLAS`
+4. **Hit COMPUTE** - Watch it expand into a full IFR flight plan
 
-### Data Management
-- 70,000+ airports worldwide (ICAO and IATA codes)
-- 10,000+ navigation aids (VOR, NDB, DME, TACAN)
-- Airport frequencies (Tower, Ground, ATIS, Approach, Departure)
-- Runway information (identifiers, length, surface)
-- Automatic database updates with offline caching
+That's it. No signup, no payment info, no tutorial wizard. Just planning.
 
-## Getting Started
+---
 
-1. **Install the App** (optional)
-   - Open InFlight in your browser
-   - Install as PWA for offline access
-   - Available on desktop and mobile devices
+**Open Source • MIT Licensed • Free Forever**
 
-2. **Load Flight Data**
-   - Click "LOAD DATA" to fetch airport and navaid database
-   - Data is cached offline indefinitely
-   - Update weekly for the latest information
-
-3. **Plan Your Route**
-   - Enter route in the ROUTE tab
-   - Use airports, navaids, airways, or coordinates
-   - Click COMPUTE to calculate flight plan
-
-4. **Navigate Your Flight**
-   - Switch to MAP tab for tactical display
-   - Enable GPS for real-time tracking
-   - Monitor progress in NAVLOG tab
-
-## Documentation Structure
-
-This documentation is organized into two main sections:
-
-### User Guide
-Complete guide for pilots and flight planners using InFlight for flight planning and navigation.
-
-- Getting started and quick start
-- Tab-by-tab feature guides
-- Keyboard shortcuts and tips
-- Troubleshooting and FAQ
-
-### Developer Guide
-Technical documentation for developers contributing to InFlight or deploying their own instance.
-
-- Architecture and design principles
-- Development setup and testing
-- Route parser implementation
-- Deployment and configuration
-
-## Open Source
-
-InFlight is open source and available on GitHub. Contributions are welcome!
-
-- Repository: [github.com/HisenZhang/inflight](https://github.com/HisenZhang/inflight)
-- License: MIT
-- Data Source: [OurAirports](https://ourairports.com/) (Public Domain)
-
-## Support
-
-- Report issues on [GitHub Issues](https://github.com/HisenZhang/inflight/issues)
-- Read the [FAQ](user-guide/faq.md) for common questions
-- Check [Troubleshooting](user-guide/troubleshooting.md) for solutions
+[View on GitHub](https://github.com/HisenZhang/inflight) | [Report Issues](https://github.com/HisenZhang/inflight/issues)

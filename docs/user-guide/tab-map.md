@@ -1,488 +1,543 @@
-# MAP Tab
+# MAP Tab: GPS Moving Map
 
-The MAP tab displays a moving map with real-time GPS tracking and tactical navigation guidance.
+This is where InFlight turns into an in-flight navigation tool. The MAP tab gives you a moving map display with your aircraft position, route visualization, and real-time guidance—think of it as a basic FMS map page in your browser.
 
-## Overview
+**What this is:** Situational awareness, backup navigation, and route monitoring.
 
-The MAP tab provides a vector-based tactical display showing:
-- Your planned route
-- Current GPS position (when enabled)
-- Waypoints with color-coded markers
-- Real-time navigation guidance
-- Distance rings and bearings
-- Automatic waypoint progression
+**What this is NOT:** A certified GPS navigator. Don't use this for primary navigation. It's a planning tool and backup reference.
 
-## Map Display
+## What You're Looking At
 
 ### Route Visualization
 
-The map shows your complete route with:
+Your planned route appears as a series of connected waypoints:
 
-**Waypoint Markers:**
+**Waypoint markers:**
 - **Cyan circles** = Airports
-- **Magenta circles** = Navaids
-- **White circles** = Fixes
-- **Amber circles** = Reporting points
+- **Magenta circles** = Navaids (VOR, NDB, DME)
+- **White circles** = Fixes (intersections, GPS waypoints)
+- **Amber circles** = Reporting points (ATC expects you to report these)
 
-**Route Lines:**
-- **Solid white lines** = Your flight path
-- Connects waypoints in sequence
-- Shows planned ground track
+**Route lines:**
+- **White solid lines** = Your planned route connecting each waypoint
+- **Yellow line** = Active leg (from your position to next waypoint)
+- **Dotted line** = GPS track trail (where you've been)
 
-**Waypoint Labels:**
-- Code displayed next to each marker
-- Type information (AIRPORT, VOR, FIX)
-- Elevation (for airports)
+### GPS Position (When Enabled)
 
-### GPS Position Indicator
+**Your aircraft:**
+- **Cyan triangle** pointing in direction of travel
+- Updates in real-time (every 1-5 seconds depending on device)
+- Leaves a dotted trail showing your path
 
-When GPS is enabled:
-
-**Aircraft Symbol:**
-- **Green triangle** pointing in direction of travel
-- Real-time position updates
-- Leaves track trail (dotted line)
-
-**Accuracy Circle:**
-- Blue circle around aircraft
+**Accuracy indicator:**
+- Blue circle around aircraft symbol
 - Radius = horizontal GPS accuracy
-- Smaller = better accuracy
+- Smaller circle = better accuracy
+- Typical: 5-25 meter radius in clear conditions
 
-**Current Leg Indicator:**
-- **Yellow line** from aircraft to next waypoint
-- Shows required ground track
+### Navigation Panel (Bottom of Screen)
 
-## Zoom Controls
+**Top row (large text):**
+- **WPT**: Next waypoint identifier (where you're going)
+- **HDG**: Required magnetic heading to fly
+- **DIST**: Distance remaining to next waypoint (NM)
+- **ETE**: Estimated time en route (minutes)
 
-Located at top of map display.
+**Bottom row (small text):**
+- **GS**: GPS ground speed (knots)
+- **ETA**: Estimated time of arrival at waypoint (Zulu time)
+- **H-ACC**: Horizontal GPS accuracy (±meters)
+- **V-ACC**: Vertical GPS accuracy (±meters)
 
-### Preset Zoom Modes
+**This is your primary reference** during GPS-guided flight. Glance down for heading, distance, and ETE.
 
-**ROUTE** (default):
-- Shows entire route from departure to destination
-- Best for overview and flight planning
+## Enabling GPS
 
-**DEST**:
-- Zooms to destination airport area
-- Shows local waypoints and route terminus
-- Useful for approach planning
+### First Time Setup
 
-**50NM**:
-- Tactical view: 50 NM radius around aircraft
-- Good for enroute navigation
-- Shows upcoming waypoints
+1. Click MAP tab
+2. Browser prompts: "Allow location access?"
+3. Click **Allow** (required for GPS tracking)
+4. GPS status changes to "ACTIVE" (green)
+5. Your position appears as cyan triangle
 
-**25NM**:
-- Close tactical view: 25 NM radius
-- Best for terminal area navigation
-- High detail around position
-
-### Manual Zoom
-
-**+ Button**:
-- Zoom in (increase detail)
-- Up to 5x magnification
-
-**− Button**:
-- Zoom out (decrease detail)
-- Back to preset levels
-
-> 💡 **Tip**: Use 50NM or 25NM during flight for best situational awareness
-
-## GPS Tracking
-
-### Enabling GPS
-
-**First Time:**
-1. Browser will request location permission
-2. Click "Allow" or "Grant Permission"
-3. GPS icon shows "ACTIVE"
-
-**Subsequent Uses:**
-- GPS activates automatically when you view MAP tab
-- No permission required if previously granted
+**Permissions are saved**—you won't need to grant them again on subsequent flights.
 
 ### GPS Status Indicators
 
-**CHECKING...** (Yellow):
-- Requesting permission or initializing
+**CHECKING... (Yellow)**
+- Browser is requesting permission or initializing
 - Wait a few seconds
 
-**ACTIVE** (Green):
+**ACTIVE (Green)**
 - GPS successfully tracking
 - Position updating in real-time
+- Ready to navigate
 
-**DENIED** (Red):
-- Location permission denied
-- Go to browser settings to enable
-- Instructions in [Troubleshooting](#gps-permission-denied)
+**DENIED (Red)**
+- You clicked "Block" on permission prompt
+- Fix: Click lock icon in address bar → Location → Allow → Refresh page
 
-**UNAVAILABLE** (Red):
-- Device doesn't support GPS
-- Browser doesn't support Geolocation API
-- Use desktop browser or GPS-enabled device
+**UNAVAILABLE (Red)**
+- Device doesn't have GPS (desktop without WiFi positioning)
+- Browser doesn't support Geolocation API (unlikely)
+- Use GPS-enabled device (phone/tablet with cellular)
 
-## Navigation Panel
+### GPS Accuracy: What to Expect
 
-The navigation panel at the bottom shows real-time guidance.
+**Excellent (±5-12 meters):**
+- Clear sky view
+- Good satellite geometry
+- Tablet with cellular GPS (even without SIM)
 
-### Primary Row (Large Display)
+**Good (±15-30 meters):**
+- Some obstruction (clouds, light tree cover)
+- Phone GPS in cockpit
+- Sufficient for enroute navigation
 
-| Field | Description | Example |
-|-------|-------------|---------|
-| **WPT** | Next waypoint code | `KORD` |
-| **HDG** | Required magnetic heading | `268°` |
-| **DIST** | Distance to next waypoint | `45.2 NM` |
-| **ETE** | Estimated time enroute | `23 MIN` |
+**Marginal (±50-100 meters):**
+- Heavy clouds, urban areas, or tree cover
+- WiFi-only positioning on ground
+- Don't rely on this for terminal navigation
 
-### Secondary Row (Small Display)
+**Poor (±100+ meters):**
+- Buildings, hangars, heavy obstruction
+- Desktop computer with WiFi positioning
+- Not usable for navigation
 
-| Field | Description | Example |
-|-------|-------------|---------|
-| **GS** | GPS ground speed | `118 KT` |
-| **ETA** | Estimated time of arrival | `14:23Z` |
-| **H-ACC** | Horizontal GPS accuracy | `±12 M` |
-| **V-ACC** | Vertical GPS accuracy | `±18 M` |
+**In-flight:** GPS accuracy is typically excellent (±10-20m) with clear sky view. Much better than on the ground.
 
-### Navigation Buttons
+## Zoom Controls
 
-**◄ PREV**:
-- Manually go to previous waypoint
-- Updates guidance to that leg
-- Useful for missed approaches or re-routing
+Located at top-right of map.
 
-**NEXT ►**:
-- Manually advance to next waypoint
-- Updates guidance to that leg
-- Useful for skipping waypoints
+### Preset Zoom Modes
 
-> 💡 **Automatic Progression**: The map auto-advances when within 2 NM of next waypoint
+**ROUTE (default):**
+- Shows entire route from departure to destination
+- Good for: Pre-flight planning, overall route awareness
+- Use when: Checking the big picture
 
-## Waypoint Interaction
+**DEST:**
+- Zooms to destination airport area
+- Shows: Arrival waypoints, local navaids, airport
+- Good for: Approach planning, reviewing STAR
+- Use when: Within 50nm of destination
 
-### Clicking Waypoints
+**50NM:**
+- Tactical view: 50 nautical mile radius around your aircraft
+- Shows: Upcoming waypoints, route ahead
+- Good for: Enroute navigation, mid-range situational awareness
+- **Use this for most of your flight**
 
-Click any waypoint marker to see details:
+**25NM:**
+- Close tactical view: 25 nautical mile radius
+- Shows: Immediate vicinity, terminal area details
+- Good for: Terminal area, pattern entry, close navigation
+- Use when: Approaching airport or navigating complex airspace
 
-**Popup Shows:**
-- Waypoint code and type
-- Position (lat/lon)
-- Elevation (if applicable)
-- Frequencies (if airport/navaid)
+### Manual Zoom (+ and − Buttons)
 
-**For Route Waypoints:**
-- **DCT** button: Set as next waypoint (go-direct)
-- Updates navigation panel
-- GPS guidance changes to new target
+**+ button**: Zoom in for more detail
+**− button**: Zoom out for wider view
 
-### Going Direct
+**Tip:** After manual zoom, clicking any preset (ROUTE/DEST/50NM/25NM) returns to standard views.
 
-To divert to a waypoint:
+## Auto-Waypoint Advancement
 
-1. Click waypoint on map
-2. Click **DCT** button in popup
-3. Navigation updates to direct course
-4. GPS guides you to new target
+**The magic feature:** InFlight automatically advances to the next waypoint when you pass abeam the current one.
 
-Clears diversion: Use PREV/NEXT buttons to return to planned route
+### How It Works
 
-## Waypoint Passage Features
+**Trigger distance:** Within 2 nautical miles of next waypoint
 
-When you pass within 2 NM of the next waypoint (automatic):
+**What happens:**
+1. Device vibrates (mobile devices) - two short pulses
+2. TTS announces waypoint passage (if audio enabled)
+3. Navigation panel updates to next leg
+4. Yellow line re-draws to new active waypoint
+5. Guidance (HDG/DIST/ETE) updates automatically
 
-### Haptic Feedback
+**Why this matters:** You don't have to manually click "NEXT" during the flight. InFlight does it for you, just like an FMS.
 
-**Device Vibrates:**
-- Two short pulses (100ms each)
-- Separated by 50ms pause
-- Works on mobile devices that support vibration
+### Manual Waypoint Control
 
-**When It Triggers:**
-- Approaching threshold (2 NM)
-- Auto-advances to next leg
-- Only on proximity-based switching (not manual)
+**PREV button (◄):**
+- Go back to previous waypoint
+- Use if: You passed a waypoint early and want to re-sequence
+- Or: ATC vectors you backwards in the route
 
-### Voice Announcements
+**NEXT button (►):**
+- Skip to next waypoint
+- Use if: ATC says "proceed direct to [waypoint]" that's ahead in route
+- Or: You want to skip a waypoint
 
-**Text-to-Speech (TTS) Announces:**
+**Important:** Auto-advancement overrides manual selection. If you manually advance, but you're still 50nm away, it will keep that waypoint until you get within 2nm.
 
-Example announcement:
-> "Approaching K A L B. Next waypoint K O R D, heading 0 9 0, distance 45 nautical miles, E T E 23 minutes"
+## Voice Announcements (TTS)
 
-**Announcement Includes:**
-- Waypoint just passed (spelled out)
+When you pass within 2nm of a waypoint, InFlight announces:
+
+**Example announcement:**
+> "Approaching K O R D. Next waypoint B S R, heading 1 4 1, distance 97 nautical miles, E T E 47 minutes."
+
+**What's included:**
+- Current waypoint (spelled out letter by letter)
 - Next waypoint (spelled out)
 - Magnetic heading (digit by digit with leading zeros)
 - Distance in nautical miles
-- ETE if available (omitted if wind correction disabled)
+- ETE if wind correction is enabled
 
-**Heading Format:**
-- 90° announced as "0 9 0"
-- 270° announced as "2 7 0"
-- 5° announced as "0 0 5"
+**Heading callout format:**
+- 90° → "zero nine zero"
+- 270° → "two seven zero"
+- 5° → "zero zero five"
 
-This matches standard aviation phraseology.
+This matches standard aviation phraseology for clarity.
 
-**Voice Settings:**
-- Uses system default TTS voice
-- Rate: 1.0 (normal speed)
-- Volume: 1.0 (maximum)
-- Cannot be customized currently
+**Volume:** Uses system TTS at maximum volume. Adjust device volume before flight.
 
-> 💡 **Tip**: Adjust device volume before flight to comfortable level
+**Voice:** Uses default system voice. No customization currently available.
 
-### Disabling Announcements
+**To disable:** Mute device volume or turn off TTS in browser settings. (Future: UI toggle planned)
 
-Currently not configurable in UI. To disable:
-- Mute device volume
-- Use browser settings to block TTS
-- Feature roadmap: Add toggle in settings
+## Haptic Feedback (Vibration)
 
-## Understanding GPS Data
+**When it triggers:** Waypoint passage (within 2nm)
 
-### Horizontal Accuracy (H-ACC)
+**Pattern:** Two short vibrations (100ms each), separated by 50ms pause
 
-Indicates GPS position uncertainty.
+**Devices:**
+- ✅ Works on mobile phones/tablets
+- ❌ Desktop browsers don't support vibration API
 
-**Good Accuracy:**
-```
-H-ACC: ±5 M    (Excellent - differential GPS)
-H-ACC: ±12 M   (Good - clear sky)
-H-ACC: ±25 M   (Acceptable)
-```
+**Why it's useful:** Alerts you to waypoint passage without looking at the screen. Great for single-pilot IFR when head-down configuring avionics.
 
-**Poor Accuracy:**
-```
-H-ACC: ±50 M   (Marginal - some obstruction)
-H-ACC: ±100 M+ (Poor - buildings/trees)
-```
+## One-Tap Diversions
 
-**Factors Affecting Accuracy:**
-- Satellite count and geometry
-- Atmospheric conditions
-- Urban canyons / buildings
-- Tree cover
-- Device quality
+**Scenario:** Weather ahead, fuel concern, emergency, or just want to land early.
 
-### Vertical Accuracy (V-ACC)
+### How to Divert
 
-Altitude accuracy from GPS.
+1. **Click any airport on the map** (cyan circle)
+2. Popup appears with airport info
+3. **Click "DCT" button** in popup
+4. Navigation updates instantly:
+   - Yellow line points to diversion airport
+   - HDG shows magnetic heading to airport
+   - DIST shows direct distance
+   - ETE updates based on current GS
 
-**Typical Values:**
-```
-V-ACC: ±10 M   (Excellent)
-V-ACC: ±25 M   (Good)
-V-ACC: ±50 M   (Acceptable)
-V-ACC: ±100 M+ (Poor)
-```
+**InFlight automatically:**
+- Calculates direct great-circle route to airport
+- Updates fuel remaining (if fuel planning enabled)
+- Shows new ETA
 
-> ⚠️ **Important**: GPS altitude is **NOT** approved for vertical navigation. Use barometric altimeter for altitude.
+**To cancel diversion:**
+- Click NEXT or PREV to return to planned route
+- Or go to ROUTE tab and recalculate
+
+**Practical use:** You're flying KSFO→KLAS, encounter headwinds stronger than planned, fuel is tight. Click KBIH (Bishop Airport, en route) and divert. Instant new heading and fuel estimate.
+
+## Reading GPS Data
 
 ### Ground Speed (GS)
 
-Derived from GPS position changes.
+**What it is:** Actual speed over the ground from GPS
 
-**Accuracy:**
-- Very accurate when moving
-- May show 0-5 KT when stationary (GPS jitter)
+**How it's calculated:** Position change over time (very accurate when moving)
+
+**Typical values:**
+- 0-5 knots when stationary (GPS jitter)
+- 80-150 knots for light GA aircraft in cruise
 - Updates every 1-5 seconds
 
-**Uses:**
-- Verify TAS and wind calculations
-- Monitor actual vs. planned performance
-- Calculate actual ETE to waypoint
+**Use it to:**
+- Compare against planned GS from navlog
+- Calculate actual ETE: `(Distance ÷ GS) × 60`
+- Verify winds aloft accuracy
 
-## Map Features
+**Example:** Navlog says 120kt GS, but GPS shows 105kt → stronger headwind than forecast. Recalculate ETE and fuel.
 
-### Distance Rings
+### Horizontal Accuracy (H-ACC)
 
-Concentric circles around waypoints (in 50NM and 25NM modes):
-- Help judge distances visually
-- Scale adjusts with zoom level
-- Grayed out for minimal distraction
+**What it is:** GPS position uncertainty (error radius)
 
-### Bearing Lines
+**Good values:**
+- ±5-10m: Excellent (differential GPS, WAAS)
+- ±10-25m: Good (standard GPS, clear sky)
+- ±25-50m: Acceptable for enroute navigation
 
-Radial lines from waypoints (in DEST mode):
-- Show cardinal directions
-- Help orient map mentally
-- Useful for visual approaches
+**Marginal values:**
+- ±50-100m: Use with caution (some obstruction)
+- ±100m+: Don't rely on this for navigation
 
-### Track Trail
+**Factors:**
+- Satellite count (more satellites = better accuracy)
+- Satellite geometry (spread out = better)
+- Atmospheric conditions
+- Obstructions (buildings, trees, clouds)
 
-Your GPS history displayed as dotted line:
-- Shows where you've been
-- Helps identify drift/deviation
-- Automatically recorded in STATS tab
+**In-flight:** Typically ±10-20m in cruise. Much better than on the ground.
 
-## Tactical Scenarios
+### Vertical Accuracy (V-ACC)
 
-### Enroute Navigation
+**What it is:** GPS altitude uncertainty
 
-**Best Settings:**
-- Zoom: **50NM** or **25NM**
-- Keep navigation panel visible
-- Monitor HDG and DIST
+**Typical values:**
+- ±10-30m in flight (acceptable)
+- ±50m+ on ground (poor satellite geometry)
 
-**What to Watch:**
-- Cross-track error (offset from yellow line)
-- Upcoming waypoints
-- Required heading changes
+**IMPORTANT WARNING:**
+- GPS altitude is **NOT** approved for vertical navigation
+- **Use your barometric altimeter** for altitude
+- GPS altitude is MSL (not pressure altitude)
+- Good for terrain awareness, not for flying assigned altitudes
 
-### Terminal Area
+## Practical Use During Flight
 
-**Best Settings:**
-- Zoom: **25NM** or manual zoom in
-- Switch to DEST for approach view
+### Pre-Flight (On the Ground)
 
-**What to Watch:**
-- Airport position relative to aircraft
-- Local waypoints (fixes, navaids)
-- Pattern altitude/entry
+1. ✅ Load route in ROUTE tab, hit COMPUTE
+2. ✅ Go to MAP tab, grant GPS permission
+3. ✅ Wait for GPS lock (H-ACC < 30m)
+4. ✅ Verify your position shows correctly on map
+5. ✅ Set zoom to 50NM
+6. ✅ Check first waypoint shows in navigation panel
 
-### Diversion
+### Takeoff and Departure
 
-If you need to divert:
+1. ✅ Keep iPad/tablet mounted and visible
+2. ✅ Glance at HDG after takeoff—should match departure heading
+3. ✅ Monitor yellow line to first waypoint
+4. ✅ If flying SID, watch waypoint advancement
 
-1. Click destination airport on map
-2. Click **DCT** button
-3. Follow new HDG guidance
-4. Or manually enter diversion in ROUTE tab
+**Tip:** If you're getting vectors from departure, use NEXT button to skip SID waypoints manually.
+
+### Enroute
+
+**Best settings:**
+- Zoom: **50NM**
+- Monitor: HDG, DIST, ETE
+- Glance interval: Every 5-10 minutes (don't fixate)
+
+**What to watch:**
+- **Cross-track error**: How far off the route line you are
+  - Deviation visible as offset from white route line
+  - Adjust heading to get back on course
+- **Upcoming waypoints**: See them approaching on map
+- **Heading changes**: Anticipate turns at waypoints
+
+**Workflow:**
+1. Fly assigned heading from ATC or navlog MH
+2. Glance at map to confirm tracking
+3. Note next waypoint distance
+4. When waypoint announcement plays, acknowledge mentally
+5. Check new heading for next leg
+6. Adjust heading indicator to new HDG
+
+### Terminal Area and Approach
+
+**Best settings:**
+- Zoom: **25NM** or **DEST**
+- Reference: Airport position relative to you
+- Monitor: Pattern entry, local waypoints
+
+**What to watch:**
+- Airport location (cyan circle)
+- Approach course alignment
+- Local navaids if flying VOR/ILS approach
+
+**Switching to approach mode:**
+1. At 10-20nm from airport, zoom to DEST
+2. Reference airport diagram for pattern entry
+3. Use GPS for situational awareness only
+4. Fly approach per ATC instructions or published procedure
+
+### Landing and Taxi
+
+GPS continues tracking on the ground:
+- Shows taxi movement on airport
+- Useful for unfamiliar airports (which taxiway am I on?)
+- Not a substitute for airport diagram
 
 ## Troubleshooting
 
-### GPS Permission Denied
+### "GPS Permission Denied"
 
-**Browser Settings:**
-
-**Chrome/Edge:**
-1. Click lock icon in address bar
+**Fix for Chrome/Edge:**
+1. Click lock icon left of URL
 2. Location → Allow
 3. Refresh page
 
-**Firefox:**
-1. Click info icon in address bar
+**Fix for Firefox:**
+1. Click info icon (i) left of URL
 2. Permissions → Location → Allow
 3. Refresh page
 
-**Safari (iOS):**
-1. Settings → Safari → Location
-2. Select "Ask" or "Allow"
+**Fix for Safari (iOS):**
+1. iOS Settings → Safari → Location Services
+2. Set to "Ask" or "Allow"
 3. Close and reopen InFlight
 
-### GPS Not Updating
+### "GPS Not Updating" or Stuck Position
 
-**Problem**: Position frozen or not moving
+**Possible causes:**
+- Phone in airplane mode with WiFi on (GPS disabled)
+- Heavy cloud cover or cockpit obstruction
+- Device GPS hardware issue
+
+**Fixes:**
+1. Toggle airplane mode OFF (enable cellular), then back ON
+   - This re-enables GPS on iOS devices
+2. Wait 30-60 seconds for satellite acquisition
+3. Move device to window for clear sky view
+4. Restart browser/app
+
+**iOS airplane mode tip:** Airplane mode disables GPS. You need cellular enabled (even without SIM) for GPS to work. Turn on airplane mode, then manually re-enable WiFi AND Bluetooth, but cellular stays off (legal in US cockpits).
+
+### Inaccurate Position (Shows Wrong Location)
+
+**Causes:**
+- WiFi positioning instead of GPS (desktop/tablet without cellular)
+- Device calibration needed
+- GPS hasn't fully locked yet
+
+**Fixes:**
+1. Check H-ACC value—wait until it's < 50m
+2. Use device with cellular GPS (phone or cellular iPad)
+3. Test with Maps app to verify device GPS works
+4. Calibrate compass (iOS: Settings → Privacy → Location → System Services → Compass Calibration)
+
+### No Voice Announcements
+
+**Causes:**
+- Device muted
+- TTS not supported in browser
+- Volume too low
+
+**Fixes:**
+1. Check device volume (side buttons)
+2. Check mute switch (iOS devices)
+3. Test TTS: Open browser console, type `speechSynthesis.speak(new SpeechSynthesisUtterance("test"))`
+4. Use Chrome or Safari (best TTS support)
+
+### No Vibration on Waypoint Passage
+
+**Expected behavior:**
+- Desktop browsers: No vibration (not supported)
+- iOS Safari: Limited vibration support
+- Android Chrome: Full vibration support
+
+**Fixes:**
+1. Confirm device is mobile (desktop can't vibrate)
+2. Check device vibration enabled in system settings
+3. Some browsers block vibration—try Chrome on Android
+
+## Tips for Effective Use
+
+### Battery Management
+
+GPS is **power-hungry**. Expect 2-4 hours on a typical tablet battery.
 
 **Solutions:**
-1. Check device has clear sky view
-2. Move away from buildings/trees
-3. Wait 30-60 seconds for satellites
-4. Restart browser
-5. Toggle airplane mode off/on (mobile)
-
-### Inaccurate Position
-
-**Problem**: GPS shows wrong location
-
-**Solutions:**
-1. Wait for better accuracy (H-ACC improves)
-2. Move to open area
-3. Check device GPS is working (use Maps app)
-4. Calibrate compass (mobile)
-
-### Map Not Displaying
-
-**Problem**: MAP tab is blank or empty
-
-**Solutions:**
-1. Calculate route in ROUTE tab first
-2. Ensure database is loaded
-3. Check browser console for errors
-4. Try different browser
-
-### Waypoint Announcements Not Working
-
-**Problem**: No voice announcements
-
-**Solutions:**
-1. Check device volume
-2. Unmute device
-3. Test TTS in browser (e.g., "speechSynthesis.speak()")
-4. Some browsers don't support TTS (use Chrome/Safari)
-5. Check browser TTS permissions
-
-### Vibration Not Working
-
-**Problem**: Device doesn't vibrate
-
-**Solutions:**
-1. Desktop browsers don't support vibration (mobile only)
-2. Check device vibration is enabled in system settings
-3. Some devices block vibration in web apps
-4. iOS has limited vibration support
-
-## Best Practices
-
-1. **Grant permissions** before takeoff
-2. **Test GPS** on ground first
-3. **Monitor accuracy** - H-ACC < 50M for reliable navigation
-4. **Use 50NM zoom** for most enroute flying
-5. **Keep device charged** - GPS drains battery quickly
-6. **Have backup** - Carry paper charts and certified GPS
-7. **Mount device** securely in cockpit for easy viewing
-8. **Don't fixate** on screen - maintain visual scan
-
-## Performance Tips
-
-### Battery Life
-
-GPS tracking is power-intensive:
-- Use external power/charger in flight
-- Lower screen brightness
+- Use external power in cockpit (USB charger, cigarette lighter adapter)
+- Lower screen brightness (50-70% is readable in most conditions)
 - Close other apps
-- Enable low-power mode when available
+- Enable low-power mode (iOS) before flight
 
-### Data Usage
+**Recommended:** Always have external power. Don't rely on battery for long flights.
 
-Map and GPS features use minimal data:
-- Route display: Offline (no data)
-- GPS tracking: Offline (no data)
-- Wind data: ~100 KB (one-time download)
-- AirNav links: Online
+### Screen Visibility
 
-### Screen Always-On
+**Bright sun:** Increase brightness to 80-100%
+**Night flight:** Decrease brightness to 20-30%, enable dark mode (future feature)
+**Tablet mounting:** Use kneeboard or yoke mount for easy viewing
 
-Prevent screen from sleeping:
+### Backup Navigation
 
-**iOS**: Enable Guided Access
-**Android**: Use "Stay Awake" developer option
-**Alternative**: Tap screen periodically
+**Never rely solely on InFlight GPS:**
+- ✅ Have paper charts or certified EFB (ForeFlight, Garmin Pilot)
+- ✅ Know how to navigate with VORs and pilotage
+- ✅ Monitor panel-mounted GPS (if equipped)
+- ✅ File flight plans with ATC for IFR
 
-## Advanced Features
+**InFlight is a backup tool**, not primary navigation.
 
-### Custom Zoom Levels
+### Cross-Check with Other Instruments
 
-After using +/− buttons:
-- Preset buttons (ROUTE, DEST, 50NM, 25NM) restore standard views
-- Manual zoom persists until preset selected
+Compare InFlight GPS with:
+- **Panel GPS**: Position, ground speed, track
+- **DME**: Distance to VORs
+- **ADF/VOR bearings**: Radial accuracy
+- **Heading indicator**: Required heading vs. actual
 
-### Multi-Touch Gestures
+**Discrepancies?** Trust certified instruments. Use InFlight for situational awareness.
 
-**Pinch Zoom** (mobile):
-- Not currently supported
-- Use +/− buttons instead
+## Advanced Scenarios
 
-**Pan/Drag**:
-- Not currently supported
-- Map auto-centers on aircraft
+### ATC Vectors Off Route
 
-Roadmap: Add pan and pinch in future update
+**Scenario:** ATC says "turn left heading 270, vectors for traffic."
 
-## Next Steps
+**How to handle:**
+1. Fly assigned heading (270)
+2. Watch map—you'll deviate from white route line
+3. Keep navigation panel visible for next waypoint awareness
+4. When ATC says "resume own navigation," turn to HDG shown in panel
+5. Rejoin route line
 
-- **[Track Flight](tab-stats.md)** - Monitor fuel, time, and recording
+**InFlight continues showing:**
+- Distance/bearing to next waypoint
+- Updated ETE
+- Your track trail (dotted line) showing vectors
+
+### Direct-To Clearance
+
+**Scenario:** ATC says "proceed direct KBIH."
+
+**If KBIH is on your route:**
+1. Click NEXT button until KBIH appears as active waypoint
+2. Turn to new HDG shown in navigation panel
+3. InFlight updates guidance automatically
+
+**If KBIH is NOT on your route:**
+1. Click KBIH airport on map
+2. Click DCT button in popup
+3. Turn to new HDG
+4. Or manually add to route in ROUTE tab for full navlog update
+
+### Lost Communication (Nordo)
+
+If you lose comms and need to navigate via last clearance:
+
+1. Reference your last ATC clearance
+2. Use MAP for situational awareness
+3. Follow filed route (white line on map)
+4. Squawk 7600
+5. Continue as filed to destination
+
+InFlight shows your planned route even if off course. Use it to rejoin.
+
+### Practice Approaches
+
+**Scenario:** Flying practice approaches under VFR.
+
+1. Load approach waypoints in ROUTE tab (if you've entered them)
+2. MAP shows your position relative to approach course
+3. Use for situational awareness, not primary guidance
+4. Fly approach per published procedure/ATC vectors
+
+**Not a substitute for approach plates.**
+
+## What's Next?
+
+After using the GPS moving map:
+
+- **[STATS Tab](tab-stats)** - Monitor fuel consumption, flight time, and track recording
+- **[DATA Tab](tab-data)** - Export GPS tracks, manage database, review past flights
 
 ---
 
-**Ready to fly?** Enable GPS and start tracking your flight in real-time!
+**Ready to navigate?** Enable GPS, set zoom to 50NM, and start your flight!

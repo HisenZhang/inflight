@@ -1,432 +1,494 @@
-# NAVLOG Tab
+# NAVLOG Tab: Your Flight Plan in Detail
 
-The NAVLOG tab displays your complete navigation log with detailed waypoint and leg information.
+After you hit COMPUTE in the ROUTE tab, this is where you end up—a complete navigation log with every waypoint, heading, distance, time, and fuel calculation.
 
-## Overview
+**Think of this as your FAA flight plan form, but better.** It's got everything you'd write on a VFR cross-country navlog, plus real-time winds, automatic fuel tracking, and clickable airport links.
 
-After calculating a route, the navigation log provides a comprehensive, leg-by-leg breakdown of your flight plan including:
-- Waypoint details (position, elevation, frequencies, runways)
-- Leg information (headings, distances, times)
-- Wind corrections (if enabled)
-- Fuel calculations (if enabled)
-- Cumulative totals
-
-## Navigation Log Structure
+## What You're Looking At
 
 The navlog alternates between two types of rows:
 
-### 1. Waypoint Rows (Cyan border)
+### Waypoint Rows (Cyan Border)
 
-Shows information about each waypoint on your route.
+**What it shows:** Information about each point on your route.
 
-**Displayed Information:**
+For airports:
+- Position (lat/lon)
+- Field elevation
+- Runways (length, surface, identifier)
+- Frequencies (tower, ground, ATIS, approach, departure)
+- Magnetic variation
 
-| Column | Content |
-|--------|---------|
-| **#** | Waypoint sequence number |
-| **Code** | Waypoint identifier (color-coded by type) |
-| **Type** | AIRPORT, VOR, NDB, FIX, REPORTING POINT |
-| **Position** | Latitude/Longitude |
-| **Elevation** | Field elevation (airports) |
-| **Mag Var** | Magnetic variation at waypoint |
-| **Runways** | Available runways with length/surface (airports) |
-| **Frequencies** | Tower, Ground, ATIS, etc. (airports and navaids) |
+For navaids (VOR/NDB):
+- Position
+- Frequency
+- Magnetic variation
 
-**Waypoint Color Coding:**
-- **Cyan** = Airports
+For fixes:
+- Position
+- Type (intersection, reporting point, GPS waypoint)
+
+**Color coding:**
+- **Cyan** = Airports (clickable links to AirNav)
 - **Magenta** = Navaids (VOR, NDB, DME, TACAN)
-- **White** = Fixes
-- **Amber** = Reporting Points
+- **White** = Fixes (intersections, waypoints)
+- **Amber** = Reporting points (ATC callout required)
 
-### 2. Leg Rows (Dark background)
+### Leg Rows (Dark Background)
 
-Shows navigation information between waypoints.
+**What it shows:** How to fly from the previous waypoint to this one.
 
-**Basic Leg Information:**
+**Basic mode** (no wind correction):
+- **HDG(M)**: Magnetic heading to fly
+- **DIST**: Distance in nautical miles
 
-| Field | Description |
-|-------|-------------|
-| **HDG(M)** | Magnetic heading to fly |
-| **DIST** | Distance in nautical miles |
-| **ETE** | Estimated time enroute (if wind enabled) |
+**With wind correction** (recommended):
+- **TC**: True course (ground track you want)
+- **WCA**: Wind correction angle (how much to crab)
+- **TH**: True heading (where to point the nose)
+- **MH**: Magnetic heading (**this is what you fly**)
+- **GS**: Ground speed (accounting for wind)
+- **WIND**: Wind direction/speed at altitude
+- **ETE**: Estimated time en route for this leg
+- **CUM DIST/TIME**: Cumulative from departure
+- **ETA**: Estimated time of arrival at waypoint
 
-**With Wind Correction Enabled:**
+**With fuel planning**:
+- **BURN**: Fuel used for this leg
+- **CUM BURN**: Total fuel burned so far
+- **REM**: Fuel remaining
+- **ENDUR**: How long you can fly on remaining fuel
 
-| Field | Description |
-|-------|-------------|
-| **TC** | True course (ground track) |
-| **WCA** | Wind correction angle |
-| **TH** | True heading (TC + WCA) |
-| **MH** | Magnetic heading (TH - Var) |
-| **GS** | Ground speed |
-| **WIND** | Wind direction/speed at altitude |
-| **CUM DIST** | Cumulative distance from departure |
-| **CUM TIME** | Cumulative time from departure |
-| **ETA** | Estimated time of arrival at waypoint |
+## Route Summary (Top of Page)
 
-**With Fuel Planning Enabled:**
-
-| Field | Description |
-|-------|-------------|
-| **BURN** | Fuel burned for this leg |
-| **CUM BURN** | Cumulative fuel burned |
-| **REM** | Fuel remaining |
-| **ENDUR** | Flight time possible with remaining fuel |
-
-## Route Summary
-
-At the top of the navlog, you'll see a summary:
+Before the waypoint list, you'll see a summary:
 
 ```
-ROUTE: KALB → KORD
-WAYPOINTS: 8
-TOTAL DISTANCE: 467.3 NM
-TOTAL TIME: 4:12
-TOTAL FUEL: 24.5 GAL (7.5 GAL REMAINING)
+ROUTE: KSFO → KLAS
+WAYPOINTS: 18
+TOTAL DISTANCE: 391.2 NM
+TOTAL TIME: 3:18
+TOTAL FUEL: 28.1 GAL BURNED (9.9 GAL REMAINING)
 ```
 
-**Summary Includes:**
-- Departure → Destination
-- Number of waypoints
-- Total distance
-- Total flight time (if wind enabled)
-- Fuel totals (if fuel enabled)
+**Quick sanity check:**
+- Does the distance match what you expected?
+- Do you have enough fuel (remaining > reserve)?
+- Does the time seem reasonable for your aircraft?
+
+If any of these look wrong, go back to ROUTE tab and check your settings.
+
+## Reading a Navlog Entry
+
+### Example: VFR Cross-Country Leg
+
+**Waypoint row:**
+```
+2  VPFYI           N37°30.12' W122°06.48'
+   FIX             VAR 13.8°W
+                   "Dumbarton Bridge visual checkpoint"
+```
+
+**Leg row:**
+```
+HDG(M) 127°  |  DIST 18.3 NM  |  ETE 11 MIN
+```
+
+**Translation:**
+- Waypoint #2 is VPFYI (Dumbarton Bridge visual checkpoint)
+- Located at 37°30.12'N, 122°06.48'W
+- Magnetic variation is 13.8° West
+- Fly magnetic heading 127° for 18.3 nautical miles
+- Should take about 11 minutes (at your planned TAS)
+
+### Example: IFR Leg with Winds
+
+**Waypoint row:**
+```
+5  BSR            N36°18.54' W121°52.68'
+   VOR 114.8      ELEV 2090 FT | VAR 12.9°W
+```
+
+**Leg row:**
+```
+TC 141°  WCA +5°  TH 146°  MH 133°  |  GS 125 KT  |  WIND 280/25
+DIST 97.4 NM  |  ETE 0:47  |  CUM 109.6 NM / 0:53  |  ETA 15:47Z
+FUEL: 6.7 GAL (9.9 CUM, 28.1 REM, 3:18 ENDUR)
+```
+
+**Translation:**
+- Waypoint #5 is Big Sur VOR on 114.8 MHz
+- You want to track 141° true course over the ground
+- Wind is from 280° at 25 knots, requiring +5° right crab
+- Fly true heading 146° (141° + 5°)
+- Apply magnetic variation: fly magnetic heading 133°
+- Ground speed will be 125 knots
+- Distance is 97.4 NM, taking 47 minutes
+- Cumulative: 109.6 NM and 53 minutes from departure
+- ETA at BSR: 15:47 Zulu
+- This leg burns 6.7 gallons
+- Total burned so far: 9.9 gallons
+- Fuel remaining: 28.1 gallons
+- Endurance: 3 hours 18 minutes on remaining fuel
+
+**What to pay attention to:**
+- MH (133°) is what you dial into your heading indicator
+- GS (125 kt) for E6B calculations or ETA updates
+- Fuel remaining (28.1 gal) to ensure you're above reserve
+
+## Understanding Wind Correction
+
+### The WCA (Wind Correction Angle)
+
+**Positive WCA** means crab right:
+```
+TC 090°  WCA +8°  TH 098°
+```
+Wind is from the left, crab 8° right to track 090°.
+
+**Negative WCA** means crab left:
+```
+TC 270°  WCA -6°  TH 264°
+```
+Wind is from the right, crab 6° left to track 270°.
+
+**Zero WCA** means direct headwind or tailwind:
+```
+TC 180°  WCA 0°  TH 180°
+```
+Wind is aligned with course, no crab needed.
+
+### The Four Headings
+
+InFlight shows all four headings for educational purposes, but **you only fly one**:
+
+1. **TC (True Course)**: Ground track you want to maintain
+2. **TH (True Heading)**: Where to point the aircraft (TC + WCA)
+3. **MH (Magnetic Heading)**: TH corrected for magnetic variation
+4. **Compass Heading**: MH corrected for deviation (not shown—do this yourself)
+
+**For flight:** Use MH (magnetic heading). That's what your heading indicator shows.
+
+### Ground Speed Math
+
+Wind affects your ground speed:
+
+**Tailwind scenario:**
+- TAS: 120 knots
+- Wind: 20 knot tailwind
+- GS: ~140 knots (faster!)
+
+**Headwind scenario:**
+- TAS: 120 knots
+- Wind: 20 knot headwind
+- GS: ~100 knots (slower)
+
+**Crosswind scenario:**
+- TAS: 120 knots
+- Wind: 20 knot direct crosswind
+- GS: ~120 knots (minimal effect, but you'll crab)
+
+InFlight calculates the exact GS using vector math, not approximations.
+
+## Fuel Planning Explained
+
+### How InFlight Calculates Fuel
+
+For each leg:
+```
+Leg Fuel Burn = (ETE ÷ 60) × Burn Rate
+```
+
+Example:
+- ETE: 47 minutes
+- Burn rate: 8.5 GPH
+- Fuel burn: (47 ÷ 60) × 8.5 = **6.7 gallons**
+
+Cumulative:
+```
+Total Burned = Sum of all leg burns
+Fuel Remaining = Starting Fuel - Total Burned - Taxi Fuel
+Endurance = (Remaining ÷ Burn Rate) × 60
+```
+
+### Fuel Status Indicators
+
+**Green (OK):**
+```
+FUEL: 3.2 GAL (12.5 CUM, 19.5 REM, 2:18 ENDUR)
+```
+Remaining fuel is above reserve requirement. Good to go.
+
+**Yellow (Caution):**
+```
+FUEL: 5.1 GAL (25.8 CUM, 5.2 REM, 0:37 ENDUR)
+```
+Cutting it close. Check your math and consider fuel stop.
+
+**Red (Insufficient):**
+```
+⚠️ INSUFFICIENT FUEL - RESERVE VIOLATED
+```
+You won't make it with required reserves. Options:
+1. Add fuel stop
+2. Reduce weight/distance
+3. Increase fuel capacity (wrong aircraft?)
+4. Check your burn rate (too high?)
+
+### Reserve Fuel Rules
+
+InFlight enforces FAA minimums:
+
+**VFR Day (FAR 91.151):**
+- 30 minutes reserve at cruise burn rate
+- Example: 8.5 GPH × 0.5 hr = **4.25 gal reserve**
+
+**VFR Night / IFR (FAR 91.167):**
+- 45 minutes reserve at cruise burn rate
+- Example: 8.5 GPH × 0.75 hr = **6.375 gal reserve**
+
+**Your fuel remaining at destination must exceed this.** Otherwise InFlight flags it red.
 
 ## Interactive Features
 
 ### Clickable Airport Links
 
-Airport waypoint codes are **clickable links** that open detailed airport information on AirNav.com.
+Any **cyan airport code** is a clickable link to AirNav.com.
 
-**To use:**
-1. Click any cyan (airport) waypoint code
-2. Opens in new tab: `https://www.airnav.com/airport/KALB`
+**Why this is useful:**
+- Check current METAR/TAF
+- Review airport diagram
+- Find FBO for fuel
+- Get runway information
+- Look up frequencies (if navlog is unclear)
 
-**AirNav provides:**
-- Current charts and diagrams
-- METAR/TAF weather
-- FBO information
-- Fuel prices
-- Runway details
-- Frequencies and procedures
+**Example:**
+Click `KSFO` → Opens `https://www.airnav.com/airport/KSFO` in new tab
 
-> 💡 **Tip**: Links open in new tab so you don't lose your navlog
+You don't lose your navlog—it opens in a new tab.
 
-### Wind Altitude Table
+### Winds Aloft Table
 
-When wind correction is enabled, a wind summary table appears above the navlog:
+When wind correction is enabled, you'll see a wind summary above the navlog:
 
 ```
-FORECAST: 6-HOUR | ALTITUDE: 5500 FT
+FORECAST: 6-HOUR | ALTITUDE: 9500 FT
 
 Waypoint    Wind Dir    Wind Speed    Temperature
-KALB        270°        12 KT         -2°C
-PAYGE       265°        15 KT         -3°C
-FNT         260°        18 KT         -4°C
-...
+KSFO        280°        15 KT         4°C
+BSR         285°        25 KT         -2°C
+DRK         290°        30 KT         -8°C
+KLAS        295°        20 KT         -5°C
 ```
 
-Shows winds aloft at each waypoint at your cruise altitude.
+**What this tells you:**
+- Wind is generally from 280-295° (westerly)
+- Wind strengthens mid-route (25-30 kt at BSR/DRK)
+- Temperature drops with altitude (standard atmosphere)
+
+**Cross-check:** Compare this with your weather briefing. If winds aloft forecast changed, recalculate the route.
+
+## Multi-Altitude Wind Interpolation
+
+**Advanced feature:** InFlight interpolates winds if you're climbing or descending.
+
+**Example scenario:**
+- Depart KSFO at 3,000 ft
+- Climb to 9,500 ft over 50nm
+- Cruise at 9,500 ft
+- Descend to pattern altitude at KLAS
+
+**How InFlight handles this:**
+1. Looks up wind at 3,000 ft (departure altitude)
+2. Looks up wind at 9,500 ft (cruise altitude)
+3. **Blends the two** for climb segments (weighted average by altitude)
+4. Uses 9,500 ft wind for cruise legs
+5. Blends 9,500 ft and pattern altitude for descent
+
+**Why this matters:**
+- More accurate ground speeds during climb/descent
+- Better fuel burn estimates
+- More realistic ETAs
+
+**To use this feature:**
+Enter winds manually at multiple altitudes in the ROUTE tab. InFlight automatically interpolates.
 
 ## Export & Import
 
-### Export Navlog
-
-Save your navigation log as a JSON file for later use or sharing.
-
-**To export:**
-1. Click **EXPORT** button
-2. File downloads: `navlog_KALB_KORD_20251115.json`
-3. Contains complete route data, options, and calculations
+### Export Your Navlog
 
 **Use cases:**
-- Backup flight plans
-- Share with other pilots
-- Reference for future flights
-- Flight planning records
+- Backup before flight
+- Share with copilot / flight instructor
+- Keep records for logbook
+- Compare planned vs. actual performance later
 
-### Import Navlog
+**To export:**
+1. Click **EXPORT** button at top of NAVLOG tab
+2. File downloads: `navlog_KSFO_KLAS_20251115.json`
+3. Save to cloud / email to yourself
 
-Load a previously exported navigation log.
+**What's included:**
+- Full route (all waypoints)
+- All calculations (headings, distances, fuel, time)
+- Wind data (snapshot from when you calculated)
+- Aircraft settings (TAS, burn rate, etc.)
+
+### Import a Saved Navlog
+
+**Use cases:**
+- Re-fly a common route
+- Load a backup from earlier
+- Review a flight plan you made last week
 
 **To import:**
 1. Click **IMPORT** button
 2. Select `.json` navlog file
-3. Route automatically loads and displays
+3. Route loads instantly with all calculations
 
-**What gets restored:**
-- Full route (departure, route, destination)
-- All calculation results
-- Wind data (if it was included)
-- Fuel calculations (if they were included)
+**Important:** Wind data is historical (from when you exported). If you're flying days later, recalculate with current winds.
 
-> ⚠️ **Note**: Wind data is historical from when navlog was created, not current conditions.
+## Using This In-Flight
 
-## Reading the Navlog
+### Pre-Flight Review
 
-### Example Waypoint Row
+Before you depart:
 
-```
-1  KALB            N42°44.82' W073°48.18'
-   AIRPORT         ELEV 285 FT | VAR 14.2°W
-                   RWY 01/19 7200FT ASPHALT, 10/28 5000FT ASPHALT
-                   TWR 120.100 GND 121.900 ATIS 135.000
-```
+1. ✅ **Scan entire navlog** - Any waypoints look weird?
+2. ✅ **Check total distance** - Match what you expected?
+3. ✅ **Verify fuel** - Remaining > reserve?
+4. ✅ **Note departure frequency** - Tower/Ground at first airport
+5. ✅ **Note arrival frequency** - ATIS/Tower at destination
+6. ✅ **First heading** - What MH to fly after takeoff?
+7. ✅ **Export backup** - Save as JSON in case iPad dies
 
-**Interpretation:**
-- Waypoint #1
-- Albany International Airport
-- Position: 42°44.82'N, 073°48.18'W
-- Elevation: 285 feet MSL
-- Magnetic variation: 14.2° West
-- Two runways: 01/19 (7200 ft) and 10/28 (5000 ft), both asphalt
-- Tower: 120.100, Ground: 121.900, ATIS: 135.000
+### In-Flight Use
 
-### Example Leg Row (Simple)
+**For each leg:**
 
-```
-HDG(M) 268°  |  DIST 45.2 NM  |  ETE 23 MIN
-```
+1. **Reference MH (Magnetic Heading)** - Dial this into heading indicator
+2. **Monitor ETE vs. actual time** - Am I faster/slower than planned?
+3. **Check fuel remaining** - Compare planned vs. fuel gauge
+4. **Use MAP tab** - Real-time GPS shows position on route
+5. **Update ETAs** - If GS is different, recalculate arrival time
 
-**Interpretation:**
-- Fly magnetic heading 268°
-- Distance to next waypoint: 45.2 NM
-- Estimated time enroute: 23 minutes
+**If you're behind schedule:**
+- Note actual GS (from GPS or calculation)
+- Adjust remaining ETAs mentally: `(Remaining NM ÷ Actual GS) × 60`
 
-### Example Leg Row (With Wind)
+**If fuel burn is higher:**
+- Check mixture (too rich?)
+- Check power setting (climbing?)
+- Consider fuel stop if trend continues
 
-```
-TC 272°  WCA +4°  TH 276°  MH 268°  |  GS 118 KT  |  WIND 310/15
-DIST 45.2 NM  |  ETE 23 MIN  |  CUM 45.2 NM / 0:23  |  ETA 14:23Z
-```
+### Post-Flight Analysis
 
-**Interpretation:**
-- True course (ground track): 272°
-- Wind correction angle: +4° (crab right)
-- True heading: 276° (TC + WCA)
-- Magnetic heading: 268° (TH - variation)
-- Ground speed: 118 knots
-- Wind: from 310° at 15 knots
-- Distance: 45.2 NM
-- ETE: 23 minutes
-- Cumulative: 45.2 NM, 23 minutes from departure
-- ETA: 14:23 Zulu time
+After landing:
 
-### Example Leg Row (With Fuel)
+1. **Export GPS track** (DATA tab) for actual path flown
+2. **Compare planned vs. actual times** - Were winds accurate?
+3. **Compare planned vs. actual fuel** - Is your burn rate correct?
+4. **Note discrepancies** - Update aircraft settings for next flight
 
-```
-TC 272°  WCA +4°  TH 276°  MH 268°  |  GS 118 KT
-DIST 45.2 NM  |  ETE 23 MIN  |  FUEL: 3.8 GAL (27.8 CUM, 3.2 REM, 0:19 ENDUR)
-```
+This makes future planning more accurate.
 
-**Interpretation:**
-- (Same navigation data as above)
-- Fuel burn: 3.8 gallons for this leg
-- Cumulative: 27.8 gallons burned so far
-- Remaining: 3.2 gallons (⚠️ LOW!)
-- Endurance: 19 minutes of flight time remaining
+## Common Issues
 
-> ⚠️ **Fuel Warning**: The navlog will highlight low fuel situations
+### "Navlog is empty"
 
-## Understanding Wind Corrections
+**Cause:** Route hasn't been calculated yet.
 
-### Wind Correction Angle (WCA)
+**Fix:** Go to ROUTE tab, enter route, click COMPUTE.
 
-The WCA is the number of degrees to crab into the wind.
+### "No wind data showing"
 
-**Positive WCA**: Crab right (wind from left)
-```
-WCA +8°  means fly 8° right of course
-```
+**Cause:** Wind correction not enabled, or internet unavailable.
 
-**Negative WCA**: Crab left (wind from right)
-```
-WCA -6°  means fly 6° left of course
-```
-
-**Zero WCA**: Wind is aligned with course
-```
-WCA 0°   means direct headwind or tailwind
-```
-
-### Heading vs. Course
-
-**True Course (TC)**:
-- Your desired ground track
-- Where you want to go
-
-**True Heading (TH)**:
-- Where you point the airplane
-- TC + WCA
-
-**Magnetic Heading (MH)**:
-- What you fly using magnetic compass
-- TH - Magnetic Variation
-- **This is the number you use!**
-
-### Ground Speed Calculation
-
-Ground speed is affected by headwind/tailwind component:
-
-**Tailwind**: GS > TAS
-```
-TAS 120 KT  +  Tailwind 15 KT  =  GS 135 KT
-```
-
-**Headwind**: GS < TAS
-```
-TAS 120 KT  -  Headwind 15 KT  =  GS 105 KT
-```
-
-**Crosswind**: GS ≈ TAS (minimal effect)
-
-## Fuel Planning Interpretation
-
-### Fuel Status
-
-The navlog tracks fuel burn and remaining fuel at each waypoint.
-
-**Green Zone** (Sufficient fuel):
-```
-FUEL: 3.2 GAL (18.5 CUM, 12.5 REM, 1:15 ENDUR)
-```
-- More than reserve requirement
-- Safe to continue
-
-**Yellow Zone** (Approaching reserve):
-```
-FUEL: 4.1 GAL (26.8 CUM, 4.2 REM, 0:25 ENDUR)
-```
-- Within 1-2 hours of reserve
-- Monitor closely
-
-**Red Zone** (Below reserve):
-```
-⚠️ INSUFFICIENT FUEL - RESERVE VIOLATED
-```
-- Not enough fuel for this route
-- Must reduce distance, add fuel stop, or increase capacity
-
-### Reserve Requirements
-
-**VFR Day**: 30 minutes reserve
-**VFR Night / IFR**: 45 minutes reserve
-
-The navlog ensures you arrive at destination with required reserve, accounting for taxi fuel.
-
-### Fuel Calculation Formula
-
-```
-Takeoff Fuel = Usable Fuel - Taxi Fuel
-Total Burn = (Flight Time ÷ 60) × Burn Rate
-Remaining = Takeoff Fuel - Total Burn
-Required Reserve = (Reserve Time ÷ 60) × Burn Rate
-```
-
-## Using the Navlog In-Flight
-
-### Pre-Flight
-
-1. ✅ Review entire route
-2. ✅ Note airport frequencies
-3. ✅ Check fuel requirements
-4. ✅ Verify headings and distances
-5. ✅ Export for backup
-
-### In-Flight
-
-1. Follow leg-by-leg headings (MH column)
-2. Monitor ETE vs. actual time
-3. Check fuel remaining at each waypoint
-4. Use MAP tab for real-time navigation
-5. Reference frequencies for ATC communication
-
-### Post-Flight
-
-1. Compare planned vs. actual times
-2. Check fuel burn accuracy
-3. Export track from DATA tab
-4. Review for future planning improvements
-
-## Printing & Sharing
-
-### Printing the Navlog
-
-**Browser Print:**
-1. Use browser's Print function (Ctrl+P / Cmd+P)
-2. Select "Print to PDF" to save
-3. Adjust page layout for best fit
-
-**Mobile:**
-- Export as JSON instead
-- View on larger screen for printing
-
-### Sharing with Crew
-
-**Export Method:**
-1. Export navlog as JSON
-2. Share file via email/cloud
-3. Recipient imports in their InFlight
-
-**Manual Method:**
-- Screenshot or photo of screen
-- Copy route string from ROUTE tab
-
-## Troubleshooting
-
-### Navlog Not Displaying
-
-**Problem**: NAVLOG tab is empty
-
-**Solutions:**
-1. Return to ROUTE tab
-2. Click CALCULATE button
-3. Ensure database is loaded
-4. Check for route errors
-
-### Wind Data Missing
-
-**Problem**: No WCA or GS columns
-
-**Solutions:**
-1. Wind correction not enabled in ROUTE tab
-2. Internet required for wind data
+**Fix:**
+1. Go to ROUTE tab, enable "Wind Correction & Time"
+2. Check internet connection
 3. Try different forecast period
-4. NOAA service may be unavailable
+4. Or manually enter winds (see below)
 
-### Fuel Shows "N/A"
+### "Fuel shows N/A"
 
-**Problem**: Fuel columns empty
+**Cause:** Fuel planning not enabled, or wind correction disabled.
 
-**Solutions:**
-1. Fuel planning not enabled
-2. Wind correction required first (for time calculations)
-3. Check fuel settings in ROUTE tab
+**Fix:**
+1. Wind correction must be enabled first (fuel needs time estimates)
+2. Go to ROUTE tab, enable "Fuel Planning"
+3. Enter fuel capacity, burn rate, reserve
+4. Click COMPUTE again
 
-### Airport Links Not Working
+### "Airport link doesn't work"
 
-**Problem**: Can't click airport codes
+**Cause:** Only airports are clickable (cyan). Navaids/fixes aren't linked.
 
-**Solutions:**
-1. Only airport waypoints are clickable (cyan)
-2. Check internet connection for AirNav
-3. Try right-click → Open in new tab
+**Fix:** If you need navaid info, search it manually on SkyVector or your charts.
 
-## Best Practices
+## Manual Wind Entry (No Internet)
 
-1. **Review before filing** - Check all headings and distances
-2. **Cross-reference charts** - Verify procedures and airways
-3. **Check NOTAMs** - InFlight doesn't include NOTAMs or TFRs
-4. **Update winds** - Recalculate closer to departure for current winds
-5. **Export backup** - Save navlog before flight
-6. **Monitor fuel closely** - Actual burn may differ from plan
-7. **Use MAP tab** - Moving map provides real-time guidance
+If you're offline or NOAA winds are unavailable, you can manually enter winds:
 
-## Next Steps
+**Method 1: Single altitude (simple)**
+1. Note wind from weather briefing (e.g., "290° at 25 knots at 9,500 ft")
+2. InFlight uses this for all legs at that altitude
 
-- **[View on Map](tab-map.md)** - See your route visualized with GPS tracking
-- **[Flight Statistics](tab-stats.md)** - Monitor fuel and flight time
+**Method 2: Multiple altitudes (better)**
+1. Enter winds at 3,000 / 6,000 / 9,000 / 12,000 ft
+2. InFlight interpolates for climb/descent legs
+3. More accurate fuel/time estimates
+
+**Where to enter:** In the ROUTE tab wind section, there's a manual entry option.
+
+## Printing the Navlog
+
+**For VFR cross-country:**
+
+1. Use browser print (Ctrl+P / Cmd+P)
+2. Select landscape orientation
+3. Print to PDF or physical printer
+4. Bring printout as backup to iPad
+
+**For IFR flight:**
+
+Most pilots use iPad, but having a paper backup is smart:
+
+1. Print navlog
+2. Highlight key frequencies
+3. Note any special procedures
+4. Fold and keep in kneeboard pocket
+
+## Tips for Professional Use
+
+**Cross-check with other tools:**
+- Compare distances with ForeFlight / Garmin Pilot
+- Verify fuel with POH performance charts
+- Check headings with manual E6B (good practice)
+
+**Update before departure:**
+- Winds aloft change—recalculate if >2 hours before flight
+- NOTAMs may affect routing (InFlight doesn't include NOTAMs)
+- TFRs may require rerouting
+
+**Monitor in-flight:**
+- Actual winds often differ from forecast
+- Update mental ETAs based on actual GS
+- If significantly off, consider diversion or fuel stop
+
+**Keep records:**
+- Export navlog before flight (flight plan record)
+- Export GPS track after flight (logbook evidence)
+- Compare planned vs. actual for future planning
+
+## What's Next?
+
+Now that you've reviewed your navlog, it's time to see it visually and track your flight:
+
+- **[MAP Tab](tab-map)** - GPS moving map, waypoint advancement, diversions
+- **[DATA Tab](tab-data)** - Export flight tracks, manage database
+- **[STATS Tab](tab-stats)** - Real-time fuel and flight time monitoring
 
 ---
 
-**Navlog ready?** Head to the [MAP](tab-map.md) tab to track your flight!
+**Navlog looks good?** Head to [MAP tab](tab-map) to see the route on a moving map!
