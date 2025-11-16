@@ -24,37 +24,44 @@ jobs:
         ls -la docs/
 
         echo "Checking for required files..."
-        test -f docs/index.html || (echo "Missing docs/index.html" && exit 1)
+        test -f docs/index.md || (echo "Missing docs/index.md" && exit 1)
         test -f docs/README.md || (echo "Missing docs/README.md" && exit 1)
-        test -f docs/_sidebar.md || (echo "Missing docs/_sidebar.md" && exit 1)
-        test -f docs/_headers || (echo "Missing docs/_headers" && exit 1)
+        test -f docs/.vitepress/config.mts || (echo "Missing docs/.vitepress/config.mts" && exit 1)
 
         echo "Checking user guide..."
         test -d docs/user-guide || (echo "Missing docs/user-guide/" && exit 1)
+        test -f docs/user-guide/index.md || (echo "Missing docs/user-guide/index.md" && exit 1)
 
         echo "Checking developer guide..."
         test -d docs/developer || (echo "Missing docs/developer/" && exit 1)
 
         echo "✅ All required documentation files present!"
 
-    - name: Validate markdown links
+    - name: Validate VitePress structure
       run: |
-        echo "Checking for broken internal links in sidebar..."
+        echo "Checking VitePress configuration..."
 
-        # Extract markdown links from _sidebar.md
-        grep -o '\[.*\]([^)]*\.md)' docs/_sidebar.md || true
+        # Verify VitePress config exists
+        test -f docs/.vitepress/config.mts || (echo "Missing VitePress config" && exit 1)
 
-        echo "✅ Sidebar structure validated!"
+        # Check for theme files
+        test -d docs/.vitepress/theme || (echo "Missing VitePress theme directory" && exit 1)
 
-    - name: Test Docsify configuration
+        echo "✅ VitePress structure validated!"
+
+    - name: Test VitePress build
       run: |
-        echo "Checking index.html configuration..."
+        echo "Installing dependencies..."
+        npm ci
 
-        # Verify Docsify is configured
-        grep -q "window.\$docsify" docs/index.html || (echo "Missing Docsify configuration" && exit 1)
-        grep -q "loadSidebar" docs/index.html || (echo "Missing loadSidebar configuration" && exit 1)
+        echo "Building documentation..."
+        npm run docs:build
 
-        echo "✅ Docsify configuration valid!"
+        echo "Checking build output..."
+        test -d docs/.vitepress/dist || (echo "Build output missing" && exit 1)
+        test -f docs/.vitepress/dist/index.html || (echo "Missing index.html in build" && exit 1)
+
+        echo "✅ VitePress build successful!"
 
     - name: Summary
       run: |
