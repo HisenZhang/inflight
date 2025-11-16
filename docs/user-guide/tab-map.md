@@ -482,8 +482,6 @@ Roadmap: Add pan and pinch in future update
 ## Next Steps
 
 - **[Track Flight](tab-stats.md)** - Monitor fuel, time, and recording
-- **[GPS Tracking Guide](features/gps-tracking.md)** - Advanced GPS features
-- **[Export Track](features/flight-recording.md)** - Save your flight as GPX
 
 ---
 

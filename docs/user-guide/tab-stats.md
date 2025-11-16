@@ -489,9 +489,7 @@ GPX export for use in other applications.
 
 ## Next Steps
 
-- **[Flight Recording Guide](features/flight-recording.md)** - Advanced track features
 - **[Data Management](tab-data.md)** - Managing saved tracks
-- **[GPS Tracking](features/gps-tracking.md)** - Understanding GPS data
 
 ---
 

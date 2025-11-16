@@ -135,7 +135,7 @@ Root directory: (empty)
 
 **Created:**
 - `docs/README.md` - Documentation homepage with overview
-- `docs/CONTRIBUTING.md` - Comprehensive contributor guide
+- `CONTRIBUTING.md` - Comprehensive contributor guide
 - `DEPLOYMENT.md` - Quick deployment guide for root
 - `DOCS_CONSOLIDATION_SUMMARY.md` - This file
 
@@ -181,7 +181,7 @@ Root directory: (empty)
 Live URL: `https://inflight-docs.pages.dev`
 
 ### Full Documentation
-See `DEPLOYMENT.md` or `docs/developer/CLOUDFLARE_DEPLOYMENT.md`
+See `DEPLOYMENT.md` or `developer/CLOUDFLARE_DEPLOYMENT.md`
 
 ## Key Features
 
@@ -246,7 +246,7 @@ See `DEPLOYMENT.md` or `docs/developer/CLOUDFLARE_DEPLOYMENT.md`
 
 ### New Files Created
 - `docs/README.md` - Documentation homepage
-- `docs/CONTRIBUTING.md` - Contributor guide
+- `CONTRIBUTING.md` - Contributor guide
 - `DEPLOYMENT.md` - Quick deployment guide
 - `DOCS_CONSOLIDATION_SUMMARY.md` - This summary
 - `wrangler.toml` - Cloudflare config
@@ -330,8 +330,8 @@ Tested and working on:
 ## Support
 
 - **Documentation Issues:** GitHub Issues
-- **Deployment Help:** See `docs/developer/CLOUDFLARE_DEPLOYMENT.md`
-- **Contributing:** See `docs/CONTRIBUTING.md`
+- **Deployment Help:** See `developer/CLOUDFLARE_DEPLOYMENT.md`
+- **Contributing:** See `CONTRIBUTING.md`
 - **Cloudflare Support:** https://community.cloudflare.com/
 
 ## Success Metrics

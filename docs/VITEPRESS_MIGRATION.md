@@ -111,7 +111,7 @@ npm install
 npm run docs:dev
 ```
 
-Opens at: http://localhost:5173
+Opens at: the local dev server
 
 **Features:**
 - Hot module replacement (HMR)

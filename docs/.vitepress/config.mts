@@ -8,9 +8,6 @@ export default defineConfig({
   // Base URL for deployment
   base: '/',
 
-  // Ignore dead links (old Docsify files and features that don't exist yet)
-  ignoreDeadLinks: true,
-
   // Theme configuration
   themeConfig: {
     // Site title and logo
@@ -34,8 +31,7 @@ export default defineConfig({
           text: 'Getting Started',
           collapsed: false,
           items: [
-            { text: 'Quick Start', link: '/user-guide/quick-start' },
-            { text: 'Quick Reference', link: '/user-guide/QUICK_REFERENCE' }
+            { text: 'Quick Start', link: '/user-guide/quick-start' }
           ]
         },
         {
@@ -76,9 +72,7 @@ export default defineConfig({
           collapsed: true,
           items: [
             { text: 'ARTCC Waypoints Guide', link: '/developer/reference/ARTCC_WAYPOINTS_GUIDE' },
-            { text: 'Implementation Summary', link: '/developer/reference/IMPLEMENTATION_SUMMARY' },
-            { text: 'Refactoring Summary', link: '/developer/reference/REFACTORING_SUMMARY' },
-            { text: 'Testing Summary', link: '/developer/reference/AUTOMATED_TESTING_SUMMARY' }
+            { text: 'Implementation Summary', link: '/developer/reference/IMPLEMENTATION_SUMMARY' }
           ]
         },
         {

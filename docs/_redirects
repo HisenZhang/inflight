@@ -1,7 +1,0 @@
-# Cloudflare Pages Redirects Configuration
-
-# Redirect /user-guide URLs to properly formatted paths
-/user-guide/* /user-guide/:splat 200
-
-# SPA fallback - serve index.html for all routes (Docsify routing)
-/* /index.html 200

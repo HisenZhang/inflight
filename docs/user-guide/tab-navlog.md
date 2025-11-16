@@ -426,8 +426,6 @@ Required Reserve = (Reserve Time ÷ 60) × Burn Rate
 
 - **[View on Map](tab-map.md)** - See your route visualized with GPS tracking
 - **[Flight Statistics](tab-stats.md)** - Monitor fuel and flight time
-- **[Wind Correction Details](features/wind-correction.md)** - Deep dive into wind calculations
-- **[Fuel Planning Guide](features/fuel-planning.md)** - Understand fuel requirements
 
 ---
 

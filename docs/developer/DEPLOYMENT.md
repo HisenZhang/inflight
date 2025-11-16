@@ -316,7 +316,7 @@ Cloudflare Pages **Free Tier** includes:
 
 ## Support & Resources
 
-- **Full deployment guide**: See [docs/developer/CLOUDFLARE_DEPLOYMENT.md](docs/developer/CLOUDFLARE_DEPLOYMENT.md)
+- **Full deployment guide**: See [developer/CLOUDFLARE_DEPLOYMENT.md](CLOUDFLARE_DEPLOYMENT)
 - **Cloudflare Docs**: https://developers.cloudflare.com/pages/
 - **Docsify Docs**: https://docsify.js.org/
 - **Community Support**: https://community.cloudflare.com/
@@ -332,7 +332,7 @@ Cloudflare Pages **Free Tier** includes:
 
 ## Contributing
 
-See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) for guidelines on:
+See [CONTRIBUTING.md](/CONTRIBUTING) for guidelines on:
 - Documentation structure
 - Writing style
 - Pull request process

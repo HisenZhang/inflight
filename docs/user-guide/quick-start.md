@@ -87,9 +87,6 @@ Record your flight for later analysis.
 ## What's Next?
 
 - **[Route Planning](tab-route.md)** - Learn advanced routing syntax
-- **[Wind Correction](features/wind-correction.md)** - Understand wind calculations
-- **[GPS Tracking](features/gps-tracking.md)** - Master the moving map
-- **[Fuel Planning](features/fuel-planning.md)** - Plan your fuel requirements
 
 ---
 

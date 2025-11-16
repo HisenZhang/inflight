@@ -66,7 +66,6 @@ Be aware of these limitations:
 
 - Check the relevant tab guide for detailed instructions
 - Review [Troubleshooting](troubleshooting.md) for common issues
-- See [Features](features/) for in-depth feature documentation
 
 ---
 

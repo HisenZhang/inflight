@@ -375,8 +375,6 @@ After calculating your route:
 
 - **[Review Navlog](tab-navlog.md)** - Check the flight plan details
 - **[View Map](tab-map.md)** - See your route visualized
-- **[Wind Correction Guide](features/wind-correction.md)** - Understand wind calculations
-- **[Route Syntax Reference](features/route-syntax.md)** - Advanced syntax examples
 
 ---
 

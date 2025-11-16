@@ -191,8 +191,6 @@ Once the database is loaded, InFlight works offline for:
 ## Next Steps
 
 - **[Enter your route](tab-route.md)** - Plan your first flight
-- **[Understanding waypoints](features/waypoint-types.md)** - Learn about different waypoint types
-- **[Flight recording](features/flight-recording.md)** - Configure automatic track recording
 
 ---
 

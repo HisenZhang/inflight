@@ -44,7 +44,7 @@ docs/
 ### NPM Scripts
 
 ```bash
-npm run docs:dev      # Start dev server (http://localhost:5173)
+npm run docs:dev      # Start dev server (the local dev server)
 npm run docs:build    # Build for production
 npm run docs:preview  # Preview production build
 ```
@@ -239,7 +239,7 @@ npm run docs:dev
 
 ```bash
 # Development
-npm run docs:dev        # http://localhost:5173
+npm run docs:dev        # the local dev server
 
 # Build
 npm run docs:build      # Output: docs/.vitepress/dist/
@@ -257,7 +257,7 @@ npm test               # Run tests
 - **VitePress Docs:** https://vitepress.dev/
 - **Project Docs:** `docs/developer/DEPLOYMENT.md`
 - **Migration Guide:** `docs/VITEPRESS_MIGRATION.md`
-- **Contributing:** `docs/CONTRIBUTING.md`
+- **Contributing:** `CONTRIBUTING.md`
 
 ---
 

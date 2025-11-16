@@ -479,5 +479,5 @@ The architecture supports adding:
 
 - [Route Syntax Reference](./ROUTE_SYNTAX.md)
 - [EBNF Grammar](./ROUTE_GRAMMAR.md)
-- [Source Code](../compute/)
-- [Tests](../tests/test-route-parser.js)
+-  Source Code: `compute/` directory
+-  Tests: `tests/test-route-parser.js`

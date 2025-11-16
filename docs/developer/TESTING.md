@@ -130,7 +130,6 @@ tests/
 ├── test-runner-simple.js     # Simple Node.js runner (default)
 ├── test-runner.js            # JSDOM Node.js runner (advanced)
 ├── index.html                # Browser test runner
-└── README.md                 # Comprehensive test documentation
 ```
 
 ## Continuous Integration
@@ -168,7 +167,6 @@ git commit -m "Your commit message"
 
 ## Writing Tests
 
-See [tests/README.md](tests/README.md) for comprehensive guide on:
 - Writing new test suites
 - Available assertions
 - Async testing
@@ -281,9 +279,6 @@ npm test 2>&1 | cat
 
 ## Resources
 
-- [Test Framework Documentation](tests/README.md)
-- [Architecture Documentation](docs/ARCHITECTURE.md)
-- [Main README](README.md)
 
 ## Support
 
