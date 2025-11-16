@@ -5,18 +5,18 @@ Welcome to the InFlight documentation! InFlight is a lightweight, offline-first 
 ## Quick Links
 
 ### For Users
-- [Quick Start Guide](user-guide/quick-start.md) - Get started with InFlight in minutes
-- [User Guide](user-guide/README.md) - Complete guide to all features
-- [FAQ](user-guide/faq.md) - Frequently asked questions
-- [Troubleshooting](user-guide/troubleshooting.md) - Common issues and solutions
+- [Quick Start Guide](user-guide/quick-start) - Get started with InFlight in minutes
+- [User Guide](user-guide/README) - Complete guide to all features
+- [FAQ](user-guide/faq) - Frequently asked questions
+- [Troubleshooting](user-guide/troubleshooting) - Common issues and solutions
 
 ### For Developers
-- [Architecture Overview](developer/ARCHITECTURE.md) - System design and structure
-- [Setup Guide](developer/SETUP.md) - Development environment setup
-- [Route Parser](developer/PARSER_ARCHITECTURE.md) - Route parsing internals
-- [Route Grammar](developer/ROUTE_GRAMMAR.md) - Complete route syntax specification
-- [Route Syntax Reference](developer/ROUTE_SYNTAX.md) - Quick syntax reference
-- [Deployment Guide](developer/CLOUDFLARE_DEPLOYMENT.md) - Deploy to Cloudflare Pages
+- [Architecture Overview](developer/ARCHITECTURE) - System design and structure
+- [Setup Guide](developer/SETUP) - Development environment setup
+- [Route Parser](developer/PARSER_ARCHITECTURE) - Route parsing internals
+- [Route Grammar](developer/ROUTE_GRAMMAR) - Complete route syntax specification
+- [Route Syntax Reference](developer/ROUTE_SYNTAX) - Quick syntax reference
+- [Deployment Guide](developer/CLOUDFLARE_DEPLOYMENT) - Deploy to Cloudflare Pages
 
 ## What is InFlight?
 
