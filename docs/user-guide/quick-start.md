@@ -2,9 +2,9 @@
 
 This guide assumes you're a pilot who knows what a navlog is and has filed flight plans before. If you just want to see how InFlight works, follow along with the example route below.
 
-## Example Flight: San Francisco to Las Vegas (IFR)
+## Example Flight: New York to Columbus (IFR)
 
-We'll plan **KSFO → KLAS** with the OFFSHORE TWO departure and KEPEC THREE arrival.
+We'll plan **KJFK → KCMH** with the RBV transition and CLIPPER THREE arrival.
 
 ### Step 0: Install as Web App (Optional but Recommended)
 
@@ -44,19 +44,19 @@ Click [**ROUTE**](tab-route) tab and enter:
 
 **Filed Route:**
 ```text
-KSFO JCOBY4 BSR J501 DRK WYNDE3 KLAS
+KJFK RBV Q430 AIR CLPRR3 KCMH
 ```
 
 **What this means:**
-- Depart KALB departure
-- Proceed to BSR (Big Sur VOR)
-- Fly airway J501 to DRK (Drakesbad VOR)
-- Arrive KORD via WYNDE THREE arrival
+- Depart KJFK (JFK Airport)
+- Proceed to RBV (Robbinsville VOR)
+- Fly Q430 (RNAV route) to AIR (Bellaire VOR)
+- Arrive KCMH via CLIPPER THREE arrival
 
 **Enter it like this:**
-- **Departure:** `KSFO`
-- **Route:** `JCOBY4 BSR J501 DRK WYNDE3`
-- **Destination:** `KLAS`
+- **Departure:** `KJFK`
+- **Route:** `RBV Q430 AIR CLPRR3`
+- **Destination:** `KCMH`
 
 Hit **COMPUTE**.
 
