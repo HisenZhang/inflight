@@ -178,9 +178,10 @@ If you've ever been frustrated by flight planning websites that:
 
 ### For Developers
 
-- **[Architecture Overview](developer/ARCHITECTURE)** - How it's built
-- **[Route Parser Internals](developer/PARSER_ARCHITECTURE)** - Parse tree structure
-- **[Deployment Guide](developer/CLOUDFLARE_DEPLOYMENT)** - Host your own instance
+- **[Design Principles](developer/01-design-principles)** - Philosophy and goals
+- **[Architecture Overview](developer/02-architecture)** - How it's built
+- **[Route Processing](developer/04-route-processing)** - Parser internals
+- **[Testing & Deployment](developer/06-testing-deployment)** - Host your own instance
 - **[Contributing Guide](CONTRIBUTING)** - Submit improvements
 
 ## Technical Highlights

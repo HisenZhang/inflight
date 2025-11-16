@@ -93,7 +93,7 @@ Failed: 0
 ✓ All tests passed!
 ```
 
-**Browser Test Runner:** [tests/index.html](../../tests/index.html)
+**Browser Test Runner:**
 
 ```bash
 npm run test:browser

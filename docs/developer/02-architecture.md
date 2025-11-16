@@ -680,7 +680,7 @@ mapContent.setAttribute('transform', `translate(${newX}, ${newY})`);
 
 ## Testing Strategy
 
-See [TESTING.md](TESTING.md) for comprehensive testing documentation.
+See [Testing & Deployment](06-testing-deployment.md) for comprehensive testing documentation.
 
 **Test Coverage**:
 - `utils/formatters.js`: 100% ✅
