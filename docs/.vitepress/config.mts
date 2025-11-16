@@ -46,7 +46,6 @@ export default defineConfig({
             { text: 'MAP Tab', link: '/user-guide/tab-map' },
             { text: 'CHKLST Tab', link: '/user-guide/tab-chklst' },
             { text: 'STATS Tab', link: '/user-guide/tab-stats' },
-            { text: 'Keyboard Shortcuts', link: '/user-guide/keyboard-shortcuts' },
             { text: 'Troubleshooting', link: '/user-guide/troubleshooting' },
             { text: 'FAQ', link: '/user-guide/faq' }
           ]
@@ -55,24 +54,12 @@ export default defineConfig({
           text: 'Developer Guide',
           collapsed: false,
           items: [
-            { text: 'Architecture Overview', link: '/developer/ARCHITECTURE' },
-            { text: 'Development Setup', link: '/developer/SETUP' },
-            { text: 'Testing Guide', link: '/developer/TESTING' },
-            { text: 'Test Routes', link: '/developer/TEST_ROUTES' },
-            { text: 'Route Parser', link: '/developer/PARSER_ARCHITECTURE' },
-            { text: 'Route Grammar', link: '/developer/ROUTE_GRAMMAR' },
-            { text: 'Route Syntax', link: '/developer/ROUTE_SYNTAX' },
-            { text: 'Deployment Guide', link: '/developer/DEPLOYMENT' },
-            { text: 'Cloudflare Pages Setup', link: '/developer/CLOUDFLARE_DEPLOYMENT' },
-            { text: 'Consolidation Summary', link: '/developer/CONSOLIDATION_SUMMARY' }
-          ]
-        },
-        {
-          text: 'Developer Reference',
-          collapsed: true,
-          items: [
-            { text: 'ARTCC Waypoints Guide', link: '/developer/reference/ARTCC_WAYPOINTS_GUIDE' },
-            { text: 'Implementation Summary', link: '/developer/reference/IMPLEMENTATION_SUMMARY' }
+            { text: '1. Design Principles', link: '/developer/01-design-principles' },
+            { text: '2. Architecture', link: '/developer/02-architecture' },
+            { text: '3. Data Management', link: '/developer/03-data' },
+            { text: '4. Route Processing', link: '/developer/04-route-processing' },
+            { text: '5. Navlog, Map & UI', link: '/developer/05-navlog-map-ui' },
+            { text: '6. Testing & Deployment', link: '/developer/06-testing-deployment' }
           ]
         },
         {
