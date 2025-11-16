@@ -551,9 +551,13 @@ async function loadFromCache(onStatusUpdate) {
 function buildTokenTypeMap() {
     tokenTypeMap.clear();
 
-    // Index airports by ICAO code ONLY (NO IATA 3-letter codes to avoid confusion)
+    // Index airports by ICAO code and local identifiers
+    // ICAO codes are 4+ characters, local identifiers can be 3 characters (alphanumeric like 1B1)
     for (const [code, airport] of airportsData) {
-        if (code.length >= 4) {  // ICAO codes are 4+ characters
+        // Include all codes that are:
+        // - 4+ characters (ICAO codes)
+        // - 3 characters with numbers (local identifiers like 1B1, 2B2, not IATA codes)
+        if (code.length >= 4 || (code.length === 3 && /\d/.test(code))) {
             tokenTypeMap.set(code, 'AIRPORT');
         }
     }

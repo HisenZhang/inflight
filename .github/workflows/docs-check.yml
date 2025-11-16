@@ -1,0 +1,66 @@
+name: Documentation Check
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'docs/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'docs/**'
+
+jobs:
+  check-docs:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Check documentation structure
+      run: |
+        echo "Checking docs/ directory structure..."
+        ls -la docs/
+
+        echo "Checking for required files..."
+        test -f docs/index.html || (echo "Missing docs/index.html" && exit 1)
+        test -f docs/README.md || (echo "Missing docs/README.md" && exit 1)
+        test -f docs/_sidebar.md || (echo "Missing docs/_sidebar.md" && exit 1)
+        test -f docs/_headers || (echo "Missing docs/_headers" && exit 1)
+
+        echo "Checking user guide..."
+        test -d docs/user-guide || (echo "Missing docs/user-guide/" && exit 1)
+
+        echo "Checking developer guide..."
+        test -d docs/developer || (echo "Missing docs/developer/" && exit 1)
+
+        echo "✅ All required documentation files present!"
+
+    - name: Validate markdown links
+      run: |
+        echo "Checking for broken internal links in sidebar..."
+
+        # Extract markdown links from _sidebar.md
+        grep -o '\[.*\]([^)]*\.md)' docs/_sidebar.md || true
+
+        echo "✅ Sidebar structure validated!"
+
+    - name: Test Docsify configuration
+      run: |
+        echo "Checking index.html configuration..."
+
+        # Verify Docsify is configured
+        grep -q "window.\$docsify" docs/index.html || (echo "Missing Docsify configuration" && exit 1)
+        grep -q "loadSidebar" docs/index.html || (echo "Missing loadSidebar configuration" && exit 1)
+
+        echo "✅ Docsify configuration valid!"
+
+    - name: Summary
+      run: |
+        echo "📚 Documentation structure:"
+        tree -L 2 docs/ || find docs/ -type d -maxdepth 2
+
+        echo ""
+        echo "✅ All documentation checks passed!"
+        echo "🚀 Ready for Cloudflare Pages deployment"

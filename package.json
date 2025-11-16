@@ -6,7 +6,10 @@
   "scripts": {
     "test": "node tests/test-runner.js",
     "test:browser": "open tests/index.html",
-    "start": "open index.html"
+    "start": "open index.html",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
   },
   "keywords": [
     "flight-planning",
@@ -19,13 +22,24 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
-    "jsdom": "^16.7.0"
+    "jsdom": "^16.7.0",
+    "vitepress": "^1.0.0"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/inflight.git"
+    "url": "git+https://github.com/yourusername/inflight.git"
   },
   "engines": {
     "node": ">=8.3.0"
-  }
+  },
+  "directories": {
+    "doc": "docs",
+    "lib": "lib",
+    "test": "tests"
+  },
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/yourusername/inflight/issues"
+  },
+  "homepage": "https://github.com/yourusername/inflight#readme"
 }

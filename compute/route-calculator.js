@@ -57,8 +57,11 @@ function resolveWaypoints(routeString) {
             }
         }
 
-        // Priority: ICAO (4+ chars) → Navaid → Fix → IATA (3 chars)
-        if (code.length >= 4 && !latLonMatch) {
+        // Priority: Airports (ICAO 4+ chars OR local 3-char alphanumeric) → Navaid → Fix → IATA (3 alphabetic chars)
+        // Check for airports:
+        // - ICAO codes (4+ characters)
+        // - Local identifiers (3 characters with numbers, e.g., 1B1, 2B2)
+        if ((code.length >= 4 || (code.length === 3 && /\d/.test(code))) && !latLonMatch) {
             waypoint = DataManager.getAirport(code);
         }
 
@@ -70,7 +73,8 @@ function resolveWaypoints(routeString) {
             waypoint = DataManager.getFix(code);
         }
 
-        if (!waypoint && code.length === 3) {
+        // IATA codes are 3 alphabetic characters (e.g., BOS, LAX, not 1B1)
+        if (!waypoint && code.length === 3 && /^[A-Z]{3}$/.test(code)) {
             waypoint = DataManager.getAirportByIATA(code);
         }
 

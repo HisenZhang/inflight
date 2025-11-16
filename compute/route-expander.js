@@ -261,13 +261,14 @@ function expandProcedure(procedureName, previousFix = null, contextAirport = nul
         if (dp && dp.body && dp.body.fixes && dp.transitions) {
             const trans = dp.transitions.find(t => t.name === transitionName);
             if (trans) {
-                // Combine transition + body
-                const combined = [...trans.fixes];
-                const bodyStart = dp.body.fixes[0];
-                if (combined[combined.length - 1] === bodyStart) {
-                    combined.push(...dp.body.fixes.slice(1));
+                // DP: body + transition (departure flows outward from airport)
+                const combined = [...dp.body.fixes];
+                const bodyEnd = dp.body.fixes[dp.body.fixes.length - 1];
+                const transStart = trans.fixes[0];
+                if (bodyEnd === transStart) {
+                    combined.push(...trans.fixes.slice(1));
                 } else {
-                    combined.push(...dp.body.fixes);
+                    combined.push(...trans.fixes);
                 }
                 console.log(`[RouteExpander] Found DP ${procName} with transition ${transitionName}`);
                 return { expanded: true, fixes: combined, type: 'DP', name: procName, transition: transitionName };
@@ -278,10 +279,11 @@ function expandProcedure(procedureName, previousFix = null, contextAirport = nul
         if (star && star.body && star.body.fixes && star.transitions) {
             const trans = star.transitions.find(t => t.name === transitionName);
             if (trans) {
-                // Combine transition + body
+                // STAR: transition + body (arrival flows inward to airport)
                 const combined = [...trans.fixes];
+                const transEnd = trans.fixes[trans.fixes.length - 1];
                 const bodyStart = star.body.fixes[0];
-                if (combined[combined.length - 1] === bodyStart) {
+                if (transEnd === bodyStart) {
                     combined.push(...star.body.fixes.slice(1));
                 } else {
                     combined.push(...star.body.fixes);
@@ -433,14 +435,32 @@ function selectBestTransition(procedure, previousFix, nextFix) {
     if (nextFix) {
         for (const trans of procedure.transitions) {
             if (trans.name === nextFix) {
-                // Combine: transition fixes + body fixes (remove duplicate if present)
-                const combined = [...trans.fixes];
-                const bodyStart = bodyFixes[0];
-                if (combined[combined.length - 1] === bodyStart) {
-                    combined.push(...bodyFixes.slice(1));  // Skip duplicate connection point
+                // For DP: body + transition (departure flows outward from airport)
+                // For STAR: transition + body (arrival flows inward to airport)
+                let combined;
+
+                if (procedure.type === 'DP') {
+                    // DP: Start with body, then add transition
+                    combined = [...bodyFixes];
+                    const bodyEnd = bodyFixes[bodyFixes.length - 1];
+                    const transStart = trans.fixes[0];
+                    if (bodyEnd === transStart) {
+                        combined.push(...trans.fixes.slice(1));  // Skip duplicate connection point
+                    } else {
+                        combined.push(...trans.fixes);
+                    }
                 } else {
-                    combined.push(...bodyFixes);
+                    // STAR: Start with transition, then add body
+                    combined = [...trans.fixes];
+                    const transEnd = trans.fixes[trans.fixes.length - 1];
+                    const bodyStart = bodyFixes[0];
+                    if (transEnd === bodyStart) {
+                        combined.push(...bodyFixes.slice(1));  // Skip duplicate connection point
+                    } else {
+                        combined.push(...bodyFixes);
+                    }
                 }
+
                 console.log(`[RouteExpander] Selected explicit transition: ${trans.name}`);
                 return { fixes: combined, transition: trans.name };
             }
@@ -480,14 +500,31 @@ function selectBestTransition(procedure, previousFix, nextFix) {
     }
 
     if (bestTransition) {
-        // Combine transition + body, removing duplicate connection point
-        const combined = [...bestTransition.fixes];
-        const bodyStart = bodyFixes[0];
-        if (combined[combined.length - 1] === bodyStart) {
-            combined.push(...bodyFixes.slice(1));
+        // Combine based on procedure type
+        let combined;
+
+        if (procedure.type === 'DP') {
+            // DP: body + transition
+            combined = [...bodyFixes];
+            const bodyEnd = bodyFixes[bodyFixes.length - 1];
+            const transStart = bestTransition.fixes[0];
+            if (bodyEnd === transStart) {
+                combined.push(...bestTransition.fixes.slice(1));
+            } else {
+                combined.push(...bestTransition.fixes);
+            }
         } else {
-            combined.push(...bodyFixes);
+            // STAR: transition + body
+            combined = [...bestTransition.fixes];
+            const transEnd = bestTransition.fixes[bestTransition.fixes.length - 1];
+            const bodyStart = bodyFixes[0];
+            if (transEnd === bodyStart) {
+                combined.push(...bodyFixes.slice(1));
+            } else {
+                combined.push(...bodyFixes);
+            }
         }
+
         console.log(`[RouteExpander] Selected closest transition: ${bestTransition.name}`);
         return { fixes: combined, transition: bestTransition.name };
     }

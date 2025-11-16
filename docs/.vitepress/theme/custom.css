@@ -1,0 +1,202 @@
+/**
+ * Customize default theme styling by overriding CSS variables:
+ * https://github.com/vuejs/vitepress/blob/main/src/client/theme-default/styles/vars.css
+ */
+
+/**
+ * Colors - Aviation Theme
+ * -------------------------------------------------------------------------- */
+
+:root {
+  /* Brand colors - Cyan aviation theme */
+  --vp-c-brand-1: #00D9FF;
+  --vp-c-brand-2: #00A8CC;
+  --vp-c-brand-3: #007A99;
+  --vp-c-brand-soft: rgba(0, 217, 255, 0.14);
+
+  /* Background colors */
+  --vp-c-bg: #ffffff;
+  --vp-c-bg-soft: #f6f6f7;
+  --vp-c-bg-mute: #f1f1f3;
+  --vp-c-bg-alt: #ffffff;
+
+  /* Code block colors */
+  --vp-code-block-bg: #1a1a1a;
+  --vp-code-bg: #f5f5f5;
+}
+
+.dark {
+  /* Brand colors stay the same in dark mode */
+  --vp-c-brand-1: #00D9FF;
+  --vp-c-brand-2: #00A8CC;
+  --vp-c-brand-3: #007A99;
+
+  /* Dark mode backgrounds */
+  --vp-c-bg: #1a1a1a;
+  --vp-c-bg-soft: #242424;
+  --vp-c-bg-mute: #2c2c2c;
+  --vp-c-bg-alt: #161616;
+
+  /* Sidebar in dark mode */
+  --vp-sidebar-bg-color: #1a1a1a;
+}
+
+/**
+ * Component: Button
+ * -------------------------------------------------------------------------- */
+
+:root {
+  --vp-button-brand-border: transparent;
+  --vp-button-brand-text: var(--vp-c-white);
+  --vp-button-brand-bg: var(--vp-c-brand-1);
+  --vp-button-brand-hover-border: transparent;
+  --vp-button-brand-hover-text: var(--vp-c-white);
+  --vp-button-brand-hover-bg: var(--vp-c-brand-2);
+  --vp-button-brand-active-border: transparent;
+  --vp-button-brand-active-text: var(--vp-c-white);
+  --vp-button-brand-active-bg: var(--vp-c-brand-3);
+}
+
+/**
+ * Component: Home
+ * -------------------------------------------------------------------------- */
+
+:root {
+  --vp-home-hero-name-color: transparent;
+  --vp-home-hero-name-background: -webkit-linear-gradient(
+    120deg,
+    #00D9FF 30%,
+    #007A99
+  );
+
+  --vp-home-hero-image-background-image: linear-gradient(
+    -45deg,
+    #00D9FF 50%,
+    #007A99 50%
+  );
+  --vp-home-hero-image-filter: blur(44px);
+}
+
+@media (min-width: 640px) {
+  :root {
+    --vp-home-hero-image-filter: blur(56px);
+  }
+}
+
+@media (min-width: 960px) {
+  :root {
+    --vp-home-hero-image-filter: blur(68px);
+  }
+}
+
+/**
+ * Component: Custom Block
+ * -------------------------------------------------------------------------- */
+
+:root {
+  --vp-custom-block-tip-border: transparent;
+  --vp-custom-block-tip-text: var(--vp-c-text-1);
+  --vp-custom-block-tip-bg: var(--vp-c-brand-soft);
+  --vp-custom-block-tip-code-bg: var(--vp-c-brand-soft);
+}
+
+/**
+ * Component: Algolia
+ * -------------------------------------------------------------------------- */
+
+.DocSearch {
+  --docsearch-primary-color: var(--vp-c-brand-1) !important;
+}
+
+/**
+ * Custom styles
+ * -------------------------------------------------------------------------- */
+
+/* Code blocks with aviation theme */
+.vp-doc div[class*='language-'] {
+  border: 1px solid var(--vp-c-brand-soft);
+  border-radius: 8px;
+}
+
+/* Inline code */
+.vp-doc :not(pre) > code {
+  color: var(--vp-c-brand-1);
+  background-color: var(--vp-code-bg);
+  padding: 3px 6px;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+.dark .vp-doc :not(pre) > code {
+  background-color: var(--vp-c-bg-mute);
+}
+
+/* Tables */
+.vp-doc table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 20px 0;
+}
+
+.vp-doc table th {
+  background-color: var(--vp-c-brand-1);
+  color: white;
+  font-weight: 600;
+  padding: 12px;
+  text-align: left;
+}
+
+.dark .vp-doc table th {
+  background-color: var(--vp-c-brand-2);
+}
+
+.vp-doc table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--vp-c-divider);
+}
+
+.vp-doc table tr:hover {
+  background-color: var(--vp-c-bg-soft);
+}
+
+/* Headings with bottom border */
+.vp-doc h1 {
+  border-bottom: 2px solid var(--vp-c-brand-1);
+  padding-bottom: 0.5em;
+}
+
+.vp-doc h2 {
+  border-bottom: 1px solid var(--vp-c-divider);
+  padding-bottom: 0.3em;
+}
+
+/* Links */
+.vp-doc a {
+  color: var(--vp-c-brand-1);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.vp-doc a:hover {
+  color: var(--vp-c-brand-2);
+  text-decoration: underline;
+}
+
+/* Blockquotes */
+.vp-doc blockquote {
+  border-left: 4px solid var(--vp-c-brand-1);
+  background-color: var(--vp-c-bg-soft);
+  padding: 1em 1.5em;
+  margin: 1em 0;
+}
+
+/* Custom container for tips */
+.vp-doc .custom-block.tip {
+  border-color: var(--vp-c-brand-1);
+}
+
+/* Footer customization */
+.VPFooter {
+  border-top: 1px solid var(--vp-c-divider);
+  padding: 32px 24px;
+}

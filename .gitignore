@@ -19,6 +19,8 @@ coverage/
 # Build output
 dist/
 build/
+docs/.vitepress/dist/
+docs/.vitepress/cache/
 
 # Logs
 *.log
@@ -27,3 +29,7 @@ npm-debug.log*
 # Environment files
 .env
 .env.local
+
+# Local database copies for testing
+data/local/
+*.local.json
