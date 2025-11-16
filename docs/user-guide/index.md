@@ -20,10 +20,10 @@ InFlight is a web-based flight planning tool that generates navigation logs and 
 ## Quick Start
 
 1. **[Load the database](tab-data)** (one-time, ~5MB)
-2. **[Enter a route](tab-route)** like `KSFO JCOBY4 BSR J501 DRK WYNDE3 KLAS`
+2. **[Enter a route](tab-route)** like `KISP APE EWC ETG J217 HNK STELA1 KBDL`
 3. **Hit COMPUTE** to expand airways and procedures
 4. **[Review navlog](tab-navlog)** with courses, distances, fuel
-5. **[Enable GPS](tab-map)** for in-flight tracking (optional)
+5. GPS auto-enables when you grant location permissions
 
 ## Common Use Cases
 
