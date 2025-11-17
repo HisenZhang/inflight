@@ -357,41 +357,39 @@ function drawAirspace(waypoints, project, strokeWidth, bounds) {
         }
     }
 
-    // Draw each airspace class in its own group with opacity at group level
-    // This prevents overlapping same-class airspace from blending darker
+    // Draw each airspace class separately in two layers
+    // Layer 1: All outer circles with fill-opacity (prevents same-class overlap darkening)
+    // Layer 2: All inner circles with opaque black fill (cuts holes for donut shape)
     for (const [airspaceClass, airports] of Object.entries(airspaceByClass)) {
         if (airports.length === 0) continue;
 
-        // Determine group-level opacity and color for this class
-        let fillColor, strokeColor, groupOpacity, dashArray;
+        // Determine color and opacity for this class
+        let fillColor, strokeColor, fillOpacity, dashArray;
 
         switch (airspaceClass) {
             case 'B':
                 fillColor = '#0000ff';
                 strokeColor = '#0000ff';
-                groupOpacity = 0.15;
+                fillOpacity = 0.15;
                 dashArray = 'none';
                 break;
             case 'C':
                 fillColor = '#c71585';
                 strokeColor = '#c71585';
-                groupOpacity = 0.2;
+                fillOpacity = 0.2;
                 dashArray = 'none';
                 break;
             case 'D':
                 fillColor = 'none';
                 strokeColor = '#4169e1';
-                groupOpacity = 0.6;
+                fillOpacity = 0.6;
                 dashArray = '8,4';
                 break;
             default:
                 continue;
         }
 
-        // Start group for this airspace class with opacity at group level
-        svg += `<g opacity="${groupOpacity}" class="airspace-group-${airspaceClass}">`;
-
-        // Draw all airports in this class (no individual opacity)
+        // Layer 1: Draw all outer circles for this class
         for (const { waypoint, airspace } of airports) {
             const center = project(waypoint.lat, waypoint.lon);
             const radii = AIRSPACE_RADII[airspace.class];
@@ -407,38 +405,42 @@ function drawAirspace(waypoints, project, strokeWidth, bounds) {
             const testPoint = project(testLat, waypoint.lon);
             const outerRadiusPx = Math.abs(testPoint.y - center.y);
 
-            // Calculate inner radius if exists
-            let innerRadiusPx = 0;
-            if (radii.inner > 0) {
-                const innerTestLat = waypoint.lat + (radii.inner * nmToDeg);
-                const innerTestPoint = project(innerTestLat, waypoint.lon);
-                innerRadiusPx = Math.abs(innerTestPoint.y - center.y);
-            }
-
-            // Draw outer circle (NO opacity on individual circles - it's on the group)
+            // Draw outer circle
             if (airspaceClass === 'D') {
                 // Class D: dashed circle, no fill
                 svg += `<circle cx="${center.x}" cy="${center.y}" r="${outerRadiusPx}" ` +
                        `fill="none" stroke="${strokeColor}" stroke-width="${strokeWidth}" ` +
-                       `stroke-dasharray="${dashArray}" class="airspace-circle airspace-${airspaceClass}"/>`;
-            } else {
-                // Class B/C: filled circle with border
-                svg += `<circle cx="${center.x}" cy="${center.y}" r="${outerRadiusPx}" ` +
-                       `fill="${fillColor}" stroke="${strokeColor}" stroke-width="${strokeWidth * 0.5}" ` +
+                       `stroke-opacity="${fillOpacity}" stroke-dasharray="${dashArray}" ` +
                        `class="airspace-circle airspace-${airspaceClass}"/>`;
-            }
-
-            // Draw inner circle for Class B and C (creates the "donut" shape by cutting a hole)
-            if (innerRadiusPx > 0 && (airspaceClass === 'B' || airspaceClass === 'C')) {
-                // Use black fill (background color) to create a hole
-                svg += `<circle cx="${center.x}" cy="${center.y}" r="${innerRadiusPx}" ` +
-                       `fill="#000000" stroke="${strokeColor}" stroke-width="${strokeWidth * 0.5}" ` +
-                       `class="airspace-circle airspace-${airspaceClass}-inner"/>`;
+            } else {
+                // Class B/C: filled circle with border (fill-opacity prevents overlap darkening)
+                svg += `<circle cx="${center.x}" cy="${center.y}" r="${outerRadiusPx}" ` +
+                       `fill="${fillColor}" fill-opacity="${fillOpacity}" ` +
+                       `stroke="${strokeColor}" stroke-opacity="${fillOpacity}" stroke-width="${strokeWidth * 0.5}" ` +
+                       `class="airspace-circle airspace-${airspaceClass}"/>`;
             }
         }
 
-        // Close this airspace class group
-        svg += '</g>';
+        // Layer 2: Draw inner circles with opaque black fill to cut holes
+        if (airspaceClass === 'B' || airspaceClass === 'C') {
+            for (const { waypoint, airspace } of airports) {
+                const center = project(waypoint.lat, waypoint.lon);
+                const radii = AIRSPACE_RADII[airspace.class];
+
+                if (!radii || radii.inner === 0) continue;
+
+                const nmToDeg = 1 / 60;
+                const innerTestLat = waypoint.lat + (radii.inner * nmToDeg);
+                const innerTestPoint = project(innerTestLat, waypoint.lon);
+                const innerRadiusPx = Math.abs(innerTestPoint.y - center.y);
+
+                // Draw inner circle with OPAQUE black fill to cut a hole
+                svg += `<circle cx="${center.x}" cy="${center.y}" r="${innerRadiusPx}" ` +
+                       `fill="#000000" fill-opacity="1" ` +
+                       `stroke="${strokeColor}" stroke-opacity="${fillOpacity}" stroke-width="${strokeWidth * 0.5}" ` +
+                       `class="airspace-circle airspace-${airspaceClass}-inner"/>`;
+            }
+        }
     }
 
     return svg;
