@@ -328,6 +328,9 @@ function drawAirspace(waypoints, project, strokeWidth, bounds) {
 
     if (!window.DataManager || !window.QueryEngine) return svg;
 
+    // Use a <g> group with mix-blend-mode to prevent overlapping colors from blending
+    svg += '<g style="mix-blend-mode: lighten;">';
+
     // Get all airports in the bounding box (with some padding for airspace that extends beyond)
     const padding = 0.5; // ~30nm padding to catch airspace that extends into view
     const expandedBounds = {
@@ -426,6 +429,9 @@ function drawAirspace(waypoints, project, strokeWidth, bounds) {
                    `opacity="${opacity}" class="airspace-circle airspace-${airspace.class}-inner"/>`;
         }
     }
+
+    // Close the blend mode group
+    svg += '</g>';
 
     return svg;
 }
