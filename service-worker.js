@@ -87,16 +87,21 @@ self.addEventListener('fetch', (event) => {
     // NETWORK FIRST - always fetch fresh content
     event.respondWith(
         fetch(event.request).then((networkResponse) => {
-            console.log('[ServiceWorker] Fresh from network:', event.request.url);
+            // Only log in development (when not on https://)
+            if (location.protocol !== 'https:') {
+                console.log('[ServiceWorker] Fresh from network:', event.request.url);
+            }
             return networkResponse;
         }).catch((error) => {
-            console.error('[ServiceWorker] Fetch failed:', error);
             // Try cache as fallback
             return caches.match(event.request).then(cachedResponse => {
                 if (cachedResponse) {
-                    console.log('[ServiceWorker] Fallback to cache:', event.request.url);
+                    // Success: offline mode working
+                    console.log('[ServiceWorker] Serving from cache (offline):', event.request.url);
                     return cachedResponse;
                 }
+                // Only error if cache also failed
+                console.error('[ServiceWorker] Not in cache and network failed:', event.request.url);
                 throw error;
             });
         })
