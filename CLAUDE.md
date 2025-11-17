@@ -218,6 +218,164 @@ window.YourModuleTests = [
 
 ---
 
+## Version Management
+
+### 🏷️ Versioning System
+
+InFlight uses **centralized version management** via [version.js](version.js) as the single source of truth.
+
+**Version Numbers:**
+- **Semantic Version** (`MAJOR.MINOR.PATCH`) - Follows [semver.org](https://semver.org)
+  - `MAJOR` - Breaking changes, incompatible API changes
+  - `MINOR` - New features, backwards-compatible
+  - `PATCH` - Bug fixes, backwards-compatible
+- **Cache Version** (`CACHE_VERSION`) - Incremental number for PWA updates
+
+**Files that must stay in sync:**
+1. [version.js](version.js) - Single source of truth ✅
+2. [package.json](package.json) - `version` field
+3. [manifest.json](manifest.json) - `version` field
+
+### 📦 Releasing a New Version
+
+**Every release must update these version numbers:**
+
+```bash
+# 1. Edit version.js
+vim version.js
+
+# Update these fields:
+MAJOR: 2,        # Increment for breaking changes
+MINOR: 1,        # Increment for new features
+PATCH: 0,        # Increment for bug fixes
+CACHE_VERSION: 57,  # Increment by 1 ALWAYS
+BUILD_DATE: '2025-01-16',  # Today's date
+RELEASE_NAME: 'Feature: New navigation mode'  # Brief description
+
+# 2. Sync package.json (manual for now)
+vim package.json
+# Change "version": "2.0.0" → "2.1.0"
+
+# 3. Sync manifest.json (manual for now)
+vim manifest.json
+# Change "version": "2.0.0" → "2.1.0"
+
+# 4. Test locally
+npm test
+
+# 5. Commit with version tag
+git add version.js package.json manifest.json
+git commit -m "chore: bump version to v2.1.0"
+git tag v2.1.0
+git push && git push --tags
+```
+
+### 🔄 Version Number Guidelines
+
+**When to increment MAJOR (2.0.0 → 3.0.0):**
+- Changed route parsing grammar (breaks existing routes)
+- Removed public APIs
+- Changed IndexedDB schema incompatibly
+- New architecture requiring data migration
+
+**When to increment MINOR (2.0.0 → 2.1.0):**
+- Added new features (e.g., RNAV approach support)
+- Added new tabs/sections
+- New data sources
+- Enhanced existing features (backwards-compatible)
+
+**When to increment PATCH (2.0.0 → 2.0.1):**
+- Bug fixes only
+- Performance improvements
+- Documentation updates (code unchanged)
+- Style/CSS tweaks
+
+**When to increment CACHE_VERSION:**
+- **ALWAYS** when deploying ANY code change
+- Even for comment-only changes (triggers PWA update)
+- Increment by 1 sequentially (v56 → v57 → v58)
+
+### 🚀 Deployment Checklist
+
+```bash
+# Pre-deployment checklist:
+☑ Updated version.js with new version numbers
+☑ Synced package.json version
+☑ Synced manifest.json version
+☑ Incremented CACHE_VERSION by 1
+☑ Updated BUILD_DATE to today
+☑ Updated RELEASE_NAME with brief description
+☑ All tests passing (npm test)
+☑ Docs updated if API changed
+☑ Committed with version tag (git tag v2.1.0)
+
+# Deploy:
+git push origin main
+# Cloudflare auto-deploys from main branch
+
+# Post-deployment:
+☑ Test PWA update detection
+☑ Verify version shows correctly in WELCOME tab
+☑ Check browser console for version log
+```
+
+### 🛠️ Version Automation (Future)
+
+Currently version syncing is manual. Future automation options:
+
+```bash
+# Option 1: npm version command (creates git tag automatically)
+npm version patch  # 2.0.0 → 2.0.1
+npm version minor  # 2.0.0 → 2.1.0
+npm version major  # 2.0.0 → 3.0.0
+
+# Option 2: Custom release script (future)
+npm run release -- --type=minor
+# Would auto-update version.js, package.json, manifest.json
+# Create git tag, push to origin
+```
+
+### 📍 Where Version Numbers Appear
+
+**User-visible:**
+- WELCOME tab → APP VERSION section
+- Browser console on page load
+- Service worker console logs
+
+**Internal:**
+- Service worker cache name (`flight-planning-v56`)
+- PWA manifest
+- Package metadata
+
+### 🔍 Checking Current Version
+
+**Via Browser Console:**
+```javascript
+window.AppVersion.getVersionInfo()
+// Returns:
+// {
+//   version: "2.0.0",
+//   cacheName: "flight-planning-v56",
+//   cacheVersion: 56,
+//   buildDate: "2025-01-15",
+//   releaseName: "Initial PWA Update System"
+// }
+```
+
+**Via UI:**
+1. Open PWA
+2. Go to WELCOME tab
+3. Scroll to "APP VERSION" section
+4. See: Version, Cache, Build Date
+
+**Via Service Worker:**
+```javascript
+// DevTools → Application → Service Workers → Console
+// Look for: "[ServiceWorker] Cache name: flight-planning-v56 | App version: 2.0.0"
+```
+
+---
+
 ## Common Tasks
 
 ### Adding a New Route Keyword/Operator

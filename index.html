@@ -14,6 +14,21 @@
     <link rel="manifest" href="manifest.json">
 </head>
 <body>
+    <!-- Update Notification Banner -->
+    <div id="update-notification" class="update-notification">
+        <div class="update-notification-content">
+            <span class="update-notification-icon">🔄</span>
+            <div class="update-notification-text">
+                <strong>UPDATE AVAILABLE</strong>
+                <p>A new version of InFlight is ready</p>
+            </div>
+            <div class="update-notification-actions">
+                <button class="btn btn-primary btn-sm" onclick="activateUpdate()">UPDATE NOW</button>
+                <button class="btn btn-secondary btn-sm" onclick="dismissUpdate()">LATER</button>
+            </div>
+        </div>
+    </div>
+
     <div class="container">
         <header>
             <!-- Tab Navigation -->
@@ -82,6 +97,31 @@
                 </button>
                 </div>
             </div>
+
+            <!-- App Updates -->
+            <div class="data-section">
+                <h3 class="section-header">APP VERSION</h3>
+                <div class="data-info">
+                    <p><strong>Version:</strong> <span id="app-version">Loading...</span></p>
+                    <p><strong>Cache:</strong> <span id="cache-version">Loading...</span></p>
+                    <p style="margin-bottom: 0;"><strong>Build:</strong> <span id="build-date">Loading...</span></p>
+                </div>
+                <div style="text-align: center;">
+                    <button class="btn btn-secondary" onclick="checkForUpdates()">
+                        CHECK FOR UPDATES
+                    </button>
+                    <p id="update-check-status" style="margin-top: 8px; font-size: 0.75rem; color: var(--text-secondary);"></p>
+                </div>
+            </div>
+
+            <script>
+                // Populate version info once AppVersion is loaded
+                if (window.AppVersion) {
+                    document.getElementById('app-version').textContent = 'v' + window.AppVersion.VERSION;
+                    document.getElementById('cache-version').textContent = window.AppVersion.CACHE_NAME;
+                    document.getElementById('build-date').textContent = window.AppVersion.BUILD_DATE;
+                }
+            </script>
         </div>
 
         <!-- Tab: Data & Cache -->
@@ -1021,6 +1061,9 @@
     </div>
 
     <!-- Scripts - Load modules in order (3-Engine Architecture) -->
+
+    <!-- Version Configuration (loaded first) -->
+    <script src="version.js"></script>                  <!-- Centralized version management -->
 
     <!-- External Libraries -->
     <script src="lib/geodesy.js"></script>              <!-- WGS84 + WMM2025 library -->

@@ -1,11 +1,18 @@
 // Flight Planning Tool - Service Worker for Offline Support
-const CACHE_NAME = 'flight-planning-v55';
+
+// Import version configuration
+importScripts('./version.js');
+
+// Use centralized cache name from version.js
+const CACHE_NAME = self.AppVersion.CACHE_NAME;
+console.log('[ServiceWorker] Cache name:', CACHE_NAME, '| App version:', self.AppVersion.VERSION);
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
     './styles.css',
     './styles/print.css',
     './manifest.json',
+    './version.js',
     // External Libraries
     './lib/geodesy.js',
     './lib/wind-stations.js',
@@ -35,10 +42,17 @@ self.addEventListener('install', (event) => {
         caches.open(CACHE_NAME).then((cache) => {
             console.log('[ServiceWorker] Caching app shell');
             return cache.addAll(ASSETS_TO_CACHE);
-        }).then(() => {
-            return self.skipWaiting();
         })
+        // Don't auto-skipWaiting - wait for user action
     );
+});
+
+// Listen for messages from clients
+self.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'SKIP_WAITING') {
+        console.log('[ServiceWorker] Received SKIP_WAITING message');
+        self.skipWaiting();
+    }
 });
 
 // Activate event - clean up old caches

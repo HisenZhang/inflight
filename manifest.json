@@ -1,6 +1,7 @@
 {
   "name": "InFlight",
   "short_name": "InFlight",
+  "version": "2.0.0",
   "description": "Flight planning tool for pilots - Offline-capable route calculator",
   "start_url": "./",
   "scope": "./",

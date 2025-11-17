@@ -722,9 +722,163 @@ if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./service-worker.js')
             .then((registration) => {
                 console.log('[App] ServiceWorker registration successful:', registration.scope);
+
+                // Check for updates once per day (24 hours)
+                // Note: Browser also auto-checks every 24h when user navigates to page
+                setInterval(() => {
+                    console.log('[App] Performing daily update check');
+                    registration.update();
+                }, 24 * 60 * 60 * 1000); // 24 hours in milliseconds
+
+                // Detect when a new service worker is waiting
+                registration.addEventListener('updatefound', () => {
+                    const newWorker = registration.installing;
+                    console.log('[App] New ServiceWorker found, installing...');
+
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            // New service worker available, show update notification
+                            console.log('[App] New ServiceWorker installed, update available');
+                            showUpdateNotification();
+                        }
+                    });
+                });
+
+                // Check if there's already a waiting service worker
+                if (registration.waiting) {
+                    console.log('[App] ServiceWorker update waiting');
+                    showUpdateNotification();
+                }
             })
             .catch((error) => {
                 console.log('[App] ServiceWorker registration failed:', error);
             });
     });
+
+    // Listen for controller change (when new SW activates)
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        console.log('[App] New ServiceWorker activated, reloading page');
+        window.location.reload();
+    });
+
+    // Check for updates when user returns to app (changes tab/window)
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && navigator.serviceWorker.controller) {
+            console.log('[App] Page visible again, checking for updates');
+            navigator.serviceWorker.ready.then((registration) => {
+                registration.update();
+            });
+        }
+    });
 }
+
+/**
+ * Shows update notification banner to user
+ */
+function showUpdateNotification() {
+    const notification = document.getElementById('update-notification');
+    if (notification) {
+        notification.classList.add('show');
+    }
+}
+
+/**
+ * Activates waiting service worker and reloads page
+ */
+window.activateUpdate = function() {
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.ready.then((registration) => {
+            if (registration.waiting) {
+                // Tell the waiting service worker to skip waiting
+                registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+            }
+        });
+    }
+};
+
+/**
+ * Dismisses update notification (user wants to update later)
+ */
+window.dismissUpdate = function() {
+    const notification = document.getElementById('update-notification');
+    if (notification) {
+        notification.classList.remove('show');
+    }
+};
+
+/**
+ * Manually checks for service worker updates
+ * Called when user clicks "CHECK FOR UPDATES" button
+ */
+window.checkForUpdates = async function() {
+    const statusEl = document.getElementById('update-check-status');
+    const button = event.target;
+
+    if (!('serviceWorker' in navigator)) {
+        if (statusEl) {
+            statusEl.textContent = 'Service worker not supported';
+            statusEl.style.color = 'var(--color-error)';
+        }
+        return;
+    }
+
+    try {
+        // Disable button and show checking status
+        button.disabled = true;
+        button.textContent = 'CHECKING...';
+        if (statusEl) {
+            statusEl.textContent = 'Checking for updates...';
+            statusEl.style.color = 'var(--text-secondary)';
+        }
+
+        const registration = await navigator.serviceWorker.ready;
+
+        // Force check for updates
+        await registration.update();
+
+        // Wait a moment for the update check to complete
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        if (registration.waiting) {
+            // Update is available
+            if (statusEl) {
+                statusEl.textContent = 'Update available! Click "UPDATE NOW" in banner above.';
+                statusEl.style.color = 'var(--color-metric)';
+            }
+            showUpdateNotification();
+        } else if (registration.installing) {
+            // Update is installing
+            if (statusEl) {
+                statusEl.textContent = 'Update installing... Please wait.';
+                statusEl.style.color = 'var(--color-warning)';
+            }
+            // Listen for installation completion
+            registration.installing.addEventListener('statechange', function() {
+                if (this.state === 'installed') {
+                    showUpdateNotification();
+                    if (statusEl) {
+                        statusEl.textContent = 'Update ready! Click "UPDATE NOW" in banner above.';
+                        statusEl.style.color = 'var(--color-metric)';
+                    }
+                }
+            });
+        } else {
+            // No update available
+            if (statusEl) {
+                statusEl.textContent = 'You are running the latest version!';
+                statusEl.style.color = 'var(--color-metric)';
+            }
+        }
+
+    } catch (error) {
+        console.error('[App] Update check failed:', error);
+        if (statusEl) {
+            statusEl.textContent = 'Update check failed. Try again later.';
+            statusEl.style.color = 'var(--color-error)';
+        }
+    } finally {
+        // Re-enable button
+        button.disabled = false;
+        button.textContent = 'CHECK FOR UPDATES';
+    }
+};

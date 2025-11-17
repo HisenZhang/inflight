@@ -1006,3 +1006,114 @@ header {
 .mt-lg {
     margin-top: var(--space-lg);
 }
+
+/* ============================================
+   UPDATE NOTIFICATION
+   ============================================ */
+
+.update-notification {
+    position: fixed;
+    top: -200px;
+    left: 0;
+    right: 0;
+    background: var(--color-metric);
+    color: var(--bg-primary);
+    padding: var(--space-md);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    z-index: 10000;
+    transition: top 0.3s ease-in-out;
+}
+
+.update-notification.show {
+    top: 0;
+}
+
+.update-notification-content {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.update-notification-icon {
+    font-size: 1.5rem;
+    animation: rotate 2s linear infinite;
+}
+
+@keyframes rotate {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.update-notification-text {
+    flex: 1;
+}
+
+.update-notification-text strong {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    margin-bottom: 2px;
+}
+
+.update-notification-text p {
+    margin: 0;
+    font-size: 0.75rem;
+    opacity: 0.9;
+}
+
+.update-notification-actions {
+    display: flex;
+    gap: var(--space-sm);
+}
+
+.update-notification .btn {
+    background: var(--bg-primary);
+    color: var(--color-metric);
+    border: 2px solid var(--bg-primary);
+    padding: 6px 12px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.update-notification .btn:hover {
+    background: transparent;
+    color: var(--bg-primary);
+    border-color: var(--bg-primary);
+}
+
+.update-notification .btn-secondary {
+    background: transparent;
+    color: var(--bg-primary);
+    border-color: var(--bg-primary);
+}
+
+.update-notification .btn-secondary:hover {
+    background: var(--bg-primary);
+    color: var(--color-metric);
+}
+
+/* Mobile responsiveness */
+@media (max-width: 600px) {
+    .update-notification-content {
+        flex-direction: column;
+        text-align: center;
+        gap: var(--space-sm);
+    }
+
+    .update-notification-actions {
+        width: 100%;
+    }
+
+    .update-notification-actions .btn {
+        flex: 1;
+    }
+}
