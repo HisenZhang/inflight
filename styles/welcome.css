@@ -60,12 +60,6 @@
 .feature-card {
     border: 1px solid var(--border-color);
     padding: 0.875rem;
-    cursor: pointer;
-    transition: border-color 0.2s ease;
-}
-
-.feature-card:hover {
-    border-color: var(--color-primary);
 }
 
 .feature-icon {
