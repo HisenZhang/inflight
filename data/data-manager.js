@@ -2,7 +2,7 @@
 
 // Database configuration
 const DB_NAME = 'FlightPlanningDB';
-const DB_VERSION = 7; // Updated for airways, STARs, and DPs
+const DB_VERSION = 10; // Updated for airspace class data
 const STORE_NAME = 'flightdata';
 const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days
 
@@ -20,6 +20,7 @@ let runwaysData = new Map();         // Runways by airport ID/code
 let airwaysData = new Map();         // Airways (NASR only)
 let starsData = new Map();           // STARs (NASR only)
 let dpsData = new Map();             // DPs (NASR only)
+let airspaceData = new Map();        // Airspace class by airport ID (NASR only)
 let tokenTypeMap = new Map();        // Fast lookup: token -> type (AIRPORT/NAVAID/FIX/AIRWAY/PROCEDURE)
 let fileMetadata = new Map();        // Track individual file load times and validity
 let rawCSVData = {};                 // Raw CSV data for reindexing
@@ -55,7 +56,7 @@ function saveToCache() {
 
         // Serialize Maps to arrays for storage
         const data = {
-            id: 'flightdata_cache_v9',
+            id: 'flightdata_cache_v10',
             airports: Array.from(airportsData.entries()),
             iataToIcao: Array.from(iataToIcao.entries()),
             navaids: Array.from(navaidsData.entries()),
@@ -65,9 +66,10 @@ function saveToCache() {
             airways: Array.from(airwaysData.entries()),
             stars: Array.from(starsData.entries()),
             dps: Array.from(dpsData.entries()),
+            airspace: Array.from(airspaceData.entries()),
             dataSources: dataSources,
             timestamp: Date.now(),
-            version: 9,
+            version: 10,
             // Track individual file metadata
             fileMetadata: Object.fromEntries(fileMetadata),
             // Store raw CSV data for reindexing
@@ -84,7 +86,7 @@ function loadFromCacheDB() {
     return new Promise((resolve, reject) => {
         const transaction = db.transaction([STORE_NAME], 'readonly');
         const store = transaction.objectStore(STORE_NAME);
-        const request = store.get('flightdata_cache_v9');
+        const request = store.get('flightdata_cache_v10');
         request.onsuccess = () => resolve(request.result);
         request.onerror = () => reject(request.error);
     });
@@ -102,7 +104,8 @@ function clearCacheDB() {
             store.delete('flightdata_cache_v6'),
             store.delete('flightdata_cache_v7'),
             store.delete('flightdata_cache_v8'),
-            store.delete('flightdata_cache_v9')
+            store.delete('flightdata_cache_v9'),
+            store.delete('flightdata_cache_v10')
         ];
         Promise.all(requests.map(r => new Promise((res) => {
             r.onsuccess = () => res();
@@ -242,6 +245,10 @@ async function reparseFromRawCSV(onStatusUpdate) {
         onStatusUpdate('[...] PARSING NASR DPS', 'loading');
         nasrData.data.dps = window.NASRAdapter.parseNASRDPs(rawCSVData.nasr_dpsCSV);
     }
+    if (rawCSVData.nasr_airspaceCSV) {
+        onStatusUpdate('[...] PARSING NASR AIRSPACE', 'loading');
+        nasrData.data.airspace = window.NASRAdapter.parseNASRAirspaceClass(rawCSVData.nasr_airspaceCSV);
+    }
 
     // Parse OurAirports data if available
     if (rawCSVData.oa_airportsCSV) {
@@ -327,6 +334,11 @@ function mergeDataSources(nasrData, ourairportsData, onStatusUpdate = null) {
             dpsData.set(id, dp);
         }
 
+        if (onStatusUpdate) onStatusUpdate('[...] INDEXING NASR AIRSPACE', 'loading');
+        for (const [arptId, airspace] of nasrData.data.airspace) {
+            airspaceData.set(arptId, airspace);
+        }
+
         dataSources.push('NASR');
     }
 
@@ -405,7 +417,7 @@ function mergeDataSources(nasrData, ourairportsData, onStatusUpdate = null) {
 async function checkCachedData() {
     try {
         const cachedData = await loadFromCacheDB();
-        if (cachedData && cachedData.version === 9 && cachedData.timestamp) {
+        if (cachedData && cachedData.version === 10 && cachedData.timestamp) {
             const age = Date.now() - cachedData.timestamp;
             const daysOld = Math.floor(age / (24 * 60 * 60 * 1000));
 
@@ -450,6 +462,7 @@ async function loadFromCache(onStatusUpdate) {
         airwaysData = new Map(cachedData.airways || []);
         starsData = new Map(cachedData.stars || []);
         dpsData = new Map(cachedData.dps || []);
+        airspaceData = new Map(cachedData.airspace || []);
         dataSources = cachedData.dataSources || [];
         dataTimestamp = cachedData.timestamp;
 
@@ -810,6 +823,21 @@ function getRunways(airportCode) {
     return runwaysData.get(airportCode) || [];
 }
 
+function getAirspaceClass(airportCode) {
+    // Try direct lookup first (for 3-letter LID codes like ALB)
+    let airspace = airspaceData.get(airportCode);
+    if (airspace) return airspace;
+
+    // If not found and code starts with K, try without the K prefix
+    // ICAO codes like KALB -> FAA LID ALB
+    if (airportCode && airportCode.startsWith('K') && airportCode.length === 4) {
+        airspace = airspaceData.get(airportCode.substring(1));
+        if (airspace) return airspace;
+    }
+
+    return null;
+}
+
 function getDataStats() {
     return {
         airports: airportsData.size,
@@ -818,6 +846,7 @@ function getDataStats() {
         airways: airwaysData.size,
         stars: starsData.size,
         dps: dpsData.size,
+        airspace: airspaceData.size,
         tokenTypes: tokenTypeMap.size,
         sources: dataSources.join(' + '),
         timestamp: dataTimestamp
@@ -1231,6 +1260,7 @@ window.DataManager = {
     getFixCoordinates,
     getFrequencies,
     getRunways,
+    getAirspaceClass,
     getDataStats,
     getDpsData: () => dpsData,
     getStarsData: () => starsData,

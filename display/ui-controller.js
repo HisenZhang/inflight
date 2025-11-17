@@ -1255,6 +1255,21 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelSt
             elevMagLine = `<div class="text-airport text-xs">${magVarDisplay}</div>`;
         }
 
+        // Airspace class for airports
+        let airspaceHTML = '';
+        if (waypoint.waypointType === 'airport') {
+            const arptCode = waypoint.icao || waypoint.ident;
+            const airspace = DataManager.getAirspaceClass(arptCode);
+            if (airspace) {
+                let airspaceText = `CLASS ${airspace.class}`;
+                // Add hours if available (common for Class D)
+                if (airspace.hours) {
+                    airspaceText += ` ${airspace.hours}`;
+                }
+                airspaceHTML = `<div class="text-reporting text-xs">${airspaceText}</div>`;
+            }
+        }
+
         // Waypoint row
         tableHTML += `
             <tr class="wpt-row">
@@ -1266,6 +1281,7 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelSt
                 <td colspan="2">
                     <div class="text-secondary text-xs">${pos}</div>
                     ${elevMagLine}
+                    ${airspaceHTML}
                     ${runwayHTML}
                     ${freqHTML ? `<div class="mt-xs">${freqHTML}</div>` : ''}
                 </td>

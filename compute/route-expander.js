@@ -59,7 +59,8 @@ function expandRoute(routeString) {
 
         // Handle procedure (STAR/DP)
         // Try if explicitly marked as PROCEDURE, or if it looks like a procedure pattern
-        const looksLikeProcedure = /^[A-Z]{3,}\d+$/.test(token);
+        // Matches: HIDEY1, WYNDE3, or TRANSITION.PROCEDURE (KAYYS.WYNDE3)
+        const looksLikeProcedure = /^[A-Z]{3,}\d+$/.test(token) || /^[A-Z]+\.[A-Z]{3,}\d*$/.test(token);
         if (tokenType === 'PROCEDURE' || looksLikeProcedure) {
             const previousFix = expanded.length > 0 ? expanded[expanded.length - 1] : null;
             const nextFix = i + 1 < tokens.length ? tokens[i + 1] : null;

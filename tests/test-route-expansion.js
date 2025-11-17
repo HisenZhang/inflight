@@ -18,7 +18,10 @@ function setupMockData() {
     const mockFixes = new Map([
         ['MOBLE', { ident: 'MOBLE', lat: 41.5, lon: -86.5 }],
         ['ADIME', { ident: 'ADIME', lat: 41.0, lon: -85.0 }],
-        ['GERBS', { ident: 'GERBS', lat: 40.8, lon: -83.0 }]
+        ['GERBS', { ident: 'GERBS', lat: 40.8, lon: -83.0 }],
+        ['KAYYS', { ident: 'KAYYS', lat: 41.2, lon: -87.5 }],
+        ['WYNDE', { ident: 'WYNDE', lat: 41.1, lon: -87.3 }],
+        ['BAAKE', { ident: 'BAAKE', lat: 40.9, lon: -87.1 }]
     ]);
 
     const mockAirways = new Map([
@@ -30,7 +33,14 @@ function setupMockData() {
 
     const mockStars = new Map([
         ['MIP.MIP4', {
-            body: ['MIP', 'FIXS1', 'FIXS2', 'KLGA']
+            body: { fixes: ['MIP', 'FIXS1', 'FIXS2', 'KLGA'] }
+        }],
+        ['WYNDE3', {
+            body: { fixes: ['WYNDE', 'BAAKE', 'KLGA'] },
+            transitions: [
+                { name: 'KAYYS', fixes: ['KAYYS', 'WYNDE'] },
+                { name: 'MTHEW', fixes: ['MTHEW', 'WYNDE'] }
+            ]
         }]
     ]);
 
@@ -69,6 +79,8 @@ function setupMockData() {
             mockTokenMap.set(match[1], 'PROCEDURE');
         }
     }
+    // Also add WYNDE3 base procedure
+    mockTokenMap.set('WYNDE3', 'PROCEDURE');
 
     console.log('[TestSetup] Created mock token map with', mockTokenMap.size, 'entries');
     console.log('[TestSetup] Token map contents:', Array.from(mockTokenMap.entries()));
@@ -241,6 +253,34 @@ test('RouteExpander should expand full route with airway and procedure', () => {
 
     assert.isNull(result.errors, 'Should have no expansion errors');
     assert.isTrue(result.expanded.length > 8, 'Should expand to more than 8 waypoints');
+});
+
+// Test TRANSITION.PROCEDURE format (FAA chart standard)
+test('RouteExpander should expand TRANSITION.PROCEDURE format (KAYYS.WYNDE3)', () => {
+    const mockData = setupMockData();
+    setupMockDataManager(mockData);
+
+    window.QueryEngine.init(
+        mockData.airports,
+        mockData.navaids,
+        mockData.fixes,
+        mockData.tokenMap
+    );
+
+    window.RouteExpander.setAirwaysData(mockData.airways);
+    window.RouteExpander.setStarsData(mockData.stars);
+    window.RouteExpander.setDpsData(mockData.dps);
+
+    const result = window.RouteExpander.expandRoute('KORD KAYYS.WYNDE3 KLGA');
+    console.log('[Test] TRANSITION.PROCEDURE expansion:', result);
+    console.log('[Test] Expanded string:', result.expandedString);
+    console.log('[Test] Errors:', result.errors);
+
+    assert.isNull(result.errors, 'Should have no expansion errors');
+    assert.includes(result.expanded, 'KAYYS', 'Should include transition fix KAYYS');
+    assert.includes(result.expanded, 'WYNDE', 'Should include procedure fix WYNDE');
+    assert.includes(result.expanded, 'BAAKE', 'Should include procedure fix BAAKE');
+    assert.notIncludes(result.expanded, 'KAYYS.WYNDE3', 'Should not include unexpanded notation');
 });
 
 console.log('\n=== Running Route Expansion Tests ===\n');

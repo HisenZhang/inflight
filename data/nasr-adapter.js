@@ -574,6 +574,58 @@ function parseNASRDPs(csvText) {
     return dps;
 }
 
+// Parse CLS_ARSP.csv - Class Airspace data
+function parseNASRAirspaceClass(csvText) {
+    const lines = csvText.split('\n');
+    const headers = parseNASRCSVLine(lines[0]);
+
+    const arptIdIdx = headers.indexOf('ARPT_ID');
+    const classBIdx = headers.indexOf('CLASS_B_AIRSPACE');
+    const classCIdx = headers.indexOf('CLASS_C_AIRSPACE');
+    const classDIdx = headers.indexOf('CLASS_D_AIRSPACE');
+    const classEIdx = headers.indexOf('CLASS_E_AIRSPACE');
+    const airspaceHrsIdx = headers.indexOf('AIRSPACE_HRS');
+
+    const airspaceData = new Map();
+
+    for (let i = 1; i < lines.length; i++) {
+        if (!lines[i].trim()) continue;
+
+        try {
+            const values = parseNASRCSVLine(lines[i]);
+            const arptId = values[arptIdIdx]?.trim().toUpperCase();
+
+            if (!arptId) continue;
+
+            // Determine airspace class (priority: B > C > D > E)
+            let airspaceClass = null;
+            if (values[classBIdx] === 'Y') {
+                airspaceClass = 'B';
+            } else if (values[classCIdx] === 'Y') {
+                airspaceClass = 'C';
+            } else if (values[classDIdx] === 'Y') {
+                airspaceClass = 'D';
+            } else if (values[classEIdx] === 'Y') {
+                airspaceClass = 'E';
+            }
+
+            if (airspaceClass) {
+                const airspaceHrs = values[airspaceHrsIdx]?.trim() || null;
+                airspaceData.set(arptId, {
+                    arptId: arptId,
+                    class: airspaceClass,
+                    hours: airspaceHrs
+                });
+            }
+        } catch (error) {
+            console.warn(`Error parsing CLS_ARSP line ${i}:`, error);
+        }
+    }
+
+    console.log(`[NASRAdapter] Parsed ${airspaceData.size} airspace class records`);
+    return airspaceData;
+}
+
 // Load all NASR data with individual file tracking
 async function loadNASRData(onStatusUpdate, onFileLoaded) {
     try {
@@ -598,7 +650,8 @@ async function loadNASRData(onStatusUpdate, onFileLoaded) {
             { id: 'nasr_frequencies', filename: 'FRQ.csv', label: 'FREQUENCIES', parser: parseNASRFrequencies },
             { id: 'nasr_airways', filename: 'AWY_BASE.csv', label: 'AIRWAYS', parser: parseNASRAirways },
             { id: 'nasr_stars', filename: 'STAR_RTE.csv', label: 'STARs', parser: parseNASRSTARs },
-            { id: 'nasr_dps', filename: 'DP_RTE.csv', label: 'DPs', parser: parseNASRDPs }
+            { id: 'nasr_dps', filename: 'DP_RTE.csv', label: 'DPs', parser: parseNASRDPs },
+            { id: 'nasr_airspace', filename: 'CLS_ARSP.csv', label: 'AIRSPACE', parser: parseNASRAirspaceClass }
         ];
 
         const parsedData = {};
@@ -676,5 +729,6 @@ window.NASRAdapter = {
     parseNASRFrequencies,
     parseNASRAirways,
     parseNASRSTARs,
-    parseNASRDPs
+    parseNASRDPs,
+    parseNASRAirspaceClass
 };

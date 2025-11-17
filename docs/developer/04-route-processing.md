@@ -318,7 +318,7 @@ Body:   [CLPRR, ARRAN, HOOPZ]
 Output: [CLPRR, ARRAN, HOOPZ, KCMH]
 ```
 
-**Implementation:** [route-expander.js:237-345](../../compute/route-expander.js#L237-L345)
+**Implementation:** [route-expander.js:246-345](../../compute/route-expander.js#L246-L345)
 
 ```javascript
 expandProcedure(procedureName, transitionName, destination) {
@@ -346,6 +346,97 @@ expandProcedure(procedureName, transitionName, destination) {
     return fixes;
 }
 ```
+
+#### TRANSITION.PROCEDURE Format (FAA Chart Standard)
+
+InFlight supports explicit transition specification using FAA chart standard notation: `TRANSITION.PROCEDURE`
+
+**Examples:**
+- `KAYYS.WYNDE3` - WYNDE THREE arrival via KAYYS transition
+- `RAMRD.HIDEY1` - HIDEY ONE departure via RAMRD transition
+- `MTHEW.CHPPR1` - CHPPR ONE arrival via MTHEW transition
+
+**Detection:** [route-expander.js:61-63](../../compute/route-expander.js#L61-L63)
+
+```javascript
+// Matches: HIDEY1, WYNDE3, or TRANSITION.PROCEDURE (KAYYS.WYNDE3)
+const looksLikeProcedure = /^[A-Z]{3,}\d+$/.test(token) || /^[A-Z]+\.[A-Z]{3,}\d*$/.test(token);
+if (tokenType === 'PROCEDURE' || looksLikeProcedure) {
+    // Attempt procedure expansion
+}
+```
+
+**Parsing:** [route-expander.js:254-297](../../compute/route-expander.js#L254-L297)
+
+```javascript
+// Extract transition and procedure name
+const transitionMatch = procedureName.match(/^([A-Z]+)\.([A-Z]{3,}\d*)$/);
+if (transitionMatch) {
+    const [, transitionName, procName] = transitionMatch;
+
+    // Try DPs (SIDs) first
+    const dp = localDpsData.get(procName);
+    if (dp && dp.transitions) {
+        const trans = dp.transitions.find(t => t.name === transitionName);
+        if (trans) {
+            // Combine transition + body for DP
+            const combined = [...dp.body.fixes];
+            combined.push(...trans.fixes);
+            return { expanded: true, fixes: combined, type: 'DP' };
+        }
+    }
+
+    // Then try STARs
+    const star = localStarsData.get(procName);
+    if (star && star.transitions) {
+        const trans = star.transitions.find(t => t.name === transitionName);
+        if (trans) {
+            // Combine transition + body for STAR
+            const combined = [...trans.fixes];
+            combined.push(...star.body.fixes);
+            return { expanded: true, fixes: combined, type: 'STAR' };
+        }
+    }
+}
+```
+
+**Autocomplete Support:** [display/ui-controller.js:592-643](../../display/ui-controller.js#L592-L643)
+
+When user types `TRANSITION.` (e.g., `KAYYS.`), autocomplete searches all procedures with that transition:
+
+```javascript
+const dotMatch = currentWord.match(/^([A-Z]{3,})\.([A-Z]*)$/);
+if (dotMatch) {
+    const [, transitionName, procedurePrefix] = dotMatch;
+
+    // Search DPs for matching transition
+    for (const [procName, procData] of dpsData.entries()) {
+        if (procData.transitions) {
+            const hasTransition = procData.transitions.some(t => t.name === transitionName);
+            if (hasTransition && (!procedurePrefix || procName.startsWith(procedurePrefix))) {
+                results.push({
+                    code: `${transitionName}.${procName}`,
+                    type: 'DP TRANSITION'
+                });
+            }
+        }
+    }
+    // (same for STARs)
+}
+```
+
+**Why This Matters:**
+
+Before this feature, entering `KAYYS.WYNDE3` would:
+1. Fail to match procedure regex (contains dot)
+2. Be treated as unknown waypoint
+3. Generate "WAYPOINT(S) NOT IN DATABASE" error
+
+After fix, it:
+1. Matches procedure regex with TRANSITION.PROCEDURE pattern
+2. Extracts `KAYYS` (transition) and `WYNDE3` (procedure)
+3. Expands to full waypoint sequence
+4. Works for both SIDs and STARs
 
 ### Deduplication
 

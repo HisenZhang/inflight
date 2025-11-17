@@ -86,7 +86,8 @@ InFlight auto-expands all the intermediate fixes on V244 and V105.
 **Airway types:**
 - **V-routes** (Victor airways): Low altitude, 1,200 AGL to 18,000 MSL
 - **J-routes** (Jet routes): High altitude, 18,000+ MSL
-- **Q-routes** (RNAV routes): GPS-based, various altitudes
+- **T-routes** (Tango airways): Low altitude RNAV, 1,200 AGL to 18,000 MSL
+- **Q-routes** (RNAV routes): High altitude RNAV, 18,000+ MSL
 
 ### Procedures (SIDs and STARs)
 
@@ -129,12 +130,19 @@ KBOS PAYGE SSOXS V3 SAX
 
 If you type `SSOXS` as the first fix after PAYGE, InFlight knows you want the SSOXS transition (not ROBUC or LBSTA).
 
-**You can also be explicit:**
+**You can also be explicit using FAA chart standard notation:**
 ```text
-WYNDE3.PAYGE
+KAYYS.WYNDE3
 ```
 
-This forces the PAYGE transition variant of WYNDE3 (if available).
+This forces the KAYYS transition for WYNDE3 STAR (follows FAA chart format: TRANSITION.PROCEDURE).
+
+**How autocomplete helps:** Type `KAYYS.` and autocomplete shows all procedures with the KAYYS transition. Type `KAYYS.WY` to filter to procedures starting with WY (like WYNDE3).
+
+**Works for both SIDs and STARs:**
+- `RAMRD.HIDEY1` - HIDEY ONE departure via RAMRD transition
+- `MTHEW.CHPPR1` - CHPPR ONE arrival via MTHEW transition
+- `KAYYS.WYNDE3` - WYNDE THREE arrival via KAYYS transition
 
 ### Mixed Routing (Real World)
 
