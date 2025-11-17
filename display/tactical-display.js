@@ -428,10 +428,11 @@ function drawAirspace(waypoints, project, strokeWidth, bounds) {
                        `class="airspace-circle airspace-${airspaceClass}"/>`;
             }
 
-            // Draw inner circle for Class B and C (creates the "donut" shape)
+            // Draw inner circle for Class B and C (creates the "donut" shape by cutting a hole)
             if (innerRadiusPx > 0 && (airspaceClass === 'B' || airspaceClass === 'C')) {
+                // Use black fill (background color) to create a hole
                 svg += `<circle cx="${center.x}" cy="${center.y}" r="${innerRadiusPx}" ` +
-                       `fill="${fillColor}" stroke="${strokeColor}" stroke-width="${strokeWidth * 0.5}" ` +
+                       `fill="#000000" stroke="${strokeColor}" stroke-width="${strokeWidth * 0.5}" ` +
                        `class="airspace-circle airspace-${airspaceClass}-inner"/>`;
             }
         }
