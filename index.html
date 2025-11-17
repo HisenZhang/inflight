@@ -46,56 +46,98 @@
 
         <!-- Tab: Welcome -->
         <div class="tab-content active" id="tab-welcome">
-            <!-- Title -->
-            <div class="data-section">
-                <h1 class="section-header" style="text-align: center; border: none; letter-spacing: 2px;">INFLIGHT</h1>
-                <p class="help-text" style="text-align: center; margin: 0;">FLIGHT PLANNING & NAVIGATION TOOL</p>
-            </div>
-
-            <!-- Disclaimer -->
-            <div class="data-section" style="border-color: var(--color-warning);">
-                <h3 class="section-header" style="color: var(--color-warning);">⚠ DISCLAIMER</h3>
-                <div class="data-info">
-                    <p style="font-weight: 700; color: var(--color-warning); margin-bottom: 0;">NOT FAA APPROVED — EDUCATIONAL USE ONLY</p>
+            <!-- Hero Section -->
+            <div class="welcome-hero">
+                <div class="hero-title">
+                    <h1>INFLIGHT</h1>
+                    <div class="hero-subtitle">FLIGHT PLANNING & NAVIGATION</div>
+                </div>
+                <div class="hero-disclaimer">
+                    <span class="disclaimer-icon">⚠</span>
+                    <span>NOT FAA APPROVED — EDUCATIONAL USE ONLY</span>
+                </div>
+                <div class="hero-actions">
+                    <button class="btn btn-primary btn-large font-bold" onclick="document.querySelector('[data-tab=data]').click()">
+                        GET STARTED →
+                    </button>
                 </div>
             </div>
 
-            <!-- Features -->
-            <div class="data-section">
-                <h3 class="section-header">FEATURES</h3>
-                <div class="data-info">
-                    <p><span style="color: var(--color-airport);">•</span> Route planning with airways, SID/STARs, direct routing</p>
-                    <p><span style="color: var(--color-airport);">•</span> Navigation log with winds aloft, fuel calculations, ETAs</p>
-                    <p><span style="color: var(--color-airport);">•</span> Moving map with real-time GPS tracking</p>
-                    <p><span style="color: var(--color-airport);">•</span> FAA NASR + OurAirports database</p>
-                    <p style="margin-bottom: 0;"><span style="color: var(--color-airport);">•</span> Flight tracking with GPX export</p>
+            <!-- Feature Grid -->
+            <div class="welcome-features">
+                <div class="feature-card" onclick="document.querySelector('[data-tab=route]').click()">
+                    <div class="feature-icon">✈</div>
+                    <div class="feature-title">ROUTE PLANNING</div>
+                    <div class="feature-desc">Airways, SID/STARs, and direct routing with waypoint validation</div>
+                </div>
+
+                <div class="feature-card" onclick="document.querySelector('[data-tab=navlog]').click()">
+                    <div class="feature-icon">📋</div>
+                    <div class="feature-title">NAVIGATION LOG</div>
+                    <div class="feature-desc">Winds aloft, fuel calculations, ETAs, and detailed leg-by-leg data</div>
+                </div>
+
+                <div class="feature-card" onclick="document.querySelector('[data-tab=map]').click()">
+                    <div class="feature-icon">🗺</div>
+                    <div class="feature-title">MOVING MAP</div>
+                    <div class="feature-desc">Real-time GPS tracking with vector graphics and flight progress</div>
+                </div>
+
+                <div class="feature-card" onclick="document.querySelector('[data-tab=stats]').click()">
+                    <div class="feature-icon">📊</div>
+                    <div class="feature-title">FLIGHT TRACKING</div>
+                    <div class="feature-desc">Track your flight, record GPS data, and export GPX tracks</div>
+                </div>
+
+                <div class="feature-card" onclick="document.querySelector('[data-tab=data]').click()">
+                    <div class="feature-icon">💾</div>
+                    <div class="feature-title">OFFLINE CAPABLE</div>
+                    <div class="feature-desc">FAA NASR + OurAirports database cached locally for offline use</div>
+                </div>
+
+                <div class="feature-card" onclick="document.querySelector('[data-tab=chklst]').click()">
+                    <div class="feature-icon">✓</div>
+                    <div class="feature-title">CHECKLISTS</div>
+                    <div class="feature-desc">Interactive pre-flight, takeoff, and landing checklists</div>
+                </div>
+            </div>
+
+            <!-- Quick Start Guide -->
+            <div class="welcome-quickstart">
+                <h3>QUICK START</h3>
+                <div class="quickstart-steps">
+                    <div class="step-item">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <div class="step-title">LOAD DATABASE</div>
+                            <div class="step-desc">Click DATA tab and load the aviation database</div>
+                        </div>
+                    </div>
+                    <div class="step-item">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <div class="step-title">ENTER ROUTE</div>
+                            <div class="step-desc">Example: <code>KORD PAYGE Q822 GONZZ KLGA</code></div>
+                        </div>
+                    </div>
+                    <div class="step-item">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <div class="step-title">REVIEW & FLY</div>
+                            <div class="step-desc">Check NAVLOG, view MAP, and enable GPS tracking</div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
             <!-- Limitations -->
-            <div class="data-section">
-                <h3 class="section-header">LIMITATIONS</h3>
-                <div class="data-info">
-                    <p><span style="color: var(--color-error);">•</span> US domestic waypoints only (no oceanic/NAT tracks)</p>
-                    <p><span style="color: var(--color-error);">•</span> OurAirports Data may be outdated</p>
-                    <p><span style="color: var(--color-error);">•</span> No NOTAM, TFR, or airspace restrictions</p>
-                    <p style="margin-bottom: 0;"><span style="color: var(--color-error);">•</span> GPS accuracy depends on device capabilities</p>
-                </div>
-            </div>
-
-            <!-- Quick Start -->
-            <div class="data-section">
-                <h3 class="section-header">QUICK START</h3>
-                <div class="data-info">
-                    <p><span style="color: var(--color-metric);">1.</span> DATA — Load aviation database</p>
-                    <p><span style="color: var(--color-metric);">2.</span> ROUTE — Enter route (e.g., <code>KORD PAYGE Q822 GONZZ KLGA</code>)</p>
-                    <p><span style="color: var(--color-metric);">3.</span> NAVLOG — Review flight plan</p>
-                    <p style="margin-bottom: 0;"><span style="color: var(--color-metric);">4.</span> MAP — Enable GPS tracking</p>
-                </div>
-                <div style="text-align: center;">
-                <button class="btn btn-primary font-bold" onclick="document.querySelector('[data-tab=data]').click()">
-                    GET STARTED
-                </button>
+            <div class="welcome-limitations">
+                <h3>LIMITATIONS</h3>
+                <div class="limitations-grid">
+                    <div class="limitation-item">⚠ US domestic waypoints only (no oceanic/NAT tracks)</div>
+                    <div class="limitation-item">⚠ OurAirports data may be outdated</div>
+                    <div class="limitation-item">⚠ No NOTAM, TFR, or airspace restrictions</div>
+                    <div class="limitation-item">⚠ GPS accuracy depends on device capabilities</div>
                 </div>
             </div>
 

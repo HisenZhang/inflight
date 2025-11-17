@@ -13,6 +13,7 @@ const ASSETS_TO_CACHE = [
     './styles/base.css',
     './styles/components.css',
     './styles/map.css',
+    './styles/welcome.css',
     './styles/print.css',
     './styles/pwa-install.css',
     './styles/tokens.css',
