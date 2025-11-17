@@ -20,8 +20,8 @@
         <div class="update-notification-content">
             <span class="update-notification-icon">🔄</span>
             <div class="update-notification-text">
-                <strong>UPDATE AVAILABLE</strong>
-                <p>A new version of InFlight is ready</p>
+                <strong id="update-version-info">UPDATE AVAILABLE</strong>
+                <p id="update-release-info">A new version of InFlight is ready</p>
             </div>
             <div class="update-notification-actions">
                 <button class="btn btn-primary btn-sm" onclick="activateUpdate()">UPDATE NOW</button>
@@ -103,10 +103,11 @@
             <div class="data-section" id="pwa-install-section" style="display: none;">
                 <h3 class="section-header">INSTALL APP</h3>
                 <div class="data-info">
-                    <p style="margin-bottom: 0;">Install InFlight on your device for offline access, faster performance, and a native app experience.</p>
+                    <p>Install InFlight on your device for offline access, faster performance, and a native app experience.</p>
+                    <p id="pwa-install-instructions" style="margin-bottom: 0;"></p>
                 </div>
                 <div style="text-align: center;">
-                    <button class="btn btn-primary font-bold" onclick="handleInstallClick()">
+                    <button class="btn btn-primary font-bold" id="pwa-install-button" onclick="handleInstallClick()">
                         📲 INSTALL NOW
                     </button>
                 </div>

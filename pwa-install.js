@@ -45,6 +45,11 @@ function initPWAInstall() {
     if (isPWAInstalled()) {
         hideInstallBanner();
         hideInstallSection();
+    } else if (isIOS() && !isPWAInstalled()) {
+        // On iOS, show install section even without beforeinstallprompt
+        // (iOS Safari doesn't fire this event)
+        console.log('[PWA Install] iOS detected - showing install instructions');
+        showInstallSection();
     }
 }
 
@@ -55,11 +60,48 @@ function isPWAInstalled() {
            window.navigator.standalone === true;
 }
 
+// Detect iOS devices
+function isIOS() {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+}
+
+// Detect Android devices
+function isAndroid() {
+    return /Android/.test(navigator.userAgent);
+}
+
 // Show the install section in Welcome tab
 function showInstallSection() {
     const section = document.getElementById('pwa-install-section');
-    if (section && !isPWAInstalled()) {
-        section.style.display = 'block';
+    const instructions = document.getElementById('pwa-install-instructions');
+    const button = document.getElementById('pwa-install-button');
+
+    if (!section || isPWAInstalled()) return;
+
+    section.style.display = 'block';
+
+    // Platform-specific instructions
+    if (isIOS()) {
+        if (instructions) {
+            instructions.innerHTML = '<strong>iOS:</strong> Tap Share <span style="color: var(--color-primary);">⎋</span> then "Add to Home Screen"';
+        }
+        if (button) {
+            button.style.display = 'none'; // Hide button on iOS (doesn't support programmatic install)
+        }
+    } else if (isAndroid()) {
+        if (instructions) {
+            instructions.innerHTML = '<strong>Android/Chrome:</strong> Tap the button below or use browser menu → "Install app"';
+        }
+        if (button && deferredPrompt) {
+            button.style.display = 'block';
+        }
+    } else {
+        if (instructions) {
+            instructions.innerHTML = '<strong>Desktop:</strong> Click the install button in your browser\'s address bar or below';
+        }
+        if (button && deferredPrompt) {
+            button.style.display = 'block';
+        }
     }
 }
 
