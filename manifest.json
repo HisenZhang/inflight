@@ -3,7 +3,7 @@
   "short_name": "InFlight",
   "id": "/",
   "version": "2.0.0",
-  "description": "Flight planning tool for pilots - Offline-capable route calculator",
+  "description": "Open source terminal-style flight planner with offline database and moving map",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

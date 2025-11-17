@@ -34,7 +34,7 @@ const AppVersion = {
 
     // Service worker cache version
     // Increment this number to force PWA updates
-    CACHE_VERSION: 99,
+    CACHE_VERSION: 100,
 
     // Full cache name for service worker
     get CACHE_NAME() {
