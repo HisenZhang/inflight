@@ -46,99 +46,20 @@
 
         <!-- Tab: Welcome -->
         <div class="tab-content active" id="tab-welcome">
-            <!-- Hero Section -->
-            <div class="welcome-hero">
-                <div class="hero-title">
-                    <h1>INFLIGHT</h1>
-                    <div class="hero-subtitle">FLIGHT PLANNING & NAVIGATION</div>
-                </div>
-                <div class="hero-disclaimer">
-                    <span class="disclaimer-icon">⚠</span>
-                    <span>NOT FAA APPROVED — EDUCATIONAL USE ONLY</span>
-                </div>
-                <div class="hero-actions">
-                    <button class="btn btn-primary btn-large font-bold" onclick="document.querySelector('[data-tab=data]').click()">
-                        GET STARTED →
-                    </button>
-                </div>
-            </div>
+            <div class="welcome-brief">
+                <h1>INFLIGHT</h1>
+                <p class="welcome-tagline">Offline-capable flight planning and navigation tool</p>
 
-            <!-- Feature Grid -->
-            <div class="welcome-features">
-                <div class="feature-card">
-                    <div class="feature-icon">✈</div>
-                    <div class="feature-title">ROUTE PLANNING</div>
-                    <div class="feature-desc">Airways, SID/STARs, and direct routing with waypoint validation</div>
+                <div class="welcome-disclaimer">⚠ NOT FAA APPROVED — EDUCATIONAL USE ONLY</div>
+
+                <div class="welcome-info">
+                    <p><strong>Features:</strong> Route planning • Navigation log • Moving map • GPS tracking • Offline database</p>
+                    <p><strong>Limitations:</strong> US waypoints only • No NOTAM/TFR • Data may be outdated</p>
                 </div>
 
-                <div class="feature-card">
-                    <div class="feature-icon">📋</div>
-                    <div class="feature-title">NAVIGATION LOG</div>
-                    <div class="feature-desc">Winds aloft, fuel calculations, ETAs, and detailed leg-by-leg data</div>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-icon">🗺</div>
-                    <div class="feature-title">MOVING MAP</div>
-                    <div class="feature-desc">Real-time GPS tracking with vector graphics and flight progress</div>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-icon">📊</div>
-                    <div class="feature-title">FLIGHT TRACKING</div>
-                    <div class="feature-desc">Track your flight, record GPS data, and export GPX tracks</div>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-icon">💾</div>
-                    <div class="feature-title">OFFLINE CAPABLE</div>
-                    <div class="feature-desc">FAA NASR + OurAirports database cached locally for offline use</div>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-icon">✓</div>
-                    <div class="feature-title">CHECKLISTS</div>
-                    <div class="feature-desc">Interactive pre-flight, takeoff, and landing checklists</div>
-                </div>
-            </div>
-
-            <!-- Quick Start Guide -->
-            <div class="welcome-quickstart">
-                <h3>QUICK START</h3>
-                <div class="quickstart-steps">
-                    <div class="step-item">
-                        <div class="step-number">1</div>
-                        <div class="step-content">
-                            <div class="step-title">LOAD DATABASE</div>
-                            <div class="step-desc">Click DATA tab and load the aviation database</div>
-                        </div>
-                    </div>
-                    <div class="step-item">
-                        <div class="step-number">2</div>
-                        <div class="step-content">
-                            <div class="step-title">ENTER ROUTE</div>
-                            <div class="step-desc">Example: <code>KORD PAYGE Q822 GONZZ KLGA</code></div>
-                        </div>
-                    </div>
-                    <div class="step-item">
-                        <div class="step-number">3</div>
-                        <div class="step-content">
-                            <div class="step-title">REVIEW & FLY</div>
-                            <div class="step-desc">Check NAVLOG, view MAP, and enable GPS tracking</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Limitations -->
-            <div class="welcome-limitations">
-                <h3>LIMITATIONS</h3>
-                <div class="limitations-grid">
-                    <div class="limitation-item">⚠ US domestic waypoints only (no oceanic/NAT tracks)</div>
-                    <div class="limitation-item">⚠ OurAirports data may be outdated</div>
-                    <div class="limitation-item">⚠ No NOTAM, TFR, or airspace restrictions</div>
-                    <div class="limitation-item">⚠ GPS accuracy depends on device capabilities</div>
-                </div>
+                <button class="btn btn-primary font-bold" onclick="document.querySelector('[data-tab=data]').click()">
+                    GET STARTED →
+                </button>
             </div>
 
             <!-- Install App -->
