@@ -12,7 +12,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css?v=8">
     <link rel="manifest" href="manifest.json">
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23000'/%3E%3Ctext x='50' y='65' font-family='monospace' font-size='48' font-weight='bold' fill='%23f0f' text-anchor='middle'%3EIN%3C/text%3E%3C/svg%3E">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23000'/%3E%3Ctext x='50' y='70' font-family='monospace' font-size='64' font-weight='bold' fill='%23fff' text-anchor='middle'%3EIN%3C/text%3E%3C/svg%3E">
 </head>
 <body>
     <!-- Update Notification Banner -->
@@ -114,15 +114,6 @@
                     <p id="update-check-status" style="margin-top: 8px; font-size: 0.75rem; color: var(--text-secondary);"></p>
                 </div>
             </div>
-
-            <script>
-                // Populate version info once AppVersion is loaded
-                if (window.AppVersion) {
-                    document.getElementById('app-version').textContent = 'v' + window.AppVersion.VERSION;
-                    document.getElementById('cache-version').textContent = window.AppVersion.CACHE_NAME;
-                    document.getElementById('build-date').textContent = window.AppVersion.BUILD_DATE;
-                }
-            </script>
         </div>
 
         <!-- Tab: Data & Cache -->
@@ -1098,5 +1089,15 @@
     <script src="display/checklist-controller.js"></script><!-- Checklist tab controller -->
     <script src="display/tactical-display.js"></script>    <!-- Vector map & GPS tracking -->
     <script src="display/app.js"></script>                 <!-- Main application coordinator -->
+
+    <!-- Initialize version display after all scripts loaded -->
+    <script>
+        // Populate version info in WELCOME tab
+        if (window.AppVersion) {
+            document.getElementById('app-version').textContent = 'v' + window.AppVersion.VERSION;
+            document.getElementById('cache-version').textContent = window.AppVersion.CACHE_NAME;
+            document.getElementById('build-date').textContent = window.AppVersion.BUILD_DATE;
+        }
+    </script>
 </body>
 </html>
