@@ -21,6 +21,7 @@ const ASSETS_TO_CACHE = [
     './manifest.json',
     './version.js',
     './pwa-install.js',
+    './demo-route.js',
     // PWA Icons and Screenshots
     './public/icon-192.svg',
     './public/icon-512.svg',

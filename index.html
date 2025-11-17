@@ -57,9 +57,14 @@
                     <p><strong>Limitations:</strong> US waypoints only • No NOTAM/TFR • Data may be outdated</p>
                 </div>
 
-                <button class="btn btn-primary font-bold" onclick="document.querySelector('[data-tab=data]').click()">
-                    GET STARTED →
-                </button>
+                <div class="welcome-actions">
+                    <button class="btn btn-primary font-bold" onclick="document.querySelector('[data-tab=data]').click()">
+                        GET STARTED →
+                    </button>
+                    <button class="btn btn-secondary" onclick="loadDemoRoute()">
+                        TRY DEMO ROUTE
+                    </button>
+                </div>
             </div>
 
             <!-- Install App -->
@@ -1092,5 +1097,6 @@
     <script src="display/checklist-controller.js"></script><!-- Checklist tab controller -->
     <script src="display/tactical-display.js"></script>    <!-- Vector map & GPS tracking -->
     <script src="display/app.js"></script>                 <!-- Main application coordinator -->
+    <script src="demo-route.js"></script>                  <!-- Demo route loader -->
 </body>
 </html>
