@@ -798,40 +798,56 @@ async function showUpdateNotification() {
                 const newVersion = `${majorMatch[1]}.${minorMatch[1]}.${patchMatch[1]}`;
                 const currentVersion = window.AppVersion ? window.AppVersion.VERSION : 'unknown';
 
-                // Calculate days ago
-                let daysAgo = '';
-                if (buildDateMatch) {
-                    const buildDate = new Date(buildDateMatch[1]);
-                    const now = new Date();
-                    const diffTime = Math.abs(now - buildDate);
-                    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
-                    if (diffDays === 0) {
-                        daysAgo = 'Released today';
-                    } else if (diffDays === 1) {
-                        daysAgo = 'Released yesterday';
-                    } else {
-                        daysAgo = `Released ${diffDays} days ago`;
-                    }
-                }
-
                 // Update notification text
                 const versionInfo = document.getElementById('update-version-info');
                 const releaseInfo = document.getElementById('update-release-info');
 
-                if (versionInfo) {
-                    versionInfo.textContent = `v${currentVersion} → v${newVersion}`;
-                }
+                // Check if versions are actually different
+                if (newVersion === currentVersion) {
+                    // Same version - just show generic update message
+                    // (happens during development/testing with same cache version)
+                    if (versionInfo) {
+                        versionInfo.textContent = 'New update available';
+                    }
+                    if (releaseInfo && releaseNameMatch && releaseNameMatch[1]) {
+                        releaseInfo.textContent = releaseNameMatch[1];
+                    }
+                } else {
+                    // Different versions - show detailed upgrade info
+                    if (versionInfo) {
+                        versionInfo.textContent = `v${currentVersion} → v${newVersion}`;
+                    }
 
-                if (releaseInfo) {
-                    const parts = [];
-                    if (releaseNameMatch && releaseNameMatch[1]) {
-                        parts.push(releaseNameMatch[1]);
+                    // Calculate days ago
+                    let daysAgo = '';
+                    if (buildDateMatch) {
+                        const buildDate = new Date(buildDateMatch[1]);
+                        const now = new Date();
+                        const diffTime = Math.abs(now - buildDate);
+                        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+                        if (diffDays === 0) {
+                            daysAgo = 'Released today';
+                        } else if (diffDays === 1) {
+                            daysAgo = 'Released yesterday';
+                        } else if (diffDays < 30) {
+                            daysAgo = `Released ${diffDays} days ago`;
+                        } else {
+                            // Don't show if older than 30 days (probably wrong date)
+                            daysAgo = '';
+                        }
                     }
-                    if (daysAgo) {
-                        parts.push(daysAgo);
+
+                    if (releaseInfo) {
+                        const parts = [];
+                        if (releaseNameMatch && releaseNameMatch[1]) {
+                            parts.push(releaseNameMatch[1]);
+                        }
+                        if (daysAgo) {
+                            parts.push(daysAgo);
+                        }
+                        releaseInfo.textContent = parts.join(' • ');
                     }
-                    releaseInfo.textContent = parts.join(' • ');
                 }
             }
         }
