@@ -810,9 +810,9 @@ window.dismissUpdate = function() {
  * Manually checks for service worker updates
  * Called when user clicks "CHECK FOR UPDATES" button
  */
-window.checkForUpdates = async function() {
+window.checkForUpdates = async function(event) {
     const statusEl = document.getElementById('update-check-status');
-    const button = event.target;
+    const button = event ? event.target : null;
 
     if (!('serviceWorker' in navigator)) {
         if (statusEl) {
@@ -824,8 +824,10 @@ window.checkForUpdates = async function() {
 
     try {
         // Disable button and show checking status
-        button.disabled = true;
-        button.textContent = 'CHECKING...';
+        if (button) {
+            button.disabled = true;
+            button.textContent = 'CHECKING...';
+        }
         if (statusEl) {
             statusEl.textContent = 'Checking for updates...';
             statusEl.style.color = 'var(--text-secondary)';
@@ -878,7 +880,9 @@ window.checkForUpdates = async function() {
         }
     } finally {
         // Re-enable button
-        button.disabled = false;
-        button.textContent = 'CHECK FOR UPDATES';
+        if (button) {
+            button.disabled = false;
+            button.textContent = 'CHECK FOR UPDATES';
+        }
     }
 };

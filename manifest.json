@@ -11,19 +11,19 @@
   "orientation": "any",
   "icons": [
     {
-      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' fill='%23000000'/%3E%3Ctext x='96' y='96' font-family='monospace' font-size='48' font-weight='bold' fill='%23ff00ff' text-anchor='middle' dominant-baseline='middle'%3EIN%3C/text%3E%3C/svg%3E",
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' fill='%23000'/%3E%3Ctext x='96' y='110' font-family='monospace' font-size='48' font-weight='bold' fill='%23f0f' text-anchor='middle'%3EIN%3C/text%3E%3C/svg%3E",
       "sizes": "192x192",
       "type": "image/svg+xml",
       "purpose": "any"
     },
     {
-      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%23000000'/%3E%3Ctext x='256' y='256' font-family='monospace' font-size='120' font-weight='bold' fill='%23ff00ff' text-anchor='middle' dominant-baseline='middle'%3EIN%3C/text%3E%3C/svg%3E",
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%23000'/%3E%3Ctext x='256' y='300' font-family='monospace' font-size='120' font-weight='bold' fill='%23f0f' text-anchor='middle'%3EIN%3C/text%3E%3C/svg%3E",
       "sizes": "512x512",
       "type": "image/svg+xml",
       "purpose": "any"
     },
     {
-      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%23ff00ff' rx='64'/%3E%3Ctext x='256' y='300' font-family='monospace' font-size='120' font-weight='bold' fill='%23000000' text-anchor='middle' dominant-baseline='middle'%3EIN%3C/text%3E%3C/svg%3E",
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%23f0f' rx='64'/%3E%3Ctext x='256' y='300' font-family='monospace' font-size='120' font-weight='bold' fill='%23000' text-anchor='middle'%3EIN%3C/text%3E%3C/svg%3E",
       "sizes": "512x512",
       "type": "image/svg+xml",
       "purpose": "maskable"
