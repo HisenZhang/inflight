@@ -773,13 +773,79 @@ if ('serviceWorker' in navigator) {
 }
 
 /**
- * Shows update notification banner to user
+ * Shows update notification banner to user with version info
  */
-function showUpdateNotification() {
+async function showUpdateNotification() {
     const notification = document.getElementById('update-notification');
-    if (notification) {
-        notification.classList.add('show');
+    if (!notification) return;
+
+    // Get new version info from waiting service worker
+    try {
+        const registration = await navigator.serviceWorker.ready;
+        if (registration.waiting) {
+            // Fetch version.js from the new service worker to get new version info
+            const response = await fetch('./version.js');
+            const versionCode = await response.text();
+
+            // Extract version info using regex (hacky but works without eval)
+            const buildDateMatch = versionCode.match(/BUILD_DATE:\s*['"]([^'"]+)['"]/);
+            const releaseNameMatch = versionCode.match(/RELEASE_NAME:\s*['"]([^'"]+)['"]/);
+            const majorMatch = versionCode.match(/MAJOR:\s*(\d+)/);
+            const minorMatch = versionCode.match(/MINOR:\s*(\d+)/);
+            const patchMatch = versionCode.match(/PATCH:\s*(\d+)/);
+
+            if (majorMatch && minorMatch && patchMatch) {
+                const newVersion = `${majorMatch[1]}.${minorMatch[1]}.${patchMatch[1]}`;
+                const currentVersion = window.AppVersion ? window.AppVersion.VERSION : 'unknown';
+
+                // Calculate days ago
+                let daysAgo = '';
+                if (buildDateMatch) {
+                    const buildDate = new Date(buildDateMatch[1]);
+                    const now = new Date();
+                    const diffTime = Math.abs(now - buildDate);
+                    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+                    if (diffDays === 0) {
+                        daysAgo = 'Released today';
+                    } else if (diffDays === 1) {
+                        daysAgo = 'Released yesterday';
+                    } else {
+                        daysAgo = `Released ${diffDays} days ago`;
+                    }
+                }
+
+                // Update notification text
+                const versionInfo = document.getElementById('update-version-info');
+                const releaseInfo = document.getElementById('update-release-info');
+
+                if (versionInfo) {
+                    versionInfo.textContent = `v${currentVersion} → v${newVersion}`;
+                }
+
+                if (releaseInfo) {
+                    const parts = [];
+                    if (releaseNameMatch && releaseNameMatch[1]) {
+                        parts.push(releaseNameMatch[1]);
+                    }
+                    if (daysAgo) {
+                        parts.push(daysAgo);
+                    }
+                    releaseInfo.textContent = parts.join(' • ');
+                }
+            }
+        }
+    } catch (error) {
+        console.error('[App] Failed to get new version info:', error);
+        // Fallback to generic message
+        const versionInfo = document.getElementById('update-version-info');
+        if (versionInfo) {
+            versionInfo.textContent = 'A new version of InFlight is ready';
+        }
     }
+
+    // Show the notification
+    notification.classList.add('show');
 }
 
 /**
