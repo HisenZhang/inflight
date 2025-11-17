@@ -6,8 +6,12 @@ let installBannerDismissed = false;
 
 // Initialize PWA install handling
 function initPWAInstall() {
+    console.log('[PWA Install] Setting up event listeners...');
+
     // Listen for the beforeinstallprompt event
     window.addEventListener('beforeinstallprompt', (e) => {
+        console.log('[PWA Install] beforeinstallprompt event fired!');
+
         // Prevent the default mini-infobar from appearing on mobile
         e.preventDefault();
 
@@ -19,7 +23,10 @@ function initPWAInstall() {
 
         // Show custom install banner if not dismissed
         if (!installBannerDismissed && !isPWAInstalled()) {
+            console.log('[PWA Install] Showing install banner');
             showInstallBanner();
+        } else {
+            console.log('[PWA Install] Not showing banner - dismissed:', installBannerDismissed, 'installed:', isPWAInstalled());
         }
     });
 
@@ -158,6 +165,14 @@ function showInstallSuccess() {
 
 // Initialize on DOM load
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('[PWA Install] Initializing...');
     checkDismissalExpiry();
     initPWAInstall();
+
+    // Debug: Check if elements exist
+    const banner = document.getElementById('pwa-install-banner');
+    const section = document.getElementById('pwa-install-section');
+    console.log('[PWA Install] Banner element:', banner ? 'Found' : 'Missing');
+    console.log('[PWA Install] Section element:', section ? 'Found' : 'Missing');
+    console.log('[PWA Install] Already installed:', isPWAInstalled());
 });
