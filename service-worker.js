@@ -10,9 +10,23 @@ const ASSETS_TO_CACHE = [
     './',
     './index.html',
     './styles.css',
+    './styles/base.css',
+    './styles/components.css',
+    './styles/map.css',
     './styles/print.css',
+    './styles/pwa-install.css',
+    './styles/tokens.css',
+    './styles/utilities.css',
     './manifest.json',
     './version.js',
+    './pwa-install.js',
+    // PWA Icons and Screenshots
+    './public/icon-192.svg',
+    './public/icon-512.svg',
+    './public/icon-maskable-192.svg',
+    './public/icon-maskable-512.svg',
+    './public/apple-touch-icon.svg',
+    './public/screenshot-wide.svg',
     // External Libraries
     './lib/geodesy.js',
     './lib/wind-stations.js',
@@ -24,13 +38,20 @@ const ASSETS_TO_CACHE = [
     './data/data-manager.js',
     // Compute Engine
     './compute/winds-aloft.js',
+    './compute/route-lexer.js',
+    './compute/route-parser.js',
+    './compute/route-resolver.js',
+    './compute/route-engine.js',
     './compute/route-expander.js',
     './compute/route-calculator.js',
     './compute/query-engine.js',
     // State Management
     './state/flight-state.js',
+    './state/flight-tracker.js',
     // Display Layer
     './display/ui-controller.js',
+    './display/stats-controller.js',
+    './display/checklist-controller.js',
     './display/tactical-display.js',
     './display/app.js'
 ];
