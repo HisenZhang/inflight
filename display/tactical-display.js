@@ -340,106 +340,80 @@ function drawAirspace(waypoints, project, strokeWidth, bounds) {
     // Query all airports within the expanded bounds
     const nearbyAirports = window.QueryEngine.getPointsInBounds(expandedBounds);
 
-    // Find airports with Class B, C, or D airspace and group by class
-    const airspaceByClass = { B: [], C: [], D: [] };
-
+    // Draw airspace circles for each airport
     for (const airport of nearbyAirports.airports) {
         const airportCode = airport.icao || airport.ident || airport.code;
-        if (airportCode) {
-            const airspace = window.DataManager.getAirspaceClass(airportCode);
-            if (airspace && (airspace.class === 'B' || airspace.class === 'C' || airspace.class === 'D')) {
-                airspaceByClass[airspace.class].push({
-                    waypoint: airport,
-                    airspace,
-                    code: airportCode
-                });
-            }
+        if (!airportCode) continue;
+
+        const airspace = window.DataManager.getAirspaceClass(airportCode);
+        if (!airspace || !(airspace.class === 'B' || airspace.class === 'C' || airspace.class === 'D')) continue;
+
+        const center = project(airport.lat, airport.lon);
+        const radii = AIRSPACE_RADII[airspace.class];
+
+        if (!radii) continue;
+
+        // Calculate radius in pixels (approximate, using latitude scaling)
+        // 1 nautical mile ≈ 1/60 degree latitude
+        const nmToDeg = 1 / 60;
+
+        // Project a point at the outer radius to calculate pixel radius
+        const testLat = airport.lat + (radii.outer * nmToDeg);
+        const testPoint = project(testLat, airport.lon);
+        const outerRadiusPx = Math.abs(testPoint.y - center.y);
+
+        // Calculate inner radius if exists
+        let innerRadiusPx = 0;
+        if (radii.inner > 0) {
+            const innerTestLat = airport.lat + (radii.inner * nmToDeg);
+            const innerTestPoint = project(innerTestLat, airport.lon);
+            innerRadiusPx = Math.abs(innerTestPoint.y - center.y);
         }
-    }
 
-    // Draw each airspace class separately in two layers
-    // Layer 1: All outer circles with fill-opacity (prevents same-class overlap darkening)
-    // Layer 2: All inner circles with opaque black fill (cuts holes for donut shape)
-    for (const [airspaceClass, airports] of Object.entries(airspaceByClass)) {
-        if (airports.length === 0) continue;
+        // Style based on airspace class
+        let fillColor, strokeColor, opacity, dashArray;
 
-        // Determine color and opacity for this class
-        let fillColor, strokeColor, fillOpacity, dashArray;
-
-        switch (airspaceClass) {
+        switch (airspace.class) {
             case 'B':
-                fillColor = '#0000ff';
+                fillColor = '#0000ff'; // Dark blue
                 strokeColor = '#0000ff';
-                fillOpacity = 0.15;
+                opacity = 0.15;
                 dashArray = 'none';
                 break;
             case 'C':
-                fillColor = '#c71585';
+                fillColor = '#c71585'; // Medium violet-red (brighter magenta)
                 strokeColor = '#c71585';
-                fillOpacity = 0.2;
+                opacity = 0.2;
                 dashArray = 'none';
                 break;
             case 'D':
-                fillColor = 'none';
-                strokeColor = '#4169e1';
-                fillOpacity = 0.6;
-                dashArray = '8,4';
+                fillColor = 'none'; // No fill for Class D
+                strokeColor = '#4169e1'; // Royal blue
+                opacity = 0.6;
+                dashArray = '8,4'; // Dashed circle
                 break;
             default:
                 continue;
         }
 
-        // Layer 1: Draw all outer circles for this class
-        for (const { waypoint, airspace } of airports) {
-            const center = project(waypoint.lat, waypoint.lon);
-            const radii = AIRSPACE_RADII[airspace.class];
-
-            if (!radii) continue;
-
-            // Calculate radius in pixels (approximate, using latitude scaling)
-            // 1 nautical mile ≈ 1/60 degree latitude
-            const nmToDeg = 1 / 60;
-
-            // Project a point at the outer radius to calculate pixel radius
-            const testLat = waypoint.lat + (radii.outer * nmToDeg);
-            const testPoint = project(testLat, waypoint.lon);
-            const outerRadiusPx = Math.abs(testPoint.y - center.y);
-
-            // Draw outer circle
-            if (airspaceClass === 'D') {
-                // Class D: dashed circle, no fill
-                svg += `<circle cx="${center.x}" cy="${center.y}" r="${outerRadiusPx}" ` +
-                       `fill="none" stroke="${strokeColor}" stroke-width="${strokeWidth}" ` +
-                       `stroke-opacity="${fillOpacity}" stroke-dasharray="${dashArray}" ` +
-                       `class="airspace-circle airspace-${airspaceClass}"/>`;
-            } else {
-                // Class B/C: filled circle with border (fill-opacity prevents overlap darkening)
-                svg += `<circle cx="${center.x}" cy="${center.y}" r="${outerRadiusPx}" ` +
-                       `fill="${fillColor}" fill-opacity="${fillOpacity}" ` +
-                       `stroke="${strokeColor}" stroke-opacity="${fillOpacity}" stroke-width="${strokeWidth * 0.5}" ` +
-                       `class="airspace-circle airspace-${airspaceClass}"/>`;
-            }
+        // Draw outer circle
+        if (airspace.class === 'D') {
+            // Class D: dashed circle, no fill, 2x thicker stroke
+            svg += `<circle cx="${center.x}" cy="${center.y}" r="${outerRadiusPx}" ` +
+                   `fill="none" stroke="${strokeColor}" stroke-width="${strokeWidth}" ` +
+                   `stroke-dasharray="${dashArray}" opacity="${opacity}" class="airspace-circle airspace-${airspace.class}"/>`;
+        } else {
+            // Class B/C: filled circle with border
+            svg += `<circle cx="${center.x}" cy="${center.y}" r="${outerRadiusPx}" ` +
+                   `fill="${fillColor}" stroke="${strokeColor}" stroke-width="${strokeWidth * 0.5}" ` +
+                   `opacity="${opacity}" class="airspace-circle airspace-${airspace.class}"/>`;
         }
 
-        // Layer 2: Draw inner circles with opaque black fill to cut holes
-        if (airspaceClass === 'B' || airspaceClass === 'C') {
-            for (const { waypoint, airspace } of airports) {
-                const center = project(waypoint.lat, waypoint.lon);
-                const radii = AIRSPACE_RADII[airspace.class];
-
-                if (!radii || radii.inner === 0) continue;
-
-                const nmToDeg = 1 / 60;
-                const innerTestLat = waypoint.lat + (radii.inner * nmToDeg);
-                const innerTestPoint = project(innerTestLat, waypoint.lon);
-                const innerRadiusPx = Math.abs(innerTestPoint.y - center.y);
-
-                // Draw inner circle with OPAQUE black fill to cut a hole
-                svg += `<circle cx="${center.x}" cy="${center.y}" r="${innerRadiusPx}" ` +
-                       `fill="#000000" fill-opacity="1" ` +
-                       `stroke="${strokeColor}" stroke-opacity="${fillOpacity}" stroke-width="${strokeWidth * 0.5}" ` +
-                       `class="airspace-circle airspace-${airspaceClass}-inner"/>`;
-            }
+        // Draw inner circle for Class B and C (creates the "donut" shape)
+        if (innerRadiusPx > 0 && (airspace.class === 'B' || airspace.class === 'C')) {
+            svg += `<circle cx="${center.x}" cy="${center.y}" r="${innerRadiusPx}" ` +
+                   `fill="${fillColor}" stroke="${strokeColor}" stroke-width="${strokeWidth * 0.5}" ` +
+                   `opacity="${opacity}" class="airspace-circle airspace-${airspace.class}-inner"/>`;
         }
     }
 
