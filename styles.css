@@ -5,4 +5,5 @@
 @import url('./styles/utilities.css');
 @import url('./styles/components.css');
 @import url('./styles/map.css');
+@import url('./styles/pwa-install.css');
 @import url('./styles/print.css');

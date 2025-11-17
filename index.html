@@ -12,7 +12,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css?v=8">
     <link rel="manifest" href="manifest.json">
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23000'/%3E%3Ctext x='50' y='70' font-family='monospace' font-size='64' font-weight='900' fill='%23fff' text-anchor='middle' stroke='%23fff' stroke-width='2'%3EIN%3C/text%3E%3C/svg%3E">
+    <link rel="apple-touch-icon" href="apple-touch-icon.svg">
 </head>
 <body>
     <!-- Update Notification Banner -->
@@ -21,8 +21,7 @@
             <span class="update-notification-icon">🔄</span>
             <div class="update-notification-text">
                 <strong>UPDATE AVAILABLE</strong>
-                <p id="update-version-info">A new version of InFlight is ready</p>
-                <p id="update-release-info" style="margin: 0; font-size: 0.7rem; opacity: 0.8;"></p>
+                <p>A new version of InFlight is ready</p>
             </div>
             <div class="update-notification-actions">
                 <button class="btn btn-primary btn-sm" onclick="activateUpdate()">UPDATE NOW</button>
@@ -100,6 +99,19 @@
                 </div>
             </div>
 
+            <!-- Install App -->
+            <div class="data-section" id="pwa-install-section" style="display: none;">
+                <h3 class="section-header">INSTALL APP</h3>
+                <div class="data-info">
+                    <p style="margin-bottom: 0;">Install InFlight on your device for offline access, faster performance, and a native app experience.</p>
+                </div>
+                <div style="text-align: center;">
+                    <button class="btn btn-primary font-bold" onclick="handleInstallClick()">
+                        📲 INSTALL NOW
+                    </button>
+                </div>
+            </div>
+
             <!-- App Updates -->
             <div class="data-section">
                 <h3 class="section-header">APP VERSION</h3>
@@ -109,12 +121,21 @@
                     <p style="margin-bottom: 0;"><strong>Build:</strong> <span id="build-date">Loading...</span></p>
                 </div>
                 <div style="text-align: center;">
-                    <button class="btn btn-secondary" onclick="checkForUpdates(event)">
+                    <button class="btn btn-secondary" onclick="checkForUpdates()">
                         CHECK FOR UPDATES
                     </button>
                     <p id="update-check-status" style="margin-top: 8px; font-size: 0.75rem; color: var(--text-secondary);"></p>
                 </div>
             </div>
+
+            <script>
+                // Populate version info once AppVersion is loaded
+                if (window.AppVersion) {
+                    document.getElementById('app-version').textContent = 'v' + window.AppVersion.VERSION;
+                    document.getElementById('cache-version').textContent = window.AppVersion.CACHE_NAME;
+                    document.getElementById('build-date').textContent = window.AppVersion.BUILD_DATE;
+                }
+            </script>
         </div>
 
         <!-- Tab: Data & Cache -->
@@ -1053,10 +1074,27 @@
 
     </div>
 
+    <!-- PWA Install Banner -->
+    <div id="pwa-install-banner" class="pwa-install-banner">
+        <div class="pwa-install-content">
+            <span class="pwa-install-icon">📲</span>
+            <div class="pwa-install-text">
+                <strong>INSTALL INFLIGHT</strong>
+                <p>Add to home screen for offline access & better performance</p>
+            </div>
+            <div class="pwa-install-actions">
+                <button class="btn-install" onclick="handleInstallClick()">INSTALL</button>
+                <button class="btn-dismiss" onclick="handleInstallDismiss()">NOT NOW</button>
+            </div>
+        </div>
+        <div id="pwa-install-status"></div>
+    </div>
+
     <!-- Scripts - Load modules in order (3-Engine Architecture) -->
 
     <!-- Version Configuration (loaded first) -->
     <script src="version.js"></script>                  <!-- Centralized version management -->
+    <script src="pwa-install.js"></script>              <!-- PWA install UI handler -->
 
     <!-- External Libraries -->
     <script src="lib/geodesy.js"></script>              <!-- WGS84 + WMM2025 library -->
@@ -1090,15 +1128,5 @@
     <script src="display/checklist-controller.js"></script><!-- Checklist tab controller -->
     <script src="display/tactical-display.js"></script>    <!-- Vector map & GPS tracking -->
     <script src="display/app.js"></script>                 <!-- Main application coordinator -->
-
-    <!-- Initialize version display after all scripts loaded -->
-    <script>
-        // Populate version info in WELCOME tab
-        if (window.AppVersion) {
-            document.getElementById('app-version').textContent = 'v' + window.AppVersion.VERSION;
-            document.getElementById('cache-version').textContent = window.AppVersion.CACHE_NAME;
-            document.getElementById('build-date').textContent = window.AppVersion.BUILD_DATE;
-        }
-    </script>
 </body>
 </html>
