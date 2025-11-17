@@ -512,3 +512,29 @@
 .map-status-bar.hidden {
     display: none;
 }
+
+/* ============================================ */
+/* Airspace Visualization */
+/* ============================================ */
+
+.airspace-circle {
+    pointer-events: none; /* Don't interfere with waypoint clicks */
+}
+
+.airspace-B {
+    fill: #0000ff;
+    stroke: #0000ff;
+    opacity: 0.15;
+}
+
+.airspace-C {
+    fill: #c71585;
+    stroke: #c71585;
+    opacity: 0.2;
+}
+
+.airspace-D {
+    fill: none;
+    stroke: #4169e1;
+    opacity: 0.6;
+}

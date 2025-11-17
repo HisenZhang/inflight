@@ -312,6 +312,125 @@ function updateLiveNavigation() {
 }
 
 // ============================================
+// AIRSPACE RENDERING
+// ============================================
+
+// Standard airspace radii (nautical miles) - conservative FAA dimensions
+const AIRSPACE_RADII = {
+    'B': { inner: 10, outer: 30 },    // Class B: inner 10nm, outer 30nm (3 concentric circles: 10/20/30)
+    'C': { inner: 5, outer: 10 },     // Class C: inner 5nm surface area, outer 10nm shelf
+    'D': { inner: 0, outer: 5 }       // Class D: 5nm radius (conservative estimate)
+};
+
+// Draw airspace around airports in the visible area (for avoidance awareness)
+function drawAirspace(waypoints, project, strokeWidth, bounds) {
+    let svg = '';
+
+    if (!window.DataManager || !window.QueryEngine) return svg;
+
+    // Get all airports in the bounding box (with some padding for airspace that extends beyond)
+    const padding = 0.5; // ~30nm padding to catch airspace that extends into view
+    const expandedBounds = {
+        minLat: bounds.minLat - padding,
+        maxLat: bounds.maxLat + padding,
+        minLon: bounds.minLon - padding,
+        maxLon: bounds.maxLon + padding
+    };
+
+    // Query all airports within the expanded bounds
+    const nearbyAirports = window.QueryEngine.getPointsInBounds(expandedBounds);
+
+    // Find airports with Class B, C, or D airspace
+    const airportsWithAirspace = [];
+    for (const airport of nearbyAirports.airports) {
+        const airportCode = airport.icao || airport.ident || airport.code;
+        if (airportCode) {
+            const airspace = window.DataManager.getAirspaceClass(airportCode);
+            if (airspace && (airspace.class === 'B' || airspace.class === 'C' || airspace.class === 'D')) {
+                airportsWithAirspace.push({
+                    waypoint: airport,
+                    airspace,
+                    code: airportCode
+                });
+            }
+        }
+    }
+
+    // Draw airspace circles for each airport
+    for (const { waypoint, airspace } of airportsWithAirspace) {
+        const center = project(waypoint.lat, waypoint.lon);
+        const radii = AIRSPACE_RADII[airspace.class];
+
+        if (!radii) continue;
+
+        // Calculate radius in pixels (approximate, using latitude scaling)
+        // 1 nautical mile ≈ 1/60 degree latitude
+        const nmToDeg = 1 / 60;
+
+        // Project a point at the outer radius to calculate pixel radius
+        const testLat = waypoint.lat + (radii.outer * nmToDeg);
+        const testPoint = project(testLat, waypoint.lon);
+        const outerRadiusPx = Math.abs(testPoint.y - center.y);
+
+        // Calculate inner radius if exists
+        let innerRadiusPx = 0;
+        if (radii.inner > 0) {
+            const innerTestLat = waypoint.lat + (radii.inner * nmToDeg);
+            const innerTestPoint = project(innerTestLat, waypoint.lon);
+            innerRadiusPx = Math.abs(innerTestPoint.y - center.y);
+        }
+
+        // Style based on airspace class
+        let fillColor, strokeColor, opacity, dashArray;
+
+        switch (airspace.class) {
+            case 'B':
+                fillColor = '#0000ff'; // Dark blue
+                strokeColor = '#0000ff';
+                opacity = 0.15;
+                dashArray = 'none';
+                break;
+            case 'C':
+                fillColor = '#c71585'; // Medium violet-red (brighter magenta)
+                strokeColor = '#c71585';
+                opacity = 0.2;
+                dashArray = 'none';
+                break;
+            case 'D':
+                fillColor = 'none'; // No fill for Class D
+                strokeColor = '#4169e1'; // Royal blue
+                opacity = 0.6;
+                dashArray = '8,4'; // Dashed circle
+                break;
+            default:
+                continue;
+        }
+
+        // Draw outer circle
+        if (airspace.class === 'D') {
+            // Class D: dashed circle, no fill, 2x thicker stroke
+            svg += `<circle cx="${center.x}" cy="${center.y}" r="${outerRadiusPx}" ` +
+                   `fill="none" stroke="${strokeColor}" stroke-width="${strokeWidth}" ` +
+                   `stroke-dasharray="${dashArray}" opacity="${opacity}" class="airspace-circle airspace-${airspace.class}"/>`;
+        } else {
+            // Class B/C: filled circle with border
+            svg += `<circle cx="${center.x}" cy="${center.y}" r="${outerRadiusPx}" ` +
+                   `fill="${fillColor}" stroke="${strokeColor}" stroke-width="${strokeWidth * 0.5}" ` +
+                   `opacity="${opacity}" class="airspace-circle airspace-${airspace.class}"/>`;
+        }
+
+        // Draw inner circle for Class B and C (creates the "donut" shape)
+        if (innerRadiusPx > 0 && (airspace.class === 'B' || airspace.class === 'C')) {
+            svg += `<circle cx="${center.x}" cy="${center.y}" r="${innerRadiusPx}" ` +
+                   `fill="${fillColor}" stroke="${strokeColor}" stroke-width="${strokeWidth * 0.5}" ` +
+                   `opacity="${opacity}" class="airspace-circle airspace-${airspace.class}-inner"/>`;
+        }
+    }
+
+    return svg;
+}
+
+// ============================================
 // DISPLAY FUNCTIONS
 // ============================================
 
@@ -518,6 +637,9 @@ function generateMap(waypoints, legs) {
 
     // Create a transform group for pan offset (applied via CSS transform for performance)
     svg += `<g id="mapContent" transform="translate(${panOffset.x}, ${panOffset.y})">`;
+
+    // Draw airspace (background layer - drawn first so it appears behind everything)
+    svg += drawAirspace(waypoints, project, strokeWidth, bounds);
 
     // Draw route lines
     for (let i = 0; i < legs.length; i++) {
