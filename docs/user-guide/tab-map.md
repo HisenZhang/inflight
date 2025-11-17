@@ -23,6 +23,38 @@ Your planned route appears as a series of connected waypoints:
 - **Yellow line** = Active leg (from your position to next waypoint)
 - **Dotted line** = GPS track trail (where you've been)
 
+### Airspace Visualization
+
+InFlight displays controlled airspace around airports for situational awareness:
+
+**Class B Airspace (Blue circles):**
+- Major airports (30nm radius typical)
+- Two-ring display: lighter outer ring (surface-10,000'), darker inner core (surface-higher altitude)
+- Example: KORD (Chicago O'Hare), KSFO (San Francisco)
+
+**Class C Airspace (Magenta circles):**
+- Medium airports (10nm radius typical)
+- Two-ring display: lighter outer ring, darker inner core
+- Example: KMDW (Chicago Midway), KBUR (Burbank)
+
+**Class D Airspace (Blue dashed circles):**
+- Towered airports (5nm radius typical)
+- Single dashed ring
+- Example: Most towered regional airports
+
+**What you see:**
+- Airspace renders automatically when airports are visible on map
+- Scales with zoom level (appears/disappears based on view)
+- Does NOT show altitude limits (2D representation only)
+
+**IMPORTANT LIMITATIONS:**
+- ⚠️ **General approximations only** - simplified circular representation
+- ⚠️ **NOT accurate boundaries** - actual airspace has irregular shapes, cutouts, and shelves
+- ⚠️ **No altitude information** - vertical limits not depicted
+- ⚠️ **For situational awareness ONLY** - do NOT use for flight planning or navigation
+- ✅ **Always refer to current sectional charts** for exact boundaries, altitudes, and operating requirements
+- ✅ Use to get a general sense of nearby controlled airspace locations only
+
 ### GPS Position (When Enabled)
 
 **Your aircraft:**
