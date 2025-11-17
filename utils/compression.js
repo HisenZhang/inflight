@@ -79,7 +79,7 @@ async function compressMultiple(rawCSVData) {
             const originalSize = csvText.length;
             const compressedSize = arrayBuffer.byteLength;
             const ratio = ((1 - compressedSize / originalSize) * 100).toFixed(1);
-            console.log(`[Compression] ${key}: ${(originalSize / 1024).toFixed(1)}KB → ${(compressedSize / 1024).toFixed(1)}KB (${ratio}% reduction)`);
+            console.log(`[Compression] ${key}: ${(originalSize / 1024).toFixed(1)}KB to ${(compressedSize / 1024).toFixed(1)}KB (${ratio}% reduction)`);
         });
 
         compressionPromises.push(promise);
@@ -106,7 +106,7 @@ async function decompressMultiple(compressedData) {
 
         const promise = decompress(arrayBuffer).then(csvText => {
             decompressed[key] = csvText;
-            console.log(`[Compression] Decompressed ${key}: ${(arrayBuffer.byteLength / 1024).toFixed(1)}KB → ${(csvText.length / 1024).toFixed(1)}KB`);
+            console.log(`[Compression] Decompressed ${key}: ${(arrayBuffer.byteLength / 1024).toFixed(1)}KB to ${(csvText.length / 1024).toFixed(1)}KB`);
         });
 
         decompressionPromises.push(promise);

@@ -383,8 +383,8 @@ class Tutorial {
             <div class="tutorial-title"></div>
             <div class="tutorial-message"></div>
             <div class="tutorial-actions">
-                <button class="btn btn-secondary tutorial-prev" onclick="tutorial.prevStep()">← BACK</button>
-                <button class="btn btn-primary tutorial-next" onclick="tutorial.nextStep()">NEXT →</button>
+                <button class="btn btn-secondary tutorial-prev" onclick="tutorial.prevStep()">BACK</button>
+                <button class="btn btn-primary tutorial-next" onclick="tutorial.nextStep()">NEXT</button>
             </div>
         `;
         document.body.appendChild(this.popout);
@@ -483,7 +483,7 @@ class Tutorial {
         } else if (index === TUTORIAL_STEPS.length - 1) {
             nextBtn.textContent = 'FINISH';
         } else {
-            nextBtn.textContent = 'NEXT →';
+            nextBtn.textContent = 'NEXT';
         }
 
         // Highlight element if specified
@@ -512,7 +512,7 @@ class Tutorial {
             if (index === TUTORIAL_STEPS.length - 1) {
                 nextBtn.textContent = 'FINISH';
             } else {
-                nextBtn.textContent = 'NEXT →';
+                nextBtn.textContent = 'NEXT';
             }
 
             // Refresh highlight position after action completes

@@ -242,12 +242,12 @@ assert.throwsAsync(asyncFn, message);
 |--------|----------------|------------------|
 | utils/formatters.js | 100% | 100% ✅ |
 | state/flight-state.js | 100% | 95% ✅ |
-| compute/query-engine.js | 90% | 0% ⚠️ |
-| compute/route-calculator.js | 90% | 0% ⚠️ |
-| compute/route-expander.js | 80% | 0% ⚠️ |
-| data/data-manager.js | 80% | 0% ⚠️ |
-| display/ui-controller.js | 70% | 0% ⚠️ |
-| display/map-display.js | 70% | 0% ⚠️ |
+| compute/query-engine.js | 90% | 0% |
+| compute/route-calculator.js | 90% | 0% |
+| compute/route-expander.js | 80% | 0% |
+| data/data-manager.js | 80% | 0% |
+| display/ui-controller.js | 70% | 0% |
+| display/map-display.js | 70% | 0% |
 
 ## Performance Benchmarks
 
@@ -297,7 +297,7 @@ Test in:
 - ✅ Chrome/Edge (Chromium)
 - ✅ Firefox
 - ✅ Safari (desktop & iOS)
-- ⚠️ Mobile browsers (Chrome Android, Safari iOS)
+- Mobile browsers (Chrome Android, Safari iOS)
 
 ## Known Limitations
 

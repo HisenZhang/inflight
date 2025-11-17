@@ -134,7 +134,7 @@ function expandRoute(routeString) {
             if (airwayType === 'AIRWAY') {
                 const segment = expandAirway(fromFix, airwayToken, toFix);
                 if (segment.expanded) {
-                    console.log(`[RouteExpander] Expanded airway ${airwayToken}: ${fromFix} → ${toFix} (${segment.fixes.length} fixes)`);
+                    console.log(`[RouteExpander] Expanded airway ${airwayToken}: ${fromFix} to ${toFix} (${segment.fixes.length} fixes)`);
                     // Check if fromFix is already the last element (for chained airways)
                     const lastFix = expanded[expanded.length - 1];
                     if (lastFix === fromFix) {

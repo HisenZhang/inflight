@@ -30,6 +30,7 @@ const ASSETS_TO_CACHE = [
     './public/icon-maskable-192.svg',
     './public/icon-maskable-512.svg',
     './public/apple-touch-icon.svg',
+    './public/favicon.svg',
     './public/screenshot-wide.svg',
     // External Libraries
     './lib/geodesy.js',

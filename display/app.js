@@ -13,6 +13,18 @@ let currentNavlogData = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
     try {
+        // Populate version info
+        if (window.AppVersion) {
+            const versionInfo = window.AppVersion.getVersionInfo();
+            const appVersionEl = document.getElementById('app-version');
+            const cacheVersionEl = document.getElementById('cache-version');
+            const buildDateEl = document.getElementById('build-date');
+
+            if (appVersionEl) appVersionEl.textContent = versionInfo.version;
+            if (cacheVersionEl) cacheVersionEl.textContent = versionInfo.cacheName;
+            if (buildDateEl) buildDateEl.textContent = versionInfo.buildDate;
+        }
+
         // Initialize UI controller
         UIController.init();
         const elements = UIController.getElements();
@@ -475,7 +487,7 @@ async function handleCalculateRoute() {
             actualDeparture = waypoints[0];
             actualDestination = waypoints[waypoints.length - 1];
             fullRoute = routeMiddle;
-            console.log(`[Route] Waypoint-only mode: ${actualDeparture} → ${actualDestination}`);
+            console.log(`[Route] Waypoint-only mode: ${actualDeparture} to ${actualDestination}`);
         } else {
             // Invalid input: some fields filled but not in a valid combination
             alert('ERROR: INVALID ROUTE INPUT\n\nEither:\n• Enter departure and destination\n• Or enter waypoints in the route field (first = departure, last = destination)');
@@ -827,7 +839,7 @@ async function showUpdateNotification() {
                 } else {
                     // Different versions - show detailed upgrade info
                     if (versionInfo) {
-                        versionInfo.textContent = `v${currentVersion} → v${newVersion}`;
+                        versionInfo.textContent = `v${currentVersion} to v${newVersion}`;
                     }
 
                     // Calculate days ago
@@ -883,8 +895,21 @@ window.activateUpdate = function() {
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.ready.then((registration) => {
             if (registration.waiting) {
+                // Show updating message
+                const notification = document.getElementById('update-notification');
+                const updateText = notification?.querySelector('.update-notification-text strong');
+                const updateBtn = notification?.querySelector('.btn-primary');
+
+                if (updateText) updateText.textContent = 'UPDATING...';
+                if (updateBtn) updateBtn.disabled = true;
+
                 // Tell the waiting service worker to skip waiting
                 registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+                // Page will reload automatically via controllerchange listener
+            } else {
+                console.warn('[Update] No waiting service worker found');
+                // Force reload anyway in case something went wrong
+                setTimeout(() => window.location.reload(), 500);
             }
         });
     }

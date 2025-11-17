@@ -90,7 +90,7 @@ function showInstallSection() {
         }
     } else if (isAndroid()) {
         if (instructions) {
-            instructions.innerHTML = '<strong>Android/Chrome:</strong> Tap the button below or use browser menu → "Install app"';
+            instructions.innerHTML = '<strong>Android/Chrome:</strong> Tap the button below or use browser menu and select "Install app"';
         }
         if (button && deferredPrompt) {
             button.style.display = 'block';

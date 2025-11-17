@@ -48,10 +48,10 @@ InFlight displays controlled airspace around airports for situational awareness:
 - Does NOT show altitude limits (2D representation only)
 
 **IMPORTANT LIMITATIONS:**
-- ⚠️ **General approximations only** - simplified circular representation
-- ⚠️ **NOT accurate boundaries** - actual airspace has irregular shapes, cutouts, and shelves
-- ⚠️ **No altitude information** - vertical limits not depicted
-- ⚠️ **For situational awareness ONLY** - do NOT use for flight planning or navigation
+- **General approximations only** - simplified circular representation
+- **NOT accurate boundaries** - actual airspace has irregular shapes, cutouts, and shelves
+- **No altitude information** - vertical limits not depicted
+- **For situational awareness ONLY** - do NOT use for flight planning or navigation
 - ✅ **Always refer to current sectional charts** for exact boundaries, altitudes, and operating requirements
 - ✅ Use to get a general sense of nearby controlled airspace locations only
 

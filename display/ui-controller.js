@@ -393,7 +393,7 @@ function populateInspection() {
             <div><span class="inspection-label">Geo Model:</span><span class="text-metric">✓ WGS84 (Vincenty)</span></div>
             <div><span class="inspection-label">Mag Model:</span><span class="text-metric">✓ WMM2025</span></div>
             <div><span class="inspection-label">Wind Stations:</span><span class="text-metric">✓ 254 stations embedded</span></div>
-            <div><span class="inspection-label">Winds Aloft API:</span><span class="text-warning">⚠ Requires internet</span></div>
+            <div><span class="inspection-label">Winds Aloft API:</span><span class="text-warning">Requires internet</span></div>
         </div>
     `;
 
@@ -1113,7 +1113,7 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelSt
     // Add fuel status if available
     if (fuelStatus) {
         const fuelColor = fuelStatus.isSufficient ? 'text-metric' : 'text-error';
-        const fuelIcon = fuelStatus.isSufficient ? '✓' : '⚠';
+        const fuelIcon = fuelStatus.isSufficient ? '✓' : '!';
         summaryHTML += `
         <div class="summary-item" style="border-top: 1px solid var(--border-color); padding-top: 8px; margin-top: 8px;">
             <span class="summary-label text-secondary text-sm">FUEL STATUS</span>
@@ -1481,7 +1481,7 @@ function displayWindAltitudeTable(legs, filedAltitude) {
         const to = RouteCalculator.getWaypointCode(leg.to);
 
         tableHTML += `<tr>`;
-        tableHTML += `<td class="leg-col"><span class="font-bold">LEG ${index + 1}</span><br><span class="text-xs text-secondary">${from}→${to}</span></td>`;
+        tableHTML += `<td class="leg-col"><span class="font-bold">LEG ${index + 1}</span><br><span class="text-xs text-secondary">${from} - ${to}</span></td>`;
 
         altitudes.forEach(alt => {
             const isFiledAlt = alt === filedAltitude;

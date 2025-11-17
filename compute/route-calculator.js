@@ -18,7 +18,7 @@ function resolveWaypoints(routeString) {
 
         if (expansion.expanded.length > 0) {
             expandedRoute = expansion.expandedString;
-            console.log(`[Route] Expanded: ${routeString} → ${expandedRoute}`);
+            console.log(`[Route] Expanded: ${routeString} to ${expandedRoute}`);
         }
     }
 
@@ -57,7 +57,7 @@ function resolveWaypoints(routeString) {
             }
         }
 
-        // Priority: Airports (ICAO 4+ chars OR local 3-char alphanumeric) → Navaid → Fix → IATA (3 alphabetic chars)
+        // Priority: Airports (ICAO 4+ chars OR local 3-char alphanumeric) then Navaid then Fix then IATA (3 alphabetic chars)
         // Check for airports:
         // - ICAO codes (4+ characters)
         // - Local identifiers (3 characters with numbers, e.g., 1B1, 2B2)
@@ -132,7 +132,7 @@ function resolveWaypoints(routeString) {
 
 // Parse FAA/ICAO lat/long coordinate format
 // Supports: DDMM/DDDMM (degrees+minutes) and DDMMSS/DDDMMSS (degrees+minutes+seconds)
-// Examples: 3407/10615 → 34°07'N 106°15'W, 4814N/06848W → 48°14'N 68°48'W
+// Examples: 3407/10615 = 34°07'N 106°15'W, 4814N/06848W = 48°14'N 68°48'W
 function parseLatLonCoordinate(code, match) {
     try {
         let latStr = match[1];
@@ -204,7 +204,7 @@ function parseLatLonCoordinate(code, match) {
         const hemisLat = lat >= 0 ? 'N' : 'S';
         const hemisLon = lon >= 0 ? 'E' : 'W';
 
-        console.log(`[Coordinate] Parsed ${code} → ${latLabel}${hemisLat} ${lonLabel}${hemisLon} (${lat.toFixed(5)}, ${lon.toFixed(5)})`);
+        console.log(`[Coordinate] Parsed ${code} = ${latLabel}${hemisLat} ${lonLabel}${hemisLon} (${lat.toFixed(5)}, ${lon.toFixed(5)})`);
 
         return {
             id: `coord_${code}`,
@@ -303,9 +303,9 @@ async function calculateRoute(waypoints, options = {}) {
                         // Apply WCA to get true heading: TH = TC + WCA
                         trueHeading = trueCourse + wca;
 
-                        console.log(`[Winds] Leg ${from.icao || from.ident} → ${to.icao || to.ident}: Wind ${windData.direction}°/${windData.speed}kt, HW: ${components.headwind.toFixed(1)}, XW: ${components.crosswind.toFixed(1)}, WCA: ${wca.toFixed(1)}°`);
+                        console.log(`[Winds] Leg ${from.icao || from.ident} to ${to.icao || to.ident}: Wind ${windData.direction}°/${windData.speed}kt, HW: ${components.headwind.toFixed(1)}, XW: ${components.crosswind.toFixed(1)}, WCA: ${wca.toFixed(1)}°`);
                     } else {
-                        console.log(`[Winds] Leg ${from.icao || from.ident} → ${to.icao || to.ident}: Wind ${windData.direction}°/${windData.speed}kt, HW: ${components.headwind.toFixed(1)}, XW: ${components.crosswind.toFixed(1)} (no TAS - WCA not calculated)`);
+                        console.log(`[Winds] Leg ${from.icao || from.ident} to ${to.icao || to.ident}: Wind ${windData.direction}°/${windData.speed}kt, HW: ${components.headwind.toFixed(1)}, XW: ${components.crosswind.toFixed(1)} (no TAS - WCA not calculated)`);
                     }
                 } else {
                     console.warn('[Winds] No wind data returned for leg');

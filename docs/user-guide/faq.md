@@ -158,8 +158,8 @@ You can manually advance with NEXT button.
 **Mostly.** Text-to-speech support varies:
 - ✅ Chrome (desktop and mobile) - Full support
 - ✅ Safari (iOS/Mac) - Full support
-- ⚠️ Firefox - Limited TTS support
-- ⚠️ iOS - Works but limited customization
+- Firefox - Limited TTS support
+- iOS - Works but limited customization
 - ❌ Older browsers - No support
 
 ## Fuel Planning Questions
@@ -263,7 +263,7 @@ See [Printing Guide](#printing-questions) for details.
 - ✅ **NAVLOG tab**: Complete navigation log table (most common!)
 - ✅ **STATS tab**: Flight statistics and fuel planning
 - ✅ **CHKLST tab**: All checklists (auto-expanded for printing)
-- ⚠️ **MAP tab**: Shows helpful message (canvas graphics can't print)
+- **MAP tab**: Shows helpful message (canvas graphics can't print)
 
 **Automatically optimized for printing:**
 - Tab navigation buttons → Hidden

@@ -63,7 +63,7 @@ async function saveToCache() {
                 console.log('[DataManager] Compressing raw CSV data...');
                 rawCSVToStore = await window.CompressionUtils.compressMultiple(rawCSVData);
                 compressionStats = window.CompressionUtils.getCompressionStats(rawCSVData, rawCSVToStore);
-                console.log(`[DataManager] Compression complete: ${compressionStats.originalSizeMB}MB → ${compressionStats.compressedSizeMB}MB (${compressionStats.ratio} reduction)`);
+                console.log(`[DataManager] Compression complete: ${compressionStats.originalSizeMB}MB to ${compressionStats.compressedSizeMB}MB (${compressionStats.ratio} reduction)`);
                 isCompressed = true;
             } else {
                 console.warn('[DataManager] CompressionStreams API not supported, storing uncompressed');

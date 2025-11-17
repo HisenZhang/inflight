@@ -245,7 +245,7 @@ Cutting it close. Check your math and consider fuel stop.
 
 **Red (Insufficient):**
 ```text
-⚠️ INSUFFICIENT FUEL - RESERVE VIOLATED
+INSUFFICIENT FUEL - RESERVE VIOLATED
 ```
 You won't make it with required reserves. Options:
 1. Add fuel stop

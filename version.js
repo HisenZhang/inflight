@@ -34,7 +34,7 @@ const AppVersion = {
 
     // Service worker cache version
     // Increment this number to force PWA updates
-    CACHE_VERSION: 91,
+    CACHE_VERSION: 99,
 
     // Full cache name for service worker
     get CACHE_NAME() {
@@ -42,10 +42,10 @@ const AppVersion = {
     },
 
     // Build metadata (optional)
-    BUILD_DATE: '2025-01-15',
+    BUILD_DATE: '2025-01-17',
 
     // Release name (optional)
-    RELEASE_NAME: 'Initial PWA Update System',
+    RELEASE_NAME: 'UI Improvements: User Guide Button & Symbol Cleanup',
 
     /**
      * Get full version info object
