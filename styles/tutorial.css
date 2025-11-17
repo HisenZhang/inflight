@@ -1,0 +1,216 @@
+/* Interactive Tutorial Styles */
+
+/* Subtle overlay */
+.tutorial-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 9998;
+    animation: fadeIn 0.3s ease-out;
+    pointer-events: none;
+}
+
+/* Highlight box around focused element */
+.tutorial-highlight {
+    position: fixed;
+    border: 3px solid var(--color-primary);
+    box-shadow: 0 0 0 6px rgba(255, 0, 255, 0.2),
+                0 0 25px rgba(255, 0, 255, 0.4);
+    z-index: 9999;
+    pointer-events: none;
+    border-radius: 2px;
+    animation: pulse 2s ease-in-out infinite;
+    background: rgba(255, 0, 255, 0.05);
+}
+
+@keyframes pulse {
+    0%, 100% {
+        box-shadow: 0 0 0 6px rgba(255, 0, 255, 0.2),
+                    0 0 25px rgba(255, 0, 255, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 0 8px rgba(255, 0, 255, 0.3),
+                    0 0 35px rgba(255, 0, 255, 0.6);
+    }
+}
+
+/* Breathing glow animation for directly highlighted elements */
+@keyframes breathingGlow {
+    0%, 100% {
+        background-color: rgba(255, 0, 255, 0.15);
+        box-shadow: 0 0 15px rgba(255, 0, 255, 0.4),
+                    inset 0 0 15px rgba(255, 0, 255, 0.1);
+        border: 2px solid rgba(255, 0, 255, 0.6);
+    }
+    50% {
+        background-color: rgba(255, 0, 255, 0.25);
+        box-shadow: 0 0 30px rgba(255, 0, 255, 0.7),
+                    inset 0 0 25px rgba(255, 0, 255, 0.2);
+        border: 2px solid rgba(255, 0, 255, 1);
+    }
+}
+
+.tutorial-glow-highlight {
+    animation: breathingGlow 2s ease-in-out infinite;
+    position: relative;
+}
+
+/* Arrow pointing from callout to highlighted element */
+.tutorial-arrow {
+    position: fixed;
+    width: 3px;
+    background: linear-gradient(to bottom, var(--color-primary), transparent);
+    z-index: 9999;
+    pointer-events: none;
+    opacity: 0.6;
+}
+
+.tutorial-arrow::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-top: 12px solid var(--color-primary);
+}
+
+/* Callout message box - anchored to top-right */
+.tutorial-popout {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    max-width: 400px;
+    min-width: 300px;
+    background: #000;
+    border: 2px solid var(--color-primary);
+    z-index: 10000;
+    padding: 0;
+    box-shadow: 0 0 30px rgba(255, 0, 255, 0.4);
+    animation: slideInRight 0.3s ease-out;
+    pointer-events: auto;
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Tutorial header */
+.tutorial-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border-color);
+    background: rgba(255, 0, 255, 0.1);
+}
+
+.tutorial-step-indicator {
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--color-primary);
+}
+
+.tutorial-close {
+    background: none;
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    font-size: 1rem;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.tutorial-close:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+/* Tutorial content */
+.tutorial-title {
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--color-primary);
+    padding: 1rem 1rem 0.5rem 1rem;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 1rem;
+}
+
+.tutorial-message {
+    padding: 0 1rem 1rem 1rem;
+    font-size: 0.875rem;
+    line-height: 1.6;
+    color: var(--text-primary);
+    white-space: pre-line;
+}
+
+/* Tutorial actions */
+.tutorial-actions {
+    display: flex;
+    gap: 0.5rem;
+    padding: 1rem;
+    border-top: 1px solid var(--border-color);
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.tutorial-actions button {
+    flex: 1;
+    font-size: 0.75rem;
+}
+
+.tutorial-prev {
+    max-width: 120px;
+}
+
+.tutorial-next {
+    flex: 2;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .tutorial-popout {
+        max-width: calc(100% - 2rem);
+        min-width: 280px;
+        left: 1rem;
+        right: 1rem;
+        top: auto;
+        bottom: 1rem;
+    }
+
+    .tutorial-arrow {
+        display: none; /* Hide arrow on mobile for simplicity */
+    }
+
+    .tutorial-actions {
+        flex-direction: column;
+    }
+
+    .tutorial-prev {
+        max-width: none;
+    }
+}

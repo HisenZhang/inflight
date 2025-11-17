@@ -66,7 +66,7 @@ inflight/
 ├── display/                    # DISPLAY LAYER (Presentation)
 │   ├── app.js                  # Application coordinator, event handlers
 │   ├── ui-controller.js        # Form inputs, navlog table, status display
-│   ├── tactical-display.js     # Vector map, GPS tracking, popups
+│   ├── map-display.js     # Vector map, GPS tracking, popups
 │   ├── checklist-controller.js # Interactive checklist
 │   └── stats-controller.js     # Flight statistics & monitoring
 │
@@ -83,7 +83,7 @@ inflight/
 │ ┌─────────────────────────────────────────────────────┐ │
 │ │ app.js              - Orchestration, event handling │ │
 │ │ ui-controller.js    - Forms, tables, status         │ │
-│ │ tactical-display.js - Vector map, GPS visualization │ │
+│ │ map-display.js - Vector map, GPS visualization │ │
 │ │ checklist-controller.js - Interactive checklist     │ │
 │ │ stats-controller.js - Flight monitoring             │ │
 │ └─────────────────────────────────────────────────────┘ │
@@ -168,7 +168,7 @@ FlightState.saveToStorage()         ← auto-save for crash recovery
     ↓
 UIController.displayResults()       ← render navlog table
     ↓
-TacticalDisplay.displayMap()        ← render vector map
+MapDisplay.displayMap()        ← render vector map
 ```
 
 ### 3. Navigation Phase (In-Flight)
@@ -176,7 +176,7 @@ TacticalDisplay.displayMap()        ← render vector map
 ```
 App initialization (automatic)
     ↓
-TacticalDisplay.startGPSTracking()
+MapDisplay.startGPSTracking()
     ↓
 navigator.geolocation.watchPosition() (1Hz updates)
     ↓
@@ -186,13 +186,13 @@ FlightTracker.updateFlightState(groundSpeed)  ← detect takeoff/landing at 40kt
     ↓
 FlightTracker.recordGPSPoint()                ← record GPS track point
     ↓
-TacticalDisplay.updateLiveNavigation()        ← update map & navigation display
+MapDisplay.updateLiveNavigation()        ← update map & navigation display
     ↓
 RouteCalculator.calculateDistance/Bearing()   ← compute to next waypoint
     ↓
 FlightState.updateNavigation()                ← store real-time state
     ↓
-TacticalDisplay.generateMap()                 ← redraw with GPS position
+MapDisplay.generateMap()                 ← redraw with GPS position
 ```
 
 ## Map Projection System
@@ -201,7 +201,7 @@ TacticalDisplay.generateMap()                 ← redraw with GPS position
 
 InFlight uses **orthographic projection** for the moving map display. This is a perspective projection from an infinite distance that creates a planar view of the sphere.
 
-**Implementation:** [tactical-display.js:470-480](../display/tactical-display.js#L470-L480)
+**Implementation:** [map-display.js:470-480](../display/map-display.js#L470-L480)
 
 ```javascript
 // Orthographic projection formulas
@@ -248,7 +248,7 @@ const screenY = height/2 - (y - centerY) * scale;  // Y-axis inverted for SVG
 <g id="mapContent" transform="translate(${panOffset.x}, ${panOffset.y})">
 ```
 
-**Scale Calculation:** [tactical-display.js:500-507](../display/tactical-display.js#L500-L507)
+**Scale Calculation:** [map-display.js:500-507](../display/map-display.js#L500-L507)
 
 The scale factor ensures all waypoints fit in the viewport with 5% padding:
 
@@ -263,7 +263,7 @@ const scale = baseScale * zoomLevel; // Apply pinch zoom
 
 InFlight adjusts for latitude-dependent longitude distances:
 
-**Implementation:** [tactical-display.js:422-429](../display/tactical-display.js#L422-L429)
+**Implementation:** [map-display.js:422-429](../display/map-display.js#L422-L429)
 
 ```javascript
 // One degree of longitude varies by latitude: 1° lon = 60nm * cos(latitude)
@@ -282,14 +282,14 @@ SVG dimensions adapt to route orientation:
 
 **Zoom Range:** 1.0x (full view) to 3.0x (detailed view)
 
-**Pinch-to-Zoom:** [tactical-display.js:1164-1175](../display/tactical-display.js#L1164-L1175)
+**Pinch-to-Zoom:** [map-display.js:1164-1175](../display/map-display.js#L1164-L1175)
 ```javascript
 const currentDistance = getPinchDistance(e.touches);
 const scale = currentDistance / initialPinchDistance;
 const newZoomLevel = Math.max(1.0, Math.min(3.0, zoomLevel * scale));
 ```
 
-**Pan Limits:** [tactical-display.js:1142-1149](../display/tactical-display.js#L1142-L1149)
+**Pan Limits:** [map-display.js:1142-1149](../display/map-display.js#L1142-L1149)
 ```javascript
 // Allow panning proportional to zoom level
 const maxPanX = zoomLevel * svgDimensions.width / 2;
@@ -307,7 +307,7 @@ At 2x zoom, the user can pan by the full viewport width to explore all areas.
 
 InFlight uses `navigator.geolocation.watchPosition()` for continuous GPS tracking.
 
-**Implementation:** [tactical-display.js:44-90](../display/tactical-display.js#L44-L90)
+**Implementation:** [map-display.js:44-90](../display/map-display.js#L44-L90)
 
 ```javascript
 watchId = navigator.geolocation.watchPosition(
@@ -344,7 +344,7 @@ The Geolocation API does not distinguish between GPS and network location. InFli
 1. **`enableHighAccuracy: true` flag**: Requests GPS when available
 2. **Accuracy thresholds**: Infers signal quality from `position.coords.accuracy`
 
-**Accuracy Color Coding:** [tactical-display.js:1000-1035](../display/tactical-display.js#L1000-L1035)
+**Accuracy Color Coding:** [map-display.js:1000-1035](../display/map-display.js#L1000-L1035)
 
 | Accuracy | Color | Likely Source |
 |----------|-------|---------------|
@@ -511,7 +511,7 @@ window.QueryEngine = { ... };
 window.FlightState = { ... };
 window.FlightTracker = { ... };
 window.UIController = { ... };
-window.TacticalDisplay = { ... };
+window.MapDisplay = { ... };
 window.Utils = { ... };
 ```
 
@@ -543,7 +543,7 @@ Display Layer → State Management → Compute Engine → Data Engine
 3. Data Engine (adapters, data-manager)
 4. Compute Engine (route-lexer, parser, resolver, expander, calculator, query, winds)
 5. State Management (flight-state, flight-tracker)
-6. Display Layer (ui-controller, checklist-controller, stats-controller, tactical-display, app)
+6. Display Layer (ui-controller, checklist-controller, stats-controller, map-display, app)
 
 ## Key Design Patterns
 
@@ -593,7 +593,7 @@ async function handleCalculateRoute() {
 
     // Display components read from state
     UIController.displayResults();     // Reads FlightState.getFlightPlan()
-    TacticalDisplay.displayMap();      // Reads FlightState.getFlightPlan()
+    MapDisplay.displayMap();      // Reads FlightState.getFlightPlan()
 }
 ```
 
@@ -695,7 +695,7 @@ See [Testing & Deployment](06-testing-deployment.md) for comprehensive testing d
 ```javascript
 // In browser console
 Object.keys(window).filter(k =>
-    ['DataManager', 'RouteEngine', 'FlightState', 'FlightTracker', 'UIController', 'TacticalDisplay'].includes(k)
+    ['DataManager', 'RouteEngine', 'FlightState', 'FlightTracker', 'UIController', 'MapDisplay'].includes(k)
 );
 // Should return all module names if loaded correctly
 ```
@@ -726,7 +726,7 @@ DataManager.getFileStatus(); // Check individual files
 ### 5. GPS Tracking Diagnostics
 
 ```javascript
-TacticalDisplay.getCurrentPosition();  // See current GPS position
+MapDisplay.getCurrentPosition();  // See current GPS position
 FlightTracker.getFlightState();       // See flight state (in flight or on ground)
 ```
 

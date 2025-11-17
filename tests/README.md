@@ -222,7 +222,7 @@ assert.throwsAsync(asyncFn, message);
 - Status display updates
 - Autocomplete behavior
 
-### 8. Tactical Display Tests
+### 8. Map Display Tests
 
 - Map projection calculations
 - GPS position rendering
@@ -247,7 +247,7 @@ assert.throwsAsync(asyncFn, message);
 | compute/route-expander.js | 80% | 0% ⚠️ |
 | data/data-manager.js | 80% | 0% ⚠️ |
 | display/ui-controller.js | 70% | 0% ⚠️ |
-| display/tactical-display.js | 70% | 0% ⚠️ |
+| display/map-display.js | 70% | 0% ⚠️ |
 
 ## Performance Benchmarks
 

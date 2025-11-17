@@ -16,12 +16,14 @@ const ASSETS_TO_CACHE = [
     './styles/welcome.css',
     './styles/print.css',
     './styles/pwa-install.css',
+    './styles/tutorial.css',
     './styles/tokens.css',
     './styles/utilities.css',
     './manifest.json',
     './version.js',
-    './pwa-install.js',
-    './demo-route.js',
+    // UI Layer
+    './ui/pwa-install.js',
+    './ui/tutorial.js',
     // PWA Icons and Screenshots
     './public/icon-192.svg',
     './public/icon-512.svg',
@@ -54,7 +56,7 @@ const ASSETS_TO_CACHE = [
     './display/ui-controller.js',
     './display/stats-controller.js',
     './display/checklist-controller.js',
-    './display/tactical-display.js',
+    './display/map-display.js',
     './display/app.js'
 ];
 

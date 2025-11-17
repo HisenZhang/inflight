@@ -58,11 +58,11 @@
                 </div>
 
                 <div class="welcome-actions">
-                    <button class="btn btn-primary font-bold" onclick="document.querySelector('[data-tab=data]').click()">
+                    <button class="btn btn-primary font-bold" onclick="document.querySelector('[data-tab=route]').click()">
                         GET STARTED →
                     </button>
-                    <button class="btn btn-secondary" onclick="loadDemoRoute()">
-                        TRY DEMO ROUTE
+                    <button class="btn btn-secondary" onclick="startTutorial()">
+                        START TUTORIAL →
                     </button>
                 </div>
             </div>
@@ -341,6 +341,16 @@
 
         <!-- Tab: Navlog -->
         <div class="tab-content" id="tab-navlog">
+        <!-- Placeholder when no route calculated -->
+        <div id="navlogPlaceholder" class="welcome-brief">
+            <h2 class="font-bold text-primary" style="font-size: 1.5rem; letter-spacing: 4px; margin-bottom: 1rem;">NAVIGATION LOG</h2>
+            <div class="welcome-info" style="max-width: 500px; margin: 0 auto 1.5rem auto;">
+                <p>The navigation log displays your calculated flight plan with detailed leg-by-leg information.</p>
+                <p style="margin-bottom: 0;"><strong>Includes:</strong> Waypoints • Courses • Distances • Time estimates • Wind correction • Fuel calculations</p>
+            </div>
+            <p class="text-secondary" style="font-size: 0.75rem;">Calculate a route in the ROUTE tab to see your navigation log here.</p>
+        </div>
+
         <!-- Results Section -->
         <div id="resultsSection" class="results-section" style="display: none;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
@@ -363,9 +373,19 @@
 
         <!-- Tab: Vector Map -->
         <div class="tab-content" id="tab-map">
+        <!-- Placeholder when no route calculated -->
+        <div id="mapPlaceholder" class="welcome-brief">
+            <h2 class="font-bold text-primary" style="font-size: 1.5rem; letter-spacing: 4px; margin-bottom: 1rem;">INTERACTIVE MAP</h2>
+            <div class="welcome-info" style="max-width: 500px; margin: 0 auto 1.5rem auto;">
+                <p>The interactive map displays your flight route with a visual representation of waypoints, airways, and procedures.</p>
+                <p style="margin-bottom: 0;"><strong>Features:</strong> Pan & zoom • GPS tracking • Real-time navigation data • Multiple zoom modes</p>
+            </div>
+            <p class="text-secondary" style="font-size: 0.75rem;">Calculate a route in the ROUTE tab to see your flight path visualized here.</p>
+        </div>
+
         <!-- Vector Map Display -->
-        <div id="tacticalDisplay" class="tactical-display" style="display: none;">
-            <div class="tactical-header">
+        <div id="mapDisplay" class="map-display" style="display: none;">
+            <div class="map-header">
                 <div class="zoom-controls">
                     <button class="zoom-btn active" data-zoom="full">ROUTE</button>
                     <button class="zoom-btn" data-zoom="destination">DEST</button>
@@ -376,7 +396,7 @@
                 </div>
             </div>
 
-            <div id="tacticalMap" class="tactical-map"></div>
+            <div id="mapContainer" class="map-container"></div>
 
             <!-- Map Info Status Bar -->
             <div id="mapStatusBar" class="map-status-bar hidden">
@@ -1063,7 +1083,7 @@
 
     <!-- Version Configuration (loaded first) -->
     <script src="version.js"></script>                  <!-- Centralized version management -->
-    <script src="pwa-install.js"></script>              <!-- PWA install UI handler -->
+    <script src="ui/pwa-install.js"></script>           <!-- PWA install UI handler -->
 
     <!-- External Libraries -->
     <script src="lib/geodesy.js"></script>              <!-- WGS84 + WMM2025 library -->
@@ -1071,6 +1091,7 @@
 
     <!-- Utilities Layer -->
     <script src="utils/formatters.js"></script>         <!-- Shared formatting utilities -->
+    <script src="utils/compression.js"></script>        <!-- CSV compression utilities -->
 
     <!-- Data Engine -->
     <script src="data/nasr-adapter.js"></script>        <!-- NASR data adapter (primary) -->
@@ -1095,8 +1116,8 @@
     <script src="display/ui-controller.js"></script>       <!-- UI interactions module -->
     <script src="display/stats-controller.js"></script>    <!-- Stats tab controller -->
     <script src="display/checklist-controller.js"></script><!-- Checklist tab controller -->
-    <script src="display/tactical-display.js"></script>    <!-- Vector map & GPS tracking -->
+    <script src="display/map-display.js"></script>    <!-- Vector map & GPS tracking -->
     <script src="display/app.js"></script>                 <!-- Main application coordinator -->
-    <script src="demo-route.js"></script>                  <!-- Demo route loader -->
+    <script src="ui/tutorial.js"></script>                 <!-- Interactive tutorial system -->
 </body>
 </html>

@@ -109,7 +109,7 @@ function exportNavlogCSV(legs) {
 
 ## Map Display
 
-**Module:** [display/tactical-display.js](../../display/tactical-display.js)
+**Module:** [display/map-display.js](../../display/map-display.js)
 
 ### SVG Vector Map
 
@@ -122,7 +122,7 @@ InFlight renders the route as an SVG vector map with the following features:
 
 ### Map Generation
 
-**Implementation:** [tactical-display.js:350-673](../../display/tactical-display.js#L350-L673)
+**Implementation:** [map-display.js:350-673](../../display/map-display.js#L350-L673)
 
 ```javascript
 function generateMap(waypoints, legs) {
@@ -156,7 +156,7 @@ function generateMap(waypoints, legs) {
     svg += `</g></svg>`;
 
     // 9. Render to DOM
-    document.getElementById('tacticalDisplay').innerHTML = svg;
+    document.getElementById('mapDisplay').innerHTML = svg;
 }
 ```
 
@@ -172,7 +172,7 @@ Rendered in this order (bottom to top):
 
 ### GPS Arrow
 
-**Implementation:** [tactical-display.js:620-640](../../display/tactical-display.js#L620-L640)
+**Implementation:** [map-display.js:620-640](../../display/map-display.js#L620-L640)
 
 ```javascript
 function drawGPSArrow(position, project) {
@@ -196,7 +196,7 @@ function drawGPSArrow(position, project) {
 
 ### Zoom Modes
 
-**Implementation:** [tactical-display.js:354-416](../../display/tactical-display.js#L354-L416)
+**Implementation:** [map-display.js:354-416](../../display/map-display.js#L354-L416)
 
 Three zoom modes available:
 
@@ -256,9 +256,9 @@ function showTab(tabName) {
 
     // Start/stop GPS tracking based on MAP tab visibility
     if (tabName === 'MAP') {
-        TacticalDisplay.startGPSTracking();
+        MapDisplay.startGPSTracking();
     } else {
-        TacticalDisplay.stopGPSTracking();
+        MapDisplay.stopGPSTracking();
     }
 }
 ```
@@ -420,7 +420,7 @@ self.addEventListener('fetch', (event) => {
 
 ### Touch Support
 
-**Implementation:** [tactical-display.js:1090-1260](../../display/tactical-display.js#L1090-L1260)
+**Implementation:** [map-display.js:1090-1260](../../display/map-display.js#L1090-L1260)
 
 ```javascript
 // Pinch-to-zoom

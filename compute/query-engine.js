@@ -303,7 +303,7 @@ function searchWaypoints(term, previousToken = null, limit = 15) {
                         type: 'DP',
                         waypointType: 'procedure',
                         location: 'Departure Procedure',
-                        contextHint: 'Type . (dot) to see transitions'
+                        contextHint: 'Click to see transitions'
                     });
                     break; // Only add once
                 }
@@ -319,7 +319,7 @@ function searchWaypoints(term, previousToken = null, limit = 15) {
                         type: 'STAR',
                         waypointType: 'procedure',
                         location: 'Arrival Procedure',
-                        contextHint: 'Type . (dot) to see transitions'
+                        contextHint: 'Click to see transitions'
                     });
                     break; // Only add once
                 }

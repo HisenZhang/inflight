@@ -2,7 +2,7 @@
 
 // Database configuration
 const DB_NAME = 'FlightPlanningDB';
-const DB_VERSION = 10; // Updated for airspace class data
+const DB_VERSION = 11; // Updated for compressed CSV storage
 const STORE_NAME = 'flightdata';
 const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days
 
@@ -49,44 +49,72 @@ function initDB() {
     });
 }
 
-function saveToCache() {
-    return new Promise((resolve, reject) => {
-        const transaction = db.transaction([STORE_NAME], 'readwrite');
-        const store = transaction.objectStore(STORE_NAME);
+async function saveToCache() {
+    try {
+        // Compress raw CSV data BEFORE opening transaction
+        let rawCSVToStore = null;
+        let compressionStats = null;
+        let isCompressed = false;
 
-        // Serialize Maps to arrays for storage
-        const data = {
-            id: 'flightdata_cache_v10',
-            airports: Array.from(airportsData.entries()),
-            iataToIcao: Array.from(iataToIcao.entries()),
-            navaids: Array.from(navaidsData.entries()),
-            fixes: Array.from(fixesData.entries()),
-            frequencies: Array.from(frequenciesData.entries()),
-            runways: Array.from(runwaysData.entries()),
-            airways: Array.from(airwaysData.entries()),
-            stars: Array.from(starsData.entries()),
-            dps: Array.from(dpsData.entries()),
-            airspace: Array.from(airspaceData.entries()),
-            dataSources: dataSources,
-            timestamp: Date.now(),
-            version: 10,
-            // Track individual file metadata
-            fileMetadata: Object.fromEntries(fileMetadata),
-            // Store raw CSV data for reindexing
-            rawCSV: rawCSVData
-        };
+        if (Object.keys(rawCSVData).length > 0) {
+            const compressionSupported = window.CompressionUtils.isCompressionSupported();
 
-        const request = store.put(data);
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error);
-    });
+            if (compressionSupported) {
+                console.log('[DataManager] Compressing raw CSV data...');
+                rawCSVToStore = await window.CompressionUtils.compressMultiple(rawCSVData);
+                compressionStats = window.CompressionUtils.getCompressionStats(rawCSVData, rawCSVToStore);
+                console.log(`[DataManager] Compression complete: ${compressionStats.originalSizeMB}MB → ${compressionStats.compressedSizeMB}MB (${compressionStats.ratio} reduction)`);
+                isCompressed = true;
+            } else {
+                console.warn('[DataManager] CompressionStreams API not supported, storing uncompressed');
+                rawCSVToStore = rawCSVData;
+                isCompressed = false;
+            }
+        }
+
+        // Now open transaction and store (synchronously)
+        return new Promise((resolve, reject) => {
+            const transaction = db.transaction([STORE_NAME], 'readwrite');
+            const store = transaction.objectStore(STORE_NAME);
+
+            // Serialize Maps to arrays for storage
+            const data = {
+                id: 'flightdata_cache_v11',
+                airports: Array.from(airportsData.entries()),
+                iataToIcao: Array.from(iataToIcao.entries()),
+                navaids: Array.from(navaidsData.entries()),
+                fixes: Array.from(fixesData.entries()),
+                frequencies: Array.from(frequenciesData.entries()),
+                runways: Array.from(runwaysData.entries()),
+                airways: Array.from(airwaysData.entries()),
+                stars: Array.from(starsData.entries()),
+                dps: Array.from(dpsData.entries()),
+                airspace: Array.from(airspaceData.entries()),
+                dataSources: dataSources,
+                timestamp: Date.now(),
+                version: 11,
+                // Track individual file metadata
+                fileMetadata: Object.fromEntries(fileMetadata),
+                // Store raw CSV data (compressed if supported, uncompressed otherwise)
+                rawCSV: rawCSVToStore,
+                compressed: isCompressed, // Flag to indicate compression
+                compressionStats: compressionStats
+            };
+
+            const request = store.put(data);
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error);
+        });
+    } catch (error) {
+        throw error;
+    }
 }
 
 function loadFromCacheDB() {
     return new Promise((resolve, reject) => {
         const transaction = db.transaction([STORE_NAME], 'readonly');
         const store = transaction.objectStore(STORE_NAME);
-        const request = store.get('flightdata_cache_v10');
+        const request = store.get('flightdata_cache_v11');
         request.onsuccess = () => resolve(request.result);
         request.onerror = () => reject(request.error);
     });
@@ -105,7 +133,8 @@ function clearCacheDB() {
             store.delete('flightdata_cache_v7'),
             store.delete('flightdata_cache_v8'),
             store.delete('flightdata_cache_v9'),
-            store.delete('flightdata_cache_v10')
+            store.delete('flightdata_cache_v10'),
+            store.delete('flightdata_cache_v11')
         ];
         Promise.all(requests.map(r => new Promise((res) => {
             r.onsuccess = () => res();
@@ -212,7 +241,7 @@ async function reparseFromRawCSV(onStatusUpdate) {
     const nasrData = { data: {} };
     const ourairportsData = { data: {} };
 
-    // Parse NASR data if available
+    // Parse NASR data if available (rawCSVData should be decompressed strings at this point)
     if (rawCSVData.nasr_airportsCSV) {
         onStatusUpdate('[...] PARSING NASR AIRPORTS', 'loading');
         nasrData.data.airports = window.NASRAdapter.parseNASRAirports(rawCSVData.nasr_airportsCSV);
@@ -417,12 +446,12 @@ function mergeDataSources(nasrData, ourairportsData, onStatusUpdate = null) {
 async function checkCachedData() {
     try {
         const cachedData = await loadFromCacheDB();
-        if (cachedData && cachedData.version === 10 && cachedData.timestamp) {
+        if (cachedData && (cachedData.version === 11 || cachedData.version === 10) && cachedData.timestamp) {
             const age = Date.now() - cachedData.timestamp;
             const daysOld = Math.floor(age / (24 * 60 * 60 * 1000));
 
             // Load from indexed cache (fast - no re-indexing needed)
-            loadFromCache(cachedData);
+            await loadFromCache(cachedData);
 
             // Determine cache status (conservative: use 7-day expiry)
             const cacheExpired = age >= CACHE_DURATION;
@@ -471,10 +500,9 @@ async function loadFromCache(onStatusUpdate) {
             fileMetadata = new Map(Object.entries(cachedData.fileMetadata));
         }
 
-        // Restore raw CSV data for reindexing
-        if (cachedData.rawCSV) {
-            rawCSVData = cachedData.rawCSV;
-        }
+        // DO NOT decompress raw CSV on fast path - only needed for reindexing
+        // Raw CSV stays compressed in memory until explicitly needed
+        rawCSVData = {}; // Clear raw CSV (not needed for normal operation)
 
         // Build token type lookup map
         buildTokenTypeMap();
@@ -511,8 +539,15 @@ async function loadFromCache(onStatusUpdate) {
             throw new Error('No raw CSV data found in cache - please reload data from internet');
         }
 
-        // Restore raw CSV data
-        rawCSVData = cachedData.rawCSV;
+        // Restore raw CSV data (decompress if needed)
+        if (cachedData.compressed && window.CompressionUtils && window.CompressionUtils.isCompressionSupported()) {
+            onStatusUpdate('[...] DECOMPRESSING RAW CSV DATA', 'loading');
+            console.log('[DataManager] Decompressing raw CSV data...');
+            rawCSVData = await window.CompressionUtils.decompressMultiple(cachedData.rawCSV);
+            console.log('[DataManager] Decompression complete');
+        } else {
+            rawCSVData = cachedData.rawCSV;
+        }
         console.log('[DataManager] Raw CSV keys in cache:', Object.keys(rawCSVData));
         dataSources = cachedData.dataSources || [];
         dataTimestamp = cachedData.timestamp;
@@ -544,8 +579,8 @@ async function loadFromCache(onStatusUpdate) {
             window.RouteExpander.setDpsData(dpsData);
         }
 
-        // Save reparsed data back to cache
-        onStatusUpdate('[...] SAVING REPARSED DATA TO CACHE', 'loading');
+        // Save reparsed data back to cache (will re-compress raw CSV)
+        onStatusUpdate('[...] COMPRESSING AND SAVING TO CACHE', 'loading');
         await saveToCache();
 
         const stats = getDataStats();

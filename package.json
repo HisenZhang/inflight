@@ -1,7 +1,7 @@
 {
   "name": "inflight",
   "version": "2.0.0",
-  "description": "Lightweight web-based flight planning application with comprehensive navlog and tactical navigation display",
+  "description": "Lightweight web-based flight planning application with comprehensive navlog and interactive map display",
   "main": "index.html",
   "scripts": {
     "test": "node tests/test-runner.js",

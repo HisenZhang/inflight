@@ -466,23 +466,32 @@ function displayMap(waypoints, legs, options = {}) {
 }
 
 function showMap() {
-    const display = document.getElementById('tacticalDisplay');
+    // Hide placeholder and show map
+    const mapPlaceholder = document.getElementById('mapPlaceholder');
+    if (mapPlaceholder) mapPlaceholder.style.display = 'none';
+
+    const display = document.getElementById('mapDisplay');
     if (display) {
         display.style.display = 'block';
     }
 }
 
 function hideMap() {
-    const display = document.getElementById('tacticalDisplay');
+    const display = document.getElementById('mapDisplay');
     if (display) {
         display.style.display = 'none';
     }
+
+    // Show placeholder when hiding map
+    const mapPlaceholder = document.getElementById('mapPlaceholder');
+    if (mapPlaceholder) mapPlaceholder.style.display = 'block';
+
     stopGPSTracking();
     routeData = null;
 }
 
 function generateMap(waypoints, legs) {
-    const mapContainer = document.getElementById('tacticalMap');
+    const mapContainer = document.getElementById('mapContainer');
     if (!mapContainer) return;
 
     // Calculate bounds based on zoom mode

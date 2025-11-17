@@ -132,7 +132,7 @@ fixNames.reverse();
 
 ```javascript
 const DB_NAME = 'FlightPlanningDB';
-const DB_VERSION = 7;
+const DB_VERSION = 11;  // Updated for compressed CSV storage
 const STORE_NAME = 'flightdata';
 const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000;  // 7 days
 ```
@@ -142,9 +142,9 @@ const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000;  // 7 days
 InFlight uses a **simplified schema** with one object store containing one cache document:
 
 ```javascript
-IndexedDB: FlightPlanningDB (version 7)
+IndexedDB: FlightPlanningDB (version 11)
   └── Object Store: flightdata
-      └── Document: flightdata_cache_v9
+      └── Document: flightdata_cache_v11
           ├── airports: [[code, {...}], ...]  // Serialized Map
           ├── navaids: [[ident, {...}], ...]
           ├── fixes: [[ident, {...}], ...]
@@ -154,9 +154,11 @@ IndexedDB: FlightPlanningDB (version 7)
           ├── frequencies: [[code, [...]], ...]
           ├── runways: [[code, [...]], ...]
           ├── timestamp: 1699564823000
-          ├── version: 9
+          ├── version: 11
           ├── fileMetadata: {...}
-          └── rawCSV: {...}  // Raw CSV strings for reindexing
+          ├── rawCSV: {...}         // Compressed CSV data (gzip)
+          ├── compressed: true      // Compression flag
+          └── compressionStats: {...}  // Compression statistics
 ```
 
 **Why one document?**
@@ -406,6 +408,60 @@ await saveToCache();
 - User sees warning: "DATABASE STALE (8D OLD)"
 - Recommendation to update shown in UI
 - App continues to function normally
+
+### CSV Compression
+
+**Module:** [utils/compression.js](../../utils/compression.js)
+
+InFlight compresses raw CSV data before storing in IndexedDB to reduce storage footprint and improve cache performance.
+
+**Implementation:** Native CompressionStreams API (gzip)
+
+```javascript
+// Compress on save
+const compressedData = await CompressionUtils.compressMultiple(rawCSVData);
+// → Reduces 10-15MB to 2-3MB (~70-80% reduction)
+
+// Decompress on load (only when reindexing)
+const rawCSVData = await CompressionUtils.decompressMultiple(compressedData);
+```
+
+**Browser Support:**
+- Chrome 80+ ✅
+- Firefox 113+ ✅
+- Safari 16.4+ ✅
+
+**Fallback Behavior:**
+- If CompressionStreams API not supported → stores uncompressed
+- No error thrown, graceful degradation
+- Detected via `CompressionUtils.isCompressionSupported()`
+
+**Performance Impact:**
+
+| Operation | Time | Notes |
+|-----------|------|-------|
+| Compression (on save) | ~500ms | One-time cost during cache save |
+| Decompression (on reindex) | ~200ms | Only when reparsing from raw CSV |
+| Cache save size | 70-80% smaller | 10-15MB → 2-3MB |
+
+**Why compress?**
+- **Storage efficiency:** Critical for mobile devices with limited storage
+- **Faster cache saves:** Less data to write to IndexedDB
+- **Preserves reindexing:** Raw CSV still available for parser updates
+- **No runtime cost:** Decompression only happens during reindexing, not normal cache loads
+
+**Compression Statistics:**
+
+```javascript
+{
+  originalSize: 15234567,
+  compressedSize: 3234567,
+  originalSizeMB: "14.53",
+  compressedSizeMB: "3.08",
+  ratio: "77.8%",
+  supported: true
+}
+```
 
 ## Data Access API
 

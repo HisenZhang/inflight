@@ -1404,6 +1404,10 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelSt
     `;
 
     elements.navlogTable.innerHTML = tableHTML;
+
+    // Hide placeholder and show results
+    const navlogPlaceholder = document.getElementById('navlogPlaceholder');
+    if (navlogPlaceholder) navlogPlaceholder.style.display = 'none';
     elements.resultsSection.style.display = 'block';
 }
 

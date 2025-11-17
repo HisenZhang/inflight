@@ -36,6 +36,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             UIController.enableRouteInput();
         } else {
             UIController.updateDatabaseStatus('warning', 'NOT LOADED');
+
+            // Auto-load database if online
+            if (navigator.onLine) {
+                console.log('[Auto-Load] Database not loaded and online - loading automatically...');
+                UIController.updateDatabaseStatus('info', 'AUTO-LOADING...');
+                try {
+                    await handleLoadData();
+                } catch (error) {
+                    console.error('[Auto-Load] Failed:', error);
+                    UIController.updateDatabaseStatus('warning', 'AUTO-LOAD FAILED - USE BUTTON');
+                }
+            }
         }
 
         // Setup event listeners

@@ -159,13 +159,13 @@ Located at top-right of map.
 - Use when: Within 50nm of destination
 
 **50NM:**
-- Tactical view: 50 nautical mile radius around your aircraft
+- Close-range view: 50 nautical mile radius around your aircraft
 - Shows: Upcoming waypoints, route ahead
 - Good for: Enroute navigation, mid-range situational awareness
 - **Use this for most of your flight**
 
 **25NM:**
-- Close tactical view: 25 nautical mile radius
+- Close map view: 25 nautical mile radius
 - Shows: Immediate vicinity, terminal area details
 - Good for: Terminal area, pattern entry, close navigation
 - Use when: Approaching airport or navigating complex airspace

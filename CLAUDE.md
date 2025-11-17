@@ -28,7 +28,7 @@
 │ DISPLAY LAYER (/display)                           │
 │ - app.js: Main coordinator                         │
 │ - ui-controller.js: Forms, navlog, status          │
-│ - tactical-display.js: Vector map & GPS            │
+│ - map-display.js: Vector map & GPS            │
 │ - checklist-controller.js, stats-controller.js     │
 └─────────────────────────────────────────────────────┘
                         ↓ ↑
@@ -536,7 +536,7 @@ const ASSETS_TO_CACHE = [
 - [state/flight-state.js](state/flight-state.js) - Flight plan state (432 lines)
 - [state/flight-tracker.js](state/flight-tracker.js) - GPS tracking (497 lines)
 - [display/ui-controller.js](display/ui-controller.js) - UI rendering (1550 lines)
-- [display/tactical-display.js](display/tactical-display.js) - Vector map (1391 lines)
+- [display/map-display.js](display/map-display.js) - Vector map (1391 lines)
 
 ### Utilities
 - [utils/formatters.js](utils/formatters.js) - Coordinate/frequency formatters (346 lines)

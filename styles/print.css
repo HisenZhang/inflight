@@ -32,9 +32,9 @@
     }
 
     /* MAP tab - show message instead of blank page */
-    #tab-map .tactical-display,
+    #tab-map .map-display,
     #tab-map canvas,
-    #tab-map .tactical-header,
+    #tab-map .map-header,
     #tab-map .navigation-panel,
     #tab-map .map-status-bar {
         display: none !important;

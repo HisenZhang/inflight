@@ -1,13 +1,13 @@
 
 /* ============================================
-   TACTICAL NAVIGATION DISPLAY
+   INTERACTIVE MAP DISPLAY
    ============================================ */
-.tactical-display {
+.map-display {
     border: 2px solid var(--border-color);
     background: var(--bg-panel);
 }
 
-.tactical-header {
+.map-header {
     background: var(--bg-primary);
     border-bottom: 2px solid var(--border-color);
     padding: var(--space-md);
@@ -16,7 +16,7 @@
     align-items: center;
 }
 
-.tactical-header h2 {
+.map-header h2 {
     font-size: 14px;
     margin: 0;
 }
@@ -50,12 +50,12 @@
     font-weight: 700;
 }
 
-.tactical-route-info {
+.map-route-info {
     color: var(--color-metric);
     font-size: 12px;
 }
 
-.tactical-map {
+.map-container {
     position: relative;
     height: 600px;
     background: #000000;
@@ -63,13 +63,13 @@
     overflow: hidden;
 }
 
-.tactical-map svg {
+.map-container svg {
     width: 100%;
     height: 100%;
     cursor: grab;
 }
 
-.tactical-map svg:active {
+.map-container svg:active {
     cursor: grabbing;
 }
 
@@ -205,14 +205,14 @@
 }
 
 /* Briefing button */
-.tactical-briefing-btn {
+.map-briefing-btn {
     background: var(--bg-primary);
     border-bottom: 2px solid var(--border-color);
     padding: var(--space-md);
     text-align: center;
 }
 
-.tactical-briefing-btn .btn {
+.map-briefing-btn .btn {
     font-size: 13px;
     padding: var(--space-md) var(--space-xl);
 }
@@ -373,12 +373,12 @@
     }
 
     /* Keep border on map */
-    .tactical-display {
+    .map-display {
         padding: 0;
         margin-bottom: var(--space-sm);
     }
 
-    .tactical-header {
+    .map-header {
         border-bottom: 1px solid var(--border-color);
         padding: var(--space-sm);
         flex-wrap: nowrap;
@@ -469,12 +469,12 @@
     }
 
     /* Mobile map styles - simple scrollable layout */
-    .tactical-display {
+    .map-display {
         margin-bottom: var(--space-sm);
         border: none;
     }
 
-    .tactical-map {
+    .map-container {
         height: 400px;
     }
 
