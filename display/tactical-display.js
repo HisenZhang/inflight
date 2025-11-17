@@ -340,7 +340,9 @@ function drawAirspace(waypoints, project, strokeWidth, bounds) {
     // Query all airports within the expanded bounds
     const nearbyAirports = window.QueryEngine.getPointsInBounds(expandedBounds);
 
-    // Draw airspace circles for each airport
+    // Group airports by airspace class to handle blend modes properly
+    const airspaceByClass = { B: [], C: [], D: [] };
+
     for (const airport of nearbyAirports.airports) {
         const airportCode = airport.icao || airport.ident || airport.code;
         if (!airportCode) continue;
@@ -350,19 +352,14 @@ function drawAirspace(waypoints, project, strokeWidth, bounds) {
 
         const center = project(airport.lat, airport.lon);
         const radii = AIRSPACE_RADII[airspace.class];
-
         if (!radii) continue;
 
-        // Calculate radius in pixels (approximate, using latitude scaling)
-        // 1 nautical mile ≈ 1/60 degree latitude
+        // Calculate radius in pixels
         const nmToDeg = 1 / 60;
-
-        // Project a point at the outer radius to calculate pixel radius
         const testLat = airport.lat + (radii.outer * nmToDeg);
         const testPoint = project(testLat, airport.lon);
         const outerRadiusPx = Math.abs(testPoint.y - center.y);
 
-        // Calculate inner radius if exists
         let innerRadiusPx = 0;
         if (radii.inner > 0) {
             const innerTestLat = airport.lat + (radii.inner * nmToDeg);
@@ -370,50 +367,78 @@ function drawAirspace(waypoints, project, strokeWidth, bounds) {
             innerRadiusPx = Math.abs(innerTestPoint.y - center.y);
         }
 
-        // Style based on airspace class
-        let fillColor, strokeColor, opacity, dashArray;
+        airspaceByClass[airspace.class].push({
+            center,
+            outerRadiusPx,
+            innerRadiusPx,
+            airspace
+        });
+    }
 
-        switch (airspace.class) {
+    // Draw each airspace class in two layers:
+    // Layer 1: Outer circles in a group with opacity (prevents overlap darkening)
+    // Layer 2: Inner circles on top with black fill (creates donut holes)
+    for (const [airspaceClass, circles] of Object.entries(airspaceByClass)) {
+        if (circles.length === 0) continue;
+
+        let fillColor, strokeColor, groupOpacity, dashArray;
+
+        switch (airspaceClass) {
             case 'B':
-                fillColor = '#0000ff'; // Dark blue
+                fillColor = '#0000ff';
                 strokeColor = '#0000ff';
-                opacity = 0.15;
+                groupOpacity = 0.2; // Increased from 0.15
                 dashArray = 'none';
                 break;
             case 'C':
-                fillColor = '#c71585'; // Medium violet-red (brighter magenta)
+                fillColor = '#c71585';
                 strokeColor = '#c71585';
-                opacity = 0.2;
+                groupOpacity = 0.2;
                 dashArray = 'none';
                 break;
             case 'D':
-                fillColor = 'none'; // No fill for Class D
-                strokeColor = '#4169e1'; // Royal blue
-                opacity = 0.6;
-                dashArray = '8,4'; // Dashed circle
+                fillColor = 'none';
+                strokeColor = '#4169e1';
+                groupOpacity = 0.6;
+                dashArray = '8,4';
                 break;
-            default:
-                continue;
         }
 
-        // Draw outer circle
-        if (airspace.class === 'D') {
-            // Class D: dashed circle, no fill, 2x thicker stroke
-            svg += `<circle cx="${center.x}" cy="${center.y}" r="${outerRadiusPx}" ` +
-                   `fill="none" stroke="${strokeColor}" stroke-width="${strokeWidth}" ` +
-                   `stroke-dasharray="${dashArray}" opacity="${opacity}" class="airspace-circle airspace-${airspace.class}"/>`;
-        } else {
-            // Class B/C: filled circle with border
-            svg += `<circle cx="${center.x}" cy="${center.y}" r="${outerRadiusPx}" ` +
-                   `fill="${fillColor}" stroke="${strokeColor}" stroke-width="${strokeWidth * 0.5}" ` +
-                   `opacity="${opacity}" class="airspace-circle airspace-${airspace.class}"/>`;
+        // Layer 1: Outer circles with group-level opacity
+        svg += `<g opacity="${groupOpacity}" class="airspace-group-${airspaceClass}">`;
+
+        for (const circle of circles) {
+            // Draw outer circle with NO opacity (solid color)
+            if (airspaceClass === 'D') {
+                svg += `<circle cx="${circle.center.x}" cy="${circle.center.y}" r="${circle.outerRadiusPx}" ` +
+                       `fill="none" stroke="${strokeColor}" stroke-width="${strokeWidth}" ` +
+                       `stroke-dasharray="${dashArray}" class="airspace-circle airspace-${airspaceClass}"/>`;
+            } else {
+                svg += `<circle cx="${circle.center.x}" cy="${circle.center.y}" r="${circle.outerRadiusPx}" ` +
+                       `fill="${fillColor}" stroke="${strokeColor}" stroke-width="${strokeWidth * 0.5}" ` +
+                       `class="airspace-circle airspace-${airspaceClass}"/>`;
+            }
         }
 
-        // Draw inner circle for Class B and C (creates the "donut" shape)
-        if (innerRadiusPx > 0 && (airspace.class === 'B' || airspace.class === 'C')) {
-            svg += `<circle cx="${center.x}" cy="${center.y}" r="${innerRadiusPx}" ` +
-                   `fill="${fillColor}" stroke="${strokeColor}" stroke-width="${strokeWidth * 0.5}" ` +
-                   `opacity="${opacity}" class="airspace-circle airspace-${airspace.class}-inner"/>`;
+        svg += `</g>`;
+
+        // Layer 2: Inner circles drawn AFTER group closes (darker shade on top)
+        if (airspaceClass === 'B' || airspaceClass === 'C') {
+            // Inner circle opacity is 2x the outer circle opacity for darker shade
+            const innerOpacity = groupOpacity * 2;
+
+            svg += `<g opacity="${innerOpacity}" class="airspace-group-${airspaceClass}-inner">`;
+
+            for (const circle of circles) {
+                if (circle.innerRadiusPx > 0) {
+                    // Draw inner circle with same color as outer, but in separate group with higher opacity
+                    svg += `<circle cx="${circle.center.x}" cy="${circle.center.y}" r="${circle.innerRadiusPx}" ` +
+                           `fill="${fillColor}" stroke="${strokeColor}" stroke-width="${strokeWidth * 0.5}" ` +
+                           `class="airspace-circle airspace-${airspaceClass}-inner"/>`;
+                }
+            }
+
+            svg += `</g>`;
         }
     }
 
