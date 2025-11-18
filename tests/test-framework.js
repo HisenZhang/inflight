@@ -2,6 +2,38 @@
 // No external dependencies - pure browser JavaScript
 
 // ============================================
+// ENVIRONMENT DETECTION
+// ============================================
+
+// Detect if running in Node.js vs Browser
+const isNodeJS = typeof process !== 'undefined' && process.versions && process.versions.node;
+
+// ANSI color codes for Node.js terminal output
+const ansiColors = {
+    reset: '\x1b[0m',
+    bright: '\x1b[1m',
+    green: '\x1b[32m',
+    red: '\x1b[31m',
+    cyan: '\x1b[36m'
+};
+
+// Helper function for environment-aware logging
+const colorLog = (message, style) => {
+    if (isNodeJS) {
+        // Node.js: Use ANSI colors
+        let color = ansiColors.reset;
+        if (style.includes('bold')) color = ansiColors.bright;
+        if (style.includes('#00ff00') || style.includes('green')) color = ansiColors.green;
+        if (style.includes('#ff0000') || style.includes('red')) color = ansiColors.red;
+        if (style.includes('#00aaff') || style.includes('cyan')) color = ansiColors.cyan + ansiColors.bright;
+        console.log(color + message + ansiColors.reset);
+    } else {
+        // Browser: Use CSS colors
+        console.log('%c' + message, style);
+    }
+};
+
+// ============================================
 // TEST FRAMEWORK
 // ============================================
 
@@ -48,7 +80,7 @@ const TestFramework = {
      * Run all tests
      */
     async runAll() {
-        console.log('%c=== IN-FLIGHT Test Suite ===', 'font-weight: bold; font-size: 16px;');
+        colorLog('=== IN-FLIGHT Test Suite ===', 'font-weight: bold; font-size: 16px;');
         this.results = { passed: 0, failed: 0, errors: [] };
 
         for (const suiteName in this.suites) {
@@ -64,7 +96,7 @@ const TestFramework = {
      */
     async runSuite(suiteName) {
         const suite = this.suites[suiteName];
-        console.log(`\n%c${suiteName}`, 'font-weight: bold; color: #00aaff;');
+        colorLog(`\n${suiteName}`, 'font-weight: bold; color: #00aaff;');
 
         for (const test of suite.tests) {
             try {
@@ -82,7 +114,7 @@ const TestFramework = {
                 }
 
                 this.results.passed++;
-                console.log(`  %c✓ ${test.name}`, 'color: #00ff00;');
+                colorLog(`  ✓ ${test.name}`, 'color: #00ff00;');
             } catch (error) {
                 this.results.failed++;
                 this.results.errors.push({
@@ -90,7 +122,7 @@ const TestFramework = {
                     test: test.name,
                     error: error.message || error
                 });
-                console.log(`  %c✗ ${test.name}`, 'color: #ff0000;');
+                colorLog(`  ✗ ${test.name}`, 'color: #ff0000;');
                 console.error(`    ${error.message || error}`);
             }
         }
@@ -100,12 +132,12 @@ const TestFramework = {
      * Print test summary
      */
     printSummary() {
-        console.log('\n%c=== Test Summary ===', 'font-weight: bold; font-size: 14px;');
-        console.log(`%cPassed: ${this.results.passed}`, 'color: #00ff00;');
-        console.log(`%cFailed: ${this.results.failed}`, 'color: #ff0000;');
+        colorLog('\n=== Test Summary ===', 'font-weight: bold; font-size: 14px;');
+        colorLog(`Passed: ${this.results.passed}`, 'color: #00ff00;');
+        colorLog(`Failed: ${this.results.failed}`, 'color: #ff0000;');
 
         if (this.results.failed > 0) {
-            console.log('\n%cFailed Tests:', 'font-weight: bold; color: #ff0000;');
+            colorLog('\nFailed Tests:', 'font-weight: bold; color: #ff0000;');
             this.results.errors.forEach(err => {
                 console.log(`  ${err.suite} > ${err.test}: ${err.error}`);
             });
