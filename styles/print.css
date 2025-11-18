@@ -27,7 +27,11 @@
     .checklist-actions,
     .inspection-actions,
     .query-history,
-    .help-text {
+    .help-text,
+    #update-notification,
+    .update-notification,
+    #pwa-install-banner,
+    .pwa-install-banner {
         display: none !important;
     }
 

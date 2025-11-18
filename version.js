@@ -24,7 +24,7 @@
 const AppVersion = {
     // Semantic version (sync with package.json)
     MAJOR: 2,
-    MINOR: 0,
+    MINOR: 1,
     PATCH: 0,
 
     // Full version string
@@ -34,7 +34,7 @@ const AppVersion = {
 
     // Service worker cache version
     // Increment this number to force PWA updates
-    CACHE_VERSION: 100,
+    CACHE_VERSION: 101,
 
     // Full cache name for service worker
     get CACHE_NAME() {
@@ -42,10 +42,10 @@ const AppVersion = {
     },
 
     // Build metadata (optional)
-    BUILD_DATE: '2025-01-17',
+    BUILD_DATE: '2025-11-18',
 
     // Release name (optional)
-    RELEASE_NAME: 'UI Improvements: User Guide Button & Symbol Cleanup',
+    RELEASE_NAME: 'Fix: Hide banners in print view',
 
     /**
      * Get full version info object
