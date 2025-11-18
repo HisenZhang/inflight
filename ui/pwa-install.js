@@ -205,6 +205,10 @@ function showInstallSuccess() {
     }
 }
 
+// Export functions to window for onclick handlers
+window.handleInstallClick = handleInstallClick;
+window.handleInstallDismiss = handleInstallDismiss;
+
 // Initialize on DOM load
 document.addEventListener('DOMContentLoaded', () => {
     console.log('[PWA Install] Initializing...');
