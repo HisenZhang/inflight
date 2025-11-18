@@ -2,7 +2,7 @@ import { defineConfig } from 'vitepress'
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
-  title: "InFlight",
+  title: "IN-FLIGHT",
   description: "Flight planning and navigation documentation",
 
   // Base URL for deployment
@@ -11,7 +11,7 @@ export default defineConfig({
   // Theme configuration
   themeConfig: {
     // Site title and logo
-    siteTitle: 'InFlight',
+    siteTitle: 'IN-FLIGHT',
 
     // Navigation bar
     nav: [
@@ -133,6 +133,6 @@ export default defineConfig({
     ['meta', { name: 'theme-color', content: '#00D9FF' }],
     ['meta', { name: 'og:type', content: 'website' }],
     ['meta', { name: 'og:locale', content: 'en' }],
-    ['meta', { name: 'og:site_name', content: 'InFlight Documentation' }]
+    ['meta', { name: 'og:site_name', content: 'IN-FLIGHT Documentation' }]
   ]
 })

@@ -1,6 +1,6 @@
 # Troubleshooting
 
-Common issues and solutions for InFlight.
+Common issues and solutions for IN-FLIGHT.
 
 ## Database Issues
 
@@ -22,7 +22,7 @@ Common issues and solutions for InFlight.
    - Chrome: Settings → Privacy → Clear browsing data
    - Firefox: Settings → Privacy → Clear Data
    - Safari: Settings → Clear History and Website Data
-   - Reload InFlight and try again
+   - Reload IN-FLIGHT and try again
 
 3. **Check Storage Space**
    - Database requires ~50-100 MB
@@ -99,7 +99,7 @@ Common issues and solutions for InFlight.
    - Waypoint codes are case-insensitive
 
 2. **Oceanic Waypoints**
-   - InFlight only supports US domestic
+   - IN-FLIGHT only supports US domestic
    - Use alternative route
    - See [Limitations](tab-welcome.md#limitations)
 
@@ -174,11 +174,11 @@ Common issues and solutions for InFlight.
 **Safari (iOS):**
 1. Settings → Safari → Location
 2. Select "Ask" or "Allow"
-3. Close and reopen InFlight
+3. Close and reopen IN-FLIGHT
 
 **Chrome (Android):**
 1. Settings → Site settings → Location
-2. Allow for InFlight
+2. Allow for IN-FLIGHT
 3. Or grant when prompted
 
 ### GPS Not Updating
@@ -206,7 +206,7 @@ Common issues and solutions for InFlight.
    - Wait for reacquisition
 
 4. **Refresh Page**
-   - Reload InFlight
+   - Reload IN-FLIGHT
    - Re-grant location permission
    - GPS may reinitialize
 
@@ -386,7 +386,7 @@ Common issues and solutions for InFlight.
 3. **Clear Browser Data**
    - Clear cache from other websites
    - Browser Settings → Storage → Clear
-   - Keep InFlight data if possible
+   - Keep IN-FLIGHT data if possible
 
 4. **Increase Storage**
    - Some browsers allow storage increase
@@ -488,7 +488,7 @@ Common issues and solutions for InFlight.
 **Solutions:**
 
 1. **Verify File Format**
-   - Must be JSON file from InFlight
+   - Must be JSON file from IN-FLIGHT
    - Exported via EXPORT button
    - Not GPX or other format
 

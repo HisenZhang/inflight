@@ -1,8 +1,8 @@
-# InFlight Test Suite
+# IN-FLIGHT Test Suite
 
 ## Overview
 
-Comprehensive test suite for the InFlight flight planning application, testing all three engines (Data, Compute, Display) and state management.
+Comprehensive test suite for the IN-FLIGHT flight planning application, testing all three engines (Data, Compute, Display) and state management.
 
 ## Running Tests
 
@@ -30,7 +30,7 @@ node tests/test-runner.js
 
 **Output Example:**
 ```
-InFlight Test Suite
+IN-FLIGHT Test Suite
 
 Testing: Coordinate Formatting
   ✓ should format positive latitude correctly

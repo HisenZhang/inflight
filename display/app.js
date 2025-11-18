@@ -880,7 +880,7 @@ async function showUpdateNotification() {
         // Fallback to generic message
         const versionInfo = document.getElementById('update-version-info');
         if (versionInfo) {
-            versionInfo.textContent = 'A new version of InFlight is ready';
+            versionInfo.textContent = 'A new version of IN-FLIGHT is ready';
         }
     }
 

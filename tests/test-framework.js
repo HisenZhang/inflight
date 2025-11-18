@@ -1,4 +1,4 @@
-// Simple Test Framework for InFlight
+// Simple Test Framework for IN-FLIGHT
 // No external dependencies - pure browser JavaScript
 
 // ============================================
@@ -48,7 +48,7 @@ const TestFramework = {
      * Run all tests
      */
     async runAll() {
-        console.log('%c=== InFlight Test Suite ===', 'font-weight: bold; font-size: 16px;');
+        console.log('%c=== IN-FLIGHT Test Suite ===', 'font-weight: bold; font-size: 16px;');
         this.results = { passed: 0, failed: 0, errors: [] };
 
         for (const suiteName in this.suites) {

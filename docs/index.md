@@ -1,10 +1,10 @@
 ---
 layout: home
-title: InFlight Documentation
+title: IN-FLIGHT Documentation
 titleTemplate: Flight Planning & Navigation
 
 hero:
-  name: InFlight
+  name: IN-FLIGHT
   text: Flight Planning & Navigation
   tagline: In-browser flight planning—works offline, open source, blazing fast. No signup required.
   actions:
@@ -39,11 +39,11 @@ features:
     details: Real IFR route syntax. Multi-altitude wind interpolation. Auto-waypoint advancement. One-tap diversions. Automatic flight logging. Features pilots actually need, not marketing fluff.
 ---
 
-# InFlight: Your Free, In-browser EFB
+# IN-FLIGHT: Your Free, In-browser EFB
 
 **TL;DR:** If you've ever wanted ForeFlight's route planning without the subscription, or SkyVector's interface but offline-capable, this is it.
 
-InFlight is a web-based flight planning tool that works like an EFB should: **in-browser, offline-capable, and actually useful in the cockpit**. No login required, no servers, no cloud sync nonsense. Just load the data once and you're good to go—even with airplane mode on. Open source and free forever.
+IN-FLIGHT is a web-based flight planning tool that works like an EFB should: **in-browser, offline-capable, and actually useful in the cockpit**. No login required, no servers, no cloud sync nonsense. Just load the data once and you're good to go—even with airplane mode on. Open source and free forever.
 
 ## What Makes This Different?
 
@@ -137,7 +137,7 @@ The fuel calculations update automatically based on your current fuel state.
 3. Compare actual ground speeds and fuel burn
 4. Pick the most efficient altitude before calling ATC
 
-Most online planners make you do this manually. InFlight just shows you the numbers.
+Most online planners make you do this manually. IN-FLIGHT just shows you the numbers.
 
 ## What It's NOT
 

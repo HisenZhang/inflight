@@ -1,12 +1,12 @@
 # ROUTE Tab: Building Flight Plans
 
-The ROUTE tab is where you enter your flight plan and let InFlight do the heavy lifting—expanding procedures, resolving airways, and calculating performance.
+The ROUTE tab is where you enter your flight plan and let IN-FLIGHT do the heavy lifting—expanding procedures, resolving airways, and calculating performance.
 
 **What makes this different from other flight planners:** The autocomplete actually understands routing context. After you enter a fix, it shows airways departing from that fix. After you enter an airway, it shows fixes on that airway. This is how FMS route entry works, not how most websites work.
 
 ## Input Modes: Two Ways to Enter Routes
 
-InFlight supports two input modes for maximum flexibility:
+IN-FLIGHT supports two input modes for maximum flexibility:
 
 ### Mode 1: Traditional Three-Field Input (Recommended for IFR)
 
@@ -24,7 +24,7 @@ InFlight supports two input modes for maximum flexibility:
 
 **Just use the Route field—leave Departure and Destination blank**
 
-Enter waypoints in the route field only. InFlight automatically treats:
+Enter waypoints in the route field only. IN-FLIGHT automatically treats:
 - **First waypoint** as departure
 - **Last waypoint** as destination
 
@@ -48,7 +48,7 @@ Destination: KOAK
 - When copying routes from other sources
 - Faster entry for straightforward flights
 
-**The magic:** InFlight auto-expands everything. You type the shorthand, it generates the full route.
+**The magic:** IN-FLIGHT auto-expands everything. You type the shorthand, it generates the full route.
 
 ## Route Syntax: What Actually Works
 
@@ -69,7 +69,7 @@ KSFO DCT KHAF
 But it's unnecessary—spaces imply direct routing.
 
 ### Airways (IFR Enroute)
-**How airways work:** You don't enter every fix on the airway. Just the entry point, airway identifier, and exit point. InFlight fills in the intermediate fixes.
+**How airways work:** You don't enter every fix on the airway. Just the entry point, airway identifier, and exit point. IN-FLIGHT fills in the intermediate fixes.
 
 **Example:**
 ```text
@@ -81,7 +81,7 @@ This means:
 2. Fly V244 from BSR to Eddy VOR (EHF)
 3. Fly V105 from EHF to Dove Creek (DVC)
 
-InFlight auto-expands all the intermediate fixes on V244 and V105.
+IN-FLIGHT auto-expands all the intermediate fixes on V244 and V105.
 
 **Airway types:**
 - **V-routes** (Victor airways): Low altitude, 1,200 AGL to 18,000 MSL
@@ -98,7 +98,7 @@ Enter the procedure name right after departure airport (or as first route elemen
 KSFO JCOBY4 BSR J501 DRK
 ```
 
-InFlight expands JCOBY4 to include all the departure fixes based on the active runway.
+IN-FLIGHT expands JCOBY4 to include all the departure fixes based on the active runway.
 
 **STAR (Standard Terminal Arrival):**
 Enter the procedure name right before destination airport (or as last route element).
@@ -107,7 +107,7 @@ Enter the procedure name right before destination airport (or as last route elem
 BSR J501 DRK WYNDE3 KLAS
 ```
 
-InFlight expands WYNDE3 to include the arrival fixes and automatically selects the correct transition.
+IN-FLIGHT expands WYNDE3 to include the arrival fixes and automatically selects the correct transition.
 
 **Full IFR example with both:**
 ```text
@@ -122,13 +122,13 @@ Breaks down to:
 
 ### Procedure Transitions
 
-Some SIDs/STARs have multiple transitions. InFlight auto-selects based on your route:
+Some SIDs/STARs have multiple transitions. IN-FLIGHT auto-selects based on your route:
 
 ```text
 KBOS PAYGE SSOXS V3 SAX
 ```
 
-If you type `SSOXS` as the first fix after PAYGE, InFlight knows you want the SSOXS transition (not ROBUC or LBSTA).
+If you type `SSOXS` as the first fix after PAYGE, IN-FLIGHT knows you want the SSOXS transition (not ROBUC or LBSTA).
 
 **You can also be explicit using FAA chart standard notation:**
 ```text
@@ -161,11 +161,11 @@ Breakdown:
 - **WYNDE3**: STAR (WYNDE THREE arrival)
 - **KORD**: Destination (Chicago O'Hare)
 
-InFlight auto-expands this into 20+ waypoints with distances and courses.
+IN-FLIGHT auto-expands this into 20+ waypoints with distances and courses.
 
 ## The Intelligent Autocomplete
 
-**This is where InFlight shines.** The autocomplete is context-aware.
+**This is where IN-FLIGHT shines.** The autocomplete is context-aware.
 
 ### After You Type a Fix
 
@@ -240,11 +240,11 @@ When you'll be flying. Options:
 - **12 HR**: Departing in 6-12 hours
 - **24 HR**: Departing in 12-24 hours
 
-InFlight fetches NOAA winds aloft forecast for that time period.
+IN-FLIGHT fetches NOAA winds aloft forecast for that time period.
 
 ### What Gets Calculated
 
-With wind correction enabled, InFlight calculates:
+With wind correction enabled, IN-FLIGHT calculates:
 
 - **Wind correction angle (WCA)**: How much to crab for crosswind
 - **Magnetic heading (MH)**: Course to fly (true course + WCA + magnetic variation)
@@ -256,17 +256,17 @@ All this appears in the NAVLOG tab after you hit COMPUTE.
 
 ### Multi-Altitude Wind Interpolation
 
-**Advanced feature:** If you enter winds at multiple altitudes, InFlight interpolates.
+**Advanced feature:** If you enter winds at multiple altitudes, IN-FLIGHT interpolates.
 
 Example: You're climbing from 3,000 to 9,000 feet over a 50nm leg.
 
-Instead of using wind from one altitude, InFlight:
+Instead of using wind from one altitude, IN-FLIGHT:
 1. Finds wind at 3,000 ft (starting altitude)
 2. Finds wind at 9,000 ft (ending altitude)
 3. Calculates blended wind for the climb segment
 4. Uses that for ground speed calculation
 
-**To use this:** Enter manual winds in NAVLOG tab at different altitudes (3000, 6000, 9000). InFlight automatically interpolates between them.
+**To use this:** Enter manual winds in NAVLOG tab at different altitudes (3000, 6000, 9000). IN-FLIGHT automatically interpolates between them.
 
 ## Fuel Planning
 
@@ -312,13 +312,13 @@ Example: Fuel capacity is 48 gallons, but you're only loading 40 gallons. Enter 
 
 ### What Gets Calculated
 
-InFlight shows:
+IN-FLIGHT shows:
 - **Fuel burn per leg** (based on ETE and burn rate)
 - **Fuel remaining at each waypoint**
 - **Total fuel required** (burn + reserve)
 - **Endurance** (how long you can fly)
 
-**Warning system:** If fuel remaining drops below reserve, InFlight highlights it in red.
+**Warning system:** If fuel remaining drops below reserve, IN-FLIGHT highlights it in red.
 
 ### Fuel Calculation Example
 
@@ -334,7 +334,7 @@ InFlight shows:
 - Reserve (VFR day): 30 min = 4.3 gallons
 - **Total required: 39.2 gallons** (barely fits in 40 gal tank!)
 
-InFlight shows this automatically when you hit COMPUTE.
+IN-FLIGHT shows this automatically when you hit COMPUTE.
 
 ## Buttons
 
@@ -505,7 +505,7 @@ Chicago → Washington National with explicit SID transition
 
 ### Route Computes But Looks Wrong
 
-**Cause:** InFlight chose a different airway segment than you expected.
+**Cause:** IN-FLIGHT chose a different airway segment than you expected.
 
 **Fix:**
 1. Check the NAVLOG to see which fixes were included
@@ -534,7 +534,7 @@ Chicago → Washington National with explicit SID transition
 
 ### Analyzing Expected Routes
 
-Got a route from ForeFlight/fltplan.com? Analyze it in InFlight:
+Got a route from ForeFlight/fltplan.com? Analyze it in IN-FLIGHT:
 
 1. Copy: `KSFO JCOBY4 BSR J501 DRK WYNDE3 KLAS`
 2. Split into departure/route/destination:

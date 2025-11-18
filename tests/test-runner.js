@@ -18,7 +18,7 @@ const colors = {
     gray: '\x1b[90m'
 };
 
-console.log(`${colors.cyan}${colors.bright}InFlight Test Suite${colors.reset}\n`);
+console.log(`${colors.cyan}${colors.bright}IN-FLIGHT Test Suite${colors.reset}\n`);
 
 // Read all required source files
 const projectRoot = path.join(__dirname, '..');

@@ -2,7 +2,7 @@
 
 ## Overview
 
-InFlight processes IFR/VFR routes through a **4-stage pipeline**: Lexer → Parser → Resolver → Expander → Calculator. Each stage transforms the route from raw text to calculated navigation legs.
+IN-FLIGHT processes IFR/VFR routes through a **4-stage pipeline**: Lexer → Parser → Resolver → Expander → Calculator. Each stage transforms the route from raw text to calculated navigation legs.
 
 ```
 "KJFK RBV Q430 AIR CLPRR3 KCMH"
@@ -349,7 +349,7 @@ expandProcedure(procedureName, transitionName, destination) {
 
 #### TRANSITION.PROCEDURE Format (FAA Chart Standard)
 
-InFlight supports explicit transition specification using FAA chart standard notation: `TRANSITION.PROCEDURE`
+IN-FLIGHT supports explicit transition specification using FAA chart standard notation: `TRANSITION.PROCEDURE`
 
 **Examples:**
 - `KAYYS.WYNDE3` - WYNDE THREE arrival via KAYYS transition
@@ -471,7 +471,7 @@ function deduplicateWaypoints(waypoints) {
 
 ### Distance Calculation (Vincenty Formula)
 
-InFlight uses the **Vincenty formula** for accurate great circle distance on WGS84 ellipsoid.
+IN-FLIGHT uses the **Vincenty formula** for accurate great circle distance on WGS84 ellipsoid.
 
 **Implementation:** [lib/geodesy.js:156-230](../../lib/geodesy.js#L156-L230)
 
@@ -520,7 +520,7 @@ function calculateBearing(lat1, lon1, lat2, lon2) {
 
 **Magnetic Variation:** [lib/geodesy.js:250-420](../../lib/geodesy.js#L250-L420)
 
-InFlight uses **WMM2025** (World Magnetic Model) to convert true bearing to magnetic:
+IN-FLIGHT uses **WMM2025** (World Magnetic Model) to convert true bearing to magnetic:
 
 ```javascript
 const trueBearing = 045;

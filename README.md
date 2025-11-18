@@ -1,4 +1,4 @@
-# InFlight
+# IN-FLIGHT
 
 **Free, offline-capable flight planning web app. By pilots, for pilots.**
 

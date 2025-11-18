@@ -1,8 +1,8 @@
-# InFlight Architecture Documentation
+# IN-FLIGHT Architecture Documentation
 
 ## Overview
 
-InFlight is a browser-based flight planning and navigation application built with a **3-Engine Architecture** that cleanly separates data management, business logic, and presentation concerns.
+IN-FLIGHT is a browser-based flight planning and navigation application built with a **3-Engine Architecture** that cleanly separates data management, business logic, and presentation concerns.
 
 ## Design Philosophy
 
@@ -199,7 +199,7 @@ MapDisplay.generateMap()                 ← redraw with GPS position
 
 ### Orthographic Projection
 
-InFlight uses **orthographic projection** for the moving map display. This is a perspective projection from an infinite distance that creates a planar view of the sphere.
+IN-FLIGHT uses **orthographic projection** for the moving map display. This is a perspective projection from an infinite distance that creates a planar view of the sphere.
 
 **Implementation:** [map-display.js:470-480](../display/map-display.js#L470-L480)
 
@@ -261,7 +261,7 @@ const scale = baseScale * zoomLevel; // Apply pinch zoom
 
 ### Aspect Ratio Handling
 
-InFlight adjusts for latitude-dependent longitude distances:
+IN-FLIGHT adjusts for latitude-dependent longitude distances:
 
 **Implementation:** [map-display.js:422-429](../display/map-display.js#L422-L429)
 
@@ -305,7 +305,7 @@ At 2x zoom, the user can pan by the full viewport width to explore all areas.
 
 ### Geolocation API Configuration
 
-InFlight uses `navigator.geolocation.watchPosition()` for continuous GPS tracking.
+IN-FLIGHT uses `navigator.geolocation.watchPosition()` for continuous GPS tracking.
 
 **Implementation:** [map-display.js:44-90](../display/map-display.js#L44-L90)
 
@@ -339,7 +339,7 @@ watchId = navigator.geolocation.watchPosition(
 
 ### GPS vs Network Location
 
-The Geolocation API does not distinguish between GPS and network location. InFlight relies on:
+The Geolocation API does not distinguish between GPS and network location. IN-FLIGHT relies on:
 
 1. **`enableHighAccuracy: true` flag**: Requests GPS when available
 2. **Accuracy thresholds**: Infers signal quality from `position.coords.accuracy`
@@ -354,7 +354,7 @@ The Geolocation API does not distinguish between GPS and network location. InFli
 
 ### Flight State Detection
 
-InFlight automatically detects takeoff and landing using a **40-knot speed threshold**.
+IN-FLIGHT automatically detects takeoff and landing using a **40-knot speed threshold**.
 
 **Implementation:** [flight-tracker.js:41-87](../state/flight-tracker.js#L41-L87)
 

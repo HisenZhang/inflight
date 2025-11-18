@@ -1,6 +1,6 @@
-# Contributing to InFlight Documentation
+# Contributing to IN-FLIGHT Documentation
 
-Thank you for your interest in improving the InFlight documentation! This guide will help you get started.
+Thank you for your interest in improving the IN-FLIGHT documentation! This guide will help you get started.
 
 ## Documentation Structure
 
@@ -294,7 +294,7 @@ We use **Docsify** for our documentation:
 **Correct:**
 - waypoint (not "waypoint name" or "fix")
 - navigation log / navlog (not "nav log")
-- InFlight (capital I and F, not "Inflight")
+- IN-FLIGHT (all caps with hyphen, not "InFlight" or "Inflight")
 - Docsify (capital D)
 - Cloudflare Pages (two words)
 
@@ -333,9 +333,9 @@ sequence in the text field provided.
 
 ## License
 
-By contributing to InFlight documentation, you agree that your
+By contributing to IN-FLIGHT documentation, you agree that your
 contributions will be licensed under the MIT License.
 
 ---
 
-Thank you for helping improve InFlight documentation! 🚀
+Thank you for helping improve IN-FLIGHT documentation! 🚀
