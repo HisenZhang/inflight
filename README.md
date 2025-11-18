@@ -2,6 +2,8 @@
 
 **Free, offline-capable flight planning web app. By pilots, for pilots.**
 
+Try now: **[in-flight.org](https://in-flight.org)**
+
 Just type the URL and start planning—no signup, no install, no subscription.
 
 ## Quick Start
