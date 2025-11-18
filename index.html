@@ -59,7 +59,7 @@
                 </div>
 
                 <div class="welcome-actions">
-                    <button class="btn btn-primary font-bold" onclick="document.querySelector('[data-tab=route]').click()">
+                    <button class="btn btn-primary font-bold" onclick="document.querySelector('[data-tab=data]').click()">
                         GET STARTED
                     </button>
                     <button class="btn btn-secondary" onclick="startTutorial()">
@@ -155,8 +155,21 @@
 
         <!-- Tab: Route -->
         <div class="tab-content" id="tab-route">
+        <!-- Placeholder when data not loaded -->
+        <div id="routePlaceholder" class="welcome-brief">
+            <h2 class="font-bold text-primary" style="font-size: 1.5rem; letter-spacing: 4px; margin-bottom: 1rem;">ROUTE PLANNING</h2>
+            <div class="welcome-info" style="max-width: 500px; margin: 0 auto 1.5rem auto;">
+                <p>Plan your flight route with detailed waypoint-to-waypoint navigation.</p>
+                <p style="margin-bottom: 0;"><strong>Supports:</strong> Direct routes • Airways • SIDs/STARs • Departure procedures • Wind calculations</p>
+            </div>
+            <p class="text-secondary" style="font-size: 0.75rem; margin-bottom: 1.5rem;">Load the aviation database first to enable route planning.</p>
+            <button class="btn btn-primary font-bold" onclick="document.querySelector('[data-tab=data]').click()">
+                LOAD DATABASE
+            </button>
+        </div>
+
         <!-- Input Section -->
-        <div class="input-section">
+        <div class="input-section" style="display: none;">
             <h2 class="font-bold text-primary">ROUTE ENTRY</h2>
 
             <!-- ICAO-Style Route Input (Required) -->

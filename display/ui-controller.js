@@ -416,6 +416,16 @@ function enableRouteInput() {
     elements.destinationInput.disabled = false;
     elements.calculateBtn.disabled = false;
 
+    // Hide route placeholder and show input section
+    const routePlaceholder = document.getElementById('routePlaceholder');
+    const inputSection = document.querySelector('#tab-route .input-section');
+    if (routePlaceholder) {
+        routePlaceholder.style.display = 'none';
+    }
+    if (inputSection) {
+        inputSection.style.display = 'block';
+    }
+
     // Enable inputs based on feature toggles (if they're enabled)
     if (elements.isWindsEnabled && elements.isWindsEnabled()) {
         elements.altitudeInput.disabled = false;
