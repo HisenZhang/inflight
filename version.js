@@ -1,5 +1,5 @@
 /**
- * InFlight Version Management
+ * IN-FLIGHT Version Management
  *
  * Single source of truth for all version numbers.
  * Update this file when releasing a new version.
@@ -64,7 +64,7 @@ const AppVersion = {
      * Display version info in console
      */
     logVersionInfo() {
-        console.log(`%c InFlight v${this.VERSION} `, 'background: #ff00ff; color: #000; font-weight: bold; padding: 4px;');
+        console.log(`%c IN-FLIGHT v${this.VERSION} `, 'background: #ff00ff; color: #000; font-weight: bold; padding: 4px;');
         console.log(`Cache: ${this.CACHE_NAME}`);
         console.log(`Build: ${this.BUILD_DATE}`);
         if (this.RELEASE_NAME) {

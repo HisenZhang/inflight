@@ -1,6 +1,6 @@
 # MAP Tab: GPS Moving Map
 
-This is where InFlight turns into an in-flight navigation tool. The MAP tab gives you a moving map display with your aircraft position, route visualization, and real-time guidance—think of it as a basic FMS map page in your browser.
+This is where IN-FLIGHT turns into an in-flight navigation tool. The MAP tab gives you a moving map display with your aircraft position, route visualization, and real-time guidance—think of it as a basic FMS map page in your browser.
 
 **What this is:** Situational awareness, backup navigation, and route monitoring.
 
@@ -25,7 +25,7 @@ Your planned route appears as a series of connected waypoints:
 
 ### Airspace Visualization
 
-InFlight displays controlled airspace around airports for situational awareness:
+IN-FLIGHT displays controlled airspace around airports for situational awareness:
 
 **Class B Airspace (Blue circles):**
 - Major airports (30nm radius typical)
@@ -179,7 +179,7 @@ Located at top-right of map.
 
 ## Auto-Waypoint Advancement
 
-**The magic feature:** InFlight automatically advances to the next waypoint when you pass abeam the current one.
+**The magic feature:** IN-FLIGHT automatically advances to the next waypoint when you pass abeam the current one.
 
 ### How It Works
 
@@ -192,7 +192,7 @@ Located at top-right of map.
 4. Yellow line re-draws to new active waypoint
 5. Guidance (HDG/DIST/ETE) updates automatically
 
-**Why this matters:** You don't have to manually click "NEXT" during the flight. InFlight does it for you, just like an FMS.
+**Why this matters:** You don't have to manually click "NEXT" during the flight. IN-FLIGHT does it for you, just like an FMS.
 
 ### Manual Waypoint Control
 
@@ -210,7 +210,7 @@ Located at top-right of map.
 
 ## Voice Announcements (TTS)
 
-When you pass within 2nm of a waypoint, InFlight announces:
+When you pass within 2nm of a waypoint, IN-FLIGHT announces:
 
 **Example announcement:**
 > "Approaching K O R D. Next waypoint B S R, heading 1 4 1, distance 97 nautical miles, E T E 47 minutes."
@@ -262,7 +262,7 @@ This matches standard aviation phraseology for clarity.
    - DIST shows direct distance
    - ETE updates based on current GS
 
-**InFlight automatically:**
+**IN-FLIGHT automatically:**
 - Calculates direct great-circle route to airport
 - Updates fuel remaining (if fuel planning enabled)
 - Shows new ETA
@@ -412,7 +412,7 @@ GPS continues tracking on the ground:
 **Fix for Safari (iOS):**
 1. iOS Settings → Safari → Location Services
 2. Set to "Ask" or "Allow"
-3. Close and reopen InFlight
+3. Close and reopen IN-FLIGHT
 
 ### "GPS Not Updating" or Stuck Position
 
@@ -490,23 +490,23 @@ GPS is **power-hungry**. Expect 2-4 hours on a typical tablet battery.
 
 ### Backup Navigation
 
-**Never rely solely on InFlight GPS:**
+**Never rely solely on IN-FLIGHT GPS:**
 - ✅ Have paper charts or certified EFB (ForeFlight, Garmin Pilot)
 - ✅ Know how to navigate with VORs and pilotage
 - ✅ Monitor panel-mounted GPS (if equipped)
 - ✅ File flight plans with ATC for IFR
 
-**InFlight is a backup tool**, not primary navigation.
+**IN-FLIGHT is a backup tool**, not primary navigation.
 
 ### Cross-Check with Other Instruments
 
-Compare InFlight GPS with:
+Compare IN-FLIGHT GPS with:
 - **Panel GPS**: Position, ground speed, track
 - **DME**: Distance to VORs
 - **ADF/VOR bearings**: Radial accuracy
 - **Heading indicator**: Required heading vs. actual
 
-**Discrepancies?** Trust certified instruments. Use InFlight for situational awareness.
+**Discrepancies?** Trust certified instruments. Use IN-FLIGHT for situational awareness.
 
 ## Advanced Scenarios
 
@@ -521,7 +521,7 @@ Compare InFlight GPS with:
 4. When ATC says "resume own navigation," turn to HDG shown in panel
 5. Rejoin route line
 
-**InFlight continues showing:**
+**IN-FLIGHT continues showing:**
 - Distance/bearing to next waypoint
 - Updated ETE
 - Your track trail (dotted line) showing vectors
@@ -533,7 +533,7 @@ Compare InFlight GPS with:
 **If KBIH is on your route:**
 1. Click NEXT button until KBIH appears as active waypoint
 2. Turn to new HDG shown in navigation panel
-3. InFlight updates guidance automatically
+3. IN-FLIGHT updates guidance automatically
 
 **If KBIH is NOT on your route:**
 1. Click KBIH airport on map
@@ -551,7 +551,7 @@ If you lose comms and need to navigate via last clearance:
 4. Squawk 7600
 5. Continue as filed to destination
 
-InFlight shows your planned route even if off course. Use it to rejoin.
+IN-FLIGHT shows your planned route even if off course. Use it to rejoin.
 
 ### Practice Approaches
 

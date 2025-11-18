@@ -113,7 +113,7 @@ function exportNavlogCSV(legs) {
 
 ### SVG Vector Map
 
-InFlight renders the route as an SVG vector map with the following features:
+IN-FLIGHT renders the route as an SVG vector map with the following features:
 
 - **Orthographic projection** (see Architecture doc for details)
 - **Responsive sizing** (adapts to route orientation)
@@ -363,8 +363,8 @@ self.addEventListener('fetch', (event) => {
 
 ```json
 {
-    "name": "InFlight - Flight Planning",
-    "short_name": "InFlight",
+    "name": "IN-FLIGHT - Flight Planning",
+    "short_name": "IN-FLIGHT",
     "start_url": "./",
     "display": "standalone",
     "background_color": "#1a1a1a",

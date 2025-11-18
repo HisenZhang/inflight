@@ -178,7 +178,7 @@ Wind is aligned with course, no crab needed.
 
 ### The Four Headings
 
-InFlight shows all four headings for educational purposes, but **you only fly one**:
+IN-FLIGHT shows all four headings for educational purposes, but **you only fly one**:
 
 1. **TC (True Course)**: Ground track you want to maintain
 2. **TH (True Heading)**: Where to point the aircraft (TC + WCA)
@@ -206,11 +206,11 @@ Wind affects your ground speed:
 - Wind: 20 knot direct crosswind
 - GS: ~120 knots (minimal effect, but you'll crab)
 
-InFlight calculates the exact GS using vector math, not approximations.
+IN-FLIGHT calculates the exact GS using vector math, not approximations.
 
 ## Fuel Planning Explained
 
-### How InFlight Calculates Fuel
+### How IN-FLIGHT Calculates Fuel
 
 For each leg:
 ```text
@@ -255,7 +255,7 @@ You won't make it with required reserves. Options:
 
 ### Reserve Fuel Rules
 
-InFlight enforces FAA minimums:
+IN-FLIGHT enforces FAA minimums:
 
 **VFR Day (FAR 91.151):**
 - 30 minutes reserve at cruise burn rate
@@ -265,7 +265,7 @@ InFlight enforces FAA minimums:
 - 45 minutes reserve at cruise burn rate
 - Example: 8.5 GPH × 0.75 hr = **6.375 gal reserve**
 
-**Your fuel remaining at destination must exceed this.** Otherwise InFlight flags it red.
+**Your fuel remaining at destination must exceed this.** Otherwise IN-FLIGHT flags it red.
 
 ## Interactive Features
 
@@ -313,7 +313,7 @@ The filed altitude column (9.5K FT) is highlighted in green.
 
 ## Multi-Altitude Wind Interpolation
 
-**Advanced feature:** InFlight interpolates winds if you're climbing or descending.
+**Advanced feature:** IN-FLIGHT interpolates winds if you're climbing or descending.
 
 **Example scenario:**
 - Depart KSFO at 3,000 ft
@@ -321,7 +321,7 @@ The filed altitude column (9.5K FT) is highlighted in green.
 - Cruise at 9,500 ft
 - Descend to pattern altitude at KLAS
 
-**How InFlight handles this:**
+**How IN-FLIGHT handles this:**
 1. Looks up wind at 3,000 ft (departure altitude)
 2. Looks up wind at 9,500 ft (cruise altitude)
 3. **Blends the two** for climb segments (weighted average by altitude)
@@ -334,7 +334,7 @@ The filed altitude column (9.5K FT) is highlighted in green.
 - More realistic ETAs
 
 **To use this feature:**
-Enter winds manually at multiple altitudes in the ROUTE tab. InFlight automatically interpolates.
+Enter winds manually at multiple altitudes in the ROUTE tab. IN-FLIGHT automatically interpolates.
 
 ## Export & Import
 
@@ -455,18 +455,18 @@ If you're offline or NOAA winds are unavailable, you can manually enter winds:
 
 **Method 1: Single altitude (simple)**
 1. Note wind from weather briefing (e.g., "290° at 25 knots at 9,500 ft")
-2. InFlight uses this for all legs at that altitude
+2. IN-FLIGHT uses this for all legs at that altitude
 
 **Method 2: Multiple altitudes (better)**
 1. Enter winds at 3,000 / 6,000 / 9,000 / 12,000 ft
-2. InFlight interpolates for climb/descent legs
+2. IN-FLIGHT interpolates for climb/descent legs
 3. More accurate fuel/time estimates
 
 **Where to enter:** In the ROUTE tab wind section, there's a manual entry option.
 
 ## Printing the Navlog
 
-InFlight automatically switches to a **printer-friendly layout** when you print:
+IN-FLIGHT automatically switches to a **printer-friendly layout** when you print:
 
 **What happens automatically:**
 - ✅ Dark theme → High-contrast black-on-white
@@ -482,7 +482,7 @@ InFlight automatically switches to a **printer-friendly layout** when you print:
 4. Print to physical printer or save as PDF
 
 **What gets printed:**
-InFlight prints **only the currently active tab**. When you're on the NAVLOG tab and press Ctrl+P:
+IN-FLIGHT prints **only the currently active tab**. When you're on the NAVLOG tab and press Ctrl+P:
 - ✅ Complete navigation log table
 - ✅ All waypoint and leg data
 - ✅ Wind corrections and fuel calculations
@@ -522,7 +522,7 @@ For more printing details, see [Printing FAQ](faq.md#printing-questions).
 
 **Update before departure:**
 - Winds aloft change—recalculate if >2 hours before flight
-- NOTAMs may affect routing (InFlight doesn't include NOTAMs)
+- NOTAMs may affect routing (IN-FLIGHT doesn't include NOTAMs)
 - TFRs may require rerouting
 
 **Monitor in-flight:**

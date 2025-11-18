@@ -2,7 +2,7 @@
 
 ## Project Vision
 
-InFlight is a free, offline-capable flight planning and navigation web application built by pilots, for pilots. The core vision is to provide professional-grade IFR/VFR route planning tools that work entirely in the browser without requiring servers, subscriptions, or internet connectivity.
+IN-FLIGHT is a free, offline-capable flight planning and navigation web application built by pilots, for pilots. The core vision is to provide professional-grade IFR/VFR route planning tools that work entirely in the browser without requiring servers, subscriptions, or internet connectivity.
 
 ## Design Goals
 

@@ -4,7 +4,7 @@
 const TUTORIAL_STEPS = [
     {
         id: 'welcome',
-        title: 'WELCOME TO INFLIGHT',
+        title: 'WELCOME TO IN-FLIGHT',
         message: 'This interactive tutorial will guide you through planning a flight from Albany (KALB) to Chicago O\'Hare (KORD). Click NEXT to begin.',
         action: null,
         highlight: null
@@ -99,7 +99,7 @@ const TUTORIAL_STEPS = [
     {
         id: 'enable-winds',
         title: 'STEP 6: ENABLE WIND CORRECTION',
-        message: 'InFlight can calculate wind correction for more accurate ground speeds and headings. Let\'s enable this feature.',
+        message: 'IN-FLIGHT can calculate wind correction for more accurate ground speeds and headings. Let\'s enable this feature.',
         action: async () => {
             const toggle = document.getElementById('enableWindsToggle');
             if (toggle && !toggle.classList.contains('active')) {
@@ -148,7 +148,7 @@ const TUTORIAL_STEPS = [
     {
         id: 'calculate',
         title: 'STEP 10: CALCULATING ROUTE',
-        message: 'Computing your flight plan... InFlight will resolve waypoints, airways, and navigation data. The app will automatically switch to the NAVLOG tab to show your results.',
+        message: 'Computing your flight plan... IN-FLIGHT will resolve waypoints, airways, and navigation data. The app will automatically switch to the NAVLOG tab to show your results.',
         action: async () => {
             const btn = document.getElementById('calculateBtn');
             if (btn && !btn.disabled) {

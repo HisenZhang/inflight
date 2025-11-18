@@ -1,8 +1,8 @@
-# InFlight User Guide
+# IN-FLIGHT User Guide
 
 **Free, offline-capable flight planning and navigation for VFR and IFR pilots.**
 
-InFlight is a web-based flight planning tool that generates navigation logs and tracks GPS position—no subscriptions, no account required, works offline after initial setup.
+IN-FLIGHT is a web-based flight planning tool that generates navigation logs and tracks GPS position—no subscriptions, no account required, works offline after initial setup.
 
 > **DISCLAIMER**
 > This is a flight planning tool, not a certified navigation system. Use it for planning and backup, not as your primary navigation source. Always verify routes and data against current charts and NOTAMs.
@@ -43,7 +43,7 @@ KBOS PAYGE SSOXS V3 SAX J57 LRP LENDY6 KLGA
 
 COMPUTE expands SIDs, airways, and STARs into a full navlog with fuel and time calculations. Edit the route string for ATC reroutes—no clicking through menus.
 
-**Note:** For filing IFR, you typically file the route as-is (e.g., `KBOS PAYGE3 V3 SAX J57 LENDY6 KLGA`). InFlight expands procedures to show you every waypoint for situational awareness and navlog generation.
+**Note:** For filing IFR, you typically file the route as-is (e.g., `KBOS PAYGE3 V3 SAX J57 LENDY6 KLGA`). IN-FLIGHT expands procedures to show you every waypoint for situational awareness and navlog generation.
 
 ### Training Aid
 
@@ -57,7 +57,7 @@ Install as a PWA for offline access. If your primary EFB fails, you still have n
 
 **Context-Aware Autocomplete:** After typing a fix, see only airways from that fix. After typing an airway, see only fixes on that airway. Same logic as FMS autocomplete.
 
-**Multi-Altitude Wind Interpolation:** Climbing through multiple altitudes on a leg? InFlight calculates blended wind for accurate ground speed and fuel burn.
+**Multi-Altitude Wind Interpolation:** Climbing through multiple altitudes on a leg? IN-FLIGHT calculates blended wind for accurate ground speed and fuel burn.
 
 **Automatic Flight Logging:** GPS auto-detects takeoff (>50 kts), logs track with timestamps, detects landing (<30 kts). Exports as GeoJSON.
 

@@ -1,14 +1,14 @@
 # Frequently Asked Questions (FAQ)
 
-Common questions about InFlight answered.
+Common questions about IN-FLIGHT answered.
 
 ## General Questions
 
-### Is InFlight approved for actual flight operations?
+### Is IN-FLIGHT approved for actual flight operations?
 
-**No.** InFlight is a planning tool, not FAA-certified equipment. Use it for flight planning and backup reference, but always verify data against current charts and NOTAMs. For primary navigation, use certified equipment and official aeronautical data.
+**No.** IN-FLIGHT is a planning tool, not FAA-certified equipment. Use it for flight planning and backup reference, but always verify data against current charts and NOTAMs. For primary navigation, use certified equipment and official aeronautical data.
 
-### Does InFlight work offline?
+### Does IN-FLIGHT work offline?
 
 **Partially.** Once the database is loaded:
 - ✅ Route calculation works offline
@@ -18,7 +18,7 @@ Common questions about InFlight answered.
 - ❌ Winds aloft requires internet (initial fetch)
 - ❌ AirNav links require internet
 
-### What devices can I use InFlight on?
+### What devices can I use IN-FLIGHT on?
 
 Any modern device with a web browser:
 - Desktop/laptop computers (Windows, Mac, Linux)
@@ -28,9 +28,9 @@ Any modern device with a web browser:
 
 Recommended: Tablet or laptop for best experience.
 
-### Does InFlight require an account or login?
+### Does IN-FLIGHT require an account or login?
 
-**No.** InFlight runs entirely in your browser with no account, login, or registration required. All data is stored locally on your device.
+**No.** IN-FLIGHT runs entirely in your browser with no account, login, or registration required. All data is stored locally on your device.
 
 ### Is my flight data private?
 
@@ -40,9 +40,9 @@ Recommended: Tablet or laptop for best experience.
 - No personal information collected
 - GPX exports contain only GPS coordinates
 
-### How much does InFlight cost?
+### How much does IN-FLIGHT cost?
 
-**Free.** InFlight is free and open-source.
+**Free.** IN-FLIGHT is free and open-source.
 
 ## Database Questions
 
@@ -77,9 +77,9 @@ For international flight planning, use official tools.
 
 ## Route Planning Questions
 
-### What route syntax does InFlight support?
+### What route syntax does IN-FLIGHT support?
 
-InFlight supports standard ICAO flight plan format:
+IN-FLIGHT supports standard ICAO flight plan format:
 - Direct routing (waypoint to waypoint)
 - Airways (Victor, Jet, RNAV)
 - SID/STAR procedures
@@ -89,7 +89,7 @@ See [Route Tab Guide](tab-route.md) for details.
 
 ### Can I plan IFR routes?
 
-**Yes.** InFlight parses IFR route syntax including airways, SIDs, and STARs. Use it for planning, practice, and understanding route structure. Always verify routes against current charts and file using official channels.
+**Yes.** IN-FLIGHT parses IFR route syntax including airways, SIDs, and STARs. Use it for planning, practice, and understanding route structure. Always verify routes against current charts and file using official channels.
 
 ### Why can't I find a specific waypoint?
 
@@ -117,7 +117,7 @@ You can calculate routes without it for basic distance and bearing.
 
 ## Navigation & GPS Questions
 
-### Does InFlight require GPS?
+### Does IN-FLIGHT require GPS?
 
 **No, not required.** GPS is only needed for:
 - Moving map tracking
@@ -145,7 +145,7 @@ Auto-advance triggers when you're within **2 nautical miles** of the next waypoi
 
 You can manually advance with NEXT button.
 
-### Can I use InFlight for actual in-flight navigation?
+### Can I use IN-FLIGHT for actual in-flight navigation?
 
 **As backup reference only.** For primary navigation, always use:
 - Certified panel-mount GPS
@@ -197,7 +197,7 @@ These match FAA requirements.
 
 ### What if I run out of fuel according to the plan?
 
-**Plan a fuel stop or reduce distance.** InFlight will warn if fuel is insufficient:
+**Plan a fuel stop or reduce distance.** IN-FLIGHT will warn if fuel is insufficient:
 - Red highlighting in navlog
 - "INSUFFICIENT FUEL" message
 - Endurance less than legal reserve
@@ -223,7 +223,7 @@ Currently, no. The checklist is fixed for Piper Cherokee 140. Future versions ma
 
 ### Can I print the checklist?
 
-**Yes.** Use browser print function (Ctrl+P / Cmd+P). InFlight automatically switches to a printer-friendly layout with:
+**Yes.** Use browser print function (Ctrl+P / Cmd+P). IN-FLIGHT automatically switches to a printer-friendly layout with:
 - High-contrast black text on white background
 - Hidden buttons and UI elements
 - Optimized formatting for paper
@@ -239,7 +239,7 @@ See [Printing Guide](#printing-questions) for details.
 
 ### Can I print my flight plan?
 
-**Yes.** InFlight has built-in printer-friendly formatting:
+**Yes.** IN-FLIGHT has built-in printer-friendly formatting:
 
 **To print:**
 1. Open the tab(s) you want to print (NAVLOG, STATS, CHKLST, etc.)
@@ -249,7 +249,7 @@ See [Printing Guide](#printing-questions) for details.
 
 ### What gets printed?
 
-**InFlight prints only the currently active tab.** This gives you clean, focused output.
+**IN-FLIGHT prints only the currently active tab.** This gives you clean, focused output.
 
 **To print a specific tab:**
 1. Click on the tab you want (NAVLOG, STATS, CHKLST, etc.)
@@ -275,7 +275,7 @@ See [Printing Guide](#printing-questions) for details.
 
 ### Does it work on color and black-and-white printers?
 
-**Yes!** InFlight's print styles work on both:
+**Yes!** IN-FLIGHT's print styles work on both:
 
 **Color printers:**
 - Airports: Dark blue
@@ -293,7 +293,7 @@ See [Printing Guide](#printing-questions) for details.
 
 ### How do I print just the navlog?
 
-**Easy!** InFlight automatically prints only the active tab:
+**Easy!** IN-FLIGHT automatically prints only the active tab:
 1. Click on **NAVLOG tab**
 2. Press **Ctrl+P / Cmd+P**
 3. Only the navlog will appear in print preview
@@ -317,7 +317,7 @@ The printed navlog includes:
 
 ### Why does the print preview look different from the screen?
 
-InFlight uses special **print-only styles** that activate when printing:
+IN-FLIGHT uses special **print-only styles** that activate when printing:
 - **Screen**: Dark theme (black background, bright colors) optimized for displays
 - **Print**: Light theme (white background, dark text) optimized for paper
 
@@ -370,7 +370,7 @@ If colors appear washed out:
 3. **Printer quality**: Set to "Best" or "High Quality" mode
 4. **Ink levels**: Check if cartridges need replacement
 
-InFlight uses dark colors specifically to avoid this issue, but browser/printer settings can affect output.
+IN-FLIGHT uses dark colors specifically to avoid this issue, but browser/printer settings can affect output.
 
 ### Can I save the print output as PDF?
 
@@ -389,7 +389,7 @@ InFlight uses dark colors specifically to avoid this issue, but browser/printer 
 ### Do I need to print every flight?
 
 **No.** Printing is optional. Many pilots prefer:
-- **Digital-only**: Keep tablet with InFlight open in cockpit
+- **Digital-only**: Keep tablet with IN-FLIGHT open in cockpit
 - **PDF archive**: Save as PDF for records
 - **Hybrid**: Print critical flights, keep others digital
 
@@ -433,7 +433,7 @@ Check:
 
 ## Performance Questions
 
-### Why is InFlight slow?
+### Why is IN-FLIGHT slow?
 
 Common causes:
 - Initial database load (first time only)
@@ -454,7 +454,7 @@ Complex routes with airways and procedures require:
 
 Be patient - calculation will complete.
 
-### Can I speed up InFlight?
+### Can I speed up IN-FLIGHT?
 
 **Tips:**
 - Use faster internet connection for initial load
@@ -479,15 +479,15 @@ Be patient - calculation will complete.
 - Geolocation API (for GPS features)
 - Speech Synthesis API (for announcements)
 
-### Does InFlight work on Internet Explorer?
+### Does IN-FLIGHT work on Internet Explorer?
 
 **No.** IE11 and older are not supported. Use a modern browser.
 
-### Is InFlight open source?
+### Is IN-FLIGHT open source?
 
 Check the project repository for licensing information.
 
-### Can I contribute to InFlight?
+### Can I contribute to IN-FLIGHT?
 
 Contributions are welcome! Check the GitHub repository for:
 - Bug reports
@@ -508,7 +508,7 @@ Nothing is stored on external servers.
 
 ### Why can't I plan oceanic routes?
 
-InFlight database includes only US domestic waypoints. Oceanic waypoints (NAT tracks, Pacific routes) are not included. Use official oceanic flight planning tools.
+IN-FLIGHT database includes only US domestic waypoints. Oceanic waypoints (NAT tracks, Pacific routes) are not included. Use official oceanic flight planning tools.
 
 ### Why are some airports missing?
 
@@ -518,20 +518,20 @@ The database includes:
 
 Very small private airports or recently added airports may not be included. Database is updated periodically.
 
-### Can InFlight replace ForeFlight/Garmin Pilot?
+### Can IN-FLIGHT replace ForeFlight/Garmin Pilot?
 
-**No.** Professional EFBs offer features InFlight doesn't:
+**No.** Professional EFBs offer features IN-FLIGHT doesn't:
 - Current charts and plates
 - NOTAMs and TFRs
 - Weather integration
 - Regular AIRAC updates
 - Certified data sources
 
-Use InFlight for planning and backup, not as your primary EFB.
+Use IN-FLIGHT for planning and backup, not as your primary EFB.
 
 ### Why don't I see NOTAMs or TFRs?
 
-InFlight does not include:
+IN-FLIGHT does not include:
 - NOTAMs (Notices to Airmen)
 - TFRs (Temporary Flight Restrictions)
 - Airspace status

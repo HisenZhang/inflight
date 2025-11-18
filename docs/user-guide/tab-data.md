@@ -4,7 +4,7 @@ The DATA tab manages the aviation database and stores your GPS flight tracks.
 
 ## Database Loading
 
-When you first use InFlight, click **LOAD DATABASE** to download FAA and OurAirports data. This downloads about 5MB and takes 10-30 seconds to parse and index.
+When you first use IN-FLIGHT, click **LOAD DATABASE** to download FAA and OurAirports data. This downloads about 5MB and takes 10-30 seconds to parse and index.
 
 Once loaded, the status panel shows the counts:
 
@@ -16,7 +16,7 @@ Airways: 1,247
 Total Waypoints: 126,541
 ```
 
-The database is cached for 7 days, so InFlight works offline after the initial load.
+The database is cached for 7 days, so IN-FLIGHT works offline after the initial load.
 
 ## Database Buttons
 
@@ -34,7 +34,7 @@ You can click **EXPORT GPX** to download an individual track as a GeoJSON file, 
 
 ## What Gets Stored
 
-InFlight uses IndexedDB to cache the raw CSV data from FAA and OurAirports, along with the parsed airports, navaids, fixes, airways, and procedures. It also builds spatial indexes for fast lookups. This cache lasts 7 days.
+IN-FLIGHT uses IndexedDB to cache the raw CSV data from FAA and OurAirports, along with the parsed airports, navaids, fixes, airways, and procedures. It also builds spatial indexes for fast lookups. This cache lasts 7 days.
 
 Your browser's localStorage holds saved GPS flight tracks, checklist states, and recent route queries.
 

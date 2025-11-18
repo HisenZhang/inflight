@@ -4,7 +4,7 @@
 
 ### Custom Test Framework
 
-InFlight uses a custom lightweight test framework instead of Jest/Mocha to maintain zero runtime dependencies.
+IN-FLIGHT uses a custom lightweight test framework instead of Jest/Mocha to maintain zero runtime dependencies.
 
 **Implementation:** [tests/test-framework.js](../../tests/test-framework.js)
 
@@ -72,7 +72,7 @@ npm test
 
 **Output:**
 ```
-InFlight Test Suite
+IN-FLIGHT Test Suite
 
 Testing: Coordinate Formatting
   ✓ should format positive latitude correctly
@@ -220,7 +220,7 @@ jobs:
 
 ### Static Site Deployment
 
-InFlight is a **zero-build static site**. Deployment is as simple as uploading files.
+IN-FLIGHT is a **zero-build static site**. Deployment is as simple as uploading files.
 
 ### Deployment Options
 
@@ -330,7 +330,7 @@ const CACHE_NAME = 'flight-planning-v48';  // Increment this!
 
 ### Environment-Specific Configuration
 
-InFlight has **no environment variables**. All configuration is hardcoded:
+IN-FLIGHT has **no environment variables**. All configuration is hardcoded:
 
 **Data Sources:** [data/nasr-adapter.js:4](../../data/nasr-adapter.js#L4)
 ```javascript

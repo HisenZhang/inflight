@@ -1,8 +1,8 @@
-# Claude Development Guide for InFlight
+# Claude Development Guide for IN-FLIGHT
 
 ## Project Overview
 
-**InFlight** is a free, offline-capable flight planning and navigation web application built by pilots, for pilots. It's a browser-based Progressive Web App (PWA) for IFR/VFR route planning, navigation log generation, wind correction calculations, GPS tracking, and moving map display.
+**IN-FLIGHT** is a free, offline-capable flight planning and navigation web application built by pilots, for pilots. It's a browser-based Progressive Web App (PWA) for IFR/VFR route planning, navigation log generation, wind correction calculations, GPS tracking, and moving map display.
 
 **Tech Stack:**
 - **Language:** Vanilla JavaScript (ES6+) - NO frameworks, NO bundler
@@ -222,7 +222,7 @@ window.YourModuleTests = [
 
 ### 🏷️ Versioning System
 
-InFlight uses **centralized version management** via [version.js](version.js) as the single source of truth.
+IN-FLIGHT uses **centralized version management** via [version.js](version.js) as the single source of truth.
 
 **Version Numbers:**
 - **Semantic Version** (`MAJOR.MINOR.PATCH`) - Follows [semver.org](https://semver.org)
@@ -730,4 +730,4 @@ git push origin feature/your-feature
 ---
 
 *Last Updated: 2025-01-15*
-*InFlight v2.0.0*
+*IN-FLIGHT v2.0.0*

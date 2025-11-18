@@ -1,6 +1,6 @@
 # Quick Start: Plan Your First Flight in 5 Minutes
 
-This guide assumes you're a pilot who knows what a navlog is and has filed flight plans before. If you just want to see how InFlight works, follow along with the example route below.
+This guide assumes you're a pilot who knows what a navlog is and has filed flight plans before. If you just want to see how IN-FLIGHT works, follow along with the example route below.
 
 ## Example Flight: Islip to Hartford (IFR)
 
@@ -8,7 +8,7 @@ We'll plan **KISP → KBDL** via J-route with STELA ONE arrival.
 
 ### Step 0: Install as Web App (Optional but Recommended)
 
-For the best experience, install InFlight as a Progressive Web App (PWA):
+For the best experience, install IN-FLIGHT as a Progressive Web App (PWA):
 
 **iOS (Safari):**
 1. Tap the Share button (square with arrow)
@@ -197,7 +197,7 @@ That's it. Print the navlog or keep it on your iPad.
 
 ### Practice Building IFR Routes
 
-InFlight's autocomplete helps you learn route construction:
+IN-FLIGHT's autocomplete helps you learn route construction:
 
 1. Type departure airport: `KBOS`
 2. Type SID name: Start typing `SSOXS` → autocomplete shows PAYGE
@@ -212,10 +212,10 @@ InFlight's autocomplete helps you learn route construction:
 
 ### Analyzing Routes from Other Sources
 
-Got a route from ForeFlight/FltPlan? Analyze it in InFlight:
+Got a route from ForeFlight/FltPlan? Analyze it in IN-FLIGHT:
 
 1. Copy route string from your EFB
-2. Paste into InFlight ROUTE tab
+2. Paste into IN-FLIGHT ROUTE tab
 3. Hit COMPUTE
 4. Compare navlog distance/times to understand the route structure
 

@@ -2,7 +2,7 @@
 
 ## Overview
 
-InFlight stores all aviation data locally in IndexedDB after a one-time download. The data layer uses a two-source strategy: FAA NASR data (primary) and OurAirports (fallback/supplement).
+IN-FLIGHT stores all aviation data locally in IndexedDB after a one-time download. The data layer uses a two-source strategy: FAA NASR data (primary) and OurAirports (fallback/supplement).
 
 ## Data Sources
 
@@ -100,13 +100,13 @@ function parseNASRCSVLine(line) {
 
 #### Frequency Conversion
 
-NASR stores VOR frequencies in kilohertz; InFlight converts to megahertz:
+NASR stores VOR frequencies in kilohertz; IN-FLIGHT converts to megahertz:
 
 **Implementation:** [data/nasr-adapter.js:194-200](../../data/nasr-adapter.js#L194-L200)
 
 ```javascript
 // NASR stores: 110200 (kHz)
-// InFlight stores: 110.2 (MHz)
+// IN-FLIGHT stores: 110.2 (MHz)
 if (frequency && frequency >= 10000 && navaidType !== 'NDB') {
     frequency = frequency / 1000;
 }
@@ -114,13 +114,13 @@ if (frequency && frequency >= 10000 && navaidType !== 'NDB') {
 
 #### Procedure Sequence Reversal
 
-NASR stores STAR/DP procedures **backwards** (runway → entry fix). InFlight reverses them to normal flight direction:
+NASR stores STAR/DP procedures **backwards** (runway → entry fix). IN-FLIGHT reverses them to normal flight direction:
 
 **Implementation:** [data/nasr-adapter.js:409-410](../../data/nasr-adapter.js#L409-L410)
 
 ```javascript
 // NASR order: RUNWAY → FIX3 → FIX2 → FIX1 (backwards)
-// InFlight order: FIX1 → FIX2 → FIX3 → RUNWAY (normal)
+// IN-FLIGHT order: FIX1 → FIX2 → FIX3 → RUNWAY (normal)
 fixNames.reverse();
 ```
 
@@ -139,7 +139,7 @@ const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000;  // 7 days
 
 ### Single Object Store Design
 
-InFlight uses a **simplified schema** with one object store containing one cache document:
+IN-FLIGHT uses a **simplified schema** with one object store containing one cache document:
 
 ```javascript
 IndexedDB: FlightPlanningDB (version 11)
@@ -413,7 +413,7 @@ await saveToCache();
 
 **Module:** [utils/compression.js](../../utils/compression.js)
 
-InFlight compresses raw CSV data before storing in IndexedDB to reduce storage footprint and improve cache performance.
+IN-FLIGHT compresses raw CSV data before storing in IndexedDB to reduce storage footprint and improve cache performance.
 
 **Implementation:** Native CompressionStreams API (gzip)
 
