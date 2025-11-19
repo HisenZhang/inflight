@@ -241,63 +241,141 @@ async function reparseFromRawCSV(onStatusUpdate) {
     const nasrData = { data: {} };
     const ourairportsData = { data: {} };
 
-    // Parse NASR data if available (rawCSVData should be decompressed strings at this point)
+    // Parse all CSV files in parallel for better performance
+    onStatusUpdate('[...] PARSING ALL CSV FILES IN PARALLEL', 'loading');
+    const startTime = performance.now();
+
+    const parsingTasks = [];
+
+    // NASR parsing tasks
     if (rawCSVData.nasr_airportsCSV) {
-        onStatusUpdate('[...] PARSING NASR AIRPORTS', 'loading');
-        nasrData.data.airports = window.NASRAdapter.parseNASRAirports(rawCSVData.nasr_airportsCSV);
+        parsingTasks.push(
+            Promise.resolve().then(() => {
+                console.log('[DataManager] Parsing NASR airports...');
+                nasrData.data.airports = window.NASRAdapter.parseNASRAirports(rawCSVData.nasr_airportsCSV);
+                console.log('[DataManager] ✓ NASR airports parsed');
+            })
+        );
     }
     if (rawCSVData.nasr_runwaysCSV) {
-        onStatusUpdate('[...] PARSING NASR RUNWAYS', 'loading');
-        nasrData.data.runways = window.NASRAdapter.parseNASRRunways(rawCSVData.nasr_runwaysCSV);
+        parsingTasks.push(
+            Promise.resolve().then(() => {
+                console.log('[DataManager] Parsing NASR runways...');
+                nasrData.data.runways = window.NASRAdapter.parseNASRRunways(rawCSVData.nasr_runwaysCSV);
+                console.log('[DataManager] ✓ NASR runways parsed');
+            })
+        );
     }
     if (rawCSVData.nasr_navaidsCSV) {
-        onStatusUpdate('[...] PARSING NASR NAVAIDS', 'loading');
-        nasrData.data.navaids = window.NASRAdapter.parseNASRNavaids(rawCSVData.nasr_navaidsCSV);
+        parsingTasks.push(
+            Promise.resolve().then(() => {
+                console.log('[DataManager] Parsing NASR navaids...');
+                nasrData.data.navaids = window.NASRAdapter.parseNASRNavaids(rawCSVData.nasr_navaidsCSV);
+                console.log('[DataManager] ✓ NASR navaids parsed');
+            })
+        );
     }
     if (rawCSVData.nasr_fixesCSV) {
-        onStatusUpdate('[...] PARSING NASR FIXES', 'loading');
-        nasrData.data.fixes = window.NASRAdapter.parseNASRFixes(rawCSVData.nasr_fixesCSV);
+        parsingTasks.push(
+            Promise.resolve().then(() => {
+                console.log('[DataManager] Parsing NASR fixes...');
+                nasrData.data.fixes = window.NASRAdapter.parseNASRFixes(rawCSVData.nasr_fixesCSV);
+                console.log('[DataManager] ✓ NASR fixes parsed');
+            })
+        );
     }
     if (rawCSVData.nasr_frequenciesCSV) {
-        onStatusUpdate('[...] PARSING NASR FREQUENCIES', 'loading');
-        nasrData.data.frequencies = window.NASRAdapter.parseNASRFrequencies(rawCSVData.nasr_frequenciesCSV);
+        parsingTasks.push(
+            Promise.resolve().then(() => {
+                console.log('[DataManager] Parsing NASR frequencies...');
+                nasrData.data.frequencies = window.NASRAdapter.parseNASRFrequencies(rawCSVData.nasr_frequenciesCSV);
+                console.log('[DataManager] ✓ NASR frequencies parsed');
+            })
+        );
     }
     if (rawCSVData.nasr_airwaysCSV) {
-        onStatusUpdate('[...] PARSING NASR AIRWAYS', 'loading');
-        nasrData.data.airways = window.NASRAdapter.parseNASRAirways(rawCSVData.nasr_airwaysCSV);
+        parsingTasks.push(
+            Promise.resolve().then(() => {
+                console.log('[DataManager] Parsing NASR airways...');
+                nasrData.data.airways = window.NASRAdapter.parseNASRAirways(rawCSVData.nasr_airwaysCSV);
+                console.log('[DataManager] ✓ NASR airways parsed');
+            })
+        );
     }
     if (rawCSVData.nasr_starsCSV) {
-        onStatusUpdate('[...] PARSING NASR STARS', 'loading');
-        nasrData.data.stars = window.NASRAdapter.parseNASRSTARs(rawCSVData.nasr_starsCSV);
+        parsingTasks.push(
+            Promise.resolve().then(() => {
+                console.log('[DataManager] Parsing NASR STARs...');
+                nasrData.data.stars = window.NASRAdapter.parseNASRSTARs(rawCSVData.nasr_starsCSV);
+                console.log('[DataManager] ✓ NASR STARs parsed');
+            })
+        );
     }
     if (rawCSVData.nasr_dpsCSV) {
-        onStatusUpdate('[...] PARSING NASR DPS', 'loading');
-        nasrData.data.dps = window.NASRAdapter.parseNASRDPs(rawCSVData.nasr_dpsCSV);
+        parsingTasks.push(
+            Promise.resolve().then(() => {
+                console.log('[DataManager] Parsing NASR DPs...');
+                nasrData.data.dps = window.NASRAdapter.parseNASRDPs(rawCSVData.nasr_dpsCSV);
+                console.log('[DataManager] ✓ NASR DPs parsed');
+            })
+        );
     }
     if (rawCSVData.nasr_airspaceCSV) {
-        onStatusUpdate('[...] PARSING NASR AIRSPACE', 'loading');
-        nasrData.data.airspace = window.NASRAdapter.parseNASRAirspaceClass(rawCSVData.nasr_airspaceCSV);
+        parsingTasks.push(
+            Promise.resolve().then(() => {
+                console.log('[DataManager] Parsing NASR airspace...');
+                nasrData.data.airspace = window.NASRAdapter.parseNASRAirspaceClass(rawCSVData.nasr_airspaceCSV);
+                console.log('[DataManager] ✓ NASR airspace parsed');
+            })
+        );
     }
 
-    // Parse OurAirports data if available
+    // OurAirports parsing tasks
     if (rawCSVData.oa_airportsCSV) {
-        onStatusUpdate('[...] PARSING OURAIRPORTS AIRPORTS', 'loading');
-        const result = window.OurAirportsAdapter.parseOAAirports(rawCSVData.oa_airportsCSV);
-        ourairportsData.data.airports = result.airports;
-        ourairportsData.data.iataToIcao = result.iataToIcao;
+        parsingTasks.push(
+            Promise.resolve().then(() => {
+                console.log('[DataManager] Parsing OurAirports airports...');
+                const result = window.OurAirportsAdapter.parseOAAirports(rawCSVData.oa_airportsCSV);
+                ourairportsData.data.airports = result.airports;
+                ourairportsData.data.iataToIcao = result.iataToIcao;
+                console.log('[DataManager] ✓ OurAirports airports parsed');
+            })
+        );
     }
     if (rawCSVData.oa_frequenciesCSV) {
-        onStatusUpdate('[...] PARSING OURAIRPORTS FREQUENCIES', 'loading');
-        ourairportsData.data.frequencies = window.OurAirportsAdapter.parseOAFrequencies(rawCSVData.oa_frequenciesCSV);
+        parsingTasks.push(
+            Promise.resolve().then(() => {
+                console.log('[DataManager] Parsing OurAirports frequencies...');
+                ourairportsData.data.frequencies = window.OurAirportsAdapter.parseOAFrequencies(rawCSVData.oa_frequenciesCSV);
+                console.log('[DataManager] ✓ OurAirports frequencies parsed');
+            })
+        );
     }
     if (rawCSVData.oa_runwaysCSV) {
-        onStatusUpdate('[...] PARSING OURAIRPORTS RUNWAYS', 'loading');
-        ourairportsData.data.runways = window.OurAirportsAdapter.parseOARunways(rawCSVData.oa_runwaysCSV);
+        parsingTasks.push(
+            Promise.resolve().then(() => {
+                console.log('[DataManager] Parsing OurAirports runways...');
+                ourairportsData.data.runways = window.OurAirportsAdapter.parseOARunways(rawCSVData.oa_runwaysCSV);
+                console.log('[DataManager] ✓ OurAirports runways parsed');
+            })
+        );
     }
     if (rawCSVData.oa_navaidsCSV) {
-        onStatusUpdate('[...] PARSING OURAIRPORTS NAVAIDS', 'loading');
-        ourairportsData.data.navaids = window.OurAirportsAdapter.parseOANavaids(rawCSVData.oa_navaidsCSV);
+        parsingTasks.push(
+            Promise.resolve().then(() => {
+                console.log('[DataManager] Parsing OurAirports navaids...');
+                ourairportsData.data.navaids = window.OurAirportsAdapter.parseOANavaids(rawCSVData.oa_navaidsCSV);
+                console.log('[DataManager] ✓ OurAirports navaids parsed');
+            })
+        );
     }
+
+    // Wait for all parsing tasks to complete in parallel
+    await Promise.all(parsingTasks);
+
+    const parseTime = ((performance.now() - startTime) / 1000).toFixed(2);
+    console.log(`[DataManager] All CSV files parsed in ${parseTime}s`);
+    onStatusUpdate(`[...] CSV PARSING COMPLETE (${parseTime}s)`, 'loading');
 
     // Merge the reparsed data - mergeDataSources will rebuild dataSources array
     onStatusUpdate('[...] MERGING REPARSED DATA', 'loading');

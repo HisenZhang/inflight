@@ -356,22 +356,104 @@ function switchTab(tabName) {
 
 async function handleLoadData() {
     const elements = UIController.getElements();
-    elements.loadDataBtn.disabled = true;
+    const progressContainer = document.getElementById('loadingProgress');
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
 
-    // Update database status to loading
-    UIController.updateDatabaseStatus('checking', 'LOADING...');
+    // Show progress bar
+    if (progressContainer) {
+        progressContainer.style.display = 'block';
+        progressBar.style.width = '0%';
+        progressText.textContent = 'Checking file sizes...';
+    }
+
+    elements.loadDataBtn.disabled = true;
+    UIController.updateDatabaseStatus('checking', 'CHECKING...');
 
     try {
+        // Get estimated download size (approximate values based on typical file sizes)
+        // NASR: ~30MB, OurAirports: ~25MB (compressed CSV)
+        const estimatedSizeMB = 55;
+
+        // Ask for user confirmation
+        const confirmed = confirm(
+            `LOAD DATABASE\n\n` +
+            `This will download approximately ${estimatedSizeMB}MB of aviation data:\n\n` +
+            `• FAA NASR (US airports, navaids, airways, procedures)\n` +
+            `• OurAirports (Worldwide airports, frequencies)\n\n` +
+            `Downloads happen in parallel. Data is compressed and cached locally.\n\n` +
+            `Continue with download?`
+        );
+
+        if (!confirmed) {
+            UIController.updateDatabaseStatus('idle', 'NOT LOADED');
+            elements.loadDataBtn.disabled = false;
+            if (progressContainer) progressContainer.style.display = 'none';
+            return;
+        }
+
+        // Update status to loading
+        UIController.updateDatabaseStatus('checking', 'LOADING...');
+        if (progressText) progressText.textContent = 'Downloading files...';
+
+        // Track progress
+        let totalSteps = 0;
+        let completedSteps = 0;
+
         await DataManager.loadData((message, type) => {
-            // Don't update the old status box, just log progress
             console.log(`[DataManager] ${message}`);
+
+            // Update progress bar based on status messages
+            if (message.includes('LOADING DATA SOURCES')) {
+                totalSteps = 15; // Approximate total steps
+                completedSteps = 1;
+            } else if (message.includes('PARSING')) {
+                completedSteps++;
+            } else if (message.includes('INDEXING') || message.includes('BUILDING')) {
+                completedSteps++;
+            } else if (message.includes('MERGING')) {
+                completedSteps++;
+            } else if (message.includes('CACHING')) {
+                completedSteps++;
+            }
+
+            // Update progress bar
+            if (progressBar && totalSteps > 0) {
+                const percentage = Math.min(100, (completedSteps / totalSteps) * 100);
+                progressBar.style.width = `${percentage}%`;
+            }
+
+            // Update progress text
+            if (progressText) {
+                const cleanMessage = message.replace(/^\[...\]\s*/, '').replace(/^\[OK\]\s*/, '');
+                progressText.textContent = cleanMessage;
+            }
         });
+
+        // Complete
+        if (progressBar) progressBar.style.width = '100%';
+        if (progressText) progressText.textContent = 'Database loaded successfully!';
+
         UIController.showDataInfo();
         UIController.enableRouteInput();
+
+        // Hide progress bar after a delay
+        setTimeout(() => {
+            if (progressContainer) progressContainer.style.display = 'none';
+        }, 2000);
+
     } catch (error) {
         console.error('Error loading data:', error);
         UIController.updateDatabaseStatus('error', 'LOAD FAILED');
         elements.loadDataBtn.disabled = false;
+
+        if (progressText) progressText.textContent = `Error: ${error.message}`;
+        if (progressBar) progressBar.style.width = '0%';
+
+        // Hide progress bar after error
+        setTimeout(() => {
+            if (progressContainer) progressContainer.style.display = 'none';
+        }, 3000);
     }
 }
 
