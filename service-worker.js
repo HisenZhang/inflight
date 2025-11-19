@@ -37,6 +37,8 @@ const ASSETS_TO_CACHE = [
     './lib/wind-stations.js',
     // Utilities Layer
     './utils/formatters.js',
+    './utils/compression.js',
+    './utils/wake-lock.js',
     // Data Engine
     './data/nasr-adapter.js',
     './data/ourairports-adapter.js',

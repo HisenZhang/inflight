@@ -345,6 +345,13 @@
                         Requires WIND CORRECTION & TIME to be enabled
                     </p>
                 </div>
+
+                <!-- Keep Screen Awake -->
+                <div class="feature-toggle">
+                    <div class="checkbox-toggle" id="enableWakeLockToggle"></div>
+                    <label class="font-medium" style="cursor: pointer;">KEEP SCREEN AWAKE</label>
+                    <span class="help-text-inline">- prevent screen from sleeping during flight</span>
+                </div>
             </div>
 
             <!-- Query History -->
@@ -1109,6 +1116,7 @@
     <!-- Utilities Layer -->
     <script src="utils/formatters.js"></script>         <!-- Shared formatting utilities -->
     <script src="utils/compression.js"></script>        <!-- CSV compression utilities -->
+    <script src="utils/wake-lock.js"></script>          <!-- Screen wake lock manager -->
 
     <!-- Data Engine -->
     <script src="data/nasr-adapter.js"></script>        <!-- NASR data adapter (primary) -->
