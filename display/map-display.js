@@ -74,6 +74,21 @@ function startGPSTracking() {
                 });
             }
 
+            // Feed data to IN-FLIGHT Controller
+            if (window.InflightController) {
+                const groundSpeedKt = position.coords.speed ? position.coords.speed * 1.94384 : 0;
+                const altitudeFt = position.coords.altitude ? position.coords.altitude * 3.28084 : null;
+                window.InflightController.updatePosition({
+                    lat: position.coords.latitude,
+                    lon: position.coords.longitude,
+                    altitude: altitudeFt,
+                    speed: groundSpeedKt,
+                    heading: position.coords.heading,
+                    accuracy: position.coords.accuracy,
+                    verticalAccuracy: position.coords.altitudeAccuracy
+                });
+            }
+
             updateLiveNavigation();
         },
         (error) => {
