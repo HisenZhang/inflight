@@ -245,7 +245,6 @@ async function calculateRoute(waypoints, options = {}) {
     if (enableWinds && altitude && typeof fetchWindsAloft === 'function') {
         try {
             windsData = await fetchWindsAloft(forecastPeriod);
-            console.log(`[Winds] Loaded ${forecastPeriod}hr forecast`);
         } catch (error) {
             console.error('[Winds] Failed to fetch winds aloft:', error);
         }
@@ -302,10 +301,6 @@ async function calculateRoute(waypoints, options = {}) {
 
                         // Apply WCA to get true heading: TH = TC + WCA
                         trueHeading = trueCourse + wca;
-
-                        console.log(`[Winds] Leg ${from.icao || from.ident} to ${to.icao || to.ident}: Wind ${windData.direction}°/${windData.speed}kt, HW: ${components.headwind.toFixed(1)}, XW: ${components.crosswind.toFixed(1)}, WCA: ${wca.toFixed(1)}°`);
-                    } else {
-                        console.log(`[Winds] Leg ${from.icao || from.ident} to ${to.icao || to.ident}: Wind ${windData.direction}°/${windData.speed}kt, HW: ${components.headwind.toFixed(1)}, XW: ${components.crosswind.toFixed(1)} (no TAS - WCA not calculated)`);
                     }
                 } else {
                     console.warn('[Winds] No wind data returned for leg');
