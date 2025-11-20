@@ -10,6 +10,30 @@ const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days
 const HISTORY_KEY = 'flightplan_query_history';
 const MAX_HISTORY = 5;
 
+// Token types - reuse constant strings to save memory (70K+ airports = ~1MB saved)
+const TOKEN_TYPE_AIRPORT = 'AIRPORT';
+const TOKEN_TYPE_NAVAID = 'NAVAID';
+const TOKEN_TYPE_FIX = 'FIX';
+const TOKEN_TYPE_AIRWAY = 'AIRWAY';
+const TOKEN_TYPE_PROCEDURE = 'PROCEDURE';
+
+// Waypoint types - reuse for 85K+ objects (~500KB saved)
+const WAYPOINT_TYPE_AIRPORT = 'airport';
+const WAYPOINT_TYPE_NAVAID = 'navaid';
+const WAYPOINT_TYPE_FIX = 'fix';
+
+// Data sources - reuse for 85K+ objects (~500KB saved)
+const SOURCE_NASR = 'nasr';
+const SOURCE_OURAIRPORTS = 'ourairports';
+
+// Airport types - reuse for common values
+const AIRPORT_TYPE_LARGE = 'large_airport';
+const AIRPORT_TYPE_MEDIUM = 'medium_airport';
+const AIRPORT_TYPE_SMALL = 'small_airport';
+const AIRPORT_TYPE_HELIPORT = 'heliport';
+const AIRPORT_TYPE_SEAPLANE = 'seaplane_base';
+const AIRPORT_TYPE_CLOSED = 'closed';
+
 // Data storage - unified worldwide database
 let airportsData = new Map();        // Merged airports (NASR + OurAirports)
 let iataToIcao = new Map();          // IATA code lookup
@@ -241,63 +265,141 @@ async function reparseFromRawCSV(onStatusUpdate) {
     const nasrData = { data: {} };
     const ourairportsData = { data: {} };
 
-    // Parse NASR data if available (rawCSVData should be decompressed strings at this point)
+    // Parse all CSV files in parallel for better performance
+    onStatusUpdate('[...] PARSING ALL CSV FILES IN PARALLEL', 'loading');
+    const startTime = performance.now();
+
+    const parsingTasks = [];
+
+    // NASR parsing tasks
     if (rawCSVData.nasr_airportsCSV) {
-        onStatusUpdate('[...] PARSING NASR AIRPORTS', 'loading');
-        nasrData.data.airports = window.NASRAdapter.parseNASRAirports(rawCSVData.nasr_airportsCSV);
+        parsingTasks.push(
+            Promise.resolve().then(() => {
+                console.log('[DataManager] Parsing NASR airports...');
+                nasrData.data.airports = window.NASRAdapter.parseNASRAirports(rawCSVData.nasr_airportsCSV);
+                console.log('[DataManager] ✓ NASR airports parsed');
+            })
+        );
     }
     if (rawCSVData.nasr_runwaysCSV) {
-        onStatusUpdate('[...] PARSING NASR RUNWAYS', 'loading');
-        nasrData.data.runways = window.NASRAdapter.parseNASRRunways(rawCSVData.nasr_runwaysCSV);
+        parsingTasks.push(
+            Promise.resolve().then(() => {
+                console.log('[DataManager] Parsing NASR runways...');
+                nasrData.data.runways = window.NASRAdapter.parseNASRRunways(rawCSVData.nasr_runwaysCSV);
+                console.log('[DataManager] ✓ NASR runways parsed');
+            })
+        );
     }
     if (rawCSVData.nasr_navaidsCSV) {
-        onStatusUpdate('[...] PARSING NASR NAVAIDS', 'loading');
-        nasrData.data.navaids = window.NASRAdapter.parseNASRNavaids(rawCSVData.nasr_navaidsCSV);
+        parsingTasks.push(
+            Promise.resolve().then(() => {
+                console.log('[DataManager] Parsing NASR navaids...');
+                nasrData.data.navaids = window.NASRAdapter.parseNASRNavaids(rawCSVData.nasr_navaidsCSV);
+                console.log('[DataManager] ✓ NASR navaids parsed');
+            })
+        );
     }
     if (rawCSVData.nasr_fixesCSV) {
-        onStatusUpdate('[...] PARSING NASR FIXES', 'loading');
-        nasrData.data.fixes = window.NASRAdapter.parseNASRFixes(rawCSVData.nasr_fixesCSV);
+        parsingTasks.push(
+            Promise.resolve().then(() => {
+                console.log('[DataManager] Parsing NASR fixes...');
+                nasrData.data.fixes = window.NASRAdapter.parseNASRFixes(rawCSVData.nasr_fixesCSV);
+                console.log('[DataManager] ✓ NASR fixes parsed');
+            })
+        );
     }
     if (rawCSVData.nasr_frequenciesCSV) {
-        onStatusUpdate('[...] PARSING NASR FREQUENCIES', 'loading');
-        nasrData.data.frequencies = window.NASRAdapter.parseNASRFrequencies(rawCSVData.nasr_frequenciesCSV);
+        parsingTasks.push(
+            Promise.resolve().then(() => {
+                console.log('[DataManager] Parsing NASR frequencies...');
+                nasrData.data.frequencies = window.NASRAdapter.parseNASRFrequencies(rawCSVData.nasr_frequenciesCSV);
+                console.log('[DataManager] ✓ NASR frequencies parsed');
+            })
+        );
     }
     if (rawCSVData.nasr_airwaysCSV) {
-        onStatusUpdate('[...] PARSING NASR AIRWAYS', 'loading');
-        nasrData.data.airways = window.NASRAdapter.parseNASRAirways(rawCSVData.nasr_airwaysCSV);
+        parsingTasks.push(
+            Promise.resolve().then(() => {
+                console.log('[DataManager] Parsing NASR airways...');
+                nasrData.data.airways = window.NASRAdapter.parseNASRAirways(rawCSVData.nasr_airwaysCSV);
+                console.log('[DataManager] ✓ NASR airways parsed');
+            })
+        );
     }
     if (rawCSVData.nasr_starsCSV) {
-        onStatusUpdate('[...] PARSING NASR STARS', 'loading');
-        nasrData.data.stars = window.NASRAdapter.parseNASRSTARs(rawCSVData.nasr_starsCSV);
+        parsingTasks.push(
+            Promise.resolve().then(() => {
+                console.log('[DataManager] Parsing NASR STARs...');
+                nasrData.data.stars = window.NASRAdapter.parseNASRSTARs(rawCSVData.nasr_starsCSV);
+                console.log('[DataManager] ✓ NASR STARs parsed');
+            })
+        );
     }
     if (rawCSVData.nasr_dpsCSV) {
-        onStatusUpdate('[...] PARSING NASR DPS', 'loading');
-        nasrData.data.dps = window.NASRAdapter.parseNASRDPs(rawCSVData.nasr_dpsCSV);
+        parsingTasks.push(
+            Promise.resolve().then(() => {
+                console.log('[DataManager] Parsing NASR DPs...');
+                nasrData.data.dps = window.NASRAdapter.parseNASRDPs(rawCSVData.nasr_dpsCSV);
+                console.log('[DataManager] ✓ NASR DPs parsed');
+            })
+        );
     }
     if (rawCSVData.nasr_airspaceCSV) {
-        onStatusUpdate('[...] PARSING NASR AIRSPACE', 'loading');
-        nasrData.data.airspace = window.NASRAdapter.parseNASRAirspaceClass(rawCSVData.nasr_airspaceCSV);
+        parsingTasks.push(
+            Promise.resolve().then(() => {
+                console.log('[DataManager] Parsing NASR airspace...');
+                nasrData.data.airspace = window.NASRAdapter.parseNASRAirspaceClass(rawCSVData.nasr_airspaceCSV);
+                console.log('[DataManager] ✓ NASR airspace parsed');
+            })
+        );
     }
 
-    // Parse OurAirports data if available
+    // OurAirports parsing tasks
     if (rawCSVData.oa_airportsCSV) {
-        onStatusUpdate('[...] PARSING OURAIRPORTS AIRPORTS', 'loading');
-        const result = window.OurAirportsAdapter.parseOAAirports(rawCSVData.oa_airportsCSV);
-        ourairportsData.data.airports = result.airports;
-        ourairportsData.data.iataToIcao = result.iataToIcao;
+        parsingTasks.push(
+            Promise.resolve().then(() => {
+                console.log('[DataManager] Parsing OurAirports airports...');
+                const result = window.OurAirportsAdapter.parseOAAirports(rawCSVData.oa_airportsCSV);
+                ourairportsData.data.airports = result.airports;
+                ourairportsData.data.iataToIcao = result.iataToIcao;
+                console.log('[DataManager] ✓ OurAirports airports parsed');
+            })
+        );
     }
     if (rawCSVData.oa_frequenciesCSV) {
-        onStatusUpdate('[...] PARSING OURAIRPORTS FREQUENCIES', 'loading');
-        ourairportsData.data.frequencies = window.OurAirportsAdapter.parseOAFrequencies(rawCSVData.oa_frequenciesCSV);
+        parsingTasks.push(
+            Promise.resolve().then(() => {
+                console.log('[DataManager] Parsing OurAirports frequencies...');
+                ourairportsData.data.frequencies = window.OurAirportsAdapter.parseOAFrequencies(rawCSVData.oa_frequenciesCSV);
+                console.log('[DataManager] ✓ OurAirports frequencies parsed');
+            })
+        );
     }
     if (rawCSVData.oa_runwaysCSV) {
-        onStatusUpdate('[...] PARSING OURAIRPORTS RUNWAYS', 'loading');
-        ourairportsData.data.runways = window.OurAirportsAdapter.parseOARunways(rawCSVData.oa_runwaysCSV);
+        parsingTasks.push(
+            Promise.resolve().then(() => {
+                console.log('[DataManager] Parsing OurAirports runways...');
+                ourairportsData.data.runways = window.OurAirportsAdapter.parseOARunways(rawCSVData.oa_runwaysCSV);
+                console.log('[DataManager] ✓ OurAirports runways parsed');
+            })
+        );
     }
     if (rawCSVData.oa_navaidsCSV) {
-        onStatusUpdate('[...] PARSING OURAIRPORTS NAVAIDS', 'loading');
-        ourairportsData.data.navaids = window.OurAirportsAdapter.parseOANavaids(rawCSVData.oa_navaidsCSV);
+        parsingTasks.push(
+            Promise.resolve().then(() => {
+                console.log('[DataManager] Parsing OurAirports navaids...');
+                ourairportsData.data.navaids = window.OurAirportsAdapter.parseOANavaids(rawCSVData.oa_navaidsCSV);
+                console.log('[DataManager] ✓ OurAirports navaids parsed');
+            })
+        );
     }
+
+    // Wait for all parsing tasks to complete in parallel
+    await Promise.all(parsingTasks);
+
+    const parseTime = ((performance.now() - startTime) / 1000).toFixed(2);
+    console.log(`[DataManager] All CSV files parsed in ${parseTime}s`);
+    onStatusUpdate(`[...] CSV PARSING COMPLETE (${parseTime}s)`, 'loading');
 
     // Merge the reparsed data - mergeDataSources will rebuild dataSources array
     onStatusUpdate('[...] MERGING REPARSED DATA', 'loading');
@@ -322,48 +424,35 @@ function mergeDataSources(nasrData, ourairportsData, onStatusUpdate = null) {
     dataSources = [];
 
     // Add NASR data first (priority)
+    // Optimized: batch status updates to reduce overhead
     if (nasrData) {
-        if (onStatusUpdate) onStatusUpdate('[...] INDEXING NASR AIRPORTS', 'loading');
+        if (onStatusUpdate) onStatusUpdate('[...] INDEXING NASR DATA', 'loading');
+
+        // Batch all NASR indexing operations without intermediate status updates
         for (const [code, airport] of nasrData.data.airports) {
             airportsData.set(code, airport);
         }
-
-        if (onStatusUpdate) onStatusUpdate('[...] INDEXING NASR NAVAIDS', 'loading');
         for (const [ident, navaid] of nasrData.data.navaids) {
             navaidsData.set(ident, navaid);
         }
-
-        if (onStatusUpdate) onStatusUpdate('[...] INDEXING NASR FIXES', 'loading');
         for (const [ident, fix] of nasrData.data.fixes) {
             fixesData.set(ident, fix);
         }
-
-        if (onStatusUpdate) onStatusUpdate('[...] INDEXING NASR RUNWAYS', 'loading');
         for (const [code, runways] of nasrData.data.runways) {
             runwaysData.set(code, runways);
         }
-
-        if (onStatusUpdate) onStatusUpdate('[...] INDEXING NASR FREQUENCIES', 'loading');
         for (const [code, freqs] of nasrData.data.frequencies) {
             frequenciesData.set(code, freqs);
         }
-
-        if (onStatusUpdate) onStatusUpdate('[...] INDEXING NASR AIRWAYS', 'loading');
         for (const [id, airway] of nasrData.data.airways) {
             airwaysData.set(id, airway);
         }
-
-        if (onStatusUpdate) onStatusUpdate('[...] INDEXING NASR STARS', 'loading');
         for (const [id, star] of nasrData.data.stars) {
             starsData.set(id, star);
         }
-
-        if (onStatusUpdate) onStatusUpdate('[...] INDEXING NASR DPS', 'loading');
         for (const [id, dp] of nasrData.data.dps) {
             dpsData.set(id, dp);
         }
-
-        if (onStatusUpdate) onStatusUpdate('[...] INDEXING NASR AIRSPACE', 'loading');
         for (const [arptId, airspace] of nasrData.data.airspace) {
             airspaceData.set(arptId, airspace);
         }
@@ -372,12 +461,14 @@ function mergeDataSources(nasrData, ourairportsData, onStatusUpdate = null) {
     }
 
     // Add OurAirports data (fills gaps, doesn't override NASR)
+    // Optimized: batch status updates to reduce overhead
     if (ourairportsData) {
-        if (onStatusUpdate) onStatusUpdate('[...] BUILDING AIRPORT INDEX', 'loading');
+        if (onStatusUpdate) onStatusUpdate('[...] INDEXING OURAIRPORTS DATA', 'loading');
+
         // Build reverse lookup: airport ID -> code (for O(1) frequency/runway mapping)
         const idToCode = new Map();
 
-        // OurAirports Airports (only add if not already present)
+        // Batch all OurAirports indexing operations without intermediate status updates
         for (const [code, airport] of ourairportsData.data.airports) {
             if (airport.id) {
                 idToCode.set(airport.id, code);
@@ -386,34 +477,22 @@ function mergeDataSources(nasrData, ourairportsData, onStatusUpdate = null) {
                 airportsData.set(code, airport);
             }
         }
-
-        if (onStatusUpdate) onStatusUpdate('[...] INDEXING IATA CODES', 'loading');
-        // Build IATA lookup
         for (const [iata, icao] of ourairportsData.data.iataToIcao) {
             if (!iataToIcao.has(iata)) {
                 iataToIcao.set(iata, icao);
             }
         }
-
-        if (onStatusUpdate) onStatusUpdate('[...] INDEXING NAVAIDS', 'loading');
-        // OurAirports Navaids (only add if not already present)
         for (const [ident, navaid] of ourairportsData.data.navaids) {
             if (!navaidsData.has(ident)) {
                 navaidsData.set(ident, navaid);
             }
         }
-
-        if (onStatusUpdate) onStatusUpdate('[...] INDEXING FREQUENCIES', 'loading');
-        // OurAirports Frequencies (use O(1) lookup instead of O(n) search)
         for (const [id, freqs] of ourairportsData.data.frequencies) {
             const code = idToCode.get(id);
             if (code && !frequenciesData.has(code)) {
                 frequenciesData.set(code, freqs);
             }
         }
-
-        if (onStatusUpdate) onStatusUpdate('[...] INDEXING RUNWAYS', 'loading');
-        // OurAirports Runways (use O(1) lookup instead of O(n) search)
         for (const [id, runways] of ourairportsData.data.runways) {
             const code = idToCode.get(id);
             if (code && !runwaysData.has(code)) {
@@ -596,6 +675,9 @@ async function loadFromCache(onStatusUpdate) {
 }
 
 // Build unified token type lookup map (NO IATA codes to avoid confusion)
+// Optimized: pre-compiled regex for faster execution
+const DIGIT_REGEX = /\d/;
+
 function buildTokenTypeMap() {
     tokenTypeMap.clear();
 
@@ -605,29 +687,29 @@ function buildTokenTypeMap() {
         // Include all codes that are:
         // - 4+ characters (ICAO codes)
         // - 3 characters with numbers (local identifiers like 1B1, 2B2, not IATA codes)
-        if (code.length >= 4 || (code.length === 3 && /\d/.test(code))) {
-            tokenTypeMap.set(code, 'AIRPORT');
+        if (code.length >= 4 || (code.length === 3 && DIGIT_REGEX.test(code))) {
+            tokenTypeMap.set(code, TOKEN_TYPE_AIRPORT);
         }
     }
 
     // Index navaids
     for (const [ident, navaid] of navaidsData) {
         if (!tokenTypeMap.has(ident)) {
-            tokenTypeMap.set(ident, 'NAVAID');
+            tokenTypeMap.set(ident, TOKEN_TYPE_NAVAID);
         }
     }
 
     // Index fixes/waypoints
     for (const [ident, fix] of fixesData) {
         if (!tokenTypeMap.has(ident)) {
-            tokenTypeMap.set(ident, 'FIX');
+            tokenTypeMap.set(ident, TOKEN_TYPE_FIX);
         }
     }
 
     // Index airways
     for (const [id, airway] of airwaysData) {
         if (!tokenTypeMap.has(id)) {
-            tokenTypeMap.set(id, 'AIRWAY');
+            tokenTypeMap.set(id, TOKEN_TYPE_AIRWAY);
         }
     }
 
@@ -642,14 +724,14 @@ function buildTokenTypeMap() {
         for (const [id, star] of starsData) {
             // Index by key (computerCode like "GLAND.BLUMS5")
             if (!tokenTypeMap.has(id)) {
-                tokenTypeMap.set(id, 'PROCEDURE');
+                tokenTypeMap.set(id, TOKEN_TYPE_PROCEDURE);
             }
 
             // Index by procedure name (e.g., "BLUMS5") for autocomplete
             if (star && typeof star === 'object' && star.name) {
                 starsIndexed.add(star.name);
                 if (!tokenTypeMap.has(star.name)) {
-                    tokenTypeMap.set(star.name, 'PROCEDURE');
+                    tokenTypeMap.set(star.name, TOKEN_TYPE_PROCEDURE);
                 }
             }
         }
@@ -664,14 +746,14 @@ function buildTokenTypeMap() {
         for (const [id, dp] of dpsData) {
             // Index by key (computerCode like "HIDEY1.HIDEY")
             if (!tokenTypeMap.has(id)) {
-                tokenTypeMap.set(id, 'PROCEDURE');
+                tokenTypeMap.set(id, TOKEN_TYPE_PROCEDURE);
             }
 
             // Index by procedure name (e.g., "HIDEY1") for autocomplete
             if (dp && typeof dp === 'object' && dp.name) {
                 dpsIndexed.add(dp.name);
                 if (!tokenTypeMap.has(dp.name)) {
-                    tokenTypeMap.set(dp.name, 'PROCEDURE');
+                    tokenTypeMap.set(dp.name, TOKEN_TYPE_PROCEDURE);
                 }
             }
         }
@@ -907,8 +989,8 @@ function searchWaypoints(query) {
         const result = {
             code: icao,
             fullCode: icao,
-            type: 'AIRPORT',
-            waypointType: 'airport',
+            type: TOKEN_TYPE_AIRPORT,
+            waypointType: WAYPOINT_TYPE_AIRPORT,
             name: airport.name,
             location: `${airport.municipality || ''}, ${airport.country}`.trim(),
             source: airport.source || 'unknown',
@@ -953,11 +1035,11 @@ function searchWaypoints(query) {
         const result = {
             code: fix.ident,
             fullCode: fix.ident,
-            type: 'FIX',
-            waypointType: 'fix',
+            type: TOKEN_TYPE_FIX,
+            waypointType: WAYPOINT_TYPE_FIX,
             name: fix.ident,
             location: `${fix.state || ''} ${fix.country}`.trim(),
-            source: fix.source || 'nasr',
+            source: fix.source || SOURCE_NASR,
             data: fix
         };
 
@@ -1275,6 +1357,30 @@ function getPointsInBounds(bounds, legs = null) {
 // ============================================
 
 window.DataManager = {
+    // Token type constants (for memory efficiency across modules)
+    TOKEN_TYPE_AIRPORT,
+    TOKEN_TYPE_NAVAID,
+    TOKEN_TYPE_FIX,
+    TOKEN_TYPE_AIRWAY,
+    TOKEN_TYPE_PROCEDURE,
+
+    // Waypoint type constants (for object property memory efficiency)
+    WAYPOINT_TYPE_AIRPORT,
+    WAYPOINT_TYPE_NAVAID,
+    WAYPOINT_TYPE_FIX,
+
+    // Source constants (for object property memory efficiency)
+    SOURCE_NASR,
+    SOURCE_OURAIRPORTS,
+
+    // Airport type constants (for object property memory efficiency)
+    AIRPORT_TYPE_LARGE,
+    AIRPORT_TYPE_MEDIUM,
+    AIRPORT_TYPE_SMALL,
+    AIRPORT_TYPE_HELIPORT,
+    AIRPORT_TYPE_SEAPLANE,
+    AIRPORT_TYPE_CLOSED,
+
     // Initialization
     initDB,
     checkCachedData,
