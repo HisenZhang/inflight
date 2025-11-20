@@ -489,6 +489,7 @@ const FlightTracker = (() => {
         getTrackPoints: () => gpsTrack.length,
         getAverageGroundSpeed,
         getFuelRemaining,
+        getFuelBurnRate: () => burnRate,
         getEndurance
     };
 })();

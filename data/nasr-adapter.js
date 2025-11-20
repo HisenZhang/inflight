@@ -4,6 +4,10 @@
 const NASR_BASE_URL = 'https://nasr.hisenz.com';
 const NASR_VALIDITY_DAYS = 30;
 
+// Note: String literals are used directly for waypointType, source, and type properties
+// JavaScript engines automatically intern identical strings, providing memory efficiency
+// without needing explicit constants (avoids global scope conflicts)
+
 // Parse NASR CSV format (quoted fields)
 // Optimized: uses array join instead of string concatenation for 2-3x speed
 function parseNASRCSVLine(line) {
@@ -150,15 +154,15 @@ function parseNASRAirports(csvText) {
             const airport = {
                 id: `nasr_${identifier}`,
                 icao: identifier.toUpperCase(),
-                type: values[typeIdx] === 'PU' ? window.DataManager.AIRPORT_TYPE_MEDIUM : window.DataManager.AIRPORT_TYPE_SMALL,
+                type: values[typeIdx] === 'PU' ? 'medium_airport' : 'small_airport',
                 name: values[nameIdx]?.trim() || '',
                 lat,
                 lon,
                 elevation: values[elevIdx] ? parseFloat(values[elevIdx]) : null,
                 municipality: values[cityIdx]?.trim() || '',
                 country: values[countryIdx]?.trim() || 'US',
-                waypointType: window.DataManager.WAYPOINT_TYPE_AIRPORT,
-                source: window.DataManager.SOURCE_NASR
+                waypointType: 'airport',
+                source: 'nasr'
             };
 
             airports.set(identifier.toUpperCase(), airport);
@@ -262,8 +266,8 @@ function parseNASRNavaids(csvText) {
                 elevation: values[elevIdx] ? parseFloat(values[elevIdx]) : null,
                 frequency: frequency,
                 country: values[countryIdx]?.trim() || 'US',
-                waypointType: window.DataManager.WAYPOINT_TYPE_NAVAID,
-                source: window.DataManager.SOURCE_NASR
+                waypointType: 'navaid',
+                source: 'nasr'
             };
 
             navaids.set(navId, navaid);
@@ -313,9 +317,9 @@ function parseNASRFixes(csvText) {
                 country: values[countryIdx]?.trim() || 'US',
                 state: values[stateIdx]?.trim() || '',
                 artcc: values[artccLowIdx]?.trim() || values[artccHighIdx]?.trim() || '',
-                waypointType: window.DataManager.WAYPOINT_TYPE_FIX,
+                waypointType: 'fix',
                 isReportingPoint: fixUseCode === 'RP', // Mark reporting points
-                source: window.DataManager.SOURCE_NASR
+                source: 'nasr'
             };
 
             fixes.set(fixId, fix);
@@ -759,7 +763,7 @@ async function loadNASRData(onStatusUpdate, onFileLoaded) {
         onStatusUpdate('[OK] NASR DATA LOADED', 'success');
 
         return {
-            source: window.DataManager.SOURCE_NASR,
+            source: 'nasr',
             info,
             data: parsedData,
             rawCSV,

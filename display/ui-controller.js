@@ -821,11 +821,38 @@ function selectAutocompleteItem(index) {
     const beforeCursor = value.substring(0, cursorPos);
     const afterCursor = value.substring(cursorPos);
 
-    const words = beforeCursor.split(/\s+/).filter(w => w.length > 0);
-    words[words.length - 1] = result.code;
-    const newBefore = words.join(' ');
+    // Determine if this is a contextual suggestion (airway) or direct replacement
+    // Procedure transitions should REPLACE, not add (WYNDE3 → KAYYS.WYNDE3)
+    const isProcedureTransition = result.waypointType === 'procedure_transition';
+    const isContextualAirway = result.contextHint && (
+        result.contextHint.includes('via') ||
+        result.contextHint.includes('Contains') ||
+        result.contextHint.includes('Exit point') ||
+        result.contextHint.includes('Airway')
+    );
 
-    elements.routeInput.value = newBefore + ' ' + afterCursor;
+    let newBefore;
+    const words = beforeCursor.split(/\s+/).filter(w => w.length > 0);
+
+    if (isContextualAirway && !isProcedureTransition) {
+        // ADD after the current complete word (don't replace it)
+        // This handles: "PAYGE" + select "Q822" → "PAYGE Q822"
+        newBefore = words.join(' ') + ' ' + result.code;
+    } else {
+        // REPLACE the current partial word
+        // This handles: "KO" + select "KORD" → "KORD"
+        // Also handles: "WYNDE3" + select "KAYYS.WYNDE3" → "KAYYS.WYNDE3"
+        words[words.length - 1] = result.code;
+        newBefore = words.join(' ');
+    }
+
+    // Also remove any partial word after the cursor (prevent residual characters)
+    // Find the next space or end of string after cursor position
+    const nextSpaceMatch = afterCursor.match(/^[^\s]*/);
+    const partialAfter = nextSpaceMatch ? nextSpaceMatch[0] : '';
+    const cleanAfter = afterCursor.substring(partialAfter.length);
+
+    elements.routeInput.value = newBefore + ' ' + cleanAfter;
     const newPos = newBefore.length + 1;
     elements.routeInput.setSelectionRange(newPos, newPos);
 
@@ -1289,11 +1316,11 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelSt
             const airspace = DataManager.getAirspaceClass(arptCode);
             if (airspace) {
                 let airspaceText = `CLASS ${airspace.class}`;
-                // Add hours if available (common for Class D)
-                if (airspace.hours) {
-                    airspaceText += ` ${airspace.hours}`;
-                }
                 airspaceHTML = `<div class="text-reporting text-xs">${airspaceText}</div>`;
+                // Add hours/supplement info as separate grey line
+                if (airspace.hours) {
+                    airspaceHTML += `<div class="text-secondary text-xs">${airspace.hours}</div>`;
+                }
             }
         }
 

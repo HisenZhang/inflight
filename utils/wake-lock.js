@@ -30,11 +30,8 @@ window.WakeLock = {
 
         console.log('[WakeLock] Screen Wake Lock API supported');
 
-        // Restore saved preference
-        const savedPref = localStorage.getItem('wakeLockEnabled');
-        if (savedPref === 'true') {
-            this.enable();
-        }
+        // Enable by default (always keep screen awake during flight operations)
+        this.enable();
 
         // Handle visibility change - release lock when tab hidden, reacquire when visible
         document.addEventListener('visibilitychange', () => {
