@@ -17,6 +17,23 @@ const TOKEN_TYPE_FIX = 'FIX';
 const TOKEN_TYPE_AIRWAY = 'AIRWAY';
 const TOKEN_TYPE_PROCEDURE = 'PROCEDURE';
 
+// Waypoint types - reuse for 85K+ objects (~500KB saved)
+const WAYPOINT_TYPE_AIRPORT = 'airport';
+const WAYPOINT_TYPE_NAVAID = 'navaid';
+const WAYPOINT_TYPE_FIX = 'fix';
+
+// Data sources - reuse for 85K+ objects (~500KB saved)
+const SOURCE_NASR = 'nasr';
+const SOURCE_OURAIRPORTS = 'ourairports';
+
+// Airport types - reuse for common values
+const AIRPORT_TYPE_LARGE = 'large_airport';
+const AIRPORT_TYPE_MEDIUM = 'medium_airport';
+const AIRPORT_TYPE_SMALL = 'small_airport';
+const AIRPORT_TYPE_HELIPORT = 'heliport';
+const AIRPORT_TYPE_SEAPLANE = 'seaplane_base';
+const AIRPORT_TYPE_CLOSED = 'closed';
+
 // Data storage - unified worldwide database
 let airportsData = new Map();        // Merged airports (NASR + OurAirports)
 let iataToIcao = new Map();          // IATA code lookup
@@ -973,7 +990,7 @@ function searchWaypoints(query) {
             code: icao,
             fullCode: icao,
             type: TOKEN_TYPE_AIRPORT,
-            waypointType: 'airport',
+            waypointType: WAYPOINT_TYPE_AIRPORT,
             name: airport.name,
             location: `${airport.municipality || ''}, ${airport.country}`.trim(),
             source: airport.source || 'unknown',
@@ -1019,10 +1036,10 @@ function searchWaypoints(query) {
             code: fix.ident,
             fullCode: fix.ident,
             type: TOKEN_TYPE_FIX,
-            waypointType: 'fix',
+            waypointType: WAYPOINT_TYPE_FIX,
             name: fix.ident,
             location: `${fix.state || ''} ${fix.country}`.trim(),
-            source: fix.source || 'nasr',
+            source: fix.source || SOURCE_NASR,
             data: fix
         };
 
@@ -1346,6 +1363,23 @@ window.DataManager = {
     TOKEN_TYPE_FIX,
     TOKEN_TYPE_AIRWAY,
     TOKEN_TYPE_PROCEDURE,
+
+    // Waypoint type constants (for object property memory efficiency)
+    WAYPOINT_TYPE_AIRPORT,
+    WAYPOINT_TYPE_NAVAID,
+    WAYPOINT_TYPE_FIX,
+
+    // Source constants (for object property memory efficiency)
+    SOURCE_NASR,
+    SOURCE_OURAIRPORTS,
+
+    // Airport type constants (for object property memory efficiency)
+    AIRPORT_TYPE_LARGE,
+    AIRPORT_TYPE_MEDIUM,
+    AIRPORT_TYPE_SMALL,
+    AIRPORT_TYPE_HELIPORT,
+    AIRPORT_TYPE_SEAPLANE,
+    AIRPORT_TYPE_CLOSED,
 
     // Initialization
     initDB,

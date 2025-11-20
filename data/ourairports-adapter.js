@@ -117,8 +117,8 @@ function parseOAAirports(csvText) {
                 iata: values[iataIdx]?.toUpperCase(),
                 municipality: values[municipalityIdx],
                 country: values[isoCountryIdx],
-                waypointType: 'airport',
-                source: 'ourairports'
+                waypointType: window.DataManager.WAYPOINT_TYPE_AIRPORT,
+                source: window.DataManager.SOURCE_OURAIRPORTS
             };
 
             airports.set(icao, airport);
@@ -172,8 +172,8 @@ function parseOANavaids(csvText) {
                 lon,
                 elevation: values[elevIdx] ? parseFloat(values[elevIdx]) : null,
                 country: values[isoCountryIdx],
-                waypointType: 'navaid',
-                source: 'ourairports'
+                waypointType: window.DataManager.WAYPOINT_TYPE_NAVAID,
+                source: window.DataManager.SOURCE_OURAIRPORTS
             };
 
             navaids.set(ident, navaid);
@@ -342,7 +342,7 @@ async function loadOurAirportsData(onStatusUpdate, onFileLoaded) {
         onStatusUpdate('[OK] OURAIRPORTS DATA LOADED', 'success');
 
         return {
-            source: 'ourairports',
+            source: window.DataManager.SOURCE_OURAIRPORTS,
             data: parsedData,
             rawCSV,
             fileMetadata

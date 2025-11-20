@@ -18,6 +18,11 @@ let TOKEN_TYPE_FIX;
 let TOKEN_TYPE_AIRWAY;
 let TOKEN_TYPE_PROCEDURE;
 
+// Waypoint type constants (for object property memory efficiency)
+let WAYPOINT_TYPE_AIRPORT;
+let WAYPOINT_TYPE_NAVAID;
+let WAYPOINT_TYPE_FIX;
+
 // ============================================
 // INITIALIZATION
 // ============================================
@@ -37,13 +42,17 @@ function init(airports, navaids, fixes, airways, tokenMap) {
     qe_airwaysData = airways;
     qe_tokenTypeMap = tokenMap;
 
-    // Import token type constants from DataManager for memory efficiency
+    // Import constants from DataManager for memory efficiency
     if (window.DataManager) {
         TOKEN_TYPE_AIRPORT = window.DataManager.TOKEN_TYPE_AIRPORT;
         TOKEN_TYPE_NAVAID = window.DataManager.TOKEN_TYPE_NAVAID;
         TOKEN_TYPE_FIX = window.DataManager.TOKEN_TYPE_FIX;
         TOKEN_TYPE_AIRWAY = window.DataManager.TOKEN_TYPE_AIRWAY;
         TOKEN_TYPE_PROCEDURE = window.DataManager.TOKEN_TYPE_PROCEDURE;
+
+        WAYPOINT_TYPE_AIRPORT = window.DataManager.WAYPOINT_TYPE_AIRPORT;
+        WAYPOINT_TYPE_NAVAID = window.DataManager.WAYPOINT_TYPE_NAVAID;
+        WAYPOINT_TYPE_FIX = window.DataManager.WAYPOINT_TYPE_FIX;
     }
 
     console.log(`[QueryEngine] Initialized with data references: ${tokenMap ? tokenMap.size : 0} tokens, ${airways ? airways.size : 0} airways`);
@@ -90,7 +99,7 @@ function searchAirports(term, limit = 15) {
                 code: code,
                 name: airport.name || code,
                 type: TOKEN_TYPE_AIRPORT,
-                waypointType: 'airport',
+                waypointType: WAYPOINT_TYPE_AIRPORT,
                 lat: airport.lat,
                 lon: airport.lon,
                 location: `${airport.municipality || ''}, ${airport.country || ''}`.trim()
@@ -355,7 +364,7 @@ function searchWaypoints(term, previousToken = null, limit = 15) {
                 code: code,
                 name: airport.name || code,
                 type: TOKEN_TYPE_AIRPORT,
-                waypointType: 'airport',
+                waypointType: WAYPOINT_TYPE_AIRPORT,
                 lat: airport.lat,
                 lon: airport.lon,
                 location: `${airport.municipality || ''}, ${airport.country || ''}`.trim()
@@ -383,7 +392,7 @@ function searchWaypoints(term, previousToken = null, limit = 15) {
                 code: ident,
                 name: navaid.name || ident,
                 type: navaid.type || TOKEN_TYPE_NAVAID,
-                waypointType: 'navaid',
+                waypointType: WAYPOINT_TYPE_NAVAID,
                 lat: navaid.lat,
                 lon: navaid.lon,
                 location: navaid.country || ''
@@ -410,7 +419,7 @@ function searchWaypoints(term, previousToken = null, limit = 15) {
                 code: name,
                 name: name,
                 type: TOKEN_TYPE_FIX,
-                waypointType: 'fix',
+                waypointType: WAYPOINT_TYPE_FIX,
                 lat: fix.lat,
                 lon: fix.lon,
                 location: `${fix.state || ''} ${fix.country || ''}`.trim()
