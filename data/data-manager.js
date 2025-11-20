@@ -400,48 +400,35 @@ function mergeDataSources(nasrData, ourairportsData, onStatusUpdate = null) {
     dataSources = [];
 
     // Add NASR data first (priority)
+    // Optimized: batch status updates to reduce overhead
     if (nasrData) {
-        if (onStatusUpdate) onStatusUpdate('[...] INDEXING NASR AIRPORTS', 'loading');
+        if (onStatusUpdate) onStatusUpdate('[...] INDEXING NASR DATA', 'loading');
+
+        // Batch all NASR indexing operations without intermediate status updates
         for (const [code, airport] of nasrData.data.airports) {
             airportsData.set(code, airport);
         }
-
-        if (onStatusUpdate) onStatusUpdate('[...] INDEXING NASR NAVAIDS', 'loading');
         for (const [ident, navaid] of nasrData.data.navaids) {
             navaidsData.set(ident, navaid);
         }
-
-        if (onStatusUpdate) onStatusUpdate('[...] INDEXING NASR FIXES', 'loading');
         for (const [ident, fix] of nasrData.data.fixes) {
             fixesData.set(ident, fix);
         }
-
-        if (onStatusUpdate) onStatusUpdate('[...] INDEXING NASR RUNWAYS', 'loading');
         for (const [code, runways] of nasrData.data.runways) {
             runwaysData.set(code, runways);
         }
-
-        if (onStatusUpdate) onStatusUpdate('[...] INDEXING NASR FREQUENCIES', 'loading');
         for (const [code, freqs] of nasrData.data.frequencies) {
             frequenciesData.set(code, freqs);
         }
-
-        if (onStatusUpdate) onStatusUpdate('[...] INDEXING NASR AIRWAYS', 'loading');
         for (const [id, airway] of nasrData.data.airways) {
             airwaysData.set(id, airway);
         }
-
-        if (onStatusUpdate) onStatusUpdate('[...] INDEXING NASR STARS', 'loading');
         for (const [id, star] of nasrData.data.stars) {
             starsData.set(id, star);
         }
-
-        if (onStatusUpdate) onStatusUpdate('[...] INDEXING NASR DPS', 'loading');
         for (const [id, dp] of nasrData.data.dps) {
             dpsData.set(id, dp);
         }
-
-        if (onStatusUpdate) onStatusUpdate('[...] INDEXING NASR AIRSPACE', 'loading');
         for (const [arptId, airspace] of nasrData.data.airspace) {
             airspaceData.set(arptId, airspace);
         }
@@ -450,12 +437,14 @@ function mergeDataSources(nasrData, ourairportsData, onStatusUpdate = null) {
     }
 
     // Add OurAirports data (fills gaps, doesn't override NASR)
+    // Optimized: batch status updates to reduce overhead
     if (ourairportsData) {
-        if (onStatusUpdate) onStatusUpdate('[...] BUILDING AIRPORT INDEX', 'loading');
+        if (onStatusUpdate) onStatusUpdate('[...] INDEXING OURAIRPORTS DATA', 'loading');
+
         // Build reverse lookup: airport ID -> code (for O(1) frequency/runway mapping)
         const idToCode = new Map();
 
-        // OurAirports Airports (only add if not already present)
+        // Batch all OurAirports indexing operations without intermediate status updates
         for (const [code, airport] of ourairportsData.data.airports) {
             if (airport.id) {
                 idToCode.set(airport.id, code);
@@ -464,34 +453,22 @@ function mergeDataSources(nasrData, ourairportsData, onStatusUpdate = null) {
                 airportsData.set(code, airport);
             }
         }
-
-        if (onStatusUpdate) onStatusUpdate('[...] INDEXING IATA CODES', 'loading');
-        // Build IATA lookup
         for (const [iata, icao] of ourairportsData.data.iataToIcao) {
             if (!iataToIcao.has(iata)) {
                 iataToIcao.set(iata, icao);
             }
         }
-
-        if (onStatusUpdate) onStatusUpdate('[...] INDEXING NAVAIDS', 'loading');
-        // OurAirports Navaids (only add if not already present)
         for (const [ident, navaid] of ourairportsData.data.navaids) {
             if (!navaidsData.has(ident)) {
                 navaidsData.set(ident, navaid);
             }
         }
-
-        if (onStatusUpdate) onStatusUpdate('[...] INDEXING FREQUENCIES', 'loading');
-        // OurAirports Frequencies (use O(1) lookup instead of O(n) search)
         for (const [id, freqs] of ourairportsData.data.frequencies) {
             const code = idToCode.get(id);
             if (code && !frequenciesData.has(code)) {
                 frequenciesData.set(code, freqs);
             }
         }
-
-        if (onStatusUpdate) onStatusUpdate('[...] INDEXING RUNWAYS', 'loading');
-        // OurAirports Runways (use O(1) lookup instead of O(n) search)
         for (const [id, runways] of ourairportsData.data.runways) {
             const code = idToCode.get(id);
             if (code && !runwaysData.has(code)) {
@@ -674,6 +651,9 @@ async function loadFromCache(onStatusUpdate) {
 }
 
 // Build unified token type lookup map (NO IATA codes to avoid confusion)
+// Optimized: pre-compiled regex for faster execution
+const DIGIT_REGEX = /\d/;
+
 function buildTokenTypeMap() {
     tokenTypeMap.clear();
 
@@ -683,7 +663,7 @@ function buildTokenTypeMap() {
         // Include all codes that are:
         // - 4+ characters (ICAO codes)
         // - 3 characters with numbers (local identifiers like 1B1, 2B2, not IATA codes)
-        if (code.length >= 4 || (code.length === 3 && /\d/.test(code))) {
+        if (code.length >= 4 || (code.length === 3 && DIGIT_REGEX.test(code))) {
             tokenTypeMap.set(code, 'AIRPORT');
         }
     }
