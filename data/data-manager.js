@@ -1406,6 +1406,11 @@ window.DataManager = {
     getDpsData: () => dpsData,
     getStarsData: () => starsData,
 
+    // Raw data access (for specialized queries)
+    getAirportsData: () => airportsData,
+    getNavaidsData: () => navaidsData,
+    getFrequenciesData: () => frequenciesData,
+
     // DEPRECATED: Use QueryEngine instead
     searchWaypoints: (query) => {
         console.warn('[DataManager] searchWaypoints is deprecated. Use QueryEngine.searchWaypoints instead.');

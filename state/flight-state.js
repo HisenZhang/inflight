@@ -22,7 +22,11 @@ const flightPlan = {
     totalTime: 0,
     fuelStatus: null,
     options: {},
-    timestamp: null
+    timestamp: null,
+    // Flight parameters
+    altitude: null,
+    tas: null,
+    windData: null
 };
 
 /**
@@ -48,7 +52,7 @@ const navigation = {
 
 /**
  * Update flight plan with new data
- * @param {object} data - Flight plan data {routeString, departure, destination, routeMiddle, waypoints, legs, totalDistance, totalTime, fuelStatus, options}
+ * @param {object} data - Flight plan data {routeString, departure, destination, routeMiddle, waypoints, legs, totalDistance, totalTime, fuelStatus, options, altitude, tas, windData}
  */
 function updateFlightPlan(data) {
     flightPlan.routeString = data.routeString || null;
@@ -61,6 +65,9 @@ function updateFlightPlan(data) {
     flightPlan.totalTime = data.totalTime || 0;
     flightPlan.fuelStatus = data.fuelStatus || null;
     flightPlan.options = data.options || {};
+    flightPlan.altitude = data.altitude || null;
+    flightPlan.tas = data.tas || null;
+    flightPlan.windData = data.windData || null;
     flightPlan.timestamp = Date.now();
 
     console.log('[FlightState] Flight plan updated:', flightPlan.routeString);
@@ -80,6 +87,9 @@ function clearFlightPlan() {
     flightPlan.totalTime = 0;
     flightPlan.fuelStatus = null;
     flightPlan.options = {};
+    flightPlan.altitude = null;
+    flightPlan.tas = null;
+    flightPlan.windData = null;
     flightPlan.timestamp = null;
 
     console.log('[FlightState] Flight plan cleared');
@@ -208,11 +218,14 @@ function saveToStorage() {
             totalDistance: flightPlan.totalDistance,
             totalTime: flightPlan.totalTime,
             fuelStatus: flightPlan.fuelStatus,
-            options: flightPlan.options
+            options: flightPlan.options,
+            altitude: flightPlan.altitude,
+            tas: flightPlan.tas,
+            windData: flightPlan.windData
         };
 
         localStorage.setItem(NAVLOG_STORAGE_KEY, JSON.stringify(saveData));
-        console.log('[FlightState] Flight plan saved to storage');
+        console.log('[FlightState] Flight plan saved to storage (including wind data)');
         return true;
     } catch (error) {
         console.error('[FlightState] Failed to save to storage:', error);
@@ -299,7 +312,10 @@ function exportAsFile() {
             totalDistance: flightPlan.totalDistance,
             totalTime: flightPlan.totalTime,
             fuelStatus: flightPlan.fuelStatus,
-            options: flightPlan.options
+            options: flightPlan.options,
+            altitude: flightPlan.altitude,
+            tas: flightPlan.tas,
+            windData: flightPlan.windData
         };
 
         const json = JSON.stringify(exportData, null, 2);

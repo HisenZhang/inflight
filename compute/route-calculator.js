@@ -387,7 +387,8 @@ async function calculateRoute(waypoints, options = {}) {
         legs,
         totalDistance,
         totalTime: enableTime ? totalTime : null,
-        fuelStatus
+        fuelStatus,
+        windData: windsData  // Include fetched wind data for persistence
     };
 }
 

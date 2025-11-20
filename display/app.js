@@ -405,11 +405,10 @@ async function handleLoadData() {
         // Ask for user confirmation
         const confirmed = confirm(
             `LOAD DATABASE\n\n` +
-            `This will download ${totalSizeMB}MB of aviation data:${sizeBreakdown}` +
-            `• FAA NASR (US airports, navaids, airways, procedures)\n` +
-            `• OurAirports (Worldwide airports, frequencies)\n\n` +
-            `Downloads happen in parallel. Data is compressed and cached locally.\n\n` +
-            `Continue with download?`
+            `Download ${totalSizeMB}MB of aviation data:${sizeBreakdown}` +
+            `• US: Airports, navaids, airways, procedures\n` +
+            `• Worldwide: Airports and frequencies\n\n` +
+            `Continue?`
         );
 
         if (!confirmed) {
@@ -643,7 +642,7 @@ async function handleCalculateRoute() {
         };
 
         // Calculate route (async now to support wind fetching)
-        const { waypoints, legs, totalDistance, totalTime, fuelStatus } = await RouteCalculator.calculateRoute(resolutionResult.waypoints, options);
+        const { waypoints, legs, totalDistance, totalTime, fuelStatus, windData } = await RouteCalculator.calculateRoute(resolutionResult.waypoints, options);
 
         // Display results
         UIController.displayResults(waypoints, legs, totalDistance, totalTime, fuelStatus, options);
@@ -676,7 +675,10 @@ async function handleCalculateRoute() {
             totalDistance,
             totalTime,
             fuelStatus,
-            options
+            options,
+            altitude: windsEnabled ? altitudeValue : null,
+            tas: windsEnabled ? tasValue : null,
+            windData: windData
         };
 
         // Update flight plan state and auto-save for crash recovery

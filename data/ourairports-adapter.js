@@ -1,6 +1,10 @@
 // OurAirports Adapter Module - Handles OurAirports data loading and parsing
 // Used as fallback for international airports and when NASR is unavailable
 
+// Note: String literals are used directly for waypointType and source properties
+// JavaScript engines automatically intern identical strings, providing memory efficiency
+// without needing explicit constants (avoids global scope conflicts)
+
 const AIRPORTS_CSV_URL = 'https://cors.hisenz.com/?url=https://raw.githubusercontent.com/davidmegginson/ourairports-data/refs/heads/main/airports.csv';
 const NAVAIDS_CSV_URL = 'https://cors.hisenz.com/?url=https://raw.githubusercontent.com/davidmegginson/ourairports-data/refs/heads/main/navaids.csv';
 const FREQUENCIES_CSV_URL = 'https://cors.hisenz.com/?url=https://raw.githubusercontent.com/davidmegginson/ourairports-data/refs/heads/main/airport-frequencies.csv';
@@ -117,8 +121,8 @@ function parseOAAirports(csvText) {
                 iata: values[iataIdx]?.toUpperCase(),
                 municipality: values[municipalityIdx],
                 country: values[isoCountryIdx],
-                waypointType: window.DataManager.WAYPOINT_TYPE_AIRPORT,
-                source: window.DataManager.SOURCE_OURAIRPORTS
+                waypointType: 'airport',
+                source: 'ourairports'
             };
 
             airports.set(icao, airport);
@@ -172,8 +176,8 @@ function parseOANavaids(csvText) {
                 lon,
                 elevation: values[elevIdx] ? parseFloat(values[elevIdx]) : null,
                 country: values[isoCountryIdx],
-                waypointType: window.DataManager.WAYPOINT_TYPE_NAVAID,
-                source: window.DataManager.SOURCE_OURAIRPORTS
+                waypointType: 'navaid',
+                source: 'ourairports'
             };
 
             navaids.set(ident, navaid);
@@ -342,7 +346,7 @@ async function loadOurAirportsData(onStatusUpdate, onFileLoaded) {
         onStatusUpdate('[OK] OURAIRPORTS DATA LOADED', 'success');
 
         return {
-            source: window.DataManager.SOURCE_OURAIRPORTS,
+            source: 'ourairports',
             data: parsedData,
             rawCSV,
             fileMetadata

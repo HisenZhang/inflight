@@ -37,10 +37,10 @@
             <div class="tab-navigation">
                 <button class="tab-btn active" data-tab="welcome">WELCOME</button>
                 <button class="tab-btn" data-tab="data">DATA</button>
-                <button class="tab-btn" data-tab="route">ROUTE</button>
+                <button class="tab-btn" data-tab="route">ENTRY</button>
                 <button class="tab-btn" data-tab="navlog">NAVLOG</button>
                 <button class="tab-btn" data-tab="map">MAP</button>
-                <button class="tab-btn" data-tab="inflight">IN-FLIGHT</button>
+                <button class="tab-btn" data-tab="inflight">AHEAD</button>
                 <button class="tab-btn" data-tab="chklst">CHKLST</button>
                 <button class="tab-btn" data-tab="stats">STATS</button>
             </div>
@@ -265,6 +265,7 @@
                             max="45000"
                             step="100"
                             value="5500"
+                            required
                             disabled
                         >
                     </div>
@@ -274,10 +275,12 @@
                             type="number"
                             id="tasInput"
                             class="font-medium"
-                            placeholder="e.g. 120"
+                            placeholder="110"
                             min="0"
                             max="500"
                             step="5"
+                            value="110"
+                            required
                             disabled
                         >
                     </div>
@@ -492,26 +495,25 @@
         </div>
         <!-- End Tab: Map -->
 
-        <!-- Tab: IN-FLIGHT -->
+        <!-- Tab: AHEAD -->
         <div class="tab-content" id="tab-inflight">
-        <!-- Placeholder when not in flight -->
+        <!-- Placeholder when GPS not available -->
         <div id="inflightPlaceholder" class="welcome-brief">
-            <h2 class="font-bold text-primary" style="font-size: 1.5rem; letter-spacing: 4px; margin-bottom: 1rem;">IN-FLIGHT AWARENESS</h2>
+            <h2 class="font-bold text-primary" style="font-size: 1.5rem; letter-spacing: 4px; margin-bottom: 1rem;">AHEAD</h2>
             <div class="welcome-info" style="max-width: 500px; margin: 0 auto 1.5rem auto;">
-                <p>Real-time situational awareness during flight with current weather conditions, fuel status, and nearby airports for diversion.</p>
-                <p style="margin-bottom: 0;"><strong>Includes:</strong> Fuel remaining • Wind/temperature • Potential hazards • Nearest airports • ETE calculations</p>
+                <p>Real-time situational awareness with current GPS position, weather conditions, fuel status, and nearby airports for diversion.</p>
+                <p style="margin-bottom: 0;"><strong>Includes:</strong> GPS position • Fuel remaining • Wind/temperature • Potential hazards • Nearest airports • ETE calculations</p>
             </div>
-            <p class="text-secondary" style="font-size: 0.75rem; margin-bottom: 1.5rem;">GPS and flight plan required. This tab updates automatically when you're in flight.</p>
-            <p class="text-secondary" style="font-size: 0.75rem;">Enable GPS tracking and calculate a route with wind/fuel enabled to see in-flight data.</p>
+            <p class="text-secondary" style="font-size: 0.75rem; margin-bottom: 1.5rem;">Waiting for GPS position...</p>
+            <p class="text-secondary" style="font-size: 0.75rem;">GPS starts automatically. If you see this message, check browser location permissions or wait for GPS fix.</p>
         </div>
 
         <!-- In-Flight Display -->
         <div id="inflightDisplay" class="inflight-display" style="display: none;">
-            <h2 class="font-bold text-primary">IN-FLIGHT AWARENESS</h2>
-
+            
             <!-- Current Position & Status -->
             <div class="stats-card">
-                <h3 class="stats-card-title">CURRENT POSITION</h3>
+                <h3 class="stats-card-title">CURRENT POSITION <span id="if-pos-status" class="text-secondary" style="font-size: 0.75em; font-weight: 400;"></span></h3>
                 <div class="stats-grid-compact">
                     <div class="stat-item">
                         <span class="stat-label">LAT</span>
@@ -594,10 +596,18 @@
                 </div>
             </div>
 
+            <!-- Weather Ahead -->
+            <div class="stats-card" id="if-weather-ahead-card">
+                <h3 class="stats-card-title">WEATHER AHEAD (ALONG HEADING)</h3>
+                <div id="if-weather-ahead-table" class="navlog-table">
+                    <p class="text-secondary">Calculating route with winds aloft to display forecast...</p>
+                </div>
+            </div>
+
             <!-- Hazard Warnings -->
-            <div class="stats-card" id="if-hazards-card" style="display: none;">
+            <div class="stats-card" id="if-hazards-card">
                 <h3 class="stats-card-title text-warning">POTENTIAL HAZARDS</h3>
-                <div id="if-hazards-list" class="hazards-list"></div>
+                <div id="if-hazards-list" class="hazards-list">None</div>
             </div>
 
             <!-- Nearest Airports -->
@@ -605,12 +615,12 @@
                 <h3 class="stats-card-title">NEAREST AIRPORTS (DIVERSION)</h3>
                 <div id="if-airports-table" class="navlog-table"></div>
                 <p class="help-text mt-sm text-secondary">
-                    Showing towered airports within 50 NM, sorted by distance
+                    Showing all airports within 50 NM, sorted by distance
                 </p>
             </div>
         </div>
         </div>
-        <!-- End Tab: IN-FLIGHT -->
+        <!-- End Tab: AHEAD -->
 
         <!-- Tab: Checklist -->
         <div class="tab-content" id="tab-chklst">
@@ -1269,7 +1279,7 @@
     <!-- Display Layer -->
     <script src="display/ui-controller.js"></script>       <!-- UI interactions module -->
     <script src="display/stats-controller.js"></script>    <!-- Stats tab controller -->
-    <script src="display/inflight-controller.js"></script> <!-- IN-FLIGHT tab controller -->
+    <script src="display/inflight-controller.js"></script> <!-- AHEAD tab controller -->
     <script src="display/checklist-controller.js"></script><!-- Checklist tab controller -->
     <script src="display/map-display.js"></script>    <!-- Vector map & GPS tracking -->
     <script src="display/app.js"></script>                 <!-- Main application coordinator -->

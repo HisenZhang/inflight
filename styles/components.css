@@ -1225,3 +1225,44 @@ header {
 .text-warning {
     color: var(--color-warning);
 }
+
+/* ============================================
+   AHEAD TAB - COMPACT LAYOUT
+   ============================================ */
+/* Remove borders between sections for more compact display */
+#tab-inflight .stats-card {
+    border: none;
+    border-top: 1px solid var(--border-color);
+    margin-bottom: 0;
+    padding: var(--space-md) 0;
+}
+
+#tab-inflight .stats-card:first-of-type {
+    border-top: none;
+    padding-top: 0;
+}
+
+/* Reduce spacing in stats card titles */
+#tab-inflight .stats-card-title {
+    margin-bottom: var(--space-sm);
+    padding-bottom: 4px;
+    font-size: 0.8rem;
+}
+
+/* Hazards "None" text in yellow */
+#if-hazards-list {
+    color: var(--color-warning);
+}
+
+/* Mobile: even more compact */
+@media (max-width: 1024px) {
+    #tab-inflight .stats-card {
+        padding: var(--space-sm) 0;
+        background: transparent;
+    }
+
+    #tab-inflight .stats-card-title {
+        font-size: 0.75rem;
+        margin-bottom: 8px;
+    }
+}

@@ -1,6 +1,10 @@
 // Query Engine - Spatial Queries, Search, and Autocomplete
 // Business logic for querying aviation data
 
+// Wrap in IIFE to avoid global scope pollution
+(function() {
+    'use strict';
+
 // ============================================
 // STATE (Data References)
 // ============================================
@@ -12,16 +16,21 @@ let qe_airwaysData = null;
 let qe_tokenTypeMap = null;
 
 // Token type constants (imported from DataManager for memory efficiency)
-let TOKEN_TYPE_AIRPORT;
-let TOKEN_TYPE_NAVAID;
-let TOKEN_TYPE_FIX;
-let TOKEN_TYPE_AIRWAY;
-let TOKEN_TYPE_PROCEDURE;
+// Initialize with fallback string literals in case init() isn't called before use
+let TOKEN_TYPE_AIRPORT = 'AIRPORT';
+let TOKEN_TYPE_NAVAID = 'NAVAID';
+let TOKEN_TYPE_FIX = 'FIX';
+let TOKEN_TYPE_AIRWAY = 'AIRWAY';
+let TOKEN_TYPE_PROCEDURE = 'PROCEDURE';
 
 // Waypoint type constants (for object property memory efficiency)
-let WAYPOINT_TYPE_AIRPORT;
-let WAYPOINT_TYPE_NAVAID;
-let WAYPOINT_TYPE_FIX;
+// Initialize with fallback string literals in case init() isn't called before use
+let WAYPOINT_TYPE_AIRPORT = 'airport';
+let WAYPOINT_TYPE_NAVAID = 'navaid';
+let WAYPOINT_TYPE_FIX = 'fix';
+let WAYPOINT_TYPE_AIRWAY = 'airway';
+let WAYPOINT_TYPE_PROCEDURE = 'procedure';
+let WAYPOINT_TYPE_PROCEDURE_TRANSITION = 'procedure_transition';
 
 // ============================================
 // INITIALIZATION
@@ -53,6 +62,8 @@ function init(airports, navaids, fixes, airways, tokenMap) {
         WAYPOINT_TYPE_AIRPORT = window.DataManager.WAYPOINT_TYPE_AIRPORT;
         WAYPOINT_TYPE_NAVAID = window.DataManager.WAYPOINT_TYPE_NAVAID;
         WAYPOINT_TYPE_FIX = window.DataManager.WAYPOINT_TYPE_FIX;
+        // Note: WAYPOINT_TYPE_AIRWAY and WAYPOINT_TYPE_PROCEDURE use local defaults
+        // as DataManager doesn't define these (they're specific to QueryEngine)
     }
 
     console.log(`[QueryEngine] Initialized with data references: ${tokenMap ? tokenMap.size : 0} tokens, ${airways ? airways.size : 0} airways`);
@@ -77,6 +88,12 @@ function init(airports, navaids, fixes, airways, tokenMap) {
  * @returns {Array} Array of airport results
  */
 function searchAirports(term, limit = 15) {
+    // Early return if data not loaded yet
+    if (!qe_airportsData || qe_airportsData.size === 0) {
+        console.warn('[QueryEngine] searchAirports called but no airport data loaded yet');
+        return [];
+    }
+
     const upperTerm = term ? term.toUpperCase() : '';
 
     // Arrays for different priority levels
@@ -133,6 +150,12 @@ function searchAirports(term, limit = 15) {
 }
 
 function searchWaypoints(term, previousToken = null, limit = 15) {
+    // Early return if data not loaded yet
+    if (!qe_airportsData || qe_airportsData.size === 0) {
+        console.warn('[QueryEngine] searchWaypoints called but no airport data loaded yet');
+        return [];
+    }
+
     const upperTerm = term ? term.toUpperCase() : '';
     const upperPrevToken = previousToken ? previousToken.toUpperCase() : null;
 
@@ -162,13 +185,13 @@ function searchWaypoints(term, previousToken = null, limit = 15) {
 
                 // Look up waypoint in all data sources (fixes, navaids, airports)
                 let waypointData = qe_fixesData?.get(upperFixIdent);
-                let waypointType = 'fix';
+                let waypointType = WAYPOINT_TYPE_FIX;
                 let displayType = TOKEN_TYPE_FIX;
 
                 if (!waypointData) {
                     waypointData = qe_navaidsData?.get(upperFixIdent);
                     if (waypointData) {
-                        waypointType = 'navaid';
+                        waypointType = WAYPOINT_TYPE_NAVAID;
                         displayType = waypointData.type || TOKEN_TYPE_NAVAID;
                     }
                 }
@@ -176,7 +199,7 @@ function searchWaypoints(term, previousToken = null, limit = 15) {
                 if (!waypointData) {
                     waypointData = qe_airportsData?.get(upperFixIdent);
                     if (waypointData) {
-                        waypointType = 'airport';
+                        waypointType = WAYPOINT_TYPE_AIRPORT;
                         displayType = TOKEN_TYPE_AIRPORT;
                     }
                 }
@@ -185,7 +208,7 @@ function searchWaypoints(term, previousToken = null, limit = 15) {
 
                 const result = {
                     code: upperFixIdent,
-                    name: waypointType === 'airport' ? (waypointData.name || upperFixIdent) : upperFixIdent,
+                    name: waypointType === WAYPOINT_TYPE_AIRPORT ? (waypointData.name || upperFixIdent) : upperFixIdent,
                     type: displayType,
                     waypointType: waypointType,
                     lat: waypointData.lat,
@@ -225,7 +248,7 @@ function searchWaypoints(term, previousToken = null, limit = 15) {
                     code: trans.display,
                     name: trans.display,
                     type: trans.type === 'DP' ? 'DP TRANSITION' : 'STAR TRANSITION',
-                    waypointType: 'procedure_transition',
+                    waypointType: WAYPOINT_TYPE_PROCEDURE_TRANSITION,
                     location: `${trans.transition} transition`,
                     contextHint: `${trans.transition} transition for ${upperPrevToken}`
                 };
@@ -261,8 +284,8 @@ function searchWaypoints(term, previousToken = null, limit = 15) {
                     prefixMatches.push({
                         code: upperAirwayId,
                         name: upperAirwayId,
-                        type: 'airway',
-                        waypointType: 'airway',
+                        type: TOKEN_TYPE_AIRWAY,
+                        waypointType: WAYPOINT_TYPE_AIRWAY,
                         location: `Contains ${upperPrevToken}`,
                         contextHint: `Airway via ${upperPrevToken}`
                     });
@@ -270,8 +293,8 @@ function searchWaypoints(term, previousToken = null, limit = 15) {
                     exactMatches.push({
                         code: upperAirwayId,
                         name: upperAirwayId,
-                        type: 'airway',
-                        waypointType: 'airway',
+                        type: TOKEN_TYPE_AIRWAY,
+                        waypointType: WAYPOINT_TYPE_AIRWAY,
                         location: `Contains ${upperPrevToken}`,
                         contextHint: `Airway via ${upperPrevToken}`
                     });
@@ -279,8 +302,8 @@ function searchWaypoints(term, previousToken = null, limit = 15) {
                     prefixMatches.push({
                         code: upperAirwayId,
                         name: upperAirwayId,
-                        type: 'airway',
-                        waypointType: 'airway',
+                        type: TOKEN_TYPE_AIRWAY,
+                        waypointType: WAYPOINT_TYPE_AIRWAY,
                         location: `Contains ${upperPrevToken}`,
                         contextHint: `Airway via ${upperPrevToken}`
                     });
@@ -288,8 +311,8 @@ function searchWaypoints(term, previousToken = null, limit = 15) {
                     substringMatches.push({
                         code: upperAirwayId,
                         name: upperAirwayId,
-                        type: 'airway',
-                        waypointType: 'airway',
+                        type: TOKEN_TYPE_AIRWAY,
+                        waypointType: WAYPOINT_TYPE_AIRWAY,
                         location: `Contains ${upperPrevToken}`,
                         contextHint: `Airway via ${upperPrevToken}`
                     });
@@ -326,7 +349,7 @@ function searchWaypoints(term, previousToken = null, limit = 15) {
                         code: upperTerm,
                         name: upperTerm,
                         type: 'DP',
-                        waypointType: 'procedure',
+                        waypointType: WAYPOINT_TYPE_PROCEDURE,
                         location: 'Departure Procedure',
                         contextHint: 'Click to see transitions'
                     });
@@ -342,7 +365,7 @@ function searchWaypoints(term, previousToken = null, limit = 15) {
                         code: upperTerm,
                         name: upperTerm,
                         type: 'STAR',
-                        waypointType: 'procedure',
+                        waypointType: WAYPOINT_TYPE_PROCEDURE,
                         location: 'Arrival Procedure',
                         contextHint: 'Click to see transitions'
                     });
@@ -768,3 +791,5 @@ window.QueryEngine = {
     findNearestAirport,
     findWaypointsWithinRadius
 };
+
+})(); // End IIFE
