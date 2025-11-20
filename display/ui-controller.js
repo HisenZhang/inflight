@@ -821,7 +821,7 @@ function selectAutocompleteItem(index) {
     const beforeCursor = value.substring(0, cursorPos);
     const afterCursor = value.substring(cursorPos);
 
-    const words = beforeCursor.split(/\s+/);
+    const words = beforeCursor.split(/\s+/).filter(w => w.length > 0);
     words[words.length - 1] = result.code;
     const newBefore = words.join(' ');
 
