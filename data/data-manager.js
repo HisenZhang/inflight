@@ -10,6 +10,13 @@ const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days
 const HISTORY_KEY = 'flightplan_query_history';
 const MAX_HISTORY = 5;
 
+// Token types - reuse constant strings to save memory (70K+ airports = ~1MB saved)
+const TOKEN_TYPE_AIRPORT = 'AIRPORT';
+const TOKEN_TYPE_NAVAID = 'NAVAID';
+const TOKEN_TYPE_FIX = 'FIX';
+const TOKEN_TYPE_AIRWAY = 'AIRWAY';
+const TOKEN_TYPE_PROCEDURE = 'PROCEDURE';
+
 // Data storage - unified worldwide database
 let airportsData = new Map();        // Merged airports (NASR + OurAirports)
 let iataToIcao = new Map();          // IATA code lookup
@@ -664,28 +671,28 @@ function buildTokenTypeMap() {
         // - 4+ characters (ICAO codes)
         // - 3 characters with numbers (local identifiers like 1B1, 2B2, not IATA codes)
         if (code.length >= 4 || (code.length === 3 && DIGIT_REGEX.test(code))) {
-            tokenTypeMap.set(code, 'AIRPORT');
+            tokenTypeMap.set(code, TOKEN_TYPE_AIRPORT);
         }
     }
 
     // Index navaids
     for (const [ident, navaid] of navaidsData) {
         if (!tokenTypeMap.has(ident)) {
-            tokenTypeMap.set(ident, 'NAVAID');
+            tokenTypeMap.set(ident, TOKEN_TYPE_NAVAID);
         }
     }
 
     // Index fixes/waypoints
     for (const [ident, fix] of fixesData) {
         if (!tokenTypeMap.has(ident)) {
-            tokenTypeMap.set(ident, 'FIX');
+            tokenTypeMap.set(ident, TOKEN_TYPE_FIX);
         }
     }
 
     // Index airways
     for (const [id, airway] of airwaysData) {
         if (!tokenTypeMap.has(id)) {
-            tokenTypeMap.set(id, 'AIRWAY');
+            tokenTypeMap.set(id, TOKEN_TYPE_AIRWAY);
         }
     }
 
@@ -700,14 +707,14 @@ function buildTokenTypeMap() {
         for (const [id, star] of starsData) {
             // Index by key (computerCode like "GLAND.BLUMS5")
             if (!tokenTypeMap.has(id)) {
-                tokenTypeMap.set(id, 'PROCEDURE');
+                tokenTypeMap.set(id, TOKEN_TYPE_PROCEDURE);
             }
 
             // Index by procedure name (e.g., "BLUMS5") for autocomplete
             if (star && typeof star === 'object' && star.name) {
                 starsIndexed.add(star.name);
                 if (!tokenTypeMap.has(star.name)) {
-                    tokenTypeMap.set(star.name, 'PROCEDURE');
+                    tokenTypeMap.set(star.name, TOKEN_TYPE_PROCEDURE);
                 }
             }
         }
@@ -722,14 +729,14 @@ function buildTokenTypeMap() {
         for (const [id, dp] of dpsData) {
             // Index by key (computerCode like "HIDEY1.HIDEY")
             if (!tokenTypeMap.has(id)) {
-                tokenTypeMap.set(id, 'PROCEDURE');
+                tokenTypeMap.set(id, TOKEN_TYPE_PROCEDURE);
             }
 
             // Index by procedure name (e.g., "HIDEY1") for autocomplete
             if (dp && typeof dp === 'object' && dp.name) {
                 dpsIndexed.add(dp.name);
                 if (!tokenTypeMap.has(dp.name)) {
-                    tokenTypeMap.set(dp.name, 'PROCEDURE');
+                    tokenTypeMap.set(dp.name, TOKEN_TYPE_PROCEDURE);
                 }
             }
         }
@@ -965,7 +972,7 @@ function searchWaypoints(query) {
         const result = {
             code: icao,
             fullCode: icao,
-            type: 'AIRPORT',
+            type: TOKEN_TYPE_AIRPORT,
             waypointType: 'airport',
             name: airport.name,
             location: `${airport.municipality || ''}, ${airport.country}`.trim(),
@@ -1011,7 +1018,7 @@ function searchWaypoints(query) {
         const result = {
             code: fix.ident,
             fullCode: fix.ident,
-            type: 'FIX',
+            type: TOKEN_TYPE_FIX,
             waypointType: 'fix',
             name: fix.ident,
             location: `${fix.state || ''} ${fix.country}`.trim(),
@@ -1333,6 +1340,13 @@ function getPointsInBounds(bounds, legs = null) {
 // ============================================
 
 window.DataManager = {
+    // Token type constants (for memory efficiency across modules)
+    TOKEN_TYPE_AIRPORT,
+    TOKEN_TYPE_NAVAID,
+    TOKEN_TYPE_FIX,
+    TOKEN_TYPE_AIRWAY,
+    TOKEN_TYPE_PROCEDURE,
+
     // Initialization
     initDB,
     checkCachedData,

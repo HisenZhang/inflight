@@ -11,6 +11,13 @@ let qe_fixesData = null;
 let qe_airwaysData = null;
 let qe_tokenTypeMap = null;
 
+// Token type constants (imported from DataManager for memory efficiency)
+let TOKEN_TYPE_AIRPORT;
+let TOKEN_TYPE_NAVAID;
+let TOKEN_TYPE_FIX;
+let TOKEN_TYPE_AIRWAY;
+let TOKEN_TYPE_PROCEDURE;
+
 // ============================================
 // INITIALIZATION
 // ============================================
@@ -29,6 +36,15 @@ function init(airports, navaids, fixes, airways, tokenMap) {
     qe_fixesData = fixes;
     qe_airwaysData = airways;
     qe_tokenTypeMap = tokenMap;
+
+    // Import token type constants from DataManager for memory efficiency
+    if (window.DataManager) {
+        TOKEN_TYPE_AIRPORT = window.DataManager.TOKEN_TYPE_AIRPORT;
+        TOKEN_TYPE_NAVAID = window.DataManager.TOKEN_TYPE_NAVAID;
+        TOKEN_TYPE_FIX = window.DataManager.TOKEN_TYPE_FIX;
+        TOKEN_TYPE_AIRWAY = window.DataManager.TOKEN_TYPE_AIRWAY;
+        TOKEN_TYPE_PROCEDURE = window.DataManager.TOKEN_TYPE_PROCEDURE;
+    }
 
     console.log(`[QueryEngine] Initialized with data references: ${tokenMap ? tokenMap.size : 0} tokens, ${airways ? airways.size : 0} airways`);
 }
@@ -73,7 +89,7 @@ function searchAirports(term, limit = 15) {
             const result = {
                 code: code,
                 name: airport.name || code,
-                type: 'AIRPORT',
+                type: TOKEN_TYPE_AIRPORT,
                 waypointType: 'airport',
                 lat: airport.lat,
                 lon: airport.lon,
@@ -126,7 +142,7 @@ function searchWaypoints(term, previousToken = null, limit = 15) {
     const descriptionMatches = [];
 
     // Special case: if previous token is an airway, suggest waypoints along that airway
-    if (prevTokenType === 'AIRWAY' && qe_airwaysData) {
+    if (prevTokenType === TOKEN_TYPE_AIRWAY && qe_airwaysData) {
         const airway = qe_airwaysData.get(upperPrevToken);
         if (airway && airway.fixes) {
             // Filter airway fixes by search term (or show all if term is empty)
@@ -138,13 +154,13 @@ function searchWaypoints(term, previousToken = null, limit = 15) {
                 // Look up waypoint in all data sources (fixes, navaids, airports)
                 let waypointData = qe_fixesData?.get(upperFixIdent);
                 let waypointType = 'fix';
-                let displayType = 'FIX';
+                let displayType = TOKEN_TYPE_FIX;
 
                 if (!waypointData) {
                     waypointData = qe_navaidsData?.get(upperFixIdent);
                     if (waypointData) {
                         waypointType = 'navaid';
-                        displayType = waypointData.type || 'NAVAID';
+                        displayType = waypointData.type || TOKEN_TYPE_NAVAID;
                     }
                 }
 
@@ -152,7 +168,7 @@ function searchWaypoints(term, previousToken = null, limit = 15) {
                     waypointData = qe_airportsData?.get(upperFixIdent);
                     if (waypointData) {
                         waypointType = 'airport';
-                        displayType = 'AIRPORT';
+                        displayType = TOKEN_TYPE_AIRPORT;
                     }
                 }
 
@@ -190,7 +206,7 @@ function searchWaypoints(term, previousToken = null, limit = 15) {
     }
 
     // Special case: if previous token is a procedure, suggest transitions
-    if (prevTokenType === 'PROCEDURE') {
+    if (prevTokenType === TOKEN_TYPE_PROCEDURE) {
         const transitions = getProcedureTransitions(upperPrevToken);
         if (transitions.length > 0) {
             for (const trans of transitions) {
@@ -223,7 +239,7 @@ function searchWaypoints(term, previousToken = null, limit = 15) {
     }
 
     // Special case: if previous token is a fix or navaid, suggest airways containing that waypoint
-    if ((prevTokenType === 'FIX' || prevTokenType === 'NAVAID') && qe_airwaysData) {
+    if ((prevTokenType === TOKEN_TYPE_FIX || prevTokenType === TOKEN_TYPE_NAVAID) && qe_airwaysData) {
         for (const [airwayId, airway] of qe_airwaysData) {
             if (exactMatches.length + prefixMatches.length + substringMatches.length >= limit) break;
 
@@ -338,7 +354,7 @@ function searchWaypoints(term, previousToken = null, limit = 15) {
             const result = {
                 code: code,
                 name: airport.name || code,
-                type: 'AIRPORT',
+                type: TOKEN_TYPE_AIRPORT,
                 waypointType: 'airport',
                 lat: airport.lat,
                 lon: airport.lon,
@@ -366,7 +382,7 @@ function searchWaypoints(term, previousToken = null, limit = 15) {
             const result = {
                 code: ident,
                 name: navaid.name || ident,
-                type: navaid.type || 'NAVAID',
+                type: navaid.type || TOKEN_TYPE_NAVAID,
                 waypointType: 'navaid',
                 lat: navaid.lat,
                 lon: navaid.lon,
@@ -393,7 +409,7 @@ function searchWaypoints(term, previousToken = null, limit = 15) {
             const result = {
                 code: name,
                 name: name,
-                type: 'FIX',
+                type: TOKEN_TYPE_FIX,
                 waypointType: 'fix',
                 lat: fix.lat,
                 lon: fix.lon,
