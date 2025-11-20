@@ -24,7 +24,7 @@
 const AppVersion = {
     // Semantic version (sync with package.json)
     MAJOR: 2,
-    MINOR: 2,
+    MINOR: 3,
     PATCH: 0,
 
     // Full version string
@@ -34,7 +34,7 @@ const AppVersion = {
 
     // Service worker cache version
     // Increment this number to force PWA updates
-    CACHE_VERSION: 102,
+    CACHE_VERSION: 103,
 
     // Full cache name for service worker
     get CACHE_NAME() {
@@ -45,7 +45,7 @@ const AppVersion = {
     BUILD_DATE: '2025-11-19',
 
     // Release name (optional)
-    RELEASE_NAME: 'Feature: Keep screen awake during flight operations',
+    RELEASE_NAME: 'Feature: IN-FLIGHT tab improvements and performance optimizations',
 
     /**
      * Get full version info object
