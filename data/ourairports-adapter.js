@@ -6,6 +6,53 @@ const NAVAIDS_CSV_URL = 'https://cors.hisenz.com/?url=https://raw.githubusercont
 const FREQUENCIES_CSV_URL = 'https://cors.hisenz.com/?url=https://raw.githubusercontent.com/davidmegginson/ourairports-data/refs/heads/main/airport-frequencies.csv';
 const RUNWAYS_CSV_URL = 'https://cors.hisenz.com/?url=https://raw.githubusercontent.com/davidmegginson/ourairports-data/refs/heads/main/runways.csv';
 
+// Get file size without downloading (HEAD request)
+async function getOAFileSize(url) {
+    try {
+        const response = await fetch(url, {
+            method: 'HEAD'
+        });
+        if (!response.ok) return null;
+
+        const contentLength = response.headers.get('Content-Length');
+        return contentLength ? parseInt(contentLength, 10) : null;
+    } catch (error) {
+        console.warn(`[OurAirports] Could not get size for ${url}:`, error);
+        return null;
+    }
+}
+
+// Get total size of all OurAirports files
+async function getOATotalSize() {
+    const files = [
+        { name: 'airports.csv', url: AIRPORTS_CSV_URL },
+        { name: 'navaids.csv', url: NAVAIDS_CSV_URL },
+        { name: 'frequencies.csv', url: FREQUENCIES_CSV_URL },
+        { name: 'runways.csv', url: RUNWAYS_CSV_URL }
+    ];
+
+    try {
+        const sizePromises = files.map(f => getOAFileSize(f.url));
+        const sizes = await Promise.all(sizePromises);
+
+        const totalBytes = sizes.reduce((sum, size) => sum + (size || 0), 0);
+        const totalMB = (totalBytes / (1024 * 1024)).toFixed(1);
+
+        return {
+            totalBytes,
+            totalMB,
+            files: files.map((file, i) => ({
+                name: file.name,
+                bytes: sizes[i],
+                mb: sizes[i] ? (sizes[i] / (1024 * 1024)).toFixed(1) : null
+            }))
+        };
+    } catch (error) {
+        console.error('[OurAirports] Error getting total size:', error);
+        return null;
+    }
+}
+
 // Parse OurAirports CSV format
 function parseOACSVLine(line) {
     const result = [];
@@ -308,6 +355,7 @@ async function loadOurAirportsData(onStatusUpdate, onFileLoaded) {
 // Export
 window.OurAirportsAdapter = {
     loadOurAirportsData,
+    getOATotalSize,
     parseOAAirports,
     parseOANavaids,
     parseOAFrequencies,

@@ -371,14 +371,29 @@ async function handleLoadData() {
     UIController.updateDatabaseStatus('checking', 'CHECKING...');
 
     try {
-        // Get estimated download size (approximate values based on typical file sizes)
-        // NASR: ~30MB, OurAirports: ~25MB (compressed CSV)
-        const estimatedSizeMB = 55;
+        // Get actual download sizes from both sources (parallel HEAD requests)
+        const [nasrSize, oaSize] = await Promise.all([
+            window.NASRAdapter.getNASRTotalSize(),
+            window.OurAirportsAdapter.getOATotalSize()
+        ]);
+
+        // Calculate total size
+        let totalSizeMB = 55; // Fallback estimate
+        let sizeBreakdown = '';
+
+        if (nasrSize && oaSize) {
+            totalSizeMB = (parseFloat(nasrSize.totalMB) + parseFloat(oaSize.totalMB)).toFixed(1);
+            sizeBreakdown = `\n  - NASR: ${nasrSize.totalMB}MB (${nasrSize.files.length} files)\n  - OurAirports: ${oaSize.totalMB}MB (${oaSize.files.length} files)\n\n`;
+        } else if (nasrSize || oaSize) {
+            const size = nasrSize || oaSize;
+            totalSizeMB = size.totalMB;
+            sizeBreakdown = `\n  - ${size.totalMB}MB (${size.files.length} files)\n  - Other sources: checking...\n\n`;
+        }
 
         // Ask for user confirmation
         const confirmed = confirm(
             `LOAD DATABASE\n\n` +
-            `This will download approximately ${estimatedSizeMB}MB of aviation data:\n\n` +
+            `This will download ${totalSizeMB}MB of aviation data:${sizeBreakdown}` +
             `• FAA NASR (US airports, navaids, airways, procedures)\n` +
             `• OurAirports (Worldwide airports, frequencies)\n\n` +
             `Downloads happen in parallel. Data is compressed and cached locally.\n\n` +

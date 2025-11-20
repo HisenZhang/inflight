@@ -52,6 +52,58 @@ async function getNASRInfo() {
     }
 }
 
+// Get file size without downloading (HEAD request)
+async function getFileSize(filename) {
+    try {
+        const response = await fetch(`${NASR_BASE_URL}/files/${filename}`, {
+            method: 'HEAD'
+        });
+        if (!response.ok) return null;
+
+        const contentLength = response.headers.get('Content-Length');
+        return contentLength ? parseInt(contentLength, 10) : null;
+    } catch (error) {
+        console.warn(`[NASR] Could not get size for ${filename}:`, error);
+        return null;
+    }
+}
+
+// Get total size of all NASR files
+async function getNASRTotalSize() {
+    const files = [
+        'APT_BASE.csv',
+        'APT_RWY.csv',
+        'NAV_BASE.csv',
+        'FIX_BASE.csv',
+        'FRQ.csv',
+        'AWY_BASE.csv',
+        'STAR_RTE.csv',
+        'DP_RTE.csv',
+        'CLS_ARSP.csv'
+    ];
+
+    try {
+        const sizePromises = files.map(f => getFileSize(f));
+        const sizes = await Promise.all(sizePromises);
+
+        const totalBytes = sizes.reduce((sum, size) => sum + (size || 0), 0);
+        const totalMB = (totalBytes / (1024 * 1024)).toFixed(1);
+
+        return {
+            totalBytes,
+            totalMB,
+            files: files.map((name, i) => ({
+                name,
+                bytes: sizes[i],
+                mb: sizes[i] ? (sizes[i] / (1024 * 1024)).toFixed(1) : null
+            }))
+        };
+    } catch (error) {
+        console.error('[NASR] Error getting total size:', error);
+        return null;
+    }
+}
+
 // Fetch NASR CSV file
 async function fetchNASRFile(filename) {
     const response = await fetch(`${NASR_BASE_URL}/files/${filename}`);
@@ -722,6 +774,7 @@ async function loadNASRData(onStatusUpdate, onFileLoaded) {
 window.NASRAdapter = {
     loadNASRData,
     getNASRInfo,
+    getNASRTotalSize,
     parseNASRAirports,
     parseNASRRunways,
     parseNASRNavaids,
