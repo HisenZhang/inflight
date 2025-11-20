@@ -11,19 +11,15 @@ function tokenize(input) {
         return [];
     }
 
-    // Normalize: uppercase and split on whitespace
-    const rawTokens = input
-        .trim()
-        .toUpperCase()
-        .split(/\s+/)
-        .filter(t => t.length > 0);
+    // Split and filter to get clean tokens (preserves indices)
+    const splitTokens = input.trim().split(/\s+/).filter(t => t.length > 0);
 
     // Create structured token objects
-    return rawTokens.map((text, index) => ({
-        text: text,           // Token text (uppercase)
-        index: index,         // Position in token array
-        type: null,           // Will be filled by parser/resolver
-        raw: input.split(/\s+/)[index] || text  // Original case
+    return splitTokens.map((text, index) => ({
+        text: text.toUpperCase(),  // Token text (uppercase)
+        index: index,              // Position in token array
+        type: null,                // Will be filled by parser/resolver
+        raw: text                  // Original case
     }));
 }
 

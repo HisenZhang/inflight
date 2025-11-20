@@ -576,7 +576,7 @@ async function handleCalculateRoute() {
             }
         } else if (!departure && !destination && routeMiddle) {
             // Waypoint-only mode: treat first waypoint as departure, last as destination
-            const waypoints = routeMiddle.trim().split(/\s+/);
+            const waypoints = routeMiddle.trim().split(/\s+/).filter(w => w.length > 0);
             if (waypoints.length < 2) {
                 alert('ERROR: AT LEAST TWO WAYPOINTS REQUIRED\n\nEnter at least a departure and destination waypoint');
                 return;
