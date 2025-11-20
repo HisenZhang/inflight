@@ -571,7 +571,7 @@ function displayQueryHistory() {
         item.textContent = query;
         item.addEventListener('click', () => {
             // Parse the route to extract departure, middle, and destination
-            const routeParts = query.trim().split(/\s+/);
+            const routeParts = query.trim().split(/\s+/).filter(w => w.length > 0);
             if (routeParts.length >= 2) {
                 elements.departureInput.value = routeParts[0];
                 elements.destinationInput.value = routeParts[routeParts.length - 1];
@@ -1555,7 +1555,7 @@ function restoreNavlog(navlogData) {
         elements.destinationInput.value = navlogData.destination;
     } else {
         // Legacy format: parse routeString to extract departure and destination
-        const routeParts = routeString.trim().split(/\s+/);
+        const routeParts = routeString.trim().split(/\s+/).filter(w => w.length > 0);
         if (routeParts.length >= 2) {
             elements.departureInput.value = routeParts[0];
             elements.destinationInput.value = routeParts[routeParts.length - 1];
