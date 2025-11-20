@@ -44,6 +44,7 @@ export default defineConfig({
             { text: 'ROUTE Tab', link: '/user-guide/tab-route' },
             { text: 'NAVLOG Tab', link: '/user-guide/tab-navlog' },
             { text: 'MAP Tab', link: '/user-guide/tab-map' },
+            { text: 'IN-FLIGHT Tab', link: '/user-guide/tab-inflight' },
             { text: 'CHKLST Tab', link: '/user-guide/tab-chklst' },
             { text: 'STATS Tab', link: '/user-guide/tab-stats' },
             { text: 'Troubleshooting', link: '/user-guide/troubleshooting' },

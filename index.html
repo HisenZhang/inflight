@@ -40,6 +40,7 @@
                 <button class="tab-btn" data-tab="route">ROUTE</button>
                 <button class="tab-btn" data-tab="navlog">NAVLOG</button>
                 <button class="tab-btn" data-tab="map">MAP</button>
+                <button class="tab-btn" data-tab="inflight">IN-FLIGHT</button>
                 <button class="tab-btn" data-tab="chklst">CHKLST</button>
                 <button class="tab-btn" data-tab="stats">STATS</button>
             </div>
@@ -353,6 +354,13 @@
                         Requires WIND CORRECTION & TIME to be enabled
                     </p>
                 </div>
+
+                <!-- Keep Screen Awake -->
+                <div class="feature-toggle">
+                    <div class="checkbox-toggle" id="enableWakeLockToggle"></div>
+                    <label class="font-medium" style="cursor: pointer;">KEEP SCREEN AWAKE</label>
+                    <span class="help-text-inline">- prevent screen from sleeping during flight</span>
+                </div>
             </div>
 
             <!-- Query History -->
@@ -483,6 +491,126 @@
         </div>
         </div>
         <!-- End Tab: Map -->
+
+        <!-- Tab: IN-FLIGHT -->
+        <div class="tab-content" id="tab-inflight">
+        <!-- Placeholder when not in flight -->
+        <div id="inflightPlaceholder" class="welcome-brief">
+            <h2 class="font-bold text-primary" style="font-size: 1.5rem; letter-spacing: 4px; margin-bottom: 1rem;">IN-FLIGHT AWARENESS</h2>
+            <div class="welcome-info" style="max-width: 500px; margin: 0 auto 1.5rem auto;">
+                <p>Real-time situational awareness during flight with current weather conditions, fuel status, and nearby airports for diversion.</p>
+                <p style="margin-bottom: 0;"><strong>Includes:</strong> Fuel remaining • Wind/temperature • Potential hazards • Nearest airports • ETE calculations</p>
+            </div>
+            <p class="text-secondary" style="font-size: 0.75rem; margin-bottom: 1.5rem;">GPS and flight plan required. This tab updates automatically when you're in flight.</p>
+            <p class="text-secondary" style="font-size: 0.75rem;">Enable GPS tracking and calculate a route with wind/fuel enabled to see in-flight data.</p>
+        </div>
+
+        <!-- In-Flight Display -->
+        <div id="inflightDisplay" class="inflight-display" style="display: none;">
+            <h2 class="font-bold text-primary">IN-FLIGHT AWARENESS</h2>
+
+            <!-- Current Position & Status -->
+            <div class="stats-card">
+                <h3 class="stats-card-title">CURRENT POSITION</h3>
+                <div class="stats-grid-compact">
+                    <div class="stat-item">
+                        <span class="stat-label">LAT</span>
+                        <span class="stat-value text-metric" id="if-lat">--</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">LON</span>
+                        <span class="stat-value text-metric" id="if-lon">--</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">ALT</span>
+                        <span class="stat-value text-metric" id="if-alt">-- FT</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">GS</span>
+                        <span class="stat-value text-metric" id="if-gs">-- KT</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">HDG</span>
+                        <span class="stat-value text-metric" id="if-hdg">--°</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">TIME</span>
+                        <span class="stat-value text-secondary" id="if-time">--:--</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fuel Status -->
+            <div class="stats-card" id="if-fuel-card">
+                <h3 class="stats-card-title">FUEL STATUS</h3>
+                <div class="stats-grid-compact">
+                    <div class="stat-item">
+                        <span class="stat-label">REM</span>
+                        <span class="stat-value text-metric" id="if-fuel-rem">-- GAL</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">ENDUR</span>
+                        <span class="stat-value text-metric" id="if-fuel-endur">--:--</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">RANGE</span>
+                        <span class="stat-value text-metric" id="if-fuel-range">-- NM</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">USED</span>
+                        <span class="stat-value text-secondary" id="if-fuel-used">-- GAL</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Weather at Current Location -->
+            <div class="stats-card">
+                <h3 class="stats-card-title">WEATHER AT POSITION</h3>
+                <div class="stats-grid-compact">
+                    <div class="stat-item">
+                        <span class="stat-label">WIND DIR</span>
+                        <span class="stat-value text-metric" id="if-wind-dir">--°</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">WIND SPD</span>
+                        <span class="stat-value text-metric" id="if-wind-spd">-- KT</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">TEMP</span>
+                        <span class="stat-value text-metric" id="if-temp">--°C</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">H-WIND</span>
+                        <span class="stat-value text-secondary" id="if-headwind">-- KT</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">X-WIND</span>
+                        <span class="stat-value text-secondary" id="if-crosswind">-- KT</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">STATUS</span>
+                        <span class="stat-value" id="if-wind-status">FORECAST</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hazard Warnings -->
+            <div class="stats-card" id="if-hazards-card" style="display: none;">
+                <h3 class="stats-card-title text-warning">POTENTIAL HAZARDS</h3>
+                <div id="if-hazards-list" class="hazards-list"></div>
+            </div>
+
+            <!-- Nearest Airports -->
+            <div class="stats-card">
+                <h3 class="stats-card-title">NEAREST AIRPORTS (DIVERSION)</h3>
+                <div id="if-airports-table" class="navlog-table"></div>
+                <p class="help-text mt-sm text-secondary">
+                    Showing towered airports within 50 NM, sorted by distance
+                </p>
+            </div>
+        </div>
+        </div>
+        <!-- End Tab: IN-FLIGHT -->
 
         <!-- Tab: Checklist -->
         <div class="tab-content" id="tab-chklst">
@@ -1117,6 +1245,7 @@
     <!-- Utilities Layer -->
     <script src="utils/formatters.js"></script>         <!-- Shared formatting utilities -->
     <script src="utils/compression.js"></script>        <!-- CSV compression utilities -->
+    <script src="utils/wake-lock.js"></script>          <!-- Screen wake lock manager -->
 
     <!-- Data Engine -->
     <script src="data/nasr-adapter.js"></script>        <!-- NASR data adapter (primary) -->
@@ -1140,6 +1269,7 @@
     <!-- Display Layer -->
     <script src="display/ui-controller.js"></script>       <!-- UI interactions module -->
     <script src="display/stats-controller.js"></script>    <!-- Stats tab controller -->
+    <script src="display/inflight-controller.js"></script> <!-- IN-FLIGHT tab controller -->
     <script src="display/checklist-controller.js"></script><!-- Checklist tab controller -->
     <script src="display/map-display.js"></script>    <!-- Vector map & GPS tracking -->
     <script src="display/app.js"></script>                 <!-- Main application coordinator -->

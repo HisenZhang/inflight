@@ -35,14 +35,12 @@ async function fetchWindsAloft(forecastPeriod = '06') {
         windsCache.forecastPeriod === forecastPeriod &&
         windsCache.timestamp &&
         (Date.now() - windsCache.timestamp) < CACHE_EXPIRY) {
-        console.log('[Winds Aloft] Using cached data');
         return windsCache.data;
     }
 
     const url = `https://cors.hisenz.com/?url=https://aviationweather.gov/api/data/windtemp?region=us&level=low&fcst=${forecastPeriod}`;
 
     try {
-        console.log(`[Winds Aloft] Fetching ${forecastPeriod}hr forecast...`);
         const response = await fetch(url);
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
@@ -58,7 +56,6 @@ async function fetchWindsAloft(forecastPeriod = '06') {
             forecastPeriod: forecastPeriod
         };
 
-        console.log(`[Winds Aloft] Fetched data for ${Object.keys(windsData).length} stations`);
         return windsData;
 
     } catch (error) {
@@ -237,16 +234,11 @@ function interpolateWind(lat, lon, altitude, windsData) {
     // Find nearest stations with data
     const nearStations = findNearestStations(lat, lon, 4);
 
-    console.log(`[Winds] Interpolating for (${lat.toFixed(2)}, ${lon.toFixed(2)}) at ${altitude}ft`);
-    console.log(`[Winds] Nearest stations:`, nearStations.map(s => `${s.code} (${s.distance.toFixed(1)}nm)`).join(', '));
-    console.log(`[Winds] Available wind data stations:`, Object.keys(windsData).slice(0, 10).join(', '), `... (${Object.keys(windsData).length} total)`);
-
     // Collect wind data from nearby stations
     const stationWinds = [];
     for (const {code, distance, station} of nearStations) {
         const stationData = windsData[code];
         if (!stationData) {
-            console.log(`[Winds] No data for station ${code}`);
             continue;
         }
 
@@ -254,7 +246,6 @@ function interpolateWind(lat, lon, altitude, windsData) {
         const wind = interpolateAltitude(altitude, stationData);
         if (wind) {
             stationWinds.push({...wind, distance});
-            console.log(`[Winds] Station ${code}: Wind ${wind.dir}°/${wind.spd}kt at ${altitude}ft`);
         }
     }
 
