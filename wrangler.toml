@@ -1,13 +1,10 @@
-# Cloudflare Pages configuration
-# This file is primarily for documentation deployment via VitePress
-# The main app is deployed as a static site without build step
+# Cloudflare Pages configuration for IN-FLIGHT
+# Static PWA deployment using Wrangler CLI
 
 name = "inflight"
 compatibility_date = "2025-11-01"
 
-# Custom domain
-# Main app domain: in-flight.org
-# Docs domain: docs.in-flight.org (or separate Pages project)
-
-# No [site] configuration needed - main app is static HTML/CSS/JS
-# Docs deployment should use: npm run docs:build && npx wrangler pages deploy docs/.vitepress/dist
+# Main app: Deploy static files from repository root
+# This is a Workers Assets project (static files only)
+[assets]
+directory = "."

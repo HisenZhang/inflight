@@ -1,0 +1,50 @@
+# Cloudflare Pages deployment exclusions
+# Files/folders to NOT upload to Cloudflare
+
+# Development dependencies
+node_modules/
+.npm/
+.nvmrc
+package.json
+package-lock.json
+
+# Testing
+tests/
+*.test.js
+
+# Documentation source (deploy separately to inflight-docs project)
+docs/
+.vitepress/
+
+# Development files
+.git/
+.github/
+.gitignore
+.gitattributes
+.DS_Store
+*.log
+
+# Documentation files (not needed in production)
+*.md
+CLAUDE.md
+DEPLOYMENT.md
+CONTRIBUTING.md
+!README.md
+
+# Wrangler config files
+wrangler.toml
+wrangler-docs.toml
+
+# Data files (too large, loaded at runtime from external URLs)
+data/local/
+*.csv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.local

@@ -1,0 +1,9 @@
+# Cloudflare Pages configuration for IN-FLIGHT Documentation
+# Separate deployment for VitePress docs
+
+name = "inflight-docs"
+compatibility_date = "2025-11-01"
+
+# Docs: Deploy built VitePress static site
+[assets]
+directory = "docs/.vitepress/dist"
