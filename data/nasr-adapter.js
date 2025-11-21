@@ -47,6 +47,7 @@ async function getNASRInfo() {
             effectiveDate: info.effectiveDate,
             updated: info.updated,
             filesCount: info.filesCount,
+            files: info.files, // Include files array for size checking
             expiryDate: expiryDate.toISOString(),
             daysRemaining,
             isValid: daysRemaining > 0
