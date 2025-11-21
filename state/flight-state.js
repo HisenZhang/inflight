@@ -322,7 +322,16 @@ function exportAsFile() {
         const blob = new Blob([json], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
 
-        const filename = `navlog_${flightPlan.routeString.replace(/\s+/g, '_')}_${Date.now()}.json`;
+        // Build filename: IN-FLIGHT_2025-11-20T21-30-45Z_DEPARTURE_DESTINATION.json
+        const now = new Date();
+        // ISO format (UTC) but replace colons with dashes for filesystem compatibility
+        const isoTime = now.toISOString().split('.')[0].replace(/:/g, '-') + 'Z'; // 2025-11-20T21-30-45Z
+
+        // Get departure and destination (fallback to first/last waypoint if not set)
+        const departure = flightPlan.departure?.icao || flightPlan.waypoints[0]?.icao || 'DEP';
+        const destination = flightPlan.destination?.icao || flightPlan.waypoints[flightPlan.waypoints.length - 1]?.icao || 'DEST';
+
+        const filename = `IN-FLIGHT_${isoTime}_${departure}_${destination}.json`;
         const a = document.createElement('a');
         a.href = url;
         a.download = filename;
@@ -333,6 +342,236 @@ function exportAsFile() {
         return true;
     } catch (error) {
         console.error('[FlightState] Failed to export:', error);
+        return false;
+    }
+}
+
+/**
+ * Export waypoints as ForeFlight-compatible CSV file for download
+ * Format: WAYPOINT_NAME,Waypoint description,Lat,Lon
+ * Rules:
+ * - Waypoint names must be ALL CAPS, at least 3 characters, include one letter, no spaces
+ * - Lat/Lon in decimal degrees (negative for W longitude)
+ * - Filename must be "user_waypoints.csv"
+ * @returns {boolean} True if exported successfully
+ */
+function exportToForeFlightCSV() {
+    if (!isFlightPlanValid()) {
+        console.error('[FlightState] No valid flight plan to export');
+        return false;
+    }
+
+    try {
+        // Build CSV content
+        const csvRows = [];
+
+        // Process each waypoint
+        flightPlan.waypoints.forEach((waypoint, index) => {
+            // Generate waypoint name (ALL CAPS, no spaces)
+            let waypointName = '';
+
+            // Use airport ICAO if available
+            if (waypoint.icao) {
+                waypointName = waypoint.icao.toUpperCase();
+            }
+            // Use navaid ID if available
+            else if (waypoint.id) {
+                waypointName = waypoint.id.toUpperCase().replace(/\s+/g, '_');
+            }
+            // Use fix name if available
+            else if (waypoint.name) {
+                waypointName = waypoint.name.toUpperCase().replace(/\s+/g, '_');
+            }
+            // Fallback: generate from route position
+            else {
+                waypointName = `WPT_${index + 1}`;
+            }
+
+            // Ensure name meets ForeFlight requirements (min 3 chars, at least one letter)
+            if (waypointName.length < 3) {
+                waypointName = `WPT_${index + 1}`;
+            }
+
+            // Build description
+            let description = '';
+            if (waypoint.name && waypoint.name !== waypoint.icao && waypoint.name !== waypoint.id) {
+                description = waypoint.name;
+            } else if (waypoint.type) {
+                description = waypoint.type.toUpperCase();
+            }
+
+            // Limit description to 30 characters (ForeFlight only shows first 30-40)
+            if (description.length > 30) {
+                description = description.substring(0, 30);
+            }
+
+            // Get lat/lon in decimal degrees
+            const lat = waypoint.lat;
+            const lon = waypoint.lon;
+
+            // Build CSV row: WAYPOINT_NAME,Description,Lat,Lon
+            // Use empty quotes "" if no description
+            const descField = description ? `"${description}"` : '""';
+            csvRows.push(`${waypointName},${descField},${lat},${lon}`);
+        });
+
+        // Create CSV content
+        const csvContent = csvRows.join('\n');
+
+        // Create blob and download
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+
+        // Filename MUST be "user_waypoints.csv" for ForeFlight to recognize it
+        const filename = 'user_waypoints.csv';
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+
+        URL.revokeObjectURL(url);
+        console.log('[FlightState] ForeFlight CSV exported:', filename, `(${csvRows.length} waypoints)`);
+        return true;
+    } catch (error) {
+        console.error('[FlightState] Failed to export ForeFlight CSV:', error);
+        return false;
+    }
+}
+
+/**
+ * Export waypoints as ForeFlight-compatible KML file for download
+ * Format: Google Earth KML with Placemarks for each waypoint
+ * KML can be imported via AirDrop, email, or iTunes/Finder
+ * Filename must be "user_waypoints.kml"
+ * @returns {boolean} True if exported successfully
+ */
+function exportToForeFlightKML() {
+    if (!isFlightPlanValid()) {
+        console.error('[FlightState] No valid flight plan to export');
+        return false;
+    }
+
+    try {
+        // Build KML content
+        const placemarks = [];
+
+        // Process each waypoint
+        flightPlan.waypoints.forEach((waypoint, index) => {
+            // Generate waypoint name (ALL CAPS, no spaces)
+            let waypointName = '';
+
+            // Use airport ICAO if available
+            if (waypoint.icao) {
+                waypointName = waypoint.icao.toUpperCase();
+            }
+            // Use navaid ID if available
+            else if (waypoint.id) {
+                waypointName = waypoint.id.toUpperCase().replace(/\s+/g, '_');
+            }
+            // Use fix name if available
+            else if (waypoint.name) {
+                waypointName = waypoint.name.toUpperCase().replace(/\s+/g, '_');
+            }
+            // Fallback: generate from route position
+            else {
+                waypointName = `WPT_${index + 1}`;
+            }
+
+            // Ensure name meets ForeFlight requirements (min 3 chars, at least one letter)
+            if (waypointName.length < 3) {
+                waypointName = `WPT_${index + 1}`;
+            }
+
+            // Build description
+            let description = '';
+            if (waypoint.name && waypoint.name !== waypoint.icao && waypoint.name !== waypoint.id) {
+                description = waypoint.name;
+            } else if (waypoint.type) {
+                description = waypoint.type.toUpperCase();
+            }
+
+            // Limit description to 30 characters (ForeFlight only shows first 30-40)
+            if (description.length > 30) {
+                description = description.substring(0, 30);
+            }
+
+            // Get lat/lon in decimal degrees
+            const lat = waypoint.lat;
+            const lon = waypoint.lon;
+
+            // Estimate altitude (use flight plan altitude if available, otherwise default to 0)
+            const altitude = flightPlan.altitude || 0;
+
+            // Build KML Placemark
+            const placemark = `\t<Placemark>
+\t\t<name>${waypointName}</name>
+\t\t<description>${description || ''}</description>
+\t\t<styleUrl>#msn_ylw-pushpin</styleUrl>
+\t\t<Point>
+\t\t\t<altitudeMode>absolute</altitudeMode>
+\t\t\t<coordinates>${lon},${lat},${altitude}</coordinates>
+\t\t</Point>
+\t</Placemark>`;
+            placemarks.push(placemark);
+        });
+
+        // Build complete KML document
+        const kmlContent = `<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2" xmlns:kml="http://www.opengis.net/kml/2.2" xmlns:atom="http://www.w3.org/2005/Atom">
+<Document>
+\t<name>user_waypoints.kml</name>
+\t<StyleMap id="msn_ylw-pushpin">
+\t\t<Pair>
+\t\t\t<key>normal</key>
+\t\t\t<styleUrl>#sn_ylw-pushpin</styleUrl>
+\t\t</Pair>
+\t\t<Pair>
+\t\t\t<key>highlight</key>
+\t\t\t<styleUrl>#sh_ylw-pushpin</styleUrl>
+\t\t</Pair>
+\t</StyleMap>
+\t<Style id="sn_ylw-pushpin">
+\t\t<IconStyle>
+\t\t\t<scale>1.1</scale>
+\t\t\t<Icon>
+\t\t\t\t<href>http://maps.google.com/mapfiles/kml/pushpin/ylw-pushpin.png</href>
+\t\t\t</Icon>
+\t\t\t<hotSpot x="20" y="2" xunits="pixels" yunits="pixels"/>
+\t\t</IconStyle>
+\t</Style>
+\t<Style id="sh_ylw-pushpin">
+\t\t<IconStyle>
+\t\t\t<scale>1.3</scale>
+\t\t\t<Icon>
+\t\t\t\t<href>http://maps.google.com/mapfiles/kml/pushpin/ylw-pushpin.png</href>
+\t\t\t</Icon>
+\t\t\t<hotSpot x="20" y="2" xunits="pixels" yunits="pixels"/>
+\t\t</IconStyle>
+\t</Style>
+\t<Folder>
+\t\t<name>IN-FLIGHT Route Waypoints</name>
+\t\t<open>1</open>
+${placemarks.join('\n')}
+\t</Folder>
+</Document>
+</kml>`;
+
+        // Create blob and download
+        const blob = new Blob([kmlContent], { type: 'application/vnd.google-earth.kml+xml;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+
+        // Filename MUST be "user_waypoints.kml" for ForeFlight to recognize it
+        const filename = 'user_waypoints.kml';
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+
+        URL.revokeObjectURL(url);
+        console.log('[FlightState] ForeFlight KML exported:', filename, `(${placemarks.length} waypoints)`);
+        return true;
+    } catch (error) {
+        console.error('[FlightState] Failed to export ForeFlight KML:', error);
         return false;
     }
 }
@@ -440,6 +679,8 @@ window.FlightState = {
 
     // Import/Export
     exportAsFile,
+    exportToForeFlightCSV,
+    exportToForeFlightKML,
     importFromFile,
 
     // Route history

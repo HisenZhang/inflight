@@ -1266,3 +1266,52 @@ header {
         margin-bottom: 8px;
     }
 }
+
+/* ============================================
+   SELECT DROPDOWNS - Terminal Avionics Style
+   ============================================ */
+
+select {
+    background: #000000;
+    color: var(--color-primary);
+    border: 2px solid var(--color-primary);
+    font-family: 'Roboto Mono', monospace;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    letter-spacing: 0.025em;
+    cursor: pointer;
+    padding: 0.5rem 0.75rem;
+}
+
+select:hover {
+    box-shadow: 0 0 8px rgba(0, 255, 0, 0.3);
+}
+
+select:focus {
+    outline: none;
+    box-shadow: 0 0 0 1px var(--color-primary), 0 0 12px rgba(0, 255, 0, 0.4);
+}
+
+/* Style the dropdown menu and options */
+select option {
+    background: #000000;
+    color: var(--color-primary);
+    font-family: 'Roboto Mono', monospace;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    letter-spacing: 0.025em;
+    padding: 0.5rem 0.75rem;
+}
+
+/* Hover state for options (limited browser support) */
+select option:hover {
+    background: var(--color-primary);
+    color: #000000;
+}
+
+/* Selected/focused option */
+select option:checked {
+    background: var(--color-primary);
+    color: #000000;
+    font-weight: 700;
+}

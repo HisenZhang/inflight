@@ -389,8 +389,16 @@
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
                 <h2 class="font-bold text-primary">NAVIGATION LOG</h2>
                 <div class="navlog-actions">
-                    <button id="exportNavlogBtn" class="btn btn-secondary btn-sm">EXPORT</button>
-                    <button id="importNavlogBtn" class="btn btn-secondary btn-sm">IMPORT</button>
+                    <select id="exportNavlogSelect" class="btn btn-secondary btn-sm">
+                        <option value="">EXPORT</option>
+                        <option value="json">IN-FLIGHT (.json)</option>
+                        <option value="csv">ForeFlight CSV (.csv)</option>
+                        <option value="kml">ForeFlight KML (.kml)</option>
+                    </select>
+                    <select id="importNavlogSelect" class="btn btn-secondary btn-sm">
+                        <option value="">IMPORT</option>
+                        <option value="json">IN-FLIGHT (.json)</option>
+                    </select>
                     <input type="file" id="importNavlogInput" accept=".json" style="display: none;">
                 </div>
             </div>
@@ -1252,6 +1260,7 @@
     <!-- Utilities Layer -->
     <script src="utils/formatters.js"></script>         <!-- Shared formatting utilities -->
     <script src="utils/compression.js"></script>        <!-- CSV compression utilities -->
+    <script src="utils/checksum.js"></script>           <!-- Data integrity verification (SHA-256) -->
     <script src="utils/wake-lock.js"></script>          <!-- Screen wake lock manager -->
 
     <!-- Data Engine -->

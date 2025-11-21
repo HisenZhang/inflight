@@ -24,6 +24,7 @@ console.log(`${colors.cyan}${colors.bright}IN-FLIGHT Test Suite${colors.reset}\n
 const projectRoot = path.join(__dirname, '..');
 const files = {
     utils: fs.readFileSync(path.join(projectRoot, 'utils/formatters.js'), 'utf8'),
+    checksum: fs.readFileSync(path.join(projectRoot, 'utils/checksum.js'), 'utf8'),
     state: fs.readFileSync(path.join(projectRoot, 'state/flight-state.js'), 'utf8'),
     routeLexer: fs.readFileSync(path.join(projectRoot, 'compute/route-lexer.js'), 'utf8'),
     routeParser: fs.readFileSync(path.join(projectRoot, 'compute/route-parser.js'), 'utf8'),
@@ -32,7 +33,8 @@ const files = {
     testFramework: fs.readFileSync(path.join(__dirname, 'test-framework.js'), 'utf8'),
     testUtils: fs.readFileSync(path.join(__dirname, 'test-utils.js'), 'utf8'),
     testState: fs.readFileSync(path.join(__dirname, 'test-state.js'), 'utf8'),
-    testRouteParser: fs.readFileSync(path.join(__dirname, 'test-route-parser.js'), 'utf8')
+    testRouteParser: fs.readFileSync(path.join(__dirname, 'test-route-parser.js'), 'utf8'),
+    testChecksum: fs.readFileSync(path.join(__dirname, 'test-checksum.js'), 'utf8')
 };
 
 // Create a minimal DOM environment
@@ -97,6 +99,7 @@ let testResults = {
         // Execute code in the context of the window object
         const script = `
             ${files.utils}
+            ${files.checksum}
             ${files.state}
             ${files.routeLexer}
             ${files.routeParser}
@@ -106,6 +109,7 @@ let testResults = {
             ${files.testUtils}
             ${files.testState}
             ${files.testRouteParser}
+            ${files.testChecksum}
         `;
 
         // Evaluate in window context

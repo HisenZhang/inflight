@@ -2,9 +2,9 @@
 
 // Database configuration
 const DB_NAME = 'FlightPlanningDB';
-const DB_VERSION = 11; // Updated for compressed CSV storage
+const DB_VERSION = 12; // Updated for checksum validation
 const STORE_NAME = 'flightdata';
-const CACHE_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days
+const CACHE_DURATION = 28 * 24 * 60 * 60 * 1000; // 28 days (long-term data)
 
 // Query history
 const HISTORY_KEY = 'flightplan_query_history';
@@ -96,6 +96,23 @@ async function saveToCache() {
             }
         }
 
+        // Calculate checksums for data integrity
+        console.log('[DataManager] Calculating checksums for data integrity...');
+        const checksums = await window.ChecksumUtils.calculateMultiple({
+            airports: airportsData,
+            iataToIcao: iataToIcao,
+            navaids: navaidsData,
+            fixes: fixesData,
+            frequencies: frequenciesData,
+            runways: runwaysData,
+            airways: airwaysData,
+            stars: starsData,
+            dps: dpsData,
+            airspace: airspaceData,
+            rawCSV: rawCSVToStore // Checksum compressed/raw CSV data
+        });
+        console.log('[DataManager] Checksums calculated:', window.ChecksumUtils.getStats(checksums));
+
         // Now open transaction and store (synchronously)
         return new Promise((resolve, reject) => {
             const transaction = db.transaction([STORE_NAME], 'readwrite');
@@ -103,7 +120,7 @@ async function saveToCache() {
 
             // Serialize Maps to arrays for storage
             const data = {
-                id: 'flightdata_cache_v11',
+                id: 'flightdata_cache_v12',
                 airports: Array.from(airportsData.entries()),
                 iataToIcao: Array.from(iataToIcao.entries()),
                 navaids: Array.from(navaidsData.entries()),
@@ -116,17 +133,22 @@ async function saveToCache() {
                 airspace: Array.from(airspaceData.entries()),
                 dataSources: dataSources,
                 timestamp: Date.now(),
-                version: 11,
+                version: 12,
                 // Track individual file metadata
                 fileMetadata: Object.fromEntries(fileMetadata),
                 // Store raw CSV data (compressed if supported, uncompressed otherwise)
                 rawCSV: rawCSVToStore,
                 compressed: isCompressed, // Flag to indicate compression
-                compressionStats: compressionStats
+                compressionStats: compressionStats,
+                // NEW: Checksums for data integrity verification
+                checksums: checksums
             };
 
             const request = store.put(data);
-            request.onsuccess = () => resolve();
+            request.onsuccess = () => {
+                console.log('[DataManager] Cache saved with checksums');
+                resolve();
+            };
             request.onerror = () => reject(request.error);
         });
     } catch (error) {
@@ -138,9 +160,22 @@ function loadFromCacheDB() {
     return new Promise((resolve, reject) => {
         const transaction = db.transaction([STORE_NAME], 'readonly');
         const store = transaction.objectStore(STORE_NAME);
-        const request = store.get('flightdata_cache_v11');
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
+
+        // Try v12 first (with checksums), fall back to v11
+        const requestV12 = store.get('flightdata_cache_v12');
+
+        requestV12.onsuccess = () => {
+            if (requestV12.result) {
+                resolve(requestV12.result);
+            } else {
+                // Fall back to v11 (no checksums - for backward compatibility)
+                const requestV11 = store.get('flightdata_cache_v11');
+                requestV11.onsuccess = () => resolve(requestV11.result);
+                requestV11.onerror = () => reject(requestV11.error);
+            }
+        };
+
+        requestV12.onerror = () => reject(requestV12.error);
     });
 }
 
@@ -158,7 +193,8 @@ function clearCacheDB() {
             store.delete('flightdata_cache_v8'),
             store.delete('flightdata_cache_v9'),
             store.delete('flightdata_cache_v10'),
-            store.delete('flightdata_cache_v11')
+            store.delete('flightdata_cache_v11'),
+            store.delete('flightdata_cache_v12')
         ];
         Promise.all(requests.map(r => new Promise((res) => {
             r.onsuccess = () => res();
@@ -525,14 +561,62 @@ function mergeDataSources(nasrData, ourairportsData, onStatusUpdate = null) {
 async function checkCachedData() {
     try {
         const cachedData = await loadFromCacheDB();
-        if (cachedData && (cachedData.version === 11 || cachedData.version === 10) && cachedData.timestamp) {
+        if (cachedData && (cachedData.version === 12 || cachedData.version === 11 || cachedData.version === 10) && cachedData.timestamp) {
             const age = Date.now() - cachedData.timestamp;
             const daysOld = Math.floor(age / (24 * 60 * 60 * 1000));
+
+            // Verify checksums if available (v12+)
+            // NOTE: Only verify parsed data structures (not raw CSV) on startup
+            // Raw CSV is only verified during reindexing (see loadFromCache)
+            if (cachedData.version >= 12 && cachedData.checksums) {
+                console.log('[DataManager] Verifying cached data structures...');
+
+                const dataToVerify = {
+                    airports: new Map(cachedData.airports),
+                    iataToIcao: new Map(cachedData.iataToIcao),
+                    navaids: new Map(cachedData.navaids),
+                    fixes: new Map(cachedData.fixes),
+                    frequencies: new Map(cachedData.frequencies),
+                    runways: new Map(cachedData.runways),
+                    airways: new Map(cachedData.airways),
+                    stars: new Map(cachedData.stars),
+                    dps: new Map(cachedData.dps),
+                    airspace: new Map(cachedData.airspace)
+                    // rawCSV is NOT verified here (only during reindexing)
+                };
+
+                const verificationResults = await window.ChecksumUtils.verifyMultiple(
+                    dataToVerify,
+                    cachedData.checksums
+                );
+
+                // Check for any failed verifications
+                const failed = Object.entries(verificationResults).filter(([key, valid]) => !valid);
+
+                if (failed.length > 0) {
+                    const failedKeys = failed.map(([key]) => key).join(', ');
+                    console.error('[DataManager] DATA INTEGRITY FAILURE:', failedKeys);
+
+                    // Clear corrupted cache
+                    await clearCacheDB();
+
+                    return {
+                        loaded: false,
+                        status: `[ERR] DATA CORRUPTED (${failedKeys}) - PLEASE RELOAD`,
+                        type: 'error',
+                        corrupted: true
+                    };
+                }
+
+                console.log('[DataManager] ✓ All data structures verified');
+            } else {
+                console.warn('[DataManager] No checksums found - skipping verification (old cache version)');
+            }
 
             // Load from indexed cache (fast - no re-indexing needed)
             await loadFromCache(cachedData);
 
-            // Determine cache status (conservative: use 7-day expiry)
+            // Determine cache status (28-day expiry for long-term data)
             const cacheExpired = age >= CACHE_DURATION;
 
             if (cacheExpired) {
@@ -543,9 +627,10 @@ async function checkCachedData() {
                 };
             } else {
                 const sources = dataSources.join(' + ');
+                const checksumStatus = cachedData.checksums ? ' [VERIFIED]' : '';
                 return {
                     loaded: true,
-                    status: `[OK] INDEXED DATABASE LOADED (${daysOld}D OLD - ${sources})`,
+                    status: `[OK] INDEXED DATABASE LOADED (${daysOld}D OLD - ${sources})${checksumStatus}`,
                     type: 'success'
                 };
             }
@@ -616,6 +701,25 @@ async function loadFromCache(onStatusUpdate) {
         // Check if raw CSV data is available for reindexing
         if (!cachedData.rawCSV || Object.keys(cachedData.rawCSV).length === 0) {
             throw new Error('No raw CSV data found in cache - please reload data from internet');
+        }
+
+        // Verify raw CSV checksum if available (v12+)
+        // This is the ONLY time we verify raw CSV (during reindexing)
+        if (cachedData.version >= 12 && cachedData.checksums && cachedData.checksums.rawCSV) {
+            onStatusUpdate('[...] VERIFYING RAW CSV INTEGRITY', 'loading');
+            console.log('[DataManager] Verifying raw CSV checksum before reindexing...');
+
+            const rawCSVValid = await window.ChecksumUtils.verify(
+                cachedData.rawCSV,
+                cachedData.checksums.rawCSV
+            );
+
+            if (!rawCSVValid) {
+                console.error('[DataManager] RAW CSV CHECKSUM FAILURE');
+                throw new Error('Raw CSV data corrupted - checksum verification failed. Please reload database from internet.');
+            }
+
+            console.log('[DataManager] ✓ Raw CSV verified');
         }
 
         // Restore raw CSV data (decompress if needed)

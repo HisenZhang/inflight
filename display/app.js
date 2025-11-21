@@ -173,27 +173,9 @@ function setupEventListeners() {
         zoomOutBtn.addEventListener('click', () => VectorMap.zoomOut());
     }
 
-    // Navlog export/import
-    const exportNavlogBtn = document.getElementById('exportNavlogBtn');
-    const exportForeFlightBtn = document.getElementById('exportForeFlightBtn');
-    const importNavlogBtn = document.getElementById('importNavlogBtn');
-    const importNavlogInput = document.getElementById('importNavlogInput');
-
-    if (exportNavlogBtn) {
-        exportNavlogBtn.addEventListener('click', handleExportNavlog);
-    }
-
-    if (exportForeFlightBtn) {
-        exportForeFlightBtn.addEventListener('click', handleExportForeFlight);
-    }
-
-    if (importNavlogBtn && importNavlogInput) {
-        importNavlogBtn.addEventListener('click', () => {
-            importNavlogInput.click();
-        });
-
-        importNavlogInput.addEventListener('change', handleImportNavlog);
-    }
+    // Navlog export/import dropdowns
+    setupExportDropdown();
+    setupImportDropdown();
 
     // Flight tracks management
     const refreshTracksBtn = document.getElementById('refreshTracksBtn');
@@ -695,96 +677,99 @@ function handleClearRoute() {
     currentNavlogData = null;
 }
 
-function handleExportNavlog() {
-    if (!currentNavlogData) {
-        alert('ERROR: NO NAVLOG TO EXPORT\n\nCalculate a route first.');
-        return;
-    }
+// ============================================
+// EXPORT/IMPORT SELECT SYSTEM
+// ============================================
 
-    // Use FlightState for export instead of DataManager
-    if (window.FlightState) {
-        // Ensure FlightState has current data
-        window.FlightState.updateFlightPlan(currentNavlogData);
-        const success = window.FlightState.exportAsFile();
-        if (!success) {
-            alert('ERROR: FAILED TO EXPORT NAVLOG');
+function setupExportDropdown() {
+    const exportSelect = document.getElementById('exportNavlogSelect');
+    if (!exportSelect) return;
+
+    exportSelect.addEventListener('change', (e) => {
+        const format = e.target.value;
+        if (format) {
+            handleExportFormat(format);
+            // Reset to default option
+            e.target.value = '';
         }
-    } else {
-        alert('ERROR: FLIGHTSTATE NOT AVAILABLE');
-    }
+    });
 }
 
-function handleExportForeFlight() {
+function setupImportDropdown() {
+    const importSelect = document.getElementById('importNavlogSelect');
+    const fileInput = document.getElementById('importNavlogInput');
+
+    if (!importSelect || !fileInput) return;
+
+    importSelect.addEventListener('change', (e) => {
+        const format = e.target.value;
+        if (format) {
+            // Trigger file input with correct accept type
+            if (format === 'json') {
+                fileInput.accept = '.json';
+            }
+            fileInput.click();
+            // Reset to default option
+            e.target.value = '';
+        }
+    });
+
+    // Handle file selection
+    fileInput.addEventListener('change', handleImportFile);
+}
+
+function handleExportFormat(format) {
     if (!currentNavlogData) {
         alert('ERROR: NO NAVLOG TO EXPORT\n\nCalculate a route first.');
         return;
     }
 
-    // Ask user which format to export
-    const choice = prompt(
-        'FOREFLIGHT EXPORT FORMAT\n\n' +
-        'Choose format to export:\n\n' +
-        '1 - CSV (user_waypoints.csv)\n' +
-        '    Import via: Content Pack, iTunes/Finder\n\n' +
-        '2 - KML (user_waypoints.kml)\n' +
-        '    Import via: AirDrop, Email, iTunes/Finder\n\n' +
-        '3 - BOTH (CSV + KML)\n\n' +
-        'Enter 1, 2, or 3:'
-    );
+    if (!window.FlightState) {
+        alert('ERROR: FLIGHTSTATE NOT AVAILABLE');
+        return;
+    }
 
-    if (!choice) return; // User cancelled
+    // Ensure FlightState has current data
+    window.FlightState.updateFlightPlan(currentNavlogData);
 
-    const exportChoice = choice.trim();
+    let success = false;
 
-    // Use FlightState for ForeFlight export
-    if (window.FlightState) {
-        // Ensure FlightState has current data
-        window.FlightState.updateFlightPlan(currentNavlogData);
+    switch (format) {
+        case 'json':
+            success = window.FlightState.exportAsFile();
+            if (!success) {
+                alert('ERROR: FAILED TO EXPORT JSON');
+            }
+            break;
 
-        let csvSuccess = false;
-        let kmlSuccess = false;
-
-        // Export based on user choice
-        if (exportChoice === '1') {
-            csvSuccess = window.FlightState.exportToForeFlightCSV();
-            if (csvSuccess) {
-                alert('CSV EXPORTED\n\nFilename: user_waypoints.csv\n\nImport into ForeFlight:\n- Via Content Pack\n- Via iTunes/Finder');
+        case 'csv':
+            success = window.FlightState.exportToForeFlightCSV();
+            if (success) {
+                alert('CSV EXPORTED\n\nFilename: user_waypoints.csv\n\nImport into ForeFlight via:\n- Content Pack\n- iTunes/Finder');
             } else {
                 alert('ERROR: FAILED TO EXPORT CSV');
             }
-        } else if (exportChoice === '2') {
-            kmlSuccess = window.FlightState.exportToForeFlightKML();
-            if (kmlSuccess) {
-                alert('KML EXPORTED\n\nFilename: user_waypoints.kml\n\nImport into ForeFlight:\n- Via AirDrop from Mac\n- Via email attachment\n- Via iTunes/Finder');
+            break;
+
+        case 'kml':
+            success = window.FlightState.exportToForeFlightKML();
+            if (success) {
+                alert('KML EXPORTED\n\nFilename: user_waypoints.kml\n\nImport into ForeFlight via:\n- AirDrop from Mac\n- Email attachment\n- iTunes/Finder');
             } else {
                 alert('ERROR: FAILED TO EXPORT KML');
             }
-        } else if (exportChoice === '3') {
-            csvSuccess = window.FlightState.exportToForeFlightCSV();
-            kmlSuccess = window.FlightState.exportToForeFlightKML();
+            break;
 
-            if (csvSuccess && kmlSuccess) {
-                alert('BOTH FILES EXPORTED\n\nFiles downloaded:\n- user_waypoints.csv\n- user_waypoints.kml\n\nCSV Import: Content Pack, iTunes/Finder\nKML Import: AirDrop, Email, iTunes/Finder');
-            } else if (csvSuccess || kmlSuccess) {
-                const format = csvSuccess ? 'CSV' : 'KML';
-                alert(`PARTIAL SUCCESS\n\nOnly ${format} exported successfully.\nThe other format failed.`);
-            } else {
-                alert('ERROR: FAILED TO EXPORT BOTH FILES');
-            }
-        } else {
-            alert('INVALID CHOICE\n\nPlease enter 1, 2, or 3.');
-        }
-    } else {
-        alert('ERROR: FLIGHTSTATE NOT AVAILABLE');
+        default:
+            alert('ERROR: UNKNOWN EXPORT FORMAT');
     }
 }
 
-async function handleImportNavlog(event) {
+async function handleImportFile(event) {
     const file = event.target.files[0];
     if (!file) return;
 
     try {
-        // Use FlightState for import instead of DataManager
         if (!window.FlightState) {
             throw new Error('FlightState not available');
         }
@@ -804,7 +789,7 @@ async function handleImportNavlog(event) {
         alert(`NAVLOG IMPORTED\n\nRoute: ${navlogData.routeString}`);
     } catch (error) {
         console.error('Import error:', error);
-        alert(`ERROR: FAILED TO IMPORT NAVLOG\n\n${error.message}`);
+        alert(`ERROR: FAILED TO IMPORT\n\n${error.message}`);
     } finally {
         // Clear file input
         event.target.value = '';
