@@ -1317,9 +1317,9 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelSt
             if (airspace) {
                 let airspaceText = `CLASS ${airspace.class}`;
                 airspaceHTML = `<div class="text-reporting text-xs">${airspaceText}</div>`;
-                // Add hours/supplement info as separate grey line
+                // Add hours/supplement info as separate amber line
                 if (airspace.hours) {
-                    airspaceHTML += `<div class="text-secondary text-xs">${airspace.hours}</div>`;
+                    airspaceHTML += `<div class="text-reporting text-xs">${airspace.hours}</div>`;
                 }
             }
         }

@@ -930,10 +930,11 @@ function showPopup(waypoint, legs, index) {
             const airspace = window.DataManager.getAirspaceClass(airportCode);
             if (airspace) {
                 let airspaceText = `CLASS ${airspace.class}`;
-                if (airspace.hours) {
-                    airspaceText += ` ${airspace.hours}`;
-                }
                 airspaceHTML = `<div class="text-reporting text-xs">${airspaceText}</div>`;
+                // Add hours/supplement info as separate amber line
+                if (airspace.hours) {
+                    airspaceHTML += `<div class="text-reporting text-xs">${airspace.hours}</div>`;
+                }
             }
         }
     }
