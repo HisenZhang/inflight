@@ -1324,6 +1324,12 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelSt
             }
         }
 
+        // Fuel types for airports
+        let fuelTypesHTML = '';
+        if (waypoint.waypointType === 'airport' && waypoint.fuelTypes) {
+            fuelTypesHTML = `<div class="text-warning text-xs">FUEL ${waypoint.fuelTypes}</div>`;
+        }
+
         // Waypoint row
         tableHTML += `
             <tr class="wpt-row">
@@ -1336,6 +1342,7 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelSt
                     <div class="text-secondary text-xs">${pos}</div>
                     ${elevMagLine}
                     ${airspaceHTML}
+                    ${fuelTypesHTML}
                     ${runwayHTML}
                     ${freqHTML ? `<div class="mt-xs">${freqHTML}</div>` : ''}
                 </td>

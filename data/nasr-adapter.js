@@ -132,6 +132,7 @@ function parseNASRAirports(csvText) {
     const elevIdx = headers.indexOf('ELEV');
     const typeIdx = headers.indexOf('FACILITY_USE_CODE');
     const ownerIdx = headers.indexOf('OWNERSHIP_TYPE_CODE');
+    const fuelTypesIdx = headers.indexOf('FUEL_TYPES');
 
     const airports = new Map();
 
@@ -151,6 +152,8 @@ function parseNASRAirports(csvText) {
 
             if (!identifier || isNaN(lat) || isNaN(lon)) continue;
 
+            const fuelTypes = values[fuelTypesIdx]?.trim() || '';
+
             const airport = {
                 id: `nasr_${identifier}`,
                 icao: identifier.toUpperCase(),
@@ -161,6 +164,7 @@ function parseNASRAirports(csvText) {
                 elevation: values[elevIdx] ? parseFloat(values[elevIdx]) : null,
                 municipality: values[cityIdx]?.trim() || '',
                 country: values[countryIdx]?.trim() || 'US',
+                fuelTypes: fuelTypes || null,
                 waypointType: 'airport',
                 source: 'nasr'
             };

@@ -922,6 +922,28 @@ function showPopup(waypoint, legs, index) {
         }
     }
 
+    // Airspace class for airports
+    let airspaceHTML = '';
+    if (waypoint.waypointType === 'airport') {
+        const airportCode = waypoint.icao || waypoint.ident;
+        if (airportCode) {
+            const airspace = window.DataManager.getAirspaceClass(airportCode);
+            if (airspace) {
+                let airspaceText = `CLASS ${airspace.class}`;
+                if (airspace.hours) {
+                    airspaceText += ` ${airspace.hours}`;
+                }
+                airspaceHTML = `<div class="text-reporting text-xs">${airspaceText}</div>`;
+            }
+        }
+    }
+
+    // Fuel types for airports
+    let fuelTypesHTML = '';
+    if (waypoint.waypointType === 'airport' && waypoint.fuelTypes) {
+        fuelTypesHTML = `<div class="text-warning text-xs">FUEL ${waypoint.fuelTypes}</div>`;
+    }
+
     // GPS-relative information (distance and heading from current position)
     let gpsRelativeInfo = '';
     if (currentPosition) {
@@ -962,6 +984,8 @@ function showPopup(waypoint, legs, index) {
                 <div class="text-secondary text-xs">${pos}</div>
                 ${gpsRelativeInfo}
                 ${elevMagLine}
+                ${airspaceHTML}
+                ${fuelTypesHTML}
                 ${runwayHTML}
                 ${freqHTML ? `<div class="mt-xs">${freqHTML}</div>` : ''}
             </td>
