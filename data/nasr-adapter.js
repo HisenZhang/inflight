@@ -72,11 +72,15 @@ async function getNASRTotalSize() {
     ];
 
     try {
+        console.log('[NASR] Getting total size from /info endpoint...');
         // Get file sizes from info endpoint (HEAD requests don't return Content-Length on Cloudflare)
         const info = await getNASRInfo();
         if (!info || !info.files) {
+            console.warn('[NASR] No info or files returned');
             return null;
         }
+
+        console.log(`[NASR] Got info with ${info.files.length} files`);
 
         // Build a map of filename -> size from info
         const sizeMap = new Map();
@@ -99,6 +103,8 @@ async function getNASRTotalSize() {
         }
 
         const totalMB = (totalBytes / (1024 * 1024)).toFixed(1);
+
+        console.log(`[NASR] Total size calculated: ${totalMB}MB for ${filesToDownload.length} files`);
 
         return {
             totalBytes,

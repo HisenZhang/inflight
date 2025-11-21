@@ -58,6 +58,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (cacheResult.loaded) {
             UIController.showDataInfo();
             UIController.enableRouteInput();
+        } else if (cacheResult.corrupted) {
+            // Data corruption detected - show error and prompt reload
+            UIController.updateDatabaseStatus('error', 'DATA CORRUPTED');
+            alert(
+                'DATA INTEGRITY FAILURE\n\n' +
+                'Cached aviation data failed checksum verification.\n' +
+                'This indicates data corruption.\n\n' +
+                'The corrupted cache has been cleared.\n' +
+                'Please reload the database from the internet.\n\n' +
+                'Click "LOAD DATA" to download fresh data.'
+            );
         } else {
             UIController.updateDatabaseStatus('warning', 'NOT LOADED');
         }
@@ -164,11 +175,16 @@ function setupEventListeners() {
 
     // Navlog export/import
     const exportNavlogBtn = document.getElementById('exportNavlogBtn');
+    const exportForeFlightBtn = document.getElementById('exportForeFlightBtn');
     const importNavlogBtn = document.getElementById('importNavlogBtn');
     const importNavlogInput = document.getElementById('importNavlogInput');
 
     if (exportNavlogBtn) {
         exportNavlogBtn.addEventListener('click', handleExportNavlog);
+    }
+
+    if (exportForeFlightBtn) {
+        exportForeFlightBtn.addEventListener('click', handleExportForeFlight);
     }
 
     if (importNavlogBtn && importNavlogInput) {
@@ -379,10 +395,16 @@ async function handleLoadData() {
     UIController.updateDatabaseStatus('checking', 'CHECKING...');
 
     try {
-        // Get actual download sizes from both sources (parallel HEAD requests)
+        // Get actual download sizes from both sources with timeout protection
         const [nasrSize, oaSize] = await Promise.all([
-            window.NASRAdapter.getNASRTotalSize(),
-            window.OurAirportsAdapter.getOATotalSize()
+            window.NASRAdapter.getNASRTotalSize().catch(err => {
+                console.warn('[App] NASR size check failed:', err);
+                return null;
+            }),
+            window.OurAirportsAdapter.getOATotalSize().catch(err => {
+                console.warn('[App] OurAirports size check failed:', err);
+                return null;
+            })
         ]);
 
         // Calculate total size
@@ -394,8 +416,9 @@ async function handleLoadData() {
             sizeBreakdown = `\n  - NASR: ${nasrSize.totalMB}MB (${nasrSize.files.length} files)\n  - OurAirports: ${oaSize.totalMB}MB (${oaSize.files.length} files)\n\n`;
         } else if (nasrSize || oaSize) {
             const size = nasrSize || oaSize;
+            const sourceName = nasrSize ? 'NASR' : 'OurAirports';
             totalSizeMB = size.totalMB;
-            sizeBreakdown = `\n  - ${size.totalMB}MB (${size.files.length} files)\n  - Other sources: checking...\n\n`;
+            sizeBreakdown = `\n  - ${sourceName}: ${size.totalMB}MB (${size.files.length} files)\n  - Other sources: checking...\n\n`;
         }
 
         // Ask for user confirmation
@@ -685,6 +708,71 @@ function handleExportNavlog() {
         const success = window.FlightState.exportAsFile();
         if (!success) {
             alert('ERROR: FAILED TO EXPORT NAVLOG');
+        }
+    } else {
+        alert('ERROR: FLIGHTSTATE NOT AVAILABLE');
+    }
+}
+
+function handleExportForeFlight() {
+    if (!currentNavlogData) {
+        alert('ERROR: NO NAVLOG TO EXPORT\n\nCalculate a route first.');
+        return;
+    }
+
+    // Ask user which format to export
+    const choice = prompt(
+        'FOREFLIGHT EXPORT FORMAT\n\n' +
+        'Choose format to export:\n\n' +
+        '1 - CSV (user_waypoints.csv)\n' +
+        '    Import via: Content Pack, iTunes/Finder\n\n' +
+        '2 - KML (user_waypoints.kml)\n' +
+        '    Import via: AirDrop, Email, iTunes/Finder\n\n' +
+        '3 - BOTH (CSV + KML)\n\n' +
+        'Enter 1, 2, or 3:'
+    );
+
+    if (!choice) return; // User cancelled
+
+    const exportChoice = choice.trim();
+
+    // Use FlightState for ForeFlight export
+    if (window.FlightState) {
+        // Ensure FlightState has current data
+        window.FlightState.updateFlightPlan(currentNavlogData);
+
+        let csvSuccess = false;
+        let kmlSuccess = false;
+
+        // Export based on user choice
+        if (exportChoice === '1') {
+            csvSuccess = window.FlightState.exportToForeFlightCSV();
+            if (csvSuccess) {
+                alert('CSV EXPORTED\n\nFilename: user_waypoints.csv\n\nImport into ForeFlight:\n- Via Content Pack\n- Via iTunes/Finder');
+            } else {
+                alert('ERROR: FAILED TO EXPORT CSV');
+            }
+        } else if (exportChoice === '2') {
+            kmlSuccess = window.FlightState.exportToForeFlightKML();
+            if (kmlSuccess) {
+                alert('KML EXPORTED\n\nFilename: user_waypoints.kml\n\nImport into ForeFlight:\n- Via AirDrop from Mac\n- Via email attachment\n- Via iTunes/Finder');
+            } else {
+                alert('ERROR: FAILED TO EXPORT KML');
+            }
+        } else if (exportChoice === '3') {
+            csvSuccess = window.FlightState.exportToForeFlightCSV();
+            kmlSuccess = window.FlightState.exportToForeFlightKML();
+
+            if (csvSuccess && kmlSuccess) {
+                alert('BOTH FILES EXPORTED\n\nFiles downloaded:\n- user_waypoints.csv\n- user_waypoints.kml\n\nCSV Import: Content Pack, iTunes/Finder\nKML Import: AirDrop, Email, iTunes/Finder');
+            } else if (csvSuccess || kmlSuccess) {
+                const format = csvSuccess ? 'CSV' : 'KML';
+                alert(`PARTIAL SUCCESS\n\nOnly ${format} exported successfully.\nThe other format failed.`);
+            } else {
+                alert('ERROR: FAILED TO EXPORT BOTH FILES');
+            }
+        } else {
+            alert('INVALID CHOICE\n\nPlease enter 1, 2, or 3.');
         }
     } else {
         alert('ERROR: FLIGHTSTATE NOT AVAILABLE');
