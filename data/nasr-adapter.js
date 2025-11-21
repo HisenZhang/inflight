@@ -57,25 +57,9 @@ async function getNASRInfo() {
     }
 }
 
-// Get file size without downloading (HEAD request)
-async function getFileSize(filename) {
-    try {
-        const response = await fetch(`${NASR_BASE_URL}/files/${filename}`, {
-            method: 'HEAD'
-        });
-        if (!response.ok) return null;
-
-        const contentLength = response.headers.get('Content-Length');
-        return contentLength ? parseInt(contentLength, 10) : null;
-    } catch (error) {
-        console.warn(`[NASR] Could not get size for ${filename}:`, error);
-        return null;
-    }
-}
-
-// Get total size of all NASR files
+// Get total size of all NASR files from /info endpoint
 async function getNASRTotalSize() {
-    const files = [
+    const filesToDownload = [
         'APT_BASE.csv',
         'APT_RWY.csv',
         'NAV_BASE.csv',
@@ -88,20 +72,38 @@ async function getNASRTotalSize() {
     ];
 
     try {
-        const sizePromises = files.map(f => getFileSize(f));
-        const sizes = await Promise.all(sizePromises);
+        // Get file sizes from info endpoint (HEAD requests don't return Content-Length on Cloudflare)
+        const info = await getNASRInfo();
+        if (!info || !info.files) {
+            return null;
+        }
 
-        const totalBytes = sizes.reduce((sum, size) => sum + (size || 0), 0);
+        // Build a map of filename -> size from info
+        const sizeMap = new Map();
+        info.files.forEach(file => {
+            sizeMap.set(file.name, file.size);
+        });
+
+        // Calculate total for files we actually download
+        let totalBytes = 0;
+        const fileDetails = [];
+
+        for (const filename of filesToDownload) {
+            const size = sizeMap.get(filename) || 0;
+            totalBytes += size;
+            fileDetails.push({
+                name: filename,
+                bytes: size,
+                mb: size ? (size / (1024 * 1024)).toFixed(1) : null
+            });
+        }
+
         const totalMB = (totalBytes / (1024 * 1024)).toFixed(1);
 
         return {
             totalBytes,
             totalMB,
-            files: files.map((name, i) => ({
-                name,
-                bytes: sizes[i],
-                mb: sizes[i] ? (sizes[i] / (1024 * 1024)).toFixed(1) : null
-            }))
+            files: fileDetails
         };
     } catch (error) {
         console.error('[NASR] Error getting total size:', error);
