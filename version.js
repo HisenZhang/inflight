@@ -24,7 +24,7 @@
 const AppVersion = {
     // Semantic version (sync with package.json)
     MAJOR: 2,
-    MINOR: 3,
+    MINOR: 4,
     PATCH: 0,
 
     // Full version string
@@ -34,7 +34,7 @@ const AppVersion = {
 
     // Service worker cache version
     // Increment this number to force PWA updates
-    CACHE_VERSION: 103,
+    CACHE_VERSION: 104,
 
     // Full cache name for service worker
     get CACHE_NAME() {
@@ -42,10 +42,10 @@ const AppVersion = {
     },
 
     // Build metadata (optional)
-    BUILD_DATE: '2025-11-19',
+    BUILD_DATE: '2025-11-20',
 
     // Release name (optional)
-    RELEASE_NAME: 'Feature: IN-FLIGHT tab improvements and performance optimizations',
+    RELEASE_NAME: 'Feature: Airport fuel types display and improved loading UI',
 
     /**
      * Get full version info object
