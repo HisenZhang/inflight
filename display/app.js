@@ -369,17 +369,13 @@ function switchTab(tabName) {
 async function handleLoadData() {
     const elements = UIController.getElements();
     const progressContainer = document.getElementById('loadingProgress');
-    const progressBar = document.getElementById('progressBar');
     const progressText = document.getElementById('progressText');
 
-    // Show progress bar
-    if (progressContainer) {
-        progressContainer.style.display = 'block';
-        progressBar.style.width = '0%';
-        progressText.textContent = 'Checking file sizes...';
-    }
-
     elements.loadDataBtn.disabled = true;
+
+    // Show progress text
+    if (progressContainer) progressContainer.style.display = 'block';
+    if (progressText) progressText.textContent = 'Checking data sources...';
     UIController.updateDatabaseStatus('checking', 'CHECKING...');
 
     try {
@@ -420,36 +416,12 @@ async function handleLoadData() {
 
         // Update status to loading
         UIController.updateDatabaseStatus('checking', 'LOADING...');
-        if (progressText) progressText.textContent = 'Downloading files...';
-
-        // Track progress
-        let totalSteps = 0;
-        let completedSteps = 0;
+        if (progressText) progressText.textContent = 'Starting download...';
 
         await DataManager.loadData((message, type) => {
             console.log(`[DataManager] ${message}`);
 
-            // Update progress bar based on status messages
-            if (message.includes('LOADING DATA SOURCES')) {
-                totalSteps = 15; // Approximate total steps
-                completedSteps = 1;
-            } else if (message.includes('PARSING')) {
-                completedSteps++;
-            } else if (message.includes('INDEXING') || message.includes('BUILDING')) {
-                completedSteps++;
-            } else if (message.includes('MERGING')) {
-                completedSteps++;
-            } else if (message.includes('CACHING')) {
-                completedSteps++;
-            }
-
-            // Update progress bar
-            if (progressBar && totalSteps > 0) {
-                const percentage = Math.min(100, (completedSteps / totalSteps) * 100);
-                progressBar.style.width = `${percentage}%`;
-            }
-
-            // Update progress text
+            // Update progress text - show what's being done
             if (progressText) {
                 const cleanMessage = message.replace(/^\[...\]\s*/, '').replace(/^\[OK\]\s*/, '');
                 progressText.textContent = cleanMessage;
@@ -457,13 +429,12 @@ async function handleLoadData() {
         });
 
         // Complete
-        if (progressBar) progressBar.style.width = '100%';
         if (progressText) progressText.textContent = 'Database loaded successfully!';
 
         UIController.showDataInfo();
         UIController.enableRouteInput();
 
-        // Hide progress bar after a delay
+        // Hide progress text after a delay
         setTimeout(() => {
             if (progressContainer) progressContainer.style.display = 'none';
         }, 2000);
@@ -474,9 +445,8 @@ async function handleLoadData() {
         elements.loadDataBtn.disabled = false;
 
         if (progressText) progressText.textContent = `Error: ${error.message}`;
-        if (progressBar) progressBar.style.width = '0%';
 
-        // Hide progress bar after error
+        // Hide progress text after error
         setTimeout(() => {
             if (progressContainer) progressContainer.style.display = 'none';
         }, 3000);
