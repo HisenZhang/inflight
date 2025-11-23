@@ -242,9 +242,12 @@ async function calculateRoute(waypoints, options = {}) {
 
     // Fetch winds aloft if wind correction is enabled
     let windsData = null;
+    let windsMetadata = null;
     if (enableWinds && altitude && typeof fetchWindsAloft === 'function') {
         try {
-            windsData = await fetchWindsAloft(forecastPeriod);
+            const fetchedData = await fetchWindsAloft(forecastPeriod);
+            windsData = fetchedData.stations;
+            windsMetadata = fetchedData.metadata;
         } catch (error) {
             console.error('[Winds] Failed to fetch winds aloft:', error);
         }
@@ -388,7 +391,8 @@ async function calculateRoute(waypoints, options = {}) {
         totalDistance,
         totalTime: enableTime ? totalTime : null,
         fuelStatus,
-        windData: windsData  // Include fetched wind data for persistence
+        windData: windsData,  // Include fetched wind data for persistence
+        windMetadata: windsMetadata  // Include wind metadata (timestamps, validity)
     };
 }
 

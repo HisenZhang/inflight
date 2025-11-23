@@ -50,6 +50,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Initialize database
         await DataManager.initDB();
 
+        // Check for version changes and auto-reindex if needed
+        await checkVersionAndReindex();
+
         // Setup feature toggles (must be before enableRouteInput)
         UIController.setupFeatureToggles();
 
@@ -458,6 +461,179 @@ async function handleLoadData() {
     }
 }
 
+/**
+ * Validate semantic version string format (e.g., "2.4.1")
+ * @param {string} version - Version string to validate
+ * @returns {boolean} True if valid semantic version format
+ */
+function isValidVersion(version) {
+    return /^\d+\.\d+\.\d+$/.test(version);
+}
+
+/**
+ * Validate cache version format (numeric string)
+ * @param {string} cacheVersion - Cache version to validate (e.g., "110")
+ * @returns {boolean} True if valid cache version format
+ */
+function isValidCacheVersion(cacheVersion) {
+    return /^\d+$/.test(cacheVersion);
+}
+
+/**
+ * Check if app version changed and auto-reindex if needed
+ *
+ * Automatically triggers reindex on:
+ * - Service worker cache version change (CACHE_VERSION bump)
+ * - Major or minor semantic version change (X.Y.0)
+ *
+ * Version tracking uses localStorage keys:
+ * - 'app_version': Semantic version string (e.g., "2.4.1")
+ * - 'app_cache_version': Cache version number string (e.g., "110")
+ *
+ * Process:
+ * 1. First run: Store current versions, no reindex
+ * 2. Version match: Skip reindex
+ * 3. Version change: Clear in-memory data, re-parse cached CSV
+ * 4. On failure: Prompt user with recovery options
+ *
+ * @returns {Promise<void>}
+ * @throws {Error} Logs warning if AppVersion module not available
+ *
+ * @example
+ * // Called during app initialization (after DB init)
+ * await checkVersionAndReindex();
+ *
+ * @sideEffects
+ * - Reads/writes localStorage (app_version, app_cache_version)
+ * - Calls DataManager.clearInMemoryData() on version change
+ * - Calls DataManager.loadFromCache() on version change
+ * - Updates UI via UIController.updateStatus()
+ *
+ * @see {DataManager.checkCachedData}
+ * @see {DataManager.clearInMemoryData}
+ * @see {DataManager.loadFromCache}
+ */
+async function checkVersionAndReindex() {
+    if (!window.AppVersion) {
+        console.warn('[App] AppVersion not available, skipping version check');
+        return;
+    }
+
+    const currentVersion = window.AppVersion.VERSION;
+    const currentCacheVersion = window.AppVersion.CACHE_VERSION;
+
+    // Get stored versions from localStorage
+    let storedVersion = localStorage.getItem('app_version');
+    let storedCacheVersion = localStorage.getItem('app_cache_version');
+
+    // Validate stored versions
+    if (storedVersion && !isValidVersion(storedVersion)) {
+        console.warn('[App] Invalid stored version format:', storedVersion);
+        localStorage.removeItem('app_version');
+        storedVersion = null;
+    }
+
+    if (storedCacheVersion && !isValidCacheVersion(storedCacheVersion)) {
+        console.warn('[App] Invalid stored cache version format:', storedCacheVersion);
+        localStorage.removeItem('app_cache_version');
+        storedCacheVersion = null;
+    }
+
+    console.log('[App] Version check:', {
+        current: currentVersion,
+        stored: storedVersion,
+        currentCache: currentCacheVersion,
+        storedCache: storedCacheVersion
+    });
+
+    // Check if this is first run (no stored version)
+    if (!storedVersion || !storedCacheVersion) {
+        console.log('[App] First run - storing version info');
+        localStorage.setItem('app_version', currentVersion);
+        localStorage.setItem('app_cache_version', String(currentCacheVersion));
+        return;
+    }
+
+    // Parse versions (format: "2.4.1" -> [2, 4, 1])
+    const [currentMajor, currentMinor] = currentVersion.split('.').map(Number);
+    const [storedMajor, storedMinor] = storedVersion.split('.').map(Number);
+
+    // Check if reindex is needed
+    const cacheVersionChanged = String(currentCacheVersion) !== storedCacheVersion;
+    const majorOrMinorChanged = (currentMajor !== storedMajor) || (currentMinor !== storedMinor);
+
+    if (cacheVersionChanged || majorOrMinorChanged) {
+        console.log('[App] Version change detected - auto-reindexing:', {
+            cacheVersionChanged,
+            majorOrMinorChanged,
+            from: `${storedVersion} (cache v${storedCacheVersion})`,
+            to: `${currentVersion} (cache v${currentCacheVersion})`
+        });
+
+        // Check if there's cached data to reindex
+        const hasCachedData = await DataManager.checkCachedData();
+        if (!hasCachedData || !hasCachedData.loaded) {
+            console.log('[App] No cached data to reindex, skipping');
+            localStorage.setItem('app_version', currentVersion);
+            localStorage.setItem('app_cache_version', String(currentCacheVersion));
+            return;
+        }
+
+        try {
+            // Show status
+            UIController.updateStatus('[...] AUTO-REINDEXING (VERSION UPDATE)', 'loading');
+            console.log('[App] Starting automatic reindex...');
+
+            // Clear in-memory data structures but keep cached files
+            await DataManager.clearInMemoryData();
+
+            // Re-parse cached files with updated parser
+            await DataManager.loadFromCache((message, type) => {
+                UIController.updateStatus(message, type);
+                console.log(`[DataManager] ${message}`);
+            });
+
+            UIController.updateStatus('[✓] AUTO-REINDEX COMPLETE', 'success');
+            console.log('[App] Auto-reindex successful');
+
+            // Update stored versions
+            localStorage.setItem('app_version', currentVersion);
+            localStorage.setItem('app_cache_version', String(currentCacheVersion));
+
+        } catch (error) {
+            console.error('[App] Auto-reindex failed:', error);
+            UIController.updateStatus('[!] AUTO-REINDEX FAILED', 'warning');
+
+            // Notify user with actionable guidance
+            const userAction = confirm(
+                'AUTO-REINDEX FAILED\n\n' +
+                `Error: ${error.message}\n\n` +
+                'This can happen if:\n' +
+                '• Cached data is corrupted\n' +
+                '• Database is locked\n' +
+                '• Browser storage is full\n\n' +
+                'OPTIONS:\n' +
+                '✓ OK: Try reloading the page\n' +
+                '✗ Cancel: Skip auto-reindex for this session\n\n' +
+                'You can manually reindex from WELCOME tab → LOAD DATA'
+            );
+
+            if (userAction) {
+                // User chose to reload - don't update versions (will retry)
+                console.log('[App] User chose to reload for retry');
+            } else {
+                // User chose to skip - update versions to prevent retry loop
+                console.log('[App] User chose to skip auto-reindex');
+                localStorage.setItem('app_version', currentVersion);
+                localStorage.setItem('app_cache_version', String(currentCacheVersion));
+                localStorage.setItem('app_skip_reindex', 'true'); // Flag for debugging
+            }
+        }
+    } else {
+        console.log('[App] Version unchanged, no reindex needed');
+    }
+}
+
 async function handleReindexCache() {
     if (!confirm('This will re-parse all cached data files with the latest parser code.\n\nAny parser changes will be applied.\n\nContinue?')) {
         return;
@@ -586,18 +762,18 @@ async function handleCalculateRoute() {
         const burnRateValue = parseFloat(elements.burnRateInput.value);
         const vfrReserve = elements.getSelectedReserve();
 
-        // Validate TAS if wind correction is enabled
-        if (windsEnabled && (isNaN(tasValue) || tasValue <= 0)) {
-            alert('ERROR: TRUE AIRSPEED REQUIRED FOR WIND CORRECTION\n\nEnter TAS in knots (e.g., 120)');
+        // Validate TAS and altitude (now mandatory)
+        if (isNaN(tasValue) || tasValue <= 0) {
+            alert('ERROR: TRUE AIRSPEED REQUIRED\n\nEnter TAS in knots (e.g., 110)');
+            return;
+        }
+
+        if (isNaN(altitudeValue) || altitudeValue < 0) {
+            alert('ERROR: CRUISE ALTITUDE REQUIRED\n\nEnter altitude in feet MSL (e.g., 5500)');
             return;
         }
 
         // Validate fuel inputs if fuel planning is enabled
-        if (fuelEnabled && !windsEnabled) {
-            alert('ERROR: FUEL PLANNING REQUIRES WIND CORRECTION & TIME\n\nEnable WIND CORRECTION & TIME first');
-            return;
-        }
-
         if (fuelEnabled && (isNaN(usableFuelValue) || usableFuelValue <= 0 || isNaN(burnRateValue) || burnRateValue <= 0)) {
             alert('ERROR: FUEL PLANNING REQUIRES VALID INPUTS\n\nEnter usable fuel and burn rate');
             return;
@@ -605,10 +781,10 @@ async function handleCalculateRoute() {
 
         const options = {
             enableWinds: windsEnabled,
-            altitude: windsEnabled ? altitudeValue : null,
+            altitude: altitudeValue, // Always pass altitude (mandatory)
             forecastPeriod: windsEnabled ? forecastPeriod : '06',
-            enableTime: windsEnabled, // Same as winds now
-            tas: windsEnabled ? tasValue : null,
+            enableTime: true, // Always calculate time (requires altitude & TAS)
+            tas: tasValue, // Always pass TAS (mandatory)
             enableFuel: fuelEnabled,
             usableFuel: fuelEnabled ? usableFuelValue : null,
             taxiFuel: fuelEnabled ? taxiFuelValue : null,
@@ -617,10 +793,54 @@ async function handleCalculateRoute() {
         };
 
         // Calculate route (async now to support wind fetching)
-        const { waypoints, legs, totalDistance, totalTime, fuelStatus, windData } = await RouteCalculator.calculateRoute(resolutionResult.waypoints, options);
+        const { waypoints, legs, totalDistance, totalTime, fuelStatus, windData, windMetadata } = await RouteCalculator.calculateRoute(resolutionResult.waypoints, options);
+
+        // Alert user if wind data is stale or expired
+        if (windsEnabled && windMetadata) {
+            const isWithinWindow = Utils.isWithinUseWindow(windMetadata.useWindow);
+            const dataAge = Date.now() - windMetadata.parsedAt;
+
+            // Determine max age based on forecast period
+            // 6hr forecasts update every 6 hours, 12hr/24hr every 12 hours
+            let maxAge;
+            let updateFrequency;
+            if (forecastPeriod === '24') {
+                maxAge = 12 * 60 * 60 * 1000; // 12 hours
+                updateFrequency = '12 hours';
+            } else if (forecastPeriod === '12') {
+                maxAge = 12 * 60 * 60 * 1000; // 12 hours
+                updateFrequency = '12 hours';
+            } else { // '06'
+                maxAge = 6 * 60 * 60 * 1000; // 6 hours
+                updateFrequency = '6 hours';
+            }
+
+            const isStale = dataAge > maxAge;
+
+            if (!isWithinWindow || isStale) {
+                const ageHours = Math.floor(dataAge / (60 * 60 * 1000));
+                let warningMsg = 'WIND DATA WARNING\n\n';
+
+                if (!isWithinWindow) {
+                    warningMsg += `⚠ Wind forecast is OUTSIDE valid time window\n`;
+                    warningMsg += `Valid: ${Utils.formatUseWindow(windMetadata.useWindow)}\n\n`;
+                }
+
+                if (isStale) {
+                    warningMsg += `⚠ Wind data is ${ageHours} hours old\n`;
+                    warningMsg += `(${forecastPeriod}-hour forecasts update every ${updateFrequency})\n\n`;
+                }
+
+                warningMsg += 'This may be cached data from when you were offline.\n';
+                warningMsg += 'Route calculation will continue with this data.\n\n';
+                warningMsg += 'Consider refreshing when online for latest forecasts.';
+
+                alert(warningMsg);
+            }
+        }
 
         // Display results
-        UIController.displayResults(waypoints, legs, totalDistance, totalTime, fuelStatus, options);
+        UIController.displayResults(waypoints, legs, totalDistance, totalTime, fuelStatus, { ...options, windMetadata });
 
         // Display vector map
         VectorMap.displayMap(waypoints, legs, options);
@@ -651,8 +871,8 @@ async function handleCalculateRoute() {
             totalTime,
             fuelStatus,
             options,
-            altitude: windsEnabled ? altitudeValue : null,
-            tas: windsEnabled ? tasValue : null,
+            altitude: altitudeValue, // Always store (mandatory)
+            tas: tasValue, // Always store (mandatory)
             windData: windData
         };
 

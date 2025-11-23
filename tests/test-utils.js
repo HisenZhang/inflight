@@ -94,6 +94,31 @@ TestFramework.describe('Utils.formatters', function({ it }) {
         assert.equals(result, '0M');
     });
 
+    it('should format decimal hours with hours and minutes', () => {
+        const result = window.Utils.formatDecimalHours(2.5);
+        assert.equals(result, '2H 30M');
+    });
+
+    it('should format decimal hours as whole hours', () => {
+        const result = window.Utils.formatDecimalHours(3.0);
+        assert.equals(result, '3H');
+    });
+
+    it('should format decimal hours as minutes only', () => {
+        const result = window.Utils.formatDecimalHours(0.75);
+        assert.equals(result, '45M');
+    });
+
+    it('should handle zero decimal hours', () => {
+        const result = window.Utils.formatDecimalHours(0);
+        assert.equals(result, '0M');
+    });
+
+    it('should handle null decimal hours', () => {
+        const result = window.Utils.formatDecimalHours(null);
+        assert.equals(result, '--');
+    });
+
     it('should format time correctly', () => {
         const date = new Date('2024-01-01T14:30:00');
         const result = window.Utils.formatTime(date);

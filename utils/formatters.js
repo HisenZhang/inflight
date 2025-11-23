@@ -132,6 +132,28 @@ function formatDuration(minutes) {
 }
 
 /**
+ * Format decimal hours to hours and minutes
+ * @param {number} decimalHours - Duration in decimal hours (e.g., 2.5)
+ * @returns {string} Formatted duration string (e.g., "2H 30M" or "30M")
+ */
+function formatDecimalHours(decimalHours) {
+    if (decimalHours === null || decimalHours === undefined || isNaN(decimalHours) || decimalHours < 0) {
+        return '--';
+    }
+
+    const hours = Math.floor(decimalHours);
+    const mins = Math.round((decimalHours - hours) * 60);
+
+    if (hours > 0 && mins > 0) {
+        return `${hours}H ${mins}M`;
+    } else if (hours > 0) {
+        return `${hours}H`;
+    } else {
+        return `${mins}M`;
+    }
+}
+
+/**
  * Format time to HH:MM format
  * @param {Date|number} time - Date object or timestamp
  * @returns {string} Formatted time string (e.g., "14:30")
@@ -154,6 +176,107 @@ function formatTime(time) {
  */
 function formatETA(time) {
     return formatTime(time);
+}
+
+/**
+ * Parse Zulu time string to human readable format
+ * @param {string} zuluTime - Zulu time string (e.g., "230000Z" or "230600Z")
+ * @returns {string} Formatted time string (e.g., "Nov 23 00:00Z" or "06:00Z")
+ */
+function formatZuluTime(zuluTime) {
+    if (!zuluTime || typeof zuluTime !== 'string') {
+        return '--';
+    }
+
+    // Extract day, hour, minute from DDHHMMZ format
+    const match = zuluTime.match(/^(\d{2})(\d{2})(\d{2})Z$/);
+    if (!match) {
+        return zuluTime; // Return original if format doesn't match
+    }
+
+    const day = parseInt(match[1]);
+    const hour = match[2];
+    const minute = match[3];
+
+    // Get current month/year for context
+    const now = new Date();
+    const currentDay = now.getUTCDate();
+
+    // If day matches current day, just show time
+    if (day === currentDay) {
+        return `${hour}:${minute}Z`;
+    }
+
+    // Otherwise show day and time
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const month = months[now.getUTCMonth()];
+    return `${month} ${day} ${hour}:${minute}Z`;
+}
+
+/**
+ * Parse use window string to human readable format
+ * @param {string} useWindow - Use window string (e.g., "0200-0900Z")
+ * @returns {string} Formatted window (e.g., "02:00-09:00Z")
+ */
+function formatUseWindow(useWindow) {
+    if (!useWindow || typeof useWindow !== 'string') {
+        return '--';
+    }
+
+    const match = useWindow.match(/^(\d{2})(\d{2})-(\d{2})(\d{2})Z$/);
+    if (!match) {
+        return useWindow; // Return original if format doesn't match
+    }
+
+    return `${match[1]}:${match[2]}-${match[3]}:${match[4]}Z`;
+}
+
+/**
+ * Check if current UTC time is within a use window
+ * @param {string} useWindow - Use window string (e.g., "0200-0900Z")
+ * @returns {boolean} True if current time is within window
+ */
+function isWithinUseWindow(useWindow) {
+    if (!useWindow) return false;
+
+    const match = useWindow.match(/^(\d{2})(\d{2})-(\d{2})(\d{2})Z$/);
+    if (!match) return false;
+
+    const now = new Date();
+    const currentUTC = now.getUTCHours() * 100 + now.getUTCMinutes();
+
+    const startTime = parseInt(match[1] + match[2]);
+    const endTime = parseInt(match[3] + match[4]);
+
+    return currentUTC >= startTime && currentUTC <= endTime;
+}
+
+/**
+ * Get age of data in human readable format
+ * @param {number} timestamp - Timestamp in milliseconds
+ * @returns {string} Age string (e.g., "2 min ago", "1 hr ago")
+ */
+function getDataAge(timestamp) {
+    if (!timestamp) return '--';
+
+    const ageMs = Date.now() - timestamp;
+    const ageMinutes = Math.floor(ageMs / 60000);
+
+    if (ageMinutes < 1) {
+        return 'Just now';
+    } else if (ageMinutes < 60) {
+        return `${ageMinutes} min ago`;
+    } else {
+        const ageHours = Math.floor(ageMinutes / 60);
+        if (ageHours === 1) {
+            return '1 hr ago';
+        } else if (ageHours < 24) {
+            return `${ageHours} hrs ago`;
+        } else {
+            const ageDays = Math.floor(ageHours / 24);
+            return `${ageDays} day${ageDays > 1 ? 's' : ''} ago`;
+        }
+    }
 }
 
 // ============================================
@@ -325,8 +448,13 @@ window.Utils = {
 
     // Time formatting
     formatDuration,
+    formatDecimalHours,
     formatTime,
     formatETA,
+    formatZuluTime,
+    formatUseWindow,
+    isWithinUseWindow,
+    getDataAge,
 
     // Speed formatting
     formatSpeed,

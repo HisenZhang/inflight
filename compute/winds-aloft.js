@@ -17,8 +17,9 @@ const WIND_LEVELS = [3000, 6000, 9000, 12000, 18000, 24000, 30000, 34000, 39000]
 
 // Winds aloft cache (expires after 3 hours)
 let windsCache = {
-    data: null,
-    timestamp: null,
+    stations: null,
+    metadata: null,
+    fetchedAt: null,
     forecastPeriod: null
 };
 
@@ -27,15 +28,18 @@ const CACHE_EXPIRY = 3 * 60 * 60 * 1000; // 3 hours
 /**
  * Fetch winds aloft from Aviation Weather API
  * @param {string} forecastPeriod - '06', '12', or '24' for hours ahead
- * @returns {Promise<Object>} - Parsed winds data by station
+ * @returns {Promise<Object>} - {stations: {...}, metadata: {...}}
  */
 async function fetchWindsAloft(forecastPeriod = '06') {
     // Check cache
-    if (windsCache.data &&
+    if (windsCache.stations &&
         windsCache.forecastPeriod === forecastPeriod &&
-        windsCache.timestamp &&
-        (Date.now() - windsCache.timestamp) < CACHE_EXPIRY) {
-        return windsCache.data;
+        windsCache.fetchedAt &&
+        (Date.now() - windsCache.fetchedAt) < CACHE_EXPIRY) {
+        return {
+            stations: windsCache.stations,
+            metadata: windsCache.metadata
+        };
     }
 
     const url = `https://cors.hisenz.com/?url=https://aviationweather.gov/api/data/windtemp?region=us&level=low&fcst=${forecastPeriod}`;
@@ -47,21 +51,45 @@ async function fetchWindsAloft(forecastPeriod = '06') {
         }
 
         const text = await response.text();
-        const windsData = parseWindsAloft(text);
+        const parsedData = parseWindsAloft(text);
 
         // Cache the result
         windsCache = {
-            data: windsData,
-            timestamp: Date.now(),
+            stations: parsedData.stations,
+            metadata: parsedData.metadata,
+            fetchedAt: Date.now(),
             forecastPeriod: forecastPeriod
         };
 
-        return windsData;
+        console.log('[Winds Aloft] Fetched and cached wind data:', {
+            dataBasedOn: parsedData.metadata.dataBasedOn,
+            validTime: parsedData.metadata.validTime,
+            useWindow: parsedData.metadata.useWindow,
+            stationCount: Object.keys(parsedData.stations).length
+        });
+
+        return parsedData;
 
     } catch (error) {
         console.error('[Winds Aloft] Fetch error:', error);
         throw error;
     }
+}
+
+/**
+ * Get cached wind data metadata (if available)
+ * @returns {Object|null} - Metadata or null if no cache
+ */
+function getWindsMetadata() {
+    if (!windsCache.metadata) {
+        return null;
+    }
+
+    return {
+        ...windsCache.metadata,
+        fetchedAt: windsCache.fetchedAt,
+        forecastPeriod: windsCache.forecastPeriod
+    };
 }
 
 /**
@@ -75,17 +103,44 @@ async function fetchWindsAloft(forecastPeriod = '06') {
  * - Missing levels: some stations don't report all altitudes
  *
  * @param {string} text - Raw winds aloft text
- * @returns {Object} - Winds data by station {station: {altitude: {dir, spd, temp}}}
+ * @returns {Object} - {stations: {...}, metadata: {dataBasedOn, validTime, useWindow, parsedAt}}
  */
 function parseWindsAloft(text) {
     const lines = text.split('\n');
     const windsData = {};
+    const metadata = {
+        dataBasedOn: null,    // e.g., "230000Z"
+        validTime: null,       // e.g., "230600Z"
+        useWindow: null,       // e.g., "0200-0900Z"
+        parsedAt: Date.now()   // Timestamp when parsed
+    };
 
     let altitudes = [];
 
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
         if (!line) continue;
+
+        // Parse metadata lines
+        // Example: "DATA BASED ON 230000Z"
+        const dataBasedMatch = line.match(/DATA BASED ON\s+(\d{6}Z)/i);
+        if (dataBasedMatch) {
+            metadata.dataBasedOn = dataBasedMatch[1];
+            continue;
+        }
+
+        // Example: "VALID 230600Z   FOR USE 0200-0900Z. TEMPS NEG ABV 24000"
+        const validMatch = line.match(/VALID\s+(\d{6}Z)/i);
+        if (validMatch) {
+            metadata.validTime = validMatch[1];
+
+            // Extract use window from same line
+            const useMatch = line.match(/FOR USE\s+(\d{4})-(\d{4})Z/i);
+            if (useMatch) {
+                metadata.useWindow = `${useMatch[1]}-${useMatch[2]}Z`;
+            }
+            continue;
+        }
 
         // Look for FT line (altitude levels)
         // Example: "FT  3000    6000    9000   12000   18000   24000  30000  34000  39000"
@@ -120,7 +175,10 @@ function parseWindsAloft(text) {
         }
     }
 
-    return windsData;
+    return {
+        stations: windsData,
+        metadata: metadata
+    };
 }
 
 /**
@@ -454,6 +512,7 @@ function getForecastPeriod(departureTime) {
 if (typeof window !== 'undefined') {
     window.WindsAloft = {
         fetchWindsAloft,
+        getWindsMetadata,
         parseWindsAloft,
         parseWindCode,
         findNearestStations,

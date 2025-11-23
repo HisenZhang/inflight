@@ -428,12 +428,11 @@ function enableRouteInput() {
         inputSection.style.display = 'block';
     }
 
-    // Enable inputs based on feature toggles (if they're enabled)
-    if (elements.isWindsEnabled && elements.isWindsEnabled()) {
-        elements.altitudeInput.disabled = false;
-        elements.tasInput.disabled = false;
-    }
+    // Always enable altitude and TAS (mandatory fields)
+    elements.altitudeInput.disabled = false;
+    elements.tasInput.disabled = false;
 
+    // Enable fuel inputs based on feature toggle (if enabled)
     if (elements.isFuelEnabled && elements.isFuelEnabled()) {
         elements.usableFuelInput.disabled = false;
         elements.taxiFuelInput.disabled = false;
@@ -442,7 +441,9 @@ function enableRouteInput() {
 }
 
 function disableRouteInput() {
+    elements.departureInput.disabled = true;
     elements.routeInput.disabled = true;
+    elements.destinationInput.disabled = true;
     elements.altitudeInput.disabled = true;
     elements.tasInput.disabled = true;
     elements.calculateBtn.disabled = true;
@@ -464,22 +465,16 @@ function setupFeatureToggles() {
     let windsEnabled = false;
     let fuelEnabled = false;
 
-    // Wind correction & time toggle (merged) - make entire row clickable
+    // Winds aloft data toggle - make entire row clickable
     const windsToggleRow = elements.enableWindsToggle.parentElement;
     windsToggleRow.addEventListener('click', () => {
         windsEnabled = !windsEnabled;
         if (windsEnabled) {
             elements.enableWindsToggle.classList.add('checked');
             elements.windInputs.classList.remove('hidden');
-            if (!elements.routeInput.disabled) {
-                elements.altitudeInput.disabled = false;
-                elements.tasInput.disabled = false;
-            }
         } else {
             elements.enableWindsToggle.classList.remove('checked');
             elements.windInputs.classList.add('hidden');
-            elements.altitudeInput.disabled = true;
-            elements.tasInput.disabled = true;
         }
     });
 
@@ -1164,18 +1159,55 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelSt
         `;
     }
 
+    // Add wind data validity if available
+    if (options.windMetadata && options.enableWinds) {
+        const metadata = options.windMetadata;
+        const isWithinWindow = Utils.isWithinUseWindow(metadata.useWindow);
+        const validityColor = isWithinWindow ? 'text-metric' : 'text-warning';
+        const validityIcon = isWithinWindow ? '✓' : '⚠';
+        const dataAge = Utils.getDataAge(metadata.parsedAt);
+
+        // Determine max age based on forecast period
+        const forecastPeriod = metadata.forecastPeriod || '06';
+        let maxAge;
+        if (forecastPeriod === '24' || forecastPeriod === '12') {
+            maxAge = 12 * 60 * 60 * 1000; // 12 hours for 12hr/24hr forecasts
+        } else {
+            maxAge = 6 * 60 * 60 * 1000; // 6 hours for 6hr forecasts
+        }
+
+        const isStale = metadata.parsedAt && (Date.now() - metadata.parsedAt) > maxAge;
+        const ageColor = isStale ? 'text-warning' : 'text-secondary';
+
+        summaryHTML += `
+        <div class="summary-item" style="border-top: 1px solid var(--border-color); padding-top: 8px; margin-top: 8px;">
+            <span class="summary-label text-secondary text-sm">WINDS DATA (${forecastPeriod}HR)</span>
+            <span class="summary-value ${validityColor}">${validityIcon} ${isWithinWindow ? 'CURRENT' : 'OUTSIDE VALID WINDOW'}</span>
+        </div>
+        <div class="summary-item">
+            <span class="summary-label text-secondary text-sm">VALID FOR</span>
+            <span class="summary-value text-secondary">${Utils.formatUseWindow(metadata.useWindow)}</span>
+        </div>
+        <div class="summary-item">
+            <span class="summary-label text-secondary text-sm">ISSUED</span>
+            <span class="summary-value ${ageColor}">${Utils.formatZuluTime(metadata.dataBasedOn)} <span class="text-xs">(${dataAge})</span></span>
+        </div>
+        `;
+    }
+
     // Add fuel status if available
     if (fuelStatus) {
         const fuelColor = fuelStatus.isSufficient ? 'text-metric' : 'text-error';
         const fuelIcon = fuelStatus.isSufficient ? '✓' : '!';
+        const borderTop = options.windMetadata && options.enableWinds ? '' : 'border-top: 1px solid var(--border-color); padding-top: 8px; margin-top: 8px;';
         summaryHTML += `
-        <div class="summary-item" style="border-top: 1px solid var(--border-color); padding-top: 8px; margin-top: 8px;">
+        <div class="summary-item" style="${borderTop}">
             <span class="summary-label text-secondary text-sm">FUEL STATUS</span>
             <span class="summary-value ${fuelColor} font-bold">${fuelIcon} ${fuelStatus.isSufficient ? 'SUFFICIENT' : 'INSUFFICIENT'}</span>
         </div>
         <div class="summary-item">
             <span class="summary-label text-secondary text-sm">FINAL FOB</span>
-            <span class="summary-value ${fuelColor} font-bold">${fuelStatus.finalFob.toFixed(1)} GAL (${(fuelStatus.finalFob / fuelStatus.burnRate).toFixed(1)}H)</span>
+            <span class="summary-value ${fuelColor} font-bold">${fuelStatus.finalFob.toFixed(1)} GAL (${Utils.formatDecimalHours(fuelStatus.finalFob / fuelStatus.burnRate)})</span>
         </div>
         <div class="summary-item">
             <span class="summary-label text-secondary text-sm">FUEL RESERVE REQ</span>
@@ -1255,7 +1287,7 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelSt
                         grouped[type].push(f.frequency.toFixed(3));
                     });
                     const freqItems = Object.entries(grouped).map(([type, freqs]) =>
-                        `<span class="text-metric text-xs">${type} ${freqs.join('/')}</span>`
+                        `<span class="text-metric text-xs"><strong>${type}</strong> ${freqs.join('/')}</span>`
                     );
                     freqHTML = freqItems.join(' ');
                 } else {
@@ -1441,7 +1473,7 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelSt
                 fuelSection = `
                     <div class="leg-section">
                         <span class="leg-secondary">FUEL BURN <span class="text-navaid">${leg.fuelBurnGal.toFixed(1)}GAL</span></span>
-                        <span class="leg-secondary">• FOB <span class="${fobColor} font-bold">${leg.fobGal.toFixed(1)}GAL (${leg.fobTime.toFixed(1)}H)</span></span>
+                        <span class="leg-secondary">• FOB <span class="${fobColor} font-bold">${leg.fobGal.toFixed(1)}GAL (${Utils.formatDecimalHours(leg.fobTime)})</span></span>
                     </div>
                 `;
             }

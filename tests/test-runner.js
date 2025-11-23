@@ -30,11 +30,13 @@ const files = {
     routeParser: fs.readFileSync(path.join(projectRoot, 'compute/route-parser.js'), 'utf8'),
     routeResolver: fs.readFileSync(path.join(projectRoot, 'compute/route-resolver.js'), 'utf8'),
     routeEngine: fs.readFileSync(path.join(projectRoot, 'compute/route-engine.js'), 'utf8'),
+    windsAloft: fs.readFileSync(path.join(projectRoot, 'compute/winds-aloft.js'), 'utf8'),
     testFramework: fs.readFileSync(path.join(__dirname, 'test-framework.js'), 'utf8'),
     testUtils: fs.readFileSync(path.join(__dirname, 'test-utils.js'), 'utf8'),
     testState: fs.readFileSync(path.join(__dirname, 'test-state.js'), 'utf8'),
     testRouteParser: fs.readFileSync(path.join(__dirname, 'test-route-parser.js'), 'utf8'),
-    testChecksum: fs.readFileSync(path.join(__dirname, 'test-checksum.js'), 'utf8')
+    testChecksum: fs.readFileSync(path.join(__dirname, 'test-checksum.js'), 'utf8'),
+    testWinds: fs.readFileSync(path.join(__dirname, 'test-winds.js'), 'utf8')
 };
 
 // Create a minimal DOM environment
@@ -105,11 +107,13 @@ let testResults = {
             ${files.routeParser}
             ${files.routeResolver}
             ${files.routeEngine}
+            ${files.windsAloft}
             ${files.testFramework}
             ${files.testUtils}
             ${files.testState}
             ${files.testRouteParser}
             ${files.testChecksum}
+            ${files.testWinds}
         `;
 
         // Evaluate in window context
