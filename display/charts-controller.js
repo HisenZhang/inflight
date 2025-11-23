@@ -5,135 +5,197 @@
 
 window.ChartsController = {
     /**
-     * Shows chart selection modal for an airport
-     * @param {string} icao - Airport ICAO code
-     * @param {string} name - Airport name for display
+     * Initialize charts tab functionality
      */
-    showChartsModal(icao, name) {
-        const charts = window.DataManager.getCharts(icao);
+    init() {
+        const searchBtn = document.getElementById('chartsSearchBtn');
+        const airportInput = document.getElementById('chartsAirportInput');
 
-        if (!charts || charts.length === 0) {
-            this._showNoChartsMessage(icao, name);
-            return;
+        if (searchBtn) {
+            searchBtn.addEventListener('click', () => this.searchCharts());
         }
 
-        const cycle = window.DataManager.getChartsCycle();
-        this._renderChartsModal(icao, name, charts, cycle);
+        if (airportInput) {
+            // Search on Enter key
+            airportInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    this.searchCharts();
+                }
+            });
+
+            // Auto-uppercase input
+            airportInput.addEventListener('input', (e) => {
+                e.target.value = e.target.value.toUpperCase();
+            });
+        }
     },
 
     /**
-     * Renders the charts selection modal
+     * Search for charts for entered airport
+     */
+    searchCharts() {
+        const airportInput = document.getElementById('chartsAirportInput');
+        if (!airportInput) return;
+
+        const icao = airportInput.value.trim().toUpperCase();
+        if (!icao) {
+            this.showError('Please enter an airport ICAO code');
+            return;
+        }
+
+        this.showChartsForAirport(icao);
+    },
+
+    /**
+     * Shows charts for an airport (called from navlog or search)
+     * @param {string} icao - Airport ICAO code
+     * @param {string} name - Optional airport name for display
+     */
+    showChartsForAirport(icao, name) {
+        // Switch to charts tab
+        const chartsTab = document.querySelector('[data-tab="charts"]');
+        if (chartsTab) {
+            chartsTab.click();
+        }
+
+        // Set input value
+        const airportInput = document.getElementById('chartsAirportInput');
+        if (airportInput) {
+            airportInput.value = icao;
+        }
+
+        const charts = window.DataManager.getCharts(icao);
+
+        if (!charts || charts.length === 0) {
+            this._showNoCharts(icao, name);
+            return;
+        }
+
+        // Get airport name if not provided
+        if (!name) {
+            const airport = window.DataManager.getAirport(icao);
+            name = airport ? airport.name : icao;
+        }
+
+        const cycle = window.DataManager.getChartsCycle();
+        this._renderCharts(icao, name, charts, cycle);
+    },
+
+    /**
+     * Renders charts in the tab
      * @private
      */
-    _renderChartsModal(icao, name, charts, cycle) {
+    _renderCharts(icao, name, charts, cycle) {
+        const resultsDiv = document.getElementById('chartsResults');
+        const contentDiv = document.getElementById('chartsResultsContent');
+        const placeholderDiv = document.getElementById('chartsPlaceholder');
+
+        if (!resultsDiv || !contentDiv) return;
+
         // Group charts by type
         const grouped = window.ChartsAdapter.groupChartsByType(charts);
 
-        // Build modal HTML
-        let modalHTML = `
-            <div id="charts-modal" class="modal-overlay">
-                <div class="modal-content charts-modal">
-                    <div class="modal-header">
-                        <h2>${name} (${icao})</h2>
-                        <button class="modal-close" onclick="ChartsController.closeModal()">&times;</button>
-                    </div>
-                    <div class="modal-body">
-                        <p class="text-secondary text-sm mb-md">
-                            <strong>TPP Cycle:</strong> ${cycle || 'Unknown'} |
-                            <strong>Total Charts:</strong> ${charts.length}
-                        </p>
-                        <p class="text-warning text-xs mb-md">
-                            ⚠️ Requires internet connection to view charts
-                        </p>
+        // Build content HTML with cleaner structure
+        let contentHTML = `
+            <div class="data-section">
+                <h3 class="section-header">${icao} - ${name}</h3>
+                <div class="data-info">
+                    <p><strong>TPP Cycle:</strong> ${cycle || 'Unknown'}</p>
+                    <p style="margin-bottom: 0;"><strong>Total Charts:</strong> ${charts.length}</p>
+                </div>
+            </div>
         `;
 
         // Airport Diagrams (APD)
         if (grouped.APD.length > 0) {
-            modalHTML += this._renderChartGroup('Airport Diagrams', grouped.APD);
+            contentHTML += this._renderChartGroup('AIRPORT DIAGRAMS', grouped.APD, 'airport');
         }
 
-        // Approach Procedures (IAP)
+        // Instrument Approach Procedures (IAP) - organized by type
         if (grouped.IAP.length > 0) {
-            modalHTML += this._renderChartGroup('Instrument Approaches', grouped.IAP);
+            const approachGroups = window.ChartsAdapter.groupApproachesByType(grouped.IAP);
+
+            contentHTML += `<div class="data-section">
+                <h3 class="section-header">INSTRUMENT APPROACHES (${grouped.IAP.length})</h3>`;
+
+            if (approachGroups.ILS.length > 0) {
+                contentHTML += this._renderApproachSubgroup('ILS', approachGroups.ILS);
+            }
+            if (approachGroups.RNAV.length > 0) {
+                contentHTML += this._renderApproachSubgroup('RNAV (GPS)', approachGroups.RNAV);
+            }
+            if (approachGroups.GPS.length > 0) {
+                contentHTML += this._renderApproachSubgroup('GPS', approachGroups.GPS);
+            }
+            if (approachGroups.VOR.length > 0) {
+                contentHTML += this._renderApproachSubgroup('VOR', approachGroups.VOR);
+            }
+            if (approachGroups.NDB.length > 0) {
+                contentHTML += this._renderApproachSubgroup('NDB', approachGroups.NDB);
+            }
+            if (approachGroups.LOC.length > 0) {
+                contentHTML += this._renderApproachSubgroup('LOC', approachGroups.LOC);
+            }
+            if (approachGroups.OTHER.length > 0) {
+                contentHTML += this._renderApproachSubgroup('OTHER', approachGroups.OTHER);
+            }
+
+            contentHTML += `</div>`;
         }
 
         // Departure Procedures (DP + ODP)
         const departures = [...grouped.DP, ...grouped.ODP];
         if (departures.length > 0) {
-            modalHTML += this._renderChartGroup('Departure Procedures', departures);
+            contentHTML += this._renderChartGroup('DEPARTURE PROCEDURES', departures, 'navaid');
         }
 
         // Standard Arrivals (STAR)
         if (grouped.STAR.length > 0) {
-            modalHTML += this._renderChartGroup('Standard Arrivals', grouped.STAR);
+            contentHTML += this._renderChartGroup('STANDARD ARRIVALS', grouped.STAR, 'navaid');
         }
 
         // Minimums (MIN)
         if (grouped.MIN.length > 0) {
-            modalHTML += this._renderChartGroup('Minimums', grouped.MIN);
+            contentHTML += this._renderChartGroup('TAKEOFF/ALTERNATE MINIMUMS', grouped.MIN, 'secondary');
         }
 
         // Hot Spots (HOT)
         if (grouped.HOT.length > 0) {
-            modalHTML += this._renderChartGroup('Hot Spots', grouped.HOT);
+            contentHTML += this._renderChartGroup('HOT SPOTS', grouped.HOT, 'warning');
         }
 
         // Other
         if (grouped.OTHER.length > 0) {
-            modalHTML += this._renderChartGroup('Other', grouped.OTHER);
+            contentHTML += this._renderChartGroup('OTHER CHARTS', grouped.OTHER, 'secondary');
         }
 
-        modalHTML += `
-                    </div>
-                </div>
-            </div>
-        `;
-
-        // Inject modal into DOM
-        const existingModal = document.getElementById('charts-modal');
-        if (existingModal) {
-            existingModal.remove();
+        contentDiv.innerHTML = contentHTML;
+        resultsDiv.style.display = 'block';
+        if (placeholderDiv) {
+            placeholderDiv.style.display = 'none';
         }
-
-        document.body.insertAdjacentHTML('beforeend', modalHTML);
-
-        // Add event listener to close on overlay click
-        const modal = document.getElementById('charts-modal');
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                this.closeModal();
-            }
-        });
-
-        // Add keyboard listener for ESC key
-        this._escapeHandler = (e) => {
-            if (e.key === 'Escape') {
-                this.closeModal();
-            }
-        };
-        document.addEventListener('keydown', this._escapeHandler);
     },
 
     /**
-     * Renders a group of charts
+     * Renders a chart group section
      * @private
+     * @param {string} title - Group title
+     * @param {Array} charts - Array of charts
+     * @param {string} colorClass - Color class for title (airport, navaid, warning, etc.)
      */
-    _renderChartGroup(title, charts) {
+    _renderChartGroup(title, charts, colorClass = 'primary') {
         let html = `
-            <div class="chart-group">
-                <h3 class="chart-group-title">${title} (${charts.length})</h3>
+            <div class="data-section">
+                <h3 class="section-header text-${colorClass}">${title} (${charts.length})</h3>
                 <div class="chart-list">
         `;
 
         charts.forEach(chart => {
+            const cleanName = this._cleanChartName(chart.name);
             html += `
-                <a href="${chart.url}"
-                   target="_blank"
-                   rel="noopener noreferrer"
-                   class="chart-item">
-                    <span class="chart-name">${chart.name}</span>
-                    <span class="chart-icon">↗</span>
-                </a>
+                <button class="btn btn-secondary chart-btn" onclick="window.open('${chart.url}', '_blank')">
+                    ${cleanName}
+                </button>
             `;
         });
 
@@ -146,67 +208,130 @@ window.ChartsController = {
     },
 
     /**
-     * Shows message when no charts are available
+     * Renders approach subgroup with proper formatting
      * @private
      */
-    _showNoChartsMessage(icao, name) {
-        const modalHTML = `
-            <div id="charts-modal" class="modal-overlay">
-                <div class="modal-content charts-modal">
-                    <div class="modal-header">
-                        <h2>${name} (${icao})</h2>
-                        <button class="modal-close" onclick="ChartsController.closeModal()">&times;</button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="text-center text-secondary">
-                            <p class="text-lg mb-md">No charts available for this airport</p>
-                            <p class="text-sm">
-                                Charts are only available for airports with published instrument procedures,
-                                airport diagrams, or other FAA Terminal Procedures Publications.
-                            </p>
-                        </div>
-                    </div>
+    _renderApproachSubgroup(typeLabel, charts) {
+        let html = `
+            <div class="chart-subgroup">
+                <div class="chart-subgroup-header">
+                    <span class="text-sm font-bold text-primary">${typeLabel}</span>
+                    <span class="text-secondary text-xs"> (${charts.length})</span>
+                </div>
+                <div class="chart-list">
+        `;
+
+        charts.forEach(chart => {
+            const formattedName = this._formatApproachName(chart.name);
+            html += `
+                <button class="btn btn-secondary chart-btn" onclick="window.open('${chart.url}', '_blank')">
+                    ${formattedName}
+                </button>
+            `;
+        });
+
+        html += `
                 </div>
             </div>
         `;
 
-        const existingModal = document.getElementById('charts-modal');
-        if (existingModal) {
-            existingModal.remove();
-        }
-
-        document.body.insertAdjacentHTML('beforeend', modalHTML);
-
-        // Add event listener to close on overlay click
-        const modal = document.getElementById('charts-modal');
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                this.closeModal();
-            }
-        });
-
-        // Add keyboard listener for ESC key
-        this._escapeHandler = (e) => {
-            if (e.key === 'Escape') {
-                this.closeModal();
-            }
-        };
-        document.addEventListener('keydown', this._escapeHandler);
+        return html;
     },
 
     /**
-     * Closes the charts modal
+     * Cleans and formats chart name (simple charts)
+     * @private
      */
-    closeModal() {
-        const modal = document.getElementById('charts-modal');
-        if (modal) {
-            modal.remove();
+    _cleanChartName(name) {
+        // Just return the name with runway highlighting
+        return name.replace(/RWY\s+(\d{1,2}[LCR]?)/gi, (_match, rwy) => {
+            return `RWY <span class="text-airport font-bold">${rwy}</span>`;
+        });
+    },
+
+    /**
+     * Formats approach chart name with color coding
+     * @private
+     */
+    _formatApproachName(name) {
+        let formattedName = name;
+
+        // Highlight runway numbers
+        formattedName = formattedName.replace(/RWY\s+(\d{1,2}[LCR]?)/gi, (_match, rwy) => {
+            return `RWY <span class="text-airport font-bold">${rwy}</span>`;
+        });
+
+        // Highlight approach types
+        const nameUpper = name.toUpperCase();
+
+        if (nameUpper.startsWith('ILS ') || nameUpper.includes(' ILS ')) {
+            formattedName = formattedName.replace(/\bILS\b/i, '<span class="text-reporting font-bold">ILS</span>');
+        } else if (nameUpper.startsWith('RNAV')) {
+            formattedName = formattedName.replace(/\bRNAV\b/i, '<span class="text-navaid font-bold">RNAV</span>');
+        } else if (nameUpper.startsWith('GPS')) {
+            formattedName = formattedName.replace(/\bGPS\b/i, '<span class="text-navaid font-bold">GPS</span>');
+        } else if (nameUpper.startsWith('VOR')) {
+            formattedName = formattedName.replace(/\bVOR\b/i, '<span class="text-metric font-bold">VOR</span>');
+        } else if (nameUpper.startsWith('NDB')) {
+            formattedName = formattedName.replace(/\bNDB\b/i, '<span class="text-reporting font-bold">NDB</span>');
+        } else if (nameUpper.startsWith('LOC')) {
+            formattedName = formattedName.replace(/\bLOC\b/i, '<span class="text-reporting font-bold">LOC</span>');
         }
 
-        // Remove keyboard listener
-        if (this._escapeHandler) {
-            document.removeEventListener('keydown', this._escapeHandler);
-            this._escapeHandler = null;
+        return formattedName;
+    },
+
+    /**
+     * Shows no charts message
+     * @private
+     */
+    _showNoCharts(icao, name) {
+        const resultsDiv = document.getElementById('chartsResults');
+        const contentDiv = document.getElementById('chartsResultsContent');
+        const placeholderDiv = document.getElementById('chartsPlaceholder');
+
+        if (!resultsDiv || !contentDiv) return;
+
+        const displayName = name || icao;
+        contentDiv.innerHTML = `
+            <div class="data-section">
+                <h3 class="section-header">${icao} - ${displayName}</h3>
+                <div class="data-info">
+                    <p class="text-warning">No charts available for this airport.</p>
+                    <p style="margin-bottom: 0;">Charts are only available for US airports with published instrument procedures. This airport may be international (non-US), may not have instrument approaches, or may be a small VFR-only airport.</p>
+                </div>
+            </div>
+        `;
+
+        resultsDiv.style.display = 'block';
+        if (placeholderDiv) {
+            placeholderDiv.style.display = 'none';
+        }
+    },
+
+    /**
+     * Shows error message
+     * @private
+     */
+    showError(message) {
+        const resultsDiv = document.getElementById('chartsResults');
+        const contentDiv = document.getElementById('chartsResultsContent');
+        const placeholderDiv = document.getElementById('chartsPlaceholder');
+
+        if (!resultsDiv || !contentDiv) return;
+
+        contentDiv.innerHTML = `
+            <div class="data-section">
+                <h3 class="section-header text-warning">ERROR</h3>
+                <div class="data-info">
+                    <p class="text-warning">${message}</p>
+                </div>
+            </div>
+        `;
+
+        resultsDiv.style.display = 'block';
+        if (placeholderDiv) {
+            placeholderDiv.style.display = 'none';
         }
     }
 };

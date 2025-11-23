@@ -341,6 +341,46 @@ header {
     user-select: none;
 }
 
+/* Base input group styling (no drop line) */
+.input-group-styled .input-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    margin-bottom: var(--space-sm);
+}
+
+.input-group-styled label {
+    min-width: 150px;
+    letter-spacing: 1px;
+}
+
+.input-group-styled input {
+    padding: 6px var(--space-sm);
+    border: 2px solid var(--border-color);
+    background: var(--bg-primary);
+    color: var(--color-airport);
+    font-size: 0.95rem;
+    font-family: inherit;
+    letter-spacing: 1px;
+}
+
+.input-group-styled input[type="number"],
+.input-group-styled input[type="time"],
+.input-group-styled input[type="text"] {
+    width: 120px;
+}
+
+.input-group-styled input:focus {
+    outline: none;
+    border-color: var(--color-metric);
+}
+
+.input-group-styled input:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+/* Feature inputs with drop line (for optional features) */
 .feature-inputs {
     margin-left: var(--space-xl);
     padding: var(--space-md);
@@ -1493,27 +1533,54 @@ select option:checked {
     }
 }
 
+/* ============================================
+   CHARTS TAB
+   ============================================ */
+
+/* Chart list container */
+.chart-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+
+/* Chart buttons */
+.chart-btn {
+    width: 100%;
+    text-align: left;
+    justify-content: flex-start;
+    padding: var(--space-sm) var(--space-md);
+    font-size: 0.85rem;
+    line-height: 1.4;
+}
+
+.chart-btn:hover {
+    border-color: var(--color-warning);
+    background: var(--bg-panel);
+}
+
+/* Chart subgroups (for approach types) */
+.chart-subgroup {
+    margin-bottom: var(--space-lg);
+}
+
+.chart-subgroup:last-child {
+    margin-bottom: 0;
+}
+
+.chart-subgroup-header {
+    display: flex;
+    gap: var(--space-xs);
+    align-items: baseline;
+    margin-bottom: var(--space-sm);
+    padding-bottom: var(--space-xs);
+    border-bottom: 1px solid var(--border-color);
+}
+
 /* Print styles - hide charts links and modal */
 @media print {
     .no-print,
     .modal-overlay {
         display: none !important;
     }
-}
-
-/* Charts link in navlog */
-.charts-link {
-    color: var(--color-warning);
-    text-decoration: none;
-    font-weight: 700;
-    letter-spacing: 0.05em;
-    cursor: pointer;
-    padding: 0.125rem 0.25rem;
-    border-radius: 2px;
-    transition: all 0.15s ease;
-}
-
-.charts-link:hover {
-    background: var(--color-warning);
-    color: #000000;
 }

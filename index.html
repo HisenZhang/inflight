@@ -39,6 +39,7 @@
                 <button class="tab-btn" data-tab="data">DATA</button>
                 <button class="tab-btn" data-tab="route">ENTRY</button>
                 <button class="tab-btn" data-tab="navlog">NAVLOG</button>
+                <button class="tab-btn" data-tab="charts">CHART</button>
                 <button class="tab-btn" data-tab="map">MAP</button>
                 <button class="tab-btn" data-tab="inflight">AHEAD</button>
                 <button class="tab-btn" data-tab="chklst">CHKLST</button>
@@ -230,38 +231,39 @@
                     </div>
                 </div>
 
-                <!-- Cruise Altitude (Required) -->
-                <div class="input-row">
-                    <label class="text-sm font-medium">CRUISE ALTITUDE (FT MSL):</label>
-                    <input
-                        type="number"
-                        id="altitudeInput"
-                        class="font-medium"
-                        placeholder="e.g. 5500"
-                        min="0"
-                        max="45000"
-                        step="100"
-                        value="5500"
-                        required
-                        disabled
-                    >
-                </div>
+                <!-- Flight Parameters (Required) -->
+                <div class="input-group-styled">
+                    <div class="input-row">
+                        <label class="text-sm font-medium">CRUISE ALTITUDE (FT MSL):</label>
+                        <input
+                            type="number"
+                            id="altitudeInput"
+                            class="font-medium"
+                            placeholder="e.g. 5500"
+                            min="0"
+                            max="45000"
+                            step="100"
+                            value="5500"
+                            required
+                            disabled
+                        >
+                    </div>
 
-                <!-- True Airspeed (Required) -->
-                <div class="input-row">
-                    <label class="text-sm font-medium">TRUE AIRSPEED (KT):</label>
-                    <input
-                        type="number"
-                        id="tasInput"
-                        class="font-medium"
-                        placeholder="e.g. 110"
-                        min="0"
-                        max="500"
-                        step="5"
-                        value="110"
-                        required
-                        disabled
-                    >
+                    <div class="input-row">
+                        <label class="text-sm font-medium">TRUE AIRSPEED (KT):</label>
+                        <input
+                            type="number"
+                            id="tasInput"
+                            class="font-medium"
+                            placeholder="e.g. 110"
+                            min="0"
+                            max="500"
+                            step="5"
+                            value="110"
+                            required
+                            disabled
+                        >
+                    </div>
                 </div>
 
                 <!-- Action Buttons -->
@@ -415,6 +417,45 @@
         </div>
         </div>
         <!-- End Tab: Navlog -->
+
+        <!-- Tab: Charts -->
+        <div class="tab-content" id="tab-charts">
+            <!-- Search Section -->
+            <div class="data-section">
+                <h3 class="section-header">SEARCH AIRPORT CHARTS</h3>
+
+                <div class="input-group-styled">
+                    <div class="input-row">
+                        <label class="text-sm font-medium">AIRPORT ICAO:</label>
+                        <input type="text" id="chartsAirportInput" class="font-medium" placeholder="KORD" maxlength="4" style="text-transform: uppercase;">
+                    </div>
+                </div>
+
+                <div class="data-actions">
+                    <button id="chartsSearchBtn" class="btn btn-primary font-bold">SEARCH</button>
+                </div>
+
+                <p class="help-text">
+                    <span class="text-secondary">FAA d-TPP (Terminal Procedures Publication) • Internet required</span>
+                </p>
+            </div>
+
+            <!-- Results Section -->
+            <div id="chartsResults" style="display: none;">
+                <div id="chartsResultsContent"></div>
+            </div>
+
+            <!-- Placeholder -->
+            <div id="chartsPlaceholder" class="welcome-brief">
+                <h2 class="font-bold text-warning" style="font-size: 1.5rem; letter-spacing: 4px; margin-bottom: 1rem;">TERMINAL PROCEDURES</h2>
+                <div class="welcome-info" style="max-width: 500px; margin: 0 auto 1.5rem auto;">
+                    <p>View FAA d-TPP charts for any US airport including approach procedures, departures, arrivals, and airport diagrams.</p>
+                    <p style="margin-bottom: 0;"><strong>Available:</strong> Instrument Approaches • Departures (SID/DP) • Arrivals (STAR) • Airport Diagrams • Minimums</p>
+                </div>
+                <p class="text-secondary" style="font-size: 0.75rem;">Search for an airport above or click CHARTS in the navlog.</p>
+            </div>
+        </div>
+        <!-- End Tab: Charts -->
 
         <!-- Tab: Vector Map -->
         <div class="tab-content" id="tab-map">
