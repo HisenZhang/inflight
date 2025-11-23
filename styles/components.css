@@ -1317,33 +1317,8 @@ select option:checked {
 }
 
 /* ============================================
-   CHARTS BUTTON & MODAL
+   CHARTS MODAL
    ============================================ */
-
-/* Charts button in navlog */
-.btn-charts {
-    background: var(--color-warning);
-    color: #000000;
-    border: none;
-    padding: 0.25rem 0.5rem;
-    font-size: 0.625rem;
-    font-weight: 700;
-    letter-spacing: 0.05em;
-    cursor: pointer;
-    border-radius: 3px;
-    margin-top: 0.25rem;
-    transition: all 0.2s ease;
-}
-
-.btn-charts:hover {
-    background: var(--color-primary);
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.btn-charts:active {
-    transform: translateY(0);
-}
 
 /* Charts modal overlay */
 .modal-overlay {
@@ -1518,10 +1493,9 @@ select option:checked {
     }
 }
 
-/* Print styles - hide charts button */
+/* Print styles - hide charts links and modal */
 @media print {
     .no-print,
-    .btn-charts,
     .modal-overlay {
         display: none !important;
     }

@@ -1362,12 +1362,15 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelSt
             fuelTypesHTML = `<div class="text-warning text-xs">FUEL ${waypoint.fuelTypes}</div>`;
         }
 
-        // Charts button for airports (hidden in print)
+        // Charts button for airports (hidden in print, only if charts available)
         let chartsButtonHTML = '';
         if (waypoint.waypointType === 'airport') {
             const icao = code;
-            const airportName = waypoint.name || code;
-            chartsButtonHTML = `<button class="btn-charts no-print" onclick="ChartsController.showChartsModal('${icao}', '${airportName.replace(/'/g, "\\'")}')">CHARTS</button>`;
+            const charts = DataManager.getCharts(icao);
+            if (charts && charts.length > 0) {
+                const airportName = waypoint.name || code;
+                chartsButtonHTML = `<div class="text-xs mt-xs"><a href="#" class="no-print" onclick="event.preventDefault(); ChartsController.showChartsModal('${icao}', '${airportName.replace(/'/g, "\\'")}')">CHARTS</a></div>`;
+            }
         }
 
         // Waypoint row
