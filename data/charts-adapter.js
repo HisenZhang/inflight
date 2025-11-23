@@ -38,13 +38,20 @@ window.ChartsAdapter = {
 
     /**
      * Fetches d-TPP metadata XML for current cycle
+     * Uses CORS proxy to bypass CORS restrictions
      * @returns {Promise<string>} XML data
      */
     async fetchChartMetadata() {
         const cycle = this.getCurrentCycle();
-        const url = `https://aeronav.faa.gov/d-tpp/${cycle}/xml_data/d-TPP_Metafile.xml`;
+        const faaUrl = `https://aeronav.faa.gov/d-tpp/${cycle}/xml_data/d-TPP_Metafile.xml`;
+
+        // Use CORS proxy (same one used by other data sources)
+        const corsProxy = 'https://corsproxy.io/?';
+        const url = corsProxy + encodeURIComponent(faaUrl);
 
         console.log(`[ChartsAdapter] Fetching chart metadata for cycle ${cycle}...`);
+        console.log(`[ChartsAdapter] FAA URL: ${faaUrl}`);
+        console.log(`[ChartsAdapter] Using CORS proxy: ${corsProxy}`);
         const startTime = Date.now();
 
         const response = await fetch(url);
