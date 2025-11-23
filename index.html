@@ -418,9 +418,10 @@
                 <h3 class="section-header">SEARCH AIRPORT CHARTS</h3>
 
                 <div class="input-group-styled">
-                    <div class="input-row">
+                    <div class="input-row" style="position: relative;">
                         <label class="text-sm font-medium">AIRPORT ICAO:</label>
                         <input type="text" id="chartsAirportInput" class="font-medium" placeholder="KORD" maxlength="4" style="text-transform: uppercase;">
+                        <div id="chartsAutocompleteDropdown" class="autocomplete-dropdown"></div>
                     </div>
                 </div>
 
@@ -431,6 +432,12 @@
                 <p class="help-text">
                     <span class="text-secondary">FAA d-TPP (Terminal Procedures Publication) • Internet required</span>
                 </p>
+            </div>
+
+            <!-- Recent Charts History -->
+            <div id="chartsHistory" class="query-history" style="display: none;">
+                <div class="history-label font-medium">RECENT CHARTS:</div>
+                <div id="chartsHistoryList" class="history-list"></div>
             </div>
 
             <!-- Results Section -->

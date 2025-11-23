@@ -3,6 +3,11 @@
  * @module ChartsController
  */
 
+// Autocomplete state
+let selectedChartsIndex = -1;
+let chartsAutocompleteResults = [];
+let isProcessingChartsSelection = false;
+
 window.ChartsController = {
     /**
      * Initialize charts tab functionality
@@ -10,24 +15,50 @@ window.ChartsController = {
     init() {
         const searchBtn = document.getElementById('chartsSearchBtn');
         const airportInput = document.getElementById('chartsAirportInput');
+        const autocompleteDropdown = document.getElementById('chartsAutocompleteDropdown');
 
         if (searchBtn) {
             searchBtn.addEventListener('click', () => this.searchCharts());
         }
 
         if (airportInput) {
-            // Search on Enter key
+            // Search on Enter key (only if autocomplete is not showing)
             airportInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
+                if (e.key === 'Enter' && !autocompleteDropdown.classList.contains('show')) {
                     this.searchCharts();
                 }
             });
 
-            // Auto-uppercase input
+            // Autocomplete input handler
             airportInput.addEventListener('input', (e) => {
                 e.target.value = e.target.value.toUpperCase();
+                this.handleAutocompleteInput(e);
+            });
+
+            // Autocomplete keyboard navigation
+            airportInput.addEventListener('keydown', (e) => {
+                this.handleAutocompleteKeydown(e);
+            });
+
+            // Hide autocomplete on blur (with delay for click handling)
+            airportInput.addEventListener('blur', () => {
+                setTimeout(() => {
+                    if (!isProcessingChartsSelection) {
+                        this.hideAutocomplete();
+                    }
+                }, 200);
             });
         }
+
+        // Prevent autocomplete hide when clicking on it
+        if (autocompleteDropdown) {
+            autocompleteDropdown.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+            });
+        }
+
+        // Load and display recent charts history
+        this.displayChartsHistory();
     },
 
     /**
@@ -91,6 +122,9 @@ window.ChartsController = {
         const placeholderDiv = document.getElementById('chartsPlaceholder');
 
         if (!resultsDiv || !contentDiv) return;
+
+        // Save to history
+        this.saveToHistory(icao);
 
         // Group charts by type
         const grouped = window.ChartsAdapter.groupChartsByType(charts);
@@ -333,5 +367,200 @@ window.ChartsController = {
         if (placeholderDiv) {
             placeholderDiv.style.display = 'none';
         }
+    },
+
+    /**
+     * Handle autocomplete input
+     * @private
+     */
+    handleAutocompleteInput(e) {
+        const value = e.target.value.toUpperCase();
+
+        if (value.length < 1) {
+            this.hideAutocomplete();
+            return;
+        }
+
+        const results = window.QueryEngine?.searchAirports(value) || [];
+        chartsAutocompleteResults = results;
+        this.displayAutocomplete(results);
+    },
+
+    /**
+     * Display autocomplete results
+     * @private
+     */
+    displayAutocomplete(results) {
+        const dropdown = document.getElementById('chartsAutocompleteDropdown');
+        if (!dropdown) return;
+
+        if (results.length === 0) {
+            dropdown.innerHTML = '<div class="autocomplete-empty">No airports found</div>';
+            dropdown.classList.add('show');
+            return;
+        }
+
+        let html = '';
+        results.forEach((result, index) => {
+            html += `
+                <div class="autocomplete-item type-airport" data-index="${index}">
+                    <span class="code">${result.code}</span>
+                    <span class="name">${result.name !== result.code ? result.name : ''}</span>
+                    <span class="location">${result.location}</span>
+                </div>
+            `;
+        });
+
+        dropdown.innerHTML = html;
+        dropdown.classList.add('show');
+        selectedChartsIndex = -1;
+
+        dropdown.querySelectorAll('.autocomplete-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const index = parseInt(item.getAttribute('data-index'));
+                this.selectAutocompleteItem(index);
+            });
+        });
+    },
+
+    /**
+     * Hide autocomplete dropdown
+     * @private
+     */
+    hideAutocomplete() {
+        if (isProcessingChartsSelection) return;
+
+        const dropdown = document.getElementById('chartsAutocompleteDropdown');
+        if (dropdown) {
+            dropdown.classList.remove('show');
+            dropdown.innerHTML = '';
+        }
+        selectedChartsIndex = -1;
+        chartsAutocompleteResults = [];
+    },
+
+    /**
+     * Handle autocomplete keyboard navigation
+     * @private
+     */
+    handleAutocompleteKeydown(e) {
+        const dropdown = document.getElementById('chartsAutocompleteDropdown');
+        if (!dropdown || !dropdown.classList.contains('show')) {
+            return;
+        }
+
+        const items = dropdown.querySelectorAll('.autocomplete-item');
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            selectedChartsIndex = Math.min(selectedChartsIndex + 1, items.length - 1);
+            this.updateAutocompleteSelection(items);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            selectedChartsIndex = Math.max(selectedChartsIndex - 1, -1);
+            this.updateAutocompleteSelection(items);
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (selectedChartsIndex >= 0) {
+                this.selectAutocompleteItem(selectedChartsIndex);
+            }
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            this.hideAutocomplete();
+        }
+    },
+
+    /**
+     * Update autocomplete selection highlighting
+     * @private
+     */
+    updateAutocompleteSelection(items) {
+        items.forEach((item, index) => {
+            if (index === selectedChartsIndex) {
+                item.classList.add('selected');
+                item.scrollIntoView({ block: 'nearest' });
+            } else {
+                item.classList.remove('selected');
+            }
+        });
+    },
+
+    /**
+     * Select an autocomplete item
+     * @private
+     */
+    selectAutocompleteItem(index) {
+        const result = chartsAutocompleteResults[index];
+        if (!result) return;
+
+        isProcessingChartsSelection = true;
+
+        const airportInput = document.getElementById('chartsAirportInput');
+        if (airportInput) {
+            airportInput.value = result.code;
+        }
+
+        setTimeout(() => {
+            isProcessingChartsSelection = false;
+            this.hideAutocomplete();
+            // Automatically search for charts
+            this.searchCharts();
+        }, 100);
+    },
+
+    /**
+     * Save airport to charts history
+     * @private
+     */
+    saveToHistory(icao) {
+        const MAX_HISTORY = 10;
+        let history = JSON.parse(localStorage.getItem('chartsHistory') || '[]');
+
+        // Remove duplicates
+        history = history.filter(item => item !== icao);
+
+        // Add to beginning
+        history.unshift(icao);
+
+        // Limit size
+        if (history.length > MAX_HISTORY) {
+            history = history.slice(0, MAX_HISTORY);
+        }
+
+        localStorage.setItem('chartsHistory', JSON.stringify(history));
+        this.displayChartsHistory();
+    },
+
+    /**
+     * Display recent charts history
+     */
+    displayChartsHistory() {
+        const history = JSON.parse(localStorage.getItem('chartsHistory') || '[]');
+        const historyDiv = document.getElementById('chartsHistory');
+        const historyList = document.getElementById('chartsHistoryList');
+
+        if (!historyDiv || !historyList) return;
+
+        if (history.length === 0) {
+            historyDiv.style.display = 'none';
+            return;
+        }
+
+        historyDiv.style.display = 'block';
+        historyList.innerHTML = '';
+
+        history.forEach(icao => {
+            const item = document.createElement('div');
+            item.className = 'history-item';
+            item.textContent = icao;
+            item.addEventListener('click', () => {
+                const airportInput = document.getElementById('chartsAirportInput');
+                if (airportInput) {
+                    airportInput.value = icao;
+                }
+                this.showChartsForAirport(icao);
+            });
+            historyList.appendChild(item);
+        });
     }
 };
