@@ -24,8 +24,8 @@
 const AppVersion = {
     // Semantic version (sync with package.json)
     MAJOR: 2,
-    MINOR: 5,
-    PATCH: 1,
+    MINOR: 6,
+    PATCH: 0,
 
     // Full version string
     get VERSION() {
@@ -34,7 +34,7 @@ const AppVersion = {
 
     // Service worker cache version
     // Increment this number to force PWA updates
-    CACHE_VERSION: 112,
+    CACHE_VERSION: 113,
 
     // Full cache name for service worker
     get CACHE_NAME() {
@@ -45,7 +45,7 @@ const AppVersion = {
     BUILD_DATE: '2025-11-23',
 
     // Release name (optional)
-    RELEASE_NAME: 'UI: Complete redesign of CHART tab with improved layout and organization',
+    RELEASE_NAME: 'Feature: Borderless design, auto wake lock, auto-reindex on version upgrade',
 
     /**
      * Get full version info object
