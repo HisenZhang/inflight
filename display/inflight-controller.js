@@ -842,7 +842,7 @@ const InflightController = (() => {
                 });
 
                 const freqItems = Object.entries(grouped).map(([type, freqs]) =>
-                    `<span class="text-metric text-xs">${type} ${freqs.join('/')}</span>`
+                    `<span class="text-metric text-xs"><strong>${type}</strong> ${freqs.join('/')}</span>`
                 );
                 freqHTML = freqItems.join(' ');
             }
@@ -856,7 +856,7 @@ const InflightController = (() => {
                     <td>
                         <div class="wpt-code"><span class="text-navaid">${distStr}</span> • <span class="text-airport">${brgStr}</span> • <span class="text-metric">${eteStr}</span></div>
                         ${elevLine}
-                        ${airspaceHoursText ? `<div class="text-secondary text-xs">${airspaceHoursText}</div>` : ''}
+                        ${airspaceHoursText ? `<div class="text-reporting text-xs">${airspaceHoursText}</div>` : ''}
                         ${runwayHTML}
                         ${freqHTML ? `<div class="mt-xs">${freqHTML}</div>` : ''}
                     </td>

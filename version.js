@@ -34,7 +34,7 @@ const AppVersion = {
 
     // Service worker cache version
     // Increment this number to force PWA updates
-    CACHE_VERSION: 105,
+    CACHE_VERSION: 110,
 
     // Full cache name for service worker
     get CACHE_NAME() {
@@ -45,7 +45,7 @@ const AppVersion = {
     BUILD_DATE: '2025-11-20',
 
     // Release name (optional)
-    RELEASE_NAME: 'Feature: Data integrity checksums and export/import improvements',
+    RELEASE_NAME: 'Feature: Automatic reindex on version/cache update',
 
     /**
      * Get full version info object

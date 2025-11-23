@@ -367,43 +367,24 @@ function exportToForeFlightCSV() {
 
         // Process each waypoint
         flightPlan.waypoints.forEach((waypoint, index) => {
-            // Generate waypoint name (ALL CAPS, no spaces)
+            // Name: Use same logic as navlog display (RouteCalculator.getWaypointCode)
+            // - Airports: use ICAO (e.g., KORD)
+            // - Everything else: use ident (e.g., PAYGE, ORD, GIJ)
             let waypointName = '';
 
-            // Use airport ICAO if available
-            if (waypoint.icao) {
-                waypointName = waypoint.icao.toUpperCase();
+            if (waypoint.waypointType === 'airport') {
+                waypointName = waypoint.icao ? waypoint.icao.toUpperCase() : '';
+            } else {
+                waypointName = waypoint.ident ? waypoint.ident.toUpperCase() : '';
             }
-            // Use navaid ID if available
-            else if (waypoint.id) {
-                waypointName = waypoint.id.toUpperCase().replace(/\s+/g, '_');
-            }
-            // Use fix name if available
-            else if (waypoint.name) {
-                waypointName = waypoint.name.toUpperCase().replace(/\s+/g, '_');
-            }
-            // Fallback: generate from route position
-            else {
+
+            // Fallback if no valid name
+            if (!waypointName || waypointName.length < 3) {
                 waypointName = `WPT_${index + 1}`;
             }
 
-            // Ensure name meets ForeFlight requirements (min 3 chars, at least one letter)
-            if (waypointName.length < 3) {
-                waypointName = `WPT_${index + 1}`;
-            }
-
-            // Build description
-            let description = '';
-            if (waypoint.name && waypoint.name !== waypoint.icao && waypoint.name !== waypoint.id) {
-                description = waypoint.name;
-            } else if (waypoint.type) {
-                description = waypoint.type.toUpperCase();
-            }
-
-            // Limit description to 30 characters (ForeFlight only shows first 30-40)
-            if (description.length > 30) {
-                description = description.substring(0, 30);
-            }
+            // Description: Use waypoint type (e.g., FIX, AIRPORT, VOR)
+            let description = waypoint.type ? waypoint.type.toUpperCase() : '';
 
             // Get lat/lon in decimal degrees
             const lat = waypoint.lat;
@@ -457,43 +438,24 @@ function exportToForeFlightKML() {
 
         // Process each waypoint
         flightPlan.waypoints.forEach((waypoint, index) => {
-            // Generate waypoint name (ALL CAPS, no spaces)
+            // Name: Use same logic as navlog display (RouteCalculator.getWaypointCode)
+            // - Airports: use ICAO (e.g., KORD)
+            // - Everything else: use ident (e.g., PAYGE, ORD, GIJ)
             let waypointName = '';
 
-            // Use airport ICAO if available
-            if (waypoint.icao) {
-                waypointName = waypoint.icao.toUpperCase();
+            if (waypoint.waypointType === 'airport') {
+                waypointName = waypoint.icao ? waypoint.icao.toUpperCase() : '';
+            } else {
+                waypointName = waypoint.ident ? waypoint.ident.toUpperCase() : '';
             }
-            // Use navaid ID if available
-            else if (waypoint.id) {
-                waypointName = waypoint.id.toUpperCase().replace(/\s+/g, '_');
-            }
-            // Use fix name if available
-            else if (waypoint.name) {
-                waypointName = waypoint.name.toUpperCase().replace(/\s+/g, '_');
-            }
-            // Fallback: generate from route position
-            else {
+
+            // Fallback if no valid name
+            if (!waypointName || waypointName.length < 3) {
                 waypointName = `WPT_${index + 1}`;
             }
 
-            // Ensure name meets ForeFlight requirements (min 3 chars, at least one letter)
-            if (waypointName.length < 3) {
-                waypointName = `WPT_${index + 1}`;
-            }
-
-            // Build description
-            let description = '';
-            if (waypoint.name && waypoint.name !== waypoint.icao && waypoint.name !== waypoint.id) {
-                description = waypoint.name;
-            } else if (waypoint.type) {
-                description = waypoint.type.toUpperCase();
-            }
-
-            // Limit description to 30 characters (ForeFlight only shows first 30-40)
-            if (description.length > 30) {
-                description = description.substring(0, 30);
-            }
+            // Description: Use waypoint type (e.g., FIX, AIRPORT, VOR)
+            let description = waypoint.type ? waypoint.type.toUpperCase() : '';
 
             // Get lat/lon in decimal degrees
             const lat = waypoint.lat;

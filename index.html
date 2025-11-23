@@ -230,6 +230,40 @@
                     </div>
                 </div>
 
+                <!-- Cruise Altitude (Required) -->
+                <div class="input-group">
+                    <label class="text-sm font-medium text-secondary">CRUISE ALTITUDE (FT MSL):</label>
+                    <input
+                        type="number"
+                        id="altitudeInput"
+                        class="font-medium"
+                        placeholder="e.g. 5500"
+                        min="0"
+                        max="45000"
+                        step="100"
+                        value="5500"
+                        required
+                        disabled
+                    >
+                </div>
+
+                <!-- True Airspeed (Required) -->
+                <div class="input-group">
+                    <label class="text-sm font-medium text-secondary">TRUE AIRSPEED (KT):</label>
+                    <input
+                        type="number"
+                        id="tasInput"
+                        class="font-medium"
+                        placeholder="e.g. 110"
+                        min="0"
+                        max="500"
+                        step="5"
+                        value="110"
+                        required
+                        disabled
+                    >
+                </div>
+
                 <!-- Action Buttons -->
                 <div class="button-row">
                     <button id="calculateBtn" class="btn btn-primary font-bold" disabled>CALCULATE</button>
@@ -237,50 +271,20 @@
                 </div>
             </div>
             <p class="help-text mb-md">
-                Airports (ICAO), NavAids, Fixes, Airways, SID/STAR. Route is optional - leave blank for direct (DCT).
+                Altitude and TAS required for wind correction and time calculations. Route is optional - leave blank for direct (DCT).
             </p>
 
             <!-- Optional Features -->
             <div class="optional-features">
                 <p class="text-secondary text-sm mb-sm">OPTIONAL FEATURES:</p>
 
-                <!-- Wind Correction & Time Estimation -->
+                <!-- Winds Aloft Data -->
                 <div class="feature-toggle">
                     <div class="checkbox-toggle" id="enableWindsToggle"></div>
-                    <label class="font-medium" style="cursor: pointer;">WIND CORRECTION & TIME</label>
-                    <span class="help-text-inline">- winds aloft, WCA, ground speed, ETA</span>
+                    <label class="font-medium" style="cursor: pointer;">WINDS ALOFT DATA</label>
+                    <span class="help-text-inline">- fetch real winds aloft for WCA, GS, ETA</span>
                 </div>
                 <div id="windInputs" class="feature-inputs hidden">
-                    <div class="input-row">
-                        <label class="text-sm font-medium">CRUISE ALTITUDE (FT MSL):</label>
-                        <input
-                            type="number"
-                            id="altitudeInput"
-                            class="font-medium"
-                            placeholder="e.g. 5500"
-                            min="0"
-                            max="45000"
-                            step="100"
-                            value="5500"
-                            required
-                            disabled
-                        >
-                    </div>
-                    <div class="input-row">
-                        <label class="text-sm font-medium">TRUE AIRSPEED (KT):</label>
-                        <input
-                            type="number"
-                            id="tasInput"
-                            class="font-medium"
-                            placeholder="110"
-                            min="0"
-                            max="500"
-                            step="5"
-                            value="110"
-                            required
-                            disabled
-                        >
-                    </div>
                     <div class="input-row">
                         <label class="text-sm font-medium">FORECAST PERIOD:</label>
                         <div class="radio-group">
@@ -290,7 +294,7 @@
                         </div>
                     </div>
                     <p class="help-text mt-sm">
-                        Wind data requires internet access
+                        Requires internet access to fetch winds aloft from aviationweather.gov
                     </p>
                 </div>
 

@@ -394,6 +394,120 @@ await saveToCache();
 - Faster than re-downloading (~5MB vs network fetch)
 - Maintains data integrity across app updates
 
+### Auto-Reindex on Version Updates
+
+**Implementation:** [display/app.js:482-635](../../display/app.js#L482-L635)
+
+IN-FLIGHT automatically reindexes cached data when the app version changes to ensure parser updates are applied without manual intervention.
+
+**Triggers:**
+
+Reindex happens automatically on:
+- **Service worker cache version change** (CACHE_VERSION bump in [version.js](../../version.js))
+- **Major or minor semantic version change** (X.Y.0)
+
+Reindex does NOT happen on:
+- **Patch version changes** (2.4.0 → 2.4.1) - considered safe
+- **No version change** (same version reloaded)
+
+**Version Tracking:**
+
+Uses localStorage to track versions across sessions:
+- `app_version`: Semantic version string (e.g., "2.4.1")
+- `app_cache_version`: Cache version number string (e.g., "110")
+
+**Process Flow:**
+
+```
+App Startup
+    ↓
+initDB()
+    ↓
+checkVersionAndReindex()
+    ├─→ Load stored versions from localStorage
+    ├─→ Validate version formats
+    ├─→ Compare with current version
+    │
+    ├─→ FIRST RUN (no stored versions):
+    │       Store current versions
+    │       Skip reindex
+    │
+    ├─→ VERSION UNCHANGED:
+    │       Skip reindex
+    │
+    └─→ VERSION CHANGED (cache/major/minor):
+            ├─→ Check if cached data exists
+            ├─→ Show status: "[...] AUTO-REINDEXING (VERSION UPDATE)"
+            ├─→ Clear in-memory data structures
+            ├─→ Re-parse cached CSV with updated parser
+            ├─→ Update stored versions on success
+            └─→ On failure:
+                    Prompt user with recovery options:
+                    • OK: Reload page (retry reindex)
+                    • Cancel: Skip reindex (prevent retry loop)
+```
+
+**User Experience:**
+
+```
+[...] AUTO-REINDEXING (VERSION UPDATE)
+[...] AIRPORTS (70,234)
+[...] NAVAIDS (10,842)
+...
+[✓] AUTO-REINDEX COMPLETE
+```
+
+**Error Handling:**
+
+If auto-reindex fails (corrupted data, storage full, etc.):
+
+```
+[!] AUTO-REINDEX FAILED
+
+ERROR: [error message]
+
+This can happen if:
+• Cached data is corrupted
+• Database is locked
+• Browser storage is full
+
+OPTIONS:
+✓ OK: Try reloading the page
+✗ Cancel: Skip auto-reindex for this session
+
+You can manually reindex from WELCOME tab → LOAD DATA
+```
+
+**Implementation Details:**
+
+1. **Version Validation**: Ensures stored versions match expected formats:
+   - Semantic version: `/^\d+\.\d+\.\d+$/` (e.g., "2.4.1")
+   - Cache version: `/^\d+$/` (e.g., "110")
+
+2. **Smart Comparison**: Only major/minor version changes trigger reindex:
+   ```javascript
+   const [major, minor] = version.split('.').map(Number);
+   const majorOrMinorChanged = (currentMajor !== storedMajor) ||
+                                (currentMinor !== storedMinor);
+   ```
+
+3. **Escape Hatch**: User can skip reindex to prevent infinite retry loop:
+   ```javascript
+   localStorage.setItem('app_skip_reindex', 'true'); // Debug flag
+   ```
+
+**Rationale:**
+
+- **Automatic**: No user intervention required for parser updates
+- **Safe**: Only reindexes when version changes, not on every load
+- **Fast**: Uses cached CSV (2-3MB compressed) instead of re-downloading (10-15MB)
+- **Graceful**: Provides recovery options on failure
+- **Transparent**: Shows progress in UI
+
+**See Also:**
+- [Version Management Guide](../../CLAUDE.md#version-management) - How to bump versions
+- [Data Integrity](./data-integrity.md) - Checksum validation during reindex
+
 ### Cache Expiration
 
 **Duration:** 7 days (168 hours)
