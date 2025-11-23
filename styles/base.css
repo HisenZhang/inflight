@@ -34,7 +34,7 @@ body {
     display: flex;
     gap: var(--space-sm);
     margin-top: var(--space-md);
-    border-bottom: 2px solid var(--border-color);
+    border-bottom: none;
     overflow-x: auto;
     overflow-y: hidden;
     white-space: nowrap;
