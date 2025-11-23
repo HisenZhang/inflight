@@ -45,8 +45,8 @@ window.ChartsAdapter = {
         const cycle = this.getCurrentCycle();
         const faaUrl = `https://aeronav.faa.gov/d-tpp/${cycle}/xml_data/d-TPP_Metafile.xml`;
 
-        // Use CORS proxy (same one used by other data sources)
-        const corsProxy = 'https://corsproxy.io/?';
+        // Use custom CORS proxy (same domain as NASR data)
+        const corsProxy = 'https://cors.hisenz.com/?url=';
         const url = corsProxy + encodeURIComponent(faaUrl);
 
         console.log(`[ChartsAdapter] Fetching chart metadata for cycle ${cycle}...`);
