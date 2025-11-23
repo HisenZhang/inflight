@@ -37,16 +37,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Initialize system checks (Internet, GPS)
         UIController.initSystemChecks();
 
-        // Initialize wake lock
+        // Initialize wake lock (always enabled)
         if (window.WakeLock) {
-            const wakeLockInit = window.WakeLock.init();
-            // Restore UI state if wake lock was previously enabled
-            if (wakeLockInit && window.WakeLock.isEnabled) {
-                const wakeLockToggle = document.getElementById('enableWakeLockToggle');
-                if (wakeLockToggle) {
-                    wakeLockToggle.classList.add('checked');
-                }
-            }
+            window.WakeLock.init();
         }
 
         // Check geodesy libraries

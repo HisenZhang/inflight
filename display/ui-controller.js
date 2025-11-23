@@ -51,8 +51,6 @@ function init() {
         burnRateInput: document.getElementById('burnRateInput'),
         fuelReserveBtns: document.querySelectorAll('.radio-btn[data-reserve]'),
 
-        enableWakeLockToggle: document.getElementById('enableWakeLockToggle'),
-
         // Results elements
         resultsSection: document.getElementById('resultsSection'),
         routeSummary: document.getElementById('routeSummary'),
@@ -496,21 +494,6 @@ function setupFeatureToggles() {
             elements.usableFuelInput.disabled = true;
             elements.taxiFuelInput.disabled = true;
             elements.burnRateInput.disabled = true;
-        }
-    });
-
-    // Wake lock toggle - make entire row clickable
-    const wakeLockToggleRow = elements.enableWakeLockToggle.parentElement;
-    wakeLockToggleRow.addEventListener('click', async () => {
-        if (window.WakeLock && window.WakeLock.isSupported) {
-            const isEnabled = await window.WakeLock.toggle();
-            if (isEnabled) {
-                elements.enableWakeLockToggle.classList.add('checked');
-            } else {
-                elements.enableWakeLockToggle.classList.remove('checked');
-            }
-        } else {
-            console.warn('[UIController] Wake Lock API not supported');
         }
     });
 
