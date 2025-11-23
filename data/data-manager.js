@@ -285,12 +285,25 @@ async function loadData(onStatusUpdate) {
 
         // Load charts data (non-blocking - charts are optional)
         try {
+            console.log('[DataManager] Loading charts data...');
             const chartsResult = await window.ChartsAdapter.loadChartData(onStatusUpdate);
+            console.log('[DataManager] Charts result:', {
+                success: chartsResult.success,
+                hasData: !!chartsResult.data,
+                error: chartsResult.error
+            });
+
             if (chartsResult.success && chartsResult.data) {
                 chartsData = chartsResult.data.chartsMap;
                 rawChartsXML = chartsResult.rawXML;
                 chartsCycle = chartsResult.data.cycle;
                 dataSources.push('Charts');
+
+                console.log('[DataManager] Charts loaded successfully:', {
+                    chartsDataSize: chartsData.size,
+                    chartsCycle: chartsCycle,
+                    rawXMLLength: rawChartsXML ? rawChartsXML.length : 0
+                });
 
                 // Add charts metadata
                 fileMetadata.set('charts', {
@@ -303,9 +316,12 @@ async function loadData(onStatusUpdate) {
                     sizeBytes: chartsResult.rawXML ? chartsResult.rawXML.length : 0,
                     cycle: chartsResult.data.cycle
                 });
+            } else {
+                console.warn('[DataManager] Charts not loaded:', chartsResult.error || 'Unknown error');
             }
         } catch (error) {
             console.warn('[DataManager] Charts loading failed (non-critical):', error);
+            console.warn('[DataManager] Error stack:', error.stack);
             onStatusUpdate('[!] CHARTS UNAVAILABLE (OPTIONAL)', 'warning');
         }
 

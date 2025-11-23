@@ -67,6 +67,7 @@ window.ChartsAdapter = {
      */
     parseChartMetadata(xmlData) {
         console.log('[ChartsAdapter] Parsing chart metadata XML...');
+        console.log('[ChartsAdapter] XML data length:', xmlData.length);
         const startTime = Date.now();
 
         const parser = new DOMParser();
@@ -74,10 +75,17 @@ window.ChartsAdapter = {
 
         const parserError = doc.querySelector('parsererror');
         if (parserError) {
+            console.error('[ChartsAdapter] XML parse error:', parserError.textContent);
             throw new Error(`XML parsing error: ${parserError.textContent}`);
         }
 
         const root = doc.querySelector('digital_tpp');
+        if (!root) {
+            console.error('[ChartsAdapter] No digital_tpp root element found!');
+            console.error('[ChartsAdapter] First 500 chars of XML:', xmlData.substring(0, 500));
+            throw new Error('Invalid XML structure: no digital_tpp root element');
+        }
+
         const cycle = root.getAttribute('cycle');
         const fromDate = root.getAttribute('from_edate');
         const toDate = root.getAttribute('to_edate');
@@ -88,6 +96,7 @@ window.ChartsAdapter = {
         let totalCharts = 0;
 
         const airports = doc.querySelectorAll('airport_name');
+        console.log(`[ChartsAdapter] Found ${airports.length} airports in XML`);
 
         airports.forEach(airport => {
             const icao = airport.getAttribute('icao_ident');
@@ -164,30 +173,44 @@ window.ChartsAdapter = {
      */
     async loadChartData(onStatusUpdate) {
         try {
+            console.log('[ChartsAdapter] Starting chart data load...');
+
             if (onStatusUpdate) {
                 onStatusUpdate('[...] DOWNLOADING CHART METADATA');
             }
 
             const xmlData = await this.fetchChartMetadata();
+            console.log('[ChartsAdapter] Fetch complete, XML length:', xmlData ? xmlData.length : 0);
 
             if (onStatusUpdate) {
                 onStatusUpdate('[...] PARSING CHART METADATA');
             }
 
             const chartData = this.parseChartMetadata(xmlData);
+            console.log('[ChartsAdapter] Parse complete, chartsMap size:', chartData.chartsMap.size);
 
             if (onStatusUpdate) {
                 onStatusUpdate(`[✓] CHARTS (${chartData.totalCharts} for ${chartData.totalAirports} airports)`);
             }
 
-            return {
+            const result = {
                 success: true,
                 data: chartData,
                 rawXML: xmlData
             };
 
+            console.log('[ChartsAdapter] Returning result:', {
+                success: result.success,
+                dataKeys: Object.keys(result.data),
+                chartsMapSize: result.data.chartsMap.size,
+                rawXMLLength: result.rawXML ? result.rawXML.length : 0
+            });
+
+            return result;
+
         } catch (error) {
             console.error('[ChartsAdapter] Error loading chart data:', error);
+            console.error('[ChartsAdapter] Error stack:', error.stack);
 
             if (onStatusUpdate) {
                 onStatusUpdate(`[!] CHARTS FAILED: ${error.message}`);
