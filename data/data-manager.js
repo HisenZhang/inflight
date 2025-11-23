@@ -45,9 +45,12 @@ let airwaysData = new Map();         // Airways (NASR only)
 let starsData = new Map();           // STARs (NASR only)
 let dpsData = new Map();             // DPs (NASR only)
 let airspaceData = new Map();        // Airspace class by airport ID (NASR only)
+let chartsData = new Map();          // Charts by airport ICAO code (FAA d-TPP)
 let tokenTypeMap = new Map();        // Fast lookup: token -> type (AIRPORT/NAVAID/FIX/AIRWAY/PROCEDURE)
 let fileMetadata = new Map();        // Track individual file load times and validity
 let rawCSVData = {};                 // Raw CSV data for reindexing
+let rawChartsXML = null;             // Raw chart XML data for reindexing
+let chartsCycle = null;              // Current TPP cycle (YYMM)
 let db = null;
 let dataTimestamp = null;
 let dataSources = [];                // Track which sources were loaded
@@ -109,6 +112,7 @@ async function saveToCache() {
             stars: starsData,
             dps: dpsData,
             airspace: airspaceData,
+            charts: chartsData,
             rawCSV: rawCSVToStore // Checksum compressed/raw CSV data
         });
         console.log('[DataManager] Checksums calculated:', window.ChecksumUtils.getStats(checksums));
@@ -131,6 +135,7 @@ async function saveToCache() {
                 stars: Array.from(starsData.entries()),
                 dps: Array.from(dpsData.entries()),
                 airspace: Array.from(airspaceData.entries()),
+                charts: Array.from(chartsData.entries()),
                 dataSources: dataSources,
                 timestamp: Date.now(),
                 version: 12,
@@ -140,6 +145,9 @@ async function saveToCache() {
                 rawCSV: rawCSVToStore,
                 compressed: isCompressed, // Flag to indicate compression
                 compressionStats: compressionStats,
+                // Store charts metadata
+                rawChartsXML: rawChartsXML,
+                chartsCycle: chartsCycle,
                 // NEW: Checksums for data integrity verification
                 checksums: checksums
             };
@@ -274,6 +282,32 @@ async function loadData(onStatusUpdate) {
         // Merge data sources
         onStatusUpdate('[...] MERGING WORLDWIDE DATABASE', 'loading');
         mergeDataSources(nasrData, ourairportsData, onStatusUpdate);
+
+        // Load charts data (non-blocking - charts are optional)
+        try {
+            const chartsResult = await window.ChartsAdapter.loadChartData(onStatusUpdate);
+            if (chartsResult.success && chartsResult.data) {
+                chartsData = chartsResult.data.chartsMap;
+                rawChartsXML = chartsResult.rawXML;
+                chartsCycle = chartsResult.data.cycle;
+                dataSources.push('Charts');
+
+                // Add charts metadata
+                fileMetadata.set('charts', {
+                    id: 'charts',
+                    name: 'FAA d-TPP Charts',
+                    source: 'Charts',
+                    loaded: true,
+                    timestamp: Date.now(),
+                    recordCount: chartsResult.data.totalCharts,
+                    sizeBytes: chartsResult.rawXML ? chartsResult.rawXML.length : 0,
+                    cycle: chartsResult.data.cycle
+                });
+            }
+        } catch (error) {
+            console.warn('[DataManager] Charts loading failed (non-critical):', error);
+            onStatusUpdate('[!] CHARTS UNAVAILABLE (OPTIONAL)', 'warning');
+        }
 
         // Cache the indexed data (not raw CSV - saves re-indexing on reload)
         onStatusUpdate('[...] CACHING INDEXED DATABASE', 'loading');
@@ -656,8 +690,13 @@ async function loadFromCache(onStatusUpdate) {
         starsData = new Map(cachedData.stars || []);
         dpsData = new Map(cachedData.dps || []);
         airspaceData = new Map(cachedData.airspace || []);
+        chartsData = new Map(cachedData.charts || []);
         dataSources = cachedData.dataSources || [];
         dataTimestamp = cachedData.timestamp;
+
+        // Restore charts metadata
+        rawChartsXML = cachedData.rawChartsXML || null;
+        chartsCycle = cachedData.chartsCycle || null;
 
         // Restore file metadata if available
         if (cachedData.fileMetadata) {
@@ -1509,11 +1548,17 @@ window.DataManager = {
     getDataStats,
     getDpsData: () => dpsData,
     getStarsData: () => starsData,
+    getCharts: (icao) => {
+        const airportCharts = chartsData.get(icao);
+        return airportCharts ? airportCharts.charts : null;
+    },
+    getChartsCycle: () => chartsCycle,
 
     // Raw data access (for specialized queries)
     getAirportsData: () => airportsData,
     getNavaidsData: () => navaidsData,
     getFrequenciesData: () => frequenciesData,
+    getChartsData: () => chartsData,
 
     // DEPRECATED: Use QueryEngine instead
     searchWaypoints: (query) => {

@@ -1362,6 +1362,14 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelSt
             fuelTypesHTML = `<div class="text-warning text-xs">FUEL ${waypoint.fuelTypes}</div>`;
         }
 
+        // Charts button for airports (hidden in print)
+        let chartsButtonHTML = '';
+        if (waypoint.waypointType === 'airport') {
+            const icao = code;
+            const airportName = waypoint.name || code;
+            chartsButtonHTML = `<button class="btn-charts no-print" onclick="ChartsController.showChartsModal('${icao}', '${airportName.replace(/'/g, "\\'")}')">CHARTS</button>`;
+        }
+
         // Waypoint row
         tableHTML += `
             <tr class="wpt-row">
@@ -1369,6 +1377,7 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelSt
                 <td class="wpt-info-cell">
                     <div class="${colorClass} wpt-code">${waypoint.waypointType === 'airport' ? `<a href="https://www.airnav.com/airport/${code}" target="_blank" rel="noopener noreferrer" class="airport-link">${code}</a>` : code}</div>
                     <div class="text-xs text-secondary">${typeDisplay}</div>
+                    ${chartsButtonHTML}
                 </td>
                 <td colspan="2">
                     <div class="text-secondary text-xs">${pos}</div>

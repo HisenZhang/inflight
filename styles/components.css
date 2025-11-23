@@ -1315,3 +1315,214 @@ select option:checked {
     color: #000000;
     font-weight: 700;
 }
+
+/* ============================================
+   CHARTS BUTTON & MODAL
+   ============================================ */
+
+/* Charts button in navlog */
+.btn-charts {
+    background: var(--color-warning);
+    color: #000000;
+    border: none;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    border-radius: 3px;
+    margin-top: 0.25rem;
+    transition: all 0.2s ease;
+}
+
+.btn-charts:hover {
+    background: var(--color-primary);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.btn-charts:active {
+    transform: translateY(0);
+}
+
+/* Charts modal overlay */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    padding: var(--space-md);
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* Charts modal content */
+.modal-content {
+    background: var(--bg-primary);
+    border: 2px solid var(--color-primary);
+    border-radius: 4px;
+    max-width: 800px;
+    width: 100%;
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.charts-modal {
+    max-width: 900px;
+}
+
+/* Modal header */
+.modal-header {
+    background: var(--bg-secondary);
+    padding: var(--space-md);
+    border-bottom: 1px solid var(--color-primary);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h2 {
+    color: var(--color-primary);
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: 0.025em;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    color: var(--color-primary);
+    font-size: 2rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.modal-close:hover {
+    color: var(--color-warning);
+    transform: scale(1.1);
+}
+
+/* Modal body */
+.modal-body {
+    padding: var(--space-md);
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* Chart groups */
+.chart-group {
+    margin-bottom: var(--space-lg);
+}
+
+.chart-group:last-child {
+    margin-bottom: 0;
+}
+
+.chart-group-title {
+    color: var(--color-primary);
+    font-size: 0.875rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    margin-bottom: var(--space-sm);
+    padding-bottom: var(--space-xs);
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* Chart list */
+.chart-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+
+/* Chart item */
+.chart-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-sm);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 3px;
+    text-decoration: none;
+    color: var(--text-primary);
+    transition: all 0.2s ease;
+}
+
+.chart-item:hover {
+    background: var(--bg-primary);
+    border-color: var(--color-primary);
+    transform: translateX(4px);
+}
+
+.chart-name {
+    font-size: 0.8125rem;
+    font-weight: 500;
+}
+
+.chart-icon {
+    color: var(--color-primary);
+    font-size: 1rem;
+    margin-left: var(--space-sm);
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    .modal-content {
+        max-width: 100%;
+        max-height: 95vh;
+    }
+
+    .modal-header h2 {
+        font-size: 1rem;
+    }
+
+    .chart-name {
+        font-size: 0.75rem;
+    }
+}
+
+/* Print styles - hide charts button */
+@media print {
+    .no-print,
+    .btn-charts,
+    .modal-overlay {
+        display: none !important;
+    }
+}
