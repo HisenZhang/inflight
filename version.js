@@ -24,8 +24,8 @@
 const AppVersion = {
     // Semantic version (sync with package.json)
     MAJOR: 2,
-    MINOR: 6,
-    PATCH: 1,
+    MINOR: 7,
+    PATCH: 0,
 
     // Full version string
     get VERSION() {
@@ -34,7 +34,7 @@ const AppVersion = {
 
     // Service worker cache version
     // Increment this number to force PWA updates
-    CACHE_VERSION: 114,
+    CACHE_VERSION: 115,
 
     // Full cache name for service worker
     get CACHE_NAME() {
@@ -45,7 +45,7 @@ const AppVersion = {
     BUILD_DATE: '2025-11-23',
 
     // Release name (optional)
-    RELEASE_NAME: 'Feature: CHARTS tab autocomplete and history',
+    RELEASE_NAME: 'Feature: Complete weather integration (WX tab, METAR/TAF/PIREP/SIGMET, map overlays)',
 
     /**
      * Get full version info object

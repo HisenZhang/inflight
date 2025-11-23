@@ -26,6 +26,7 @@ const files = {
     utils: fs.readFileSync(path.join(projectRoot, 'utils/formatters.js'), 'utf8'),
     checksum: fs.readFileSync(path.join(projectRoot, 'utils/checksum.js'), 'utf8'),
     state: fs.readFileSync(path.join(projectRoot, 'state/flight-state.js'), 'utf8'),
+    weatherAPI: fs.readFileSync(path.join(projectRoot, 'compute/weather-api.js'), 'utf8'),
     routeLexer: fs.readFileSync(path.join(projectRoot, 'compute/route-lexer.js'), 'utf8'),
     routeParser: fs.readFileSync(path.join(projectRoot, 'compute/route-parser.js'), 'utf8'),
     routeResolver: fs.readFileSync(path.join(projectRoot, 'compute/route-resolver.js'), 'utf8'),
@@ -36,7 +37,8 @@ const files = {
     testState: fs.readFileSync(path.join(__dirname, 'test-state.js'), 'utf8'),
     testRouteParser: fs.readFileSync(path.join(__dirname, 'test-route-parser.js'), 'utf8'),
     testChecksum: fs.readFileSync(path.join(__dirname, 'test-checksum.js'), 'utf8'),
-    testWinds: fs.readFileSync(path.join(__dirname, 'test-winds.js'), 'utf8')
+    testWinds: fs.readFileSync(path.join(__dirname, 'test-winds.js'), 'utf8'),
+    testWeatherAPI: fs.readFileSync(path.join(__dirname, 'test-weather-api.js'), 'utf8')
 };
 
 // Create a minimal DOM environment
@@ -103,6 +105,7 @@ let testResults = {
             ${files.utils}
             ${files.checksum}
             ${files.state}
+            ${files.weatherAPI}
             ${files.routeLexer}
             ${files.routeParser}
             ${files.routeResolver}
@@ -114,6 +117,7 @@ let testResults = {
             ${files.testRouteParser}
             ${files.testChecksum}
             ${files.testWinds}
+            ${files.testWeatherAPI}
         `;
 
         // Evaluate in window context

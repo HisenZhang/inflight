@@ -125,6 +125,7 @@ const InflightController = (() => {
             updateFuelDisplay();
             updateWeatherDisplay();
             updateWeatherAhead();
+            updateNearbyPIREPs(); // Fetch and display nearby hazardous PIREPs
             updateNearbyAirports();
         } else {
             // No GPS position or flight plan data available
@@ -630,6 +631,104 @@ const InflightController = (() => {
         } else {
             elements.hazardsList.textContent = 'None';
         }
+    }
+
+    /**
+     * Update nearby PIREPs and weather alerts
+     */
+    async function updateNearbyPIREPs() {
+        if (!currentPosition) return;
+
+        const pirepCard = document.getElementById('if-pireps-card');
+        const pirepList = document.getElementById('if-pireps-list');
+
+        if (!pirepCard || !pirepList) return;
+
+        try {
+            // Find nearest airport to use as center point for PIREP search
+            const nearestAirport = findNearestAirportICAO(currentPosition.lat, currentPosition.lon);
+
+            if (!nearestAirport) {
+                pirepCard.style.display = 'none';
+                return;
+            }
+
+            // Fetch PIREPs within 50NM
+            const pireps = await window.WeatherAPI.fetchPIREPs(nearestAirport, 50, 6);
+
+            if (!pireps || pireps.length === 0) {
+                pirepCard.style.display = 'none';
+                return;
+            }
+
+            // Filter for hazardous PIREPs only
+            const hazardousPireps = pireps.filter(pirep => {
+                const hazards = window.WeatherAPI.parsePIREPHazards(pirep);
+                return hazards.hasIcing || hazards.hasTurbulence;
+            });
+
+            if (hazardousPireps.length === 0) {
+                pirepCard.style.display = 'none';
+                return;
+            }
+
+            // Display hazardous PIREPs
+            const pirepHTML = hazardousPireps.map(pirep => {
+                const hazards = window.WeatherAPI.parsePIREPHazards(pirep);
+                const obsTime = pirep.obsTime ? new Date(pirep.obsTime * 1000).toUTCString().substring(17, 22) : '--:--';
+
+                let hazardText = [];
+                if (hazards.hasIcing) hazardText.push('ICING');
+                if (hazards.hasTurbulence) hazardText.push('TURBULENCE');
+
+                const severityColor = hazards.severity === 'SEVERE' ? 'error' :
+                                      hazards.severity === 'MODERATE' ? 'warning' : 'secondary';
+
+                return `
+                    <div style="padding: 8px; margin-bottom: 8px; background: var(--bg-secondary); border-left: 3px solid var(--${severityColor});">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                            <span class="text-${severityColor}" style="font-weight: 700;">${hazardText.join(' + ')} ${hazards.severity ? `(${hazards.severity})` : ''}</span>
+                            <span class="text-secondary" style="font-size: 0.75rem;">${obsTime}Z</span>
+                        </div>
+                        <div style="font-size: 0.75rem; color: var(--text-secondary);">
+                            ${pirep.fltlvl ? `FL${pirep.fltlvl}` : '--'} • ${pirep.acType || 'UNK A/C'}
+                        </div>
+                        <div style="font-size: 0.7rem; margin-top: 4px; font-family: 'Roboto Mono', monospace; color: var(--text-metric);">
+                            ${pirep.rawOb ? pirep.rawOb.substring(0, 100) : 'No details'}${pirep.rawOb && pirep.rawOb.length > 100 ? '...' : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            pirepList.innerHTML = pirepHTML;
+            pirepCard.style.display = 'block';
+
+        } catch (error) {
+            console.error('[AHEAD] PIREP fetch error:', error);
+            pirepCard.style.display = 'none';
+        }
+    }
+
+    /**
+     * Find nearest airport ICAO code for weather queries
+     */
+    function findNearestAirportICAO(lat, lon) {
+        const airportsData = window.DataManager.getAirportsData?.() || new Map();
+        let nearest = null;
+        let minDistance = Infinity;
+
+        for (const [code, airport] of airportsData) {
+            // Only use airports with 4-letter ICAO codes
+            if (!code || code.length !== 4) continue;
+
+            const distance = calculateDistance(lat, lon, airport.lat, airport.lon);
+            if (distance < minDistance) {
+                minDistance = distance;
+                nearest = code;
+            }
+        }
+
+        return nearest;
     }
 
     function updateNearbyAirports() {

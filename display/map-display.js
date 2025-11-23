@@ -792,6 +792,11 @@ function generateMap(waypoints, legs) {
         svg += `</g>`;
     }
 
+    // Draw weather overlays (PIREPs and SIGMETs) if enabled
+    if (window.VectorMap && window.VectorMap.weatherOverlaysEnabled) {
+        svg += window.VectorMap.drawWeatherOverlays(project, bounds);
+    }
+
     // Close the transform group
     svg += `</g>`;
 
@@ -1558,6 +1563,141 @@ function navigateToNextWaypoint() {
 }
 
 // ============================================
+// WEATHER OVERLAYS
+// ============================================
+
+let weatherOverlaysEnabled = false;
+let cachedWeatherData = {
+    pireps: [],
+    sigmets: [],
+    lastFetch: null
+};
+
+/**
+ * Enable/disable weather overlays on map
+ */
+function toggleWeatherOverlays(enabled) {
+    weatherOverlaysEnabled = enabled;
+    if (enabled && routeData) {
+        fetchWeatherForRoute();
+    } else if (routeData) {
+        displayMap(routeData); // Redraw without weather
+    }
+}
+
+/**
+ * Fetch weather data for current route
+ */
+async function fetchWeatherForRoute() {
+    if (!routeData || !routeData.legs || routeData.legs.length === 0) return;
+
+    try {
+        // Get departure airport
+        const departureWaypoint = routeData.legs[0].from;
+        const departureIcao = departureWaypoint.icao || departureWaypoint.ident;
+
+        if (!departureIcao || departureIcao.length !== 4) {
+            console.warn('[VectorMap] Cannot fetch weather: invalid departure ICAO');
+            return;
+        }
+
+        // Fetch PIREPs and SIGMETs
+        const [pireps, sigmets] = await Promise.all([
+            window.WeatherAPI.fetchPIREPs(departureIcao, 200, 6), // 200NM radius
+            window.WeatherAPI.fetchSIGMETs()
+        ]);
+
+        cachedWeatherData = {
+            pireps: pireps || [],
+            sigmets: sigmets || [],
+            lastFetch: Date.now()
+        };
+
+        console.log(`[VectorMap] Fetched ${pireps.length} PIREPs and ${sigmets.length} SIGMETs`);
+
+        // Redraw map with weather overlays
+        if (routeData) {
+            displayMap(routeData);
+        }
+
+    } catch (error) {
+        console.error('[VectorMap] Weather fetch error:', error);
+    }
+}
+
+/**
+ * Draw weather overlays (PIREPs and SIGMETs)
+ * @param {Function} project - Projection function
+ * @param {Object} bounds - Map bounds
+ * @returns {string} SVG markup for weather overlays
+ */
+function drawWeatherOverlays(project, bounds) {
+    let svg = '';
+
+    // Draw PIREPs as markers
+    cachedWeatherData.pireps.forEach(pirep => {
+        if (!pirep.lat || !pirep.lon) return;
+
+        // Check if PIREP is within visible bounds
+        if (pirep.lat < bounds.minLat || pirep.lat > bounds.maxLat ||
+            pirep.lon < bounds.minLon || pirep.lon > bounds.maxLon) {
+            return;
+        }
+
+        const pos = project(pirep.lat, pirep.lon);
+        const hazards = window.WeatherAPI.parsePIREPHazards(pirep);
+
+        // Determine marker color based on hazards
+        let markerColor = '#FFFF00'; // Yellow default
+        let markerShape = 'circle';
+
+        if (hazards.severity === 'SEVERE') {
+            markerColor = '#FF0000'; // Red
+            markerShape = 'diamond';
+        } else if (hazards.severity === 'MODERATE') {
+            markerColor = '#FFA500'; // Orange
+            markerShape = 'triangle';
+        } else if (hazards.hasIcing) {
+            markerColor = '#00FFFF'; // Cyan for icing
+        } else if (hazards.hasTurbulence) {
+            markerColor = '#FFA500'; // Orange for turbulence
+        }
+
+        // Draw marker based on shape
+        if (markerShape === 'diamond') {
+            // Diamond for severe
+            const size = 8;
+            svg += `<polygon points="${pos.x},${pos.y - size} ${pos.x + size},${pos.y} ${pos.x},${pos.y + size} ${pos.x - size},${pos.y}"
+                    fill="${markerColor}" stroke="#FFFFFF" stroke-width="2" opacity="0.8"
+                    data-pirep="${encodeURIComponent(pirep.rawOb || '')}"
+                    class="pirep-marker"/>`;
+        } else if (markerShape === 'triangle') {
+            // Triangle for moderate
+            const size = 8;
+            svg += `<polygon points="${pos.x},${pos.y - size} ${pos.x + size},${pos.y + size} ${pos.x - size},${pos.y + size}"
+                    fill="${markerColor}" stroke="#FFFFFF" stroke-width="2" opacity="0.8"
+                    data-pirep="${encodeURIComponent(pirep.rawOb || '')}"
+                    class="pirep-marker"/>`;
+        } else {
+            // Circle for light/unknown
+            svg += `<circle cx="${pos.x}" cy="${pos.y}" r="6"
+                    fill="${markerColor}" stroke="#FFFFFF" stroke-width="2" opacity="0.8"
+                    data-pirep="${encodeURIComponent(pirep.rawOb || '')}"
+                    class="pirep-marker"/>`;
+        }
+
+        // Add hazard icon overlay
+        if (hazards.hasIcing) {
+            svg += `<text x="${pos.x}" y="${pos.y + 1}" font-size="8" font-weight="bold" text-anchor="middle" fill="#000000">I</text>`;
+        } else if (hazards.hasTurbulence) {
+            svg += `<text x="${pos.x}" y="${pos.y + 1}" font-size="8" font-weight="bold" text-anchor="middle" fill="#000000">T</text>`;
+        }
+    });
+
+    return svg;
+}
+
+// ============================================
 // EXPORTS
 // ============================================
 
@@ -1570,5 +1710,9 @@ window.VectorMap = {
     zoomIn,
     zoomOut,
     navigateToPrevWaypoint,
-    navigateToNextWaypoint
+    navigateToNextWaypoint,
+    toggleWeatherOverlays,
+    fetchWeatherForRoute,
+    drawWeatherOverlays,
+    weatherOverlaysEnabled
 };

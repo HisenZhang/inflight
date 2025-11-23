@@ -34,6 +34,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             ChartsController.init();
         }
 
+        // Initialize Weather controller
+        if (window.WeatherController) {
+            WeatherController.init();
+        }
+
         // Initialize system checks (Internet, GPS)
         UIController.initSystemChecks();
 
@@ -172,6 +177,24 @@ function setupEventListeners() {
     }
     if (zoomOutBtn) {
         zoomOutBtn.addEventListener('click', () => VectorMap.zoomOut());
+    }
+
+    // Weather overlay toggle button
+    const weatherOverlayBtn = document.getElementById('weatherOverlayBtn');
+    if (weatherOverlayBtn) {
+        weatherOverlayBtn.addEventListener('click', () => {
+            const currentState = window.VectorMap.weatherOverlaysEnabled;
+            window.VectorMap.toggleWeatherOverlays(!currentState);
+
+            // Update button appearance
+            if (!currentState) {
+                weatherOverlayBtn.classList.add('active');
+                weatherOverlayBtn.style.background = 'var(--primary)';
+            } else {
+                weatherOverlayBtn.classList.remove('active');
+                weatherOverlayBtn.style.background = '';
+            }
+        });
     }
 
     // Navlog export/import dropdowns

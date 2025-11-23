@@ -39,6 +39,7 @@
                 <button class="tab-btn" data-tab="data">DATA</button>
                 <button class="tab-btn" data-tab="route">ENTRY</button>
                 <button class="tab-btn" data-tab="navlog">NAVLOG</button>
+                <button class="tab-btn" data-tab="wx">WX</button>
                 <button class="tab-btn" data-tab="charts">CHART</button>
                 <button class="tab-btn" data-tab="map">MAP</button>
                 <button class="tab-btn" data-tab="inflight">AHEAD</button>
@@ -196,6 +197,8 @@
                         >
                         <div id="departureAutocompleteDropdown" class="autocomplete-dropdown"></div>
                     </div>
+                    <!-- Departure Weather -->
+                    <div id="departureWeather" class="route-weather-summary" style="display: none;"></div>
                 </div>
 
                 <!-- Route (Optional) -->
@@ -229,6 +232,8 @@
                         >
                         <div id="destinationAutocompleteDropdown" class="autocomplete-dropdown"></div>
                     </div>
+                    <!-- Destination Weather -->
+                    <div id="destinationWeather" class="route-weather-summary" style="display: none;"></div>
                 </div>
 
                 <!-- Flight Parameters (Required) -->
@@ -412,6 +417,83 @@
         </div>
         <!-- End Tab: Navlog -->
 
+        <!-- Tab: WX (Weather) -->
+        <div class="tab-content" id="tab-wx">
+            <!-- Airport Search -->
+            <div class="data-section">
+                <h3 class="section-header">AVIATION WEATHER</h3>
+
+                <div class="input-group-styled">
+                    <div class="input-row" style="position: relative;">
+                        <label class="text-sm font-medium">AIRPORT ICAO:</label>
+                        <input type="text" id="wxAirportInput" class="font-medium" placeholder="KORD" maxlength="4" style="text-transform: uppercase;">
+                        <div id="wxAutocompleteDropdown" class="autocomplete-dropdown"></div>
+                    </div>
+                </div>
+
+                <div class="data-actions">
+                    <button id="wxSearchBtn" class="btn btn-primary font-bold">GET WEATHER</button>
+                    <button id="wxClearBtn" class="btn btn-secondary">CLEAR</button>
+                </div>
+
+                <p class="help-text">
+                    <span class="text-secondary">Real-time METAR, TAF, PIREPs, and SIGMETs • Internet required</span>
+                </p>
+            </div>
+
+            <!-- Weather Sub-tabs -->
+            <div id="wxSubtabs" class="data-section" style="display: none;">
+                <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                    <button class="btn btn-secondary btn-sm wx-subtab active" data-subtab="metar">METAR</button>
+                    <button class="btn btn-secondary btn-sm wx-subtab" data-subtab="taf">TAF</button>
+                    <button class="btn btn-secondary btn-sm wx-subtab" data-subtab="pirep">PIREP</button>
+                    <button class="btn btn-secondary btn-sm wx-subtab" data-subtab="sigmet">SIGMET</button>
+                </div>
+
+                <!-- METAR View -->
+                <div id="wxMetarView" class="wx-subtab-content">
+                    <div id="wxMetarDisplay"></div>
+                </div>
+
+                <!-- TAF View -->
+                <div id="wxTafView" class="wx-subtab-content" style="display: none;">
+                    <div id="wxTafDisplay"></div>
+                </div>
+
+                <!-- PIREP View -->
+                <div id="wxPirepView" class="wx-subtab-content" style="display: none;">
+                    <div id="wxPirepDisplay"></div>
+                </div>
+
+                <!-- SIGMET View -->
+                <div id="wxSigmetView" class="wx-subtab-content" style="display: none;">
+                    <div id="wxSigmetDisplay"></div>
+                </div>
+            </div>
+
+            <!-- Loading/Error States -->
+            <div id="wxLoading" class="loading-panel" style="display: none;">
+                <div class="loading-spinner"></div>
+                <div class="loading-text">FETCHING WEATHER DATA...</div>
+            </div>
+
+            <div id="wxError" class="error-panel" style="display: none;">
+                <div class="error-title">⚠ WEATHER FETCH ERROR</div>
+                <div id="wxErrorText" class="error-text"></div>
+            </div>
+
+            <!-- Placeholder -->
+            <div id="wxPlaceholder" class="welcome-brief">
+                <h2 class="font-bold text-primary" style="font-size: 1.5rem; letter-spacing: 4px; margin-bottom: 1rem;">REAL-TIME WEATHER</h2>
+                <div class="welcome-info" style="max-width: 500px; margin: 0 auto 1.5rem auto;">
+                    <p>Access current weather observations, terminal forecasts, pilot reports, and significant weather advisories.</p>
+                    <p style="margin-bottom: 0;"><strong>Available:</strong> METAR • TAF • PIREPs • SIGMETs • AIRMETs • Flight Categories</p>
+                </div>
+                <p class="text-secondary" style="font-size: 0.75rem;">Enter an airport code above to view weather data.</p>
+            </div>
+        </div>
+        <!-- End Tab: WX -->
+
         <!-- Tab: Charts -->
         <div class="tab-content" id="tab-charts">
             <!-- Search Section -->
@@ -480,6 +562,7 @@
                     <button class="zoom-btn" data-zoom="surrounding-25">25NM</button>
                     <button class="zoom-btn" id="zoomOutBtn">−</button>
                     <button class="zoom-btn" id="zoomInBtn">+</button>
+                    <button class="zoom-btn" id="weatherOverlayBtn" title="Toggle Weather Overlays (PIREPs)">☁</button>
                 </div>
             </div>
 
@@ -659,6 +742,12 @@
             <div class="stats-card" id="if-hazards-card">
                 <h3 class="stats-card-title text-warning">POTENTIAL HAZARDS</h3>
                 <div id="if-hazards-list" class="hazards-list">None</div>
+            </div>
+
+            <!-- Nearby PIREPs & Weather Alerts -->
+            <div class="stats-card" id="if-pireps-card" style="display: none;">
+                <h3 class="stats-card-title text-warning">NEARBY PIREPs & ALERTS</h3>
+                <div id="if-pireps-list" class="pireps-list"></div>
             </div>
 
             <!-- Nearest Airports -->
@@ -1316,6 +1405,7 @@
     <script src="data/data-manager.js"></script>        <!-- Data loading & caching orchestrator -->
 
     <!-- Compute Engine -->
+    <script src="compute/weather-api.js"></script>      <!-- Weather data fetching (METAR/TAF/PIREP/SIGMET) -->
     <script src="compute/winds-aloft.js"></script>      <!-- Wind data fetching & interpolation -->
     <script src="compute/route-lexer.js"></script>      <!-- Route tokenization (NEW) -->
     <script src="compute/route-parser.js"></script>     <!-- Route parsing (NEW) -->
@@ -1335,6 +1425,7 @@
     <script src="display/inflight-controller.js"></script> <!-- AHEAD tab controller -->
     <script src="display/checklist-controller.js"></script><!-- Checklist tab controller -->
     <script src="display/charts-controller.js"></script>   <!-- Charts display controller -->
+    <script src="display/weather-controller.js"></script>  <!-- WX tab controller -->
     <script src="display/map-display.js"></script>    <!-- Vector map & GPS tracking -->
     <script src="display/app.js"></script>                 <!-- Main application coordinator -->
     <script src="ui/tutorial.js"></script>                 <!-- Interactive tutorial system -->

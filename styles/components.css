@@ -1609,3 +1609,73 @@ select option:checked {
         display: none !important;
     }
 }
+
+/* ============================================
+   WEATHER INTEGRATION
+   ============================================ */
+
+/* Route Weather Summary */
+.route-weather-summary {
+    margin-top: var(--space-sm);
+    padding: var(--space-sm);
+    background: var(--bg-secondary);
+    border-left: 2px solid var(--border-color);
+    font-size: 0.75rem;
+    line-height: 1.4;
+}
+
+.route-weather-summary.vfr {
+    border-color: var(--success);
+}
+
+.route-weather-summary.mvfr {
+    border-color: var(--primary);
+}
+
+.route-weather-summary.ifr {
+    border-color: var(--warning);
+}
+
+.route-weather-summary.lifr {
+    border-color: var(--error);
+}
+
+.wx-category-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    margin-right: var(--space-xs);
+}
+
+.wx-category-badge.vfr {
+    background: var(--success);
+    color: var(--bg-primary);
+}
+
+.wx-category-badge.mvfr {
+    background: var(--primary);
+    color: var(--bg-primary);
+}
+
+.wx-category-badge.ifr {
+    background: var(--warning);
+    color: var(--bg-primary);
+}
+
+.wx-category-badge.lifr {
+    background: var(--error);
+    color: var(--bg-primary);
+}
+
+.wx-summary-line {
+    margin: 2px 0;
+    color: var(--text-secondary);
+}
+
+.wx-summary-metric {
+    color: var(--text-metric);
+    font-weight: 500;
+}
