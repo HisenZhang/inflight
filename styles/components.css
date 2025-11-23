@@ -9,10 +9,10 @@ header {
     margin-bottom: var(--space-md);
 }
 
-/* Data Sections */
+/* Data Sections - Borderless design */
 .data-section {
     background: var(--bg-primary);
-    border: 2px solid var(--border-color);
+    border: none;
     padding: var(--space-md);
     margin-bottom: var(--space-md);
 }
@@ -28,10 +28,10 @@ header {
     border-bottom: 1px solid var(--border-color);
 }
 
-/* Status Box */
+/* Status Box - Borderless design */
 .data-status {
     background: var(--bg-primary);
-    border: 2px solid var(--border-color);
+    border: none;
     padding: var(--space-md);
     margin-bottom: var(--space-md);
 }
@@ -41,7 +41,7 @@ header {
     align-items: center;
     gap: var(--space-md);
     padding: var(--space-sm);
-    border: 1px solid var(--border-color);
+    border-left: 2px solid var(--border-color);
     margin-bottom: var(--space-sm);
 }
 
@@ -119,7 +119,8 @@ header {
     flex-direction: column;
     gap: var(--space-xs);
     padding: var(--space-md);
-    border: 2px solid var(--border-color);
+    border: none;
+    border-left: 2px solid var(--border-color);
     background: var(--bg-panel);
 }
 
@@ -219,7 +220,7 @@ header {
 /* Input Section */
 .input-section {
     background: var(--bg-primary);
-    border: 2px solid var(--border-color);
+    border: none;
     padding: var(--space-md);
     margin-bottom: var(--space-md);
 }
@@ -538,10 +539,10 @@ header {
     font-weight: 500;
 }
 
-/* Results Section */
+/* Results Section - Borderless design */
 .results-section {
     background: var(--bg-primary);
-    border: 2px solid var(--border-color);
+    border: none;
     padding: var(--space-md);
 }
 
@@ -731,7 +732,7 @@ header {
    ============================================ */
 .stats-section {
     background: var(--bg-primary);
-    border: 2px solid var(--border-color);
+    border: none;
     padding: var(--space-md);
 }
 
@@ -745,45 +746,34 @@ header {
 
 .stats-card {
     background: var(--bg-panel);
-    border: 2px solid var(--border-color);
+    border: none;
+    border-top: 1px solid var(--border-color);
     padding: var(--space-md);
     margin-bottom: var(--space-md);
 }
 
 @media (max-width: 1024px) {
-    /* Mobile: Remove panel borders to maximize screen space (except map) */
+    /* Mobile: Tighter spacing for all sections */
     .data-section,
     .data-status,
     .stats-section,
     .checklist-section,
-    .checklist-card,
-    .inflight-display,
     .results-section,
     .input-section {
-        border: none;
-        border-radius: 0;
         padding: var(--space-md) var(--space-sm);
         margin-bottom: var(--space-sm);
     }
 
-    /* Mobile: Checklist cards with top border for separation */
+    /* Mobile: Checklist cards background transparent */
     .checklist-card {
-        border-top: 1px solid var(--border-color);
         background: transparent;
+        padding: var(--space-md) 0;
     }
 
-    .checklist-card:first-of-type {
-        border-top: none;
-    }
-
-    /* Mobile: Status boxes with minimal borders */
-    .status-box {
-        border-left: 2px solid var(--border-color);
-        border-right: none;
-        border-top: none;
-        border-bottom: none;
-        padding: var(--space-sm);
-        margin-bottom: var(--space-xs);
+    /* Mobile: Stats cards background transparent */
+    .stats-card {
+        background: transparent;
+        padding: var(--space-md) 0;
     }
 
     /* Mobile: Preserve map borders for visual clarity */
@@ -792,33 +782,9 @@ header {
         border: 2px solid var(--border-color) !important;
     }
 
-    /* Mobile: Keep section headers but remove bottom border */
+    /* Mobile: Section headers more compact */
     .section-header {
-        border-bottom: none;
         margin-bottom: var(--space-sm);
-        padding-bottom: 0;
-    }
-
-    /* Mobile: Stats cards with top border only */
-    .stats-card {
-        border: none;
-        border-top: 1px solid var(--border-color);
-        border-radius: 0;
-        background: var(--bg-primary);
-        padding: var(--space-md) 0;
-    }
-
-    .stats-card:first-of-type {
-        border-top: none;
-    }
-
-    /* Mobile: Chart subgroups with minimal borders */
-    .chart-subgroup {
-        margin-bottom: var(--space-md);
-    }
-
-    .chart-subgroup-header {
-        border-bottom: 1px solid var(--border-color);
     }
 
     /* Mobile-friendly ICAO route input layout */
@@ -1007,9 +973,14 @@ header {
 
 .checklist-card {
     background: var(--bg-panel);
-    border: 1px solid var(--border-color);
+    border: none;
+    border-top: 1px solid var(--border-color);
     padding: var(--space-md);
     margin-bottom: var(--space-md);
+}
+
+.checklist-card:first-of-type {
+    border-top: none;
 }
 
 .checklist-title {
