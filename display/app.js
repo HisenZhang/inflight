@@ -29,6 +29,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         UIController.init();
         const elements = UIController.getElements();
 
+        // Initialize Charts controller
+        if (window.ChartsController) {
+            ChartsController.init();
+        }
+
         // Initialize system checks (Internet, GPS)
         UIController.initSystemChecks();
 

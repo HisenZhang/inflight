@@ -1149,8 +1149,9 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelSt
 
     // Add total time if available
     if (totalTime !== null && options.enableTime) {
-        const hours = Math.floor(totalTime / 60);
-        const minutes = Math.round(totalTime % 60);
+        const totalMinutes = Math.round(totalTime);
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
         summaryHTML += `
         <div class="summary-item">
             <span class="summary-label text-secondary text-sm">TIME</span>
@@ -1342,16 +1343,17 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelSt
         }
 
         // Airspace class for airports
-        let airspaceHTML = '';
+        let airspaceClassHTML = '';
+        let airspaceHoursHTML = '';
         if (waypoint.waypointType === 'airport') {
             const arptCode = waypoint.icao || waypoint.ident;
             const airspace = DataManager.getAirspaceClass(arptCode);
             if (airspace) {
                 let airspaceText = `CLASS ${airspace.class}`;
-                airspaceHTML = `<div class="text-reporting text-xs">${airspaceText}</div>`;
-                // Add hours/supplement info as separate amber line
+                airspaceClassHTML = `<div class="text-reporting text-xs">${airspaceText}</div>`;
+                // Add hours/supplement info for right column
                 if (airspace.hours) {
-                    airspaceHTML += `<div class="text-reporting text-xs">${airspace.hours}</div>`;
+                    airspaceHoursHTML = `<div class="text-reporting text-xs">${airspace.hours}</div>`;
                 }
             }
         }
@@ -1362,14 +1364,14 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelSt
             fuelTypesHTML = `<div class="text-warning text-xs">FUEL ${waypoint.fuelTypes}</div>`;
         }
 
-        // Charts link for airports (hidden in print, only if charts available)
+        // Charts button for airports (hidden in print, only if charts available)
         let chartsButtonHTML = '';
         if (waypoint.waypointType === 'airport') {
             const icao = code;
             const charts = DataManager.getCharts(icao);
             if (charts && charts.length > 0) {
                 const airportName = waypoint.name || code;
-                chartsButtonHTML = `<div class="text-xs mt-xs"><a href="#" class="charts-link no-print" onclick="event.preventDefault(); ChartsController.showChartsModal('${icao}', '${airportName.replace(/'/g, "\\'")}')">CHARTS</a></div>`;
+                chartsButtonHTML = `<div style="margin-top: 0.25rem;"><button class="btn btn-secondary btn-sm no-print" onclick="ChartsController.showChartsForAirport('${icao}', '${airportName.replace(/'/g, "\\'")}')">CHARTS</button></div>`;
             }
         }
 
@@ -1380,12 +1382,13 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelSt
                 <td class="wpt-info-cell">
                     <div class="${colorClass} wpt-code">${waypoint.waypointType === 'airport' ? `<a href="https://www.airnav.com/airport/${code}" target="_blank" rel="noopener noreferrer" class="airport-link">${code}</a>` : code}</div>
                     <div class="text-xs text-secondary">${typeDisplay}</div>
+                    ${airspaceClassHTML}
                     ${chartsButtonHTML}
                 </td>
                 <td colspan="2">
                     <div class="text-secondary text-xs">${pos}</div>
                     ${elevMagLine}
-                    ${airspaceHTML}
+                    ${airspaceHoursHTML}
                     ${fuelTypesHTML}
                     ${runwayHTML}
                     ${freqHTML ? `<div class="mt-xs">${freqHTML}</div>` : ''}
@@ -1416,8 +1419,9 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelSt
 
             // ETE (green/metric color for value if available)
             if (leg.legTime !== undefined) {
-                const hours = Math.floor(leg.legTime / 60);
-                const minutes = Math.round(leg.legTime % 60);
+                const totalMinutes = Math.round(leg.legTime);
+                const hours = Math.floor(totalMinutes / 60);
+                const minutes = totalMinutes % 60;
                 const timeDisplay = hours > 0 ? `${hours}H${minutes}M` : `${minutes}M`;
                 primaryNavHTML += ` <span class="leg-primary">ETE <span class="text-metric">${timeDisplay}</span></span>`;
                 cumulativeTime += leg.legTime;
@@ -1442,8 +1446,9 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelSt
             secondaryNavHTML += ` <span class="leg-secondary">• CUM DIST <span class="text-navaid">${cumulativeDistance.toFixed(1)}NM</span></span>`;
 
             if (cumulativeTime > 0) {
-                const cumHours = Math.floor(cumulativeTime / 60);
-                const cumMinutes = Math.round(cumulativeTime % 60);
+                const totalMinutes = Math.round(cumulativeTime);
+                const cumHours = Math.floor(totalMinutes / 60);
+                const cumMinutes = totalMinutes % 60;
                 const cumTimeDisplay = cumHours > 0 ? `${cumHours}H${cumMinutes}M` : `${cumMinutes}M`;
                 secondaryNavHTML += ` <span class="leg-secondary">• CUM TIME <span class="text-metric">${cumTimeDisplay}</span></span>`;
             }

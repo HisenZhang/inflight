@@ -237,8 +237,9 @@ function updateLiveNavigation() {
 
             // Add ETE if available (might not be if user opted out of wind correction)
             if (currentLeg.legTime !== undefined && currentLeg.legTime !== null) {
-                const hours = Math.floor(currentLeg.legTime / 60);
-                const minutes = Math.round(currentLeg.legTime % 60);
+                const totalMinutes = Math.round(currentLeg.legTime);
+                const hours = Math.floor(totalMinutes / 60);
+                const minutes = totalMinutes % 60;
                 if (hours > 0) {
                     message += `, E T E ${hours} hour${hours > 1 ? 's' : ''} ${minutes} minute${minutes !== 1 ? 's' : ''}`;
                 } else {
@@ -1079,8 +1080,9 @@ function updateCurrentInstruction(firstLeg, options) {
     // ETE in green
     if (els.ete) {
         if (firstLeg.legTime !== undefined) {
-            const hours = Math.floor(firstLeg.legTime / 60);
-            const minutes = Math.round(firstLeg.legTime % 60);
+            const totalMinutes = Math.round(firstLeg.legTime);
+            const hours = Math.floor(totalMinutes / 60);
+            const minutes = totalMinutes % 60;
             els.ete.textContent = hours > 0 ? `${hours}H${minutes}M` : `${minutes}M`;
         } else {
             els.ete.textContent = '--';
@@ -1154,8 +1156,9 @@ function updateNavigationDisplay(navData) {
 
     // Update ETE to next waypoint (green) - hide if ground speed < 5kt (likely noise)
     if (els.ete && eteNextWP !== null && gpsGroundSpeed !== null && gpsGroundSpeed >= 5) {
-        const hours = Math.floor(eteNextWP / 60);
-        const minutes = Math.round(eteNextWP % 60);
+        const totalMinutes = Math.round(eteNextWP);
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
         els.ete.textContent = hours > 0 ? `${hours}H${minutes}M` : `${minutes}M`;
         els.ete.style.color = '#00ff00'; // Green
     } else if (els.ete) {

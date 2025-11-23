@@ -121,8 +121,9 @@ function formatDuration(minutes) {
         return '--';
     }
 
-    const hours = Math.floor(minutes / 60);
-    const mins = Math.round(minutes % 60);
+    const totalMinutes = Math.round(minutes);
+    const hours = Math.floor(totalMinutes / 60);
+    const mins = totalMinutes % 60;
 
     if (hours > 0) {
         return `${hours}H ${mins}M`;

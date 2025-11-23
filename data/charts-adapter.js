@@ -271,6 +271,45 @@ window.ChartsAdapter = {
     },
 
     /**
+     * Groups approach charts by approach type (ILS, RNAV, VOR, etc.)
+     * @param {Array} iapCharts - Array of IAP chart objects
+     * @returns {Object} Charts grouped by approach type
+     */
+    groupApproachesByType(iapCharts) {
+        const grouped = {
+            ILS: [],
+            RNAV: [],
+            GPS: [],
+            VOR: [],
+            NDB: [],
+            LOC: [],
+            OTHER: []
+        };
+
+        iapCharts.forEach(chart => {
+            const name = chart.name.toUpperCase();
+
+            if (name.startsWith('ILS ') || name.includes(' ILS ')) {
+                grouped.ILS.push(chart);
+            } else if (name.startsWith('RNAV')) {
+                grouped.RNAV.push(chart);
+            } else if (name.startsWith('GPS') || name.includes('(GPS)')) {
+                grouped.GPS.push(chart);
+            } else if (name.startsWith('VOR')) {
+                grouped.VOR.push(chart);
+            } else if (name.startsWith('NDB')) {
+                grouped.NDB.push(chart);
+            } else if (name.startsWith('LOC')) {
+                grouped.LOC.push(chart);
+            } else {
+                grouped.OTHER.push(chart);
+            }
+        });
+
+        return grouped;
+    },
+
+    /**
      * Gets human-readable chart type name
      * @param {string} code - Chart code
      * @returns {string} Human-readable name
