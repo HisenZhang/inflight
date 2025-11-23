@@ -751,6 +751,76 @@ header {
 }
 
 @media (max-width: 1024px) {
+    /* Mobile: Remove panel borders to maximize screen space (except map) */
+    .data-section,
+    .data-status,
+    .stats-section,
+    .checklist-section,
+    .checklist-card,
+    .inflight-display,
+    .results-section,
+    .input-section {
+        border: none;
+        border-radius: 0;
+        padding: var(--space-md) var(--space-sm);
+        margin-bottom: var(--space-sm);
+    }
+
+    /* Mobile: Checklist cards with top border for separation */
+    .checklist-card {
+        border-top: 1px solid var(--border-color);
+        background: transparent;
+    }
+
+    .checklist-card:first-of-type {
+        border-top: none;
+    }
+
+    /* Mobile: Status boxes with minimal borders */
+    .status-box {
+        border-left: 2px solid var(--border-color);
+        border-right: none;
+        border-top: none;
+        border-bottom: none;
+        padding: var(--space-sm);
+        margin-bottom: var(--space-xs);
+    }
+
+    /* Mobile: Preserve map borders for visual clarity */
+    .map-display,
+    .map-container {
+        border: 2px solid var(--border-color) !important;
+    }
+
+    /* Mobile: Keep section headers but remove bottom border */
+    .section-header {
+        border-bottom: none;
+        margin-bottom: var(--space-sm);
+        padding-bottom: 0;
+    }
+
+    /* Mobile: Stats cards with top border only */
+    .stats-card {
+        border: none;
+        border-top: 1px solid var(--border-color);
+        border-radius: 0;
+        background: var(--bg-primary);
+        padding: var(--space-md) 0;
+    }
+
+    .stats-card:first-of-type {
+        border-top: none;
+    }
+
+    /* Mobile: Chart subgroups with minimal borders */
+    .chart-subgroup {
+        margin-bottom: var(--space-md);
+    }
+
+    .chart-subgroup-header {
+        border-bottom: 1px solid var(--border-color);
+    }
+
     /* Mobile-friendly ICAO route input layout */
     .route-input-icao .input-row {
         grid-template-columns: 100px 1fr;
@@ -767,22 +837,6 @@ header {
 
     .route-input-icao .button-row button {
         width: 100%;
-    }
-
-    .stats-section {
-        border: none;
-        padding: var(--space-md);
-    }
-
-    .stats-card {
-        border: none;
-        border-top: 1px solid var(--border-color);
-        border-radius: 0;
-        background: var(--bg-primary);
-    }
-
-    .stats-card:first-of-type {
-        border-top: none;
     }
 }
 
