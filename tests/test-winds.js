@@ -91,28 +91,81 @@ window.WindsTests = TestFramework.describe('Winds Aloft Data', function({ it }) 
         }
     });
 
+    it('should handle midnight-crossing use windows', () => {
+        // Test window that crosses midnight (e.g., 2000-0300Z = 8PM to 3AM)
+
+        // Mock the current time by temporarily replacing the function
+        const originalFunction = window.Utils.isWithinUseWindow;
+
+        // Create a test version that accepts a mock time
+        const testIsWithinUseWindow = (useWindow, mockHour, mockMin) => {
+            if (!useWindow) return false;
+            const match = useWindow.match(/^(\d{2})(\d{2})-(\d{2})(\d{2})Z$/);
+            if (!match) return false;
+
+            const currentUTC = mockHour * 100 + mockMin;
+            const startTime = parseInt(match[1] + match[2]);
+            const endTime = parseInt(match[3] + match[4]);
+
+            if (endTime < startTime) {
+                return currentUTC >= startTime || currentUTC <= endTime;
+            } else {
+                return currentUTC >= startTime && currentUTC <= endTime;
+            }
+        };
+
+        const midnightWindow = '2000-0300Z';
+
+        // Should be outside window (before start)
+        assert.equals(testIsWithinUseWindow(midnightWindow, 19, 0), false, '19:00 should be outside 2000-0300Z window');
+
+        // Should be inside window (at start)
+        assert.equals(testIsWithinUseWindow(midnightWindow, 20, 0), true, '20:00 should be inside 2000-0300Z window');
+
+        // Should be inside window (before midnight)
+        assert.equals(testIsWithinUseWindow(midnightWindow, 22, 30), true, '22:30 should be inside 2000-0300Z window');
+        assert.equals(testIsWithinUseWindow(midnightWindow, 23, 59), true, '23:59 should be inside 2000-0300Z window');
+
+        // Should be inside window (after midnight)
+        assert.equals(testIsWithinUseWindow(midnightWindow, 0, 0), true, '00:00 should be inside 2000-0300Z window');
+        assert.equals(testIsWithinUseWindow(midnightWindow, 2, 30), true, '02:30 should be inside 2000-0300Z window');
+
+        // Should be inside window (at end)
+        assert.equals(testIsWithinUseWindow(midnightWindow, 3, 0), true, '03:00 should be inside 2000-0300Z window');
+
+        // Should be outside window (after end)
+        assert.equals(testIsWithinUseWindow(midnightWindow, 3, 1), false, '03:01 should be outside 2000-0300Z window');
+        assert.equals(testIsWithinUseWindow(midnightWindow, 10, 0), false, '10:00 should be outside 2000-0300Z window');
+    });
+
     it('should format data age in minutes', () => {
         const timestamp = Date.now() - (5 * 60 * 1000); // 5 minutes ago
         const result = window.Utils.getDataAge(timestamp);
-        assert.equals(result, '5 min ago');
+        assert.equals(result, '5m ago');
     });
 
     it('should format data age in hours', () => {
         const timestamp = Date.now() - (2 * 60 * 60 * 1000); // 2 hours ago
         const result = window.Utils.getDataAge(timestamp);
-        assert.equals(result, '2 hrs ago');
+        assert.equals(result, '2h ago');
+    });
+
+    it('should format data age in hours and minutes', () => {
+        const timestamp = Date.now() - (2 * 60 * 60 * 1000 + 15 * 60 * 1000); // 2 hours 15 minutes ago
+        const result = window.Utils.getDataAge(timestamp);
+        assert.equals(result, '2h 15m ago');
     });
 
     it('should format data age in days', () => {
         const timestamp = Date.now() - (2 * 24 * 60 * 60 * 1000); // 2 days ago
         const result = window.Utils.getDataAge(timestamp);
-        assert.equals(result, '2 days ago');
+        assert.equals(result, '2d ago');
     });
 
-    it('should handle just now age', () => {
-        const timestamp = Date.now();
+    it('should handle very recent age in seconds', () => {
+        const timestamp = Date.now() - 30000; // 30 seconds ago
         const result = window.Utils.getDataAge(timestamp);
-        assert.equals(result, 'Just now');
+        assert.equals(result, '30s ago');
     });
 
 });

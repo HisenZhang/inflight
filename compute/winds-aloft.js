@@ -15,15 +15,13 @@
 // Standard wind levels in feet MSL
 const WIND_LEVELS = [3000, 6000, 9000, 12000, 18000, 24000, 30000, 34000, 39000];
 
-// Winds aloft cache (expires after 3 hours)
-let windsCache = {
-    stations: null,
-    metadata: null,
-    fetchedAt: null,
-    forecastPeriod: null
+// Winds aloft cache - separate cache for each forecast period
+// Each period (06, 12, 24) maintains its own cache until replaced
+let windsCacheByPeriod = {
+    '06': { stations: null, metadata: null, fetchedAt: null },
+    '12': { stations: null, metadata: null, fetchedAt: null },
+    '24': { stations: null, metadata: null, fetchedAt: null }
 };
-
-const CACHE_EXPIRY = 3 * 60 * 60 * 1000; // 3 hours
 
 /**
  * Fetch winds aloft from Aviation Weather API
@@ -31,15 +29,32 @@ const CACHE_EXPIRY = 3 * 60 * 60 * 1000; // 3 hours
  * @returns {Promise<Object>} - {stations: {...}, metadata: {...}}
  */
 async function fetchWindsAloft(forecastPeriod = '06') {
-    // Check cache
-    if (windsCache.stations &&
-        windsCache.forecastPeriod === forecastPeriod &&
-        windsCache.fetchedAt &&
-        (Date.now() - windsCache.fetchedAt) < CACHE_EXPIRY) {
-        return {
-            stations: windsCache.stations,
-            metadata: windsCache.metadata
-        };
+    console.log(`[Winds Aloft] Requesting ${forecastPeriod}-hour forecast`);
+
+    // Get cache for this specific forecast period
+    const cache = windsCacheByPeriod[forecastPeriod];
+
+    // Check if we have cached data for this period
+    if (cache && cache.stations && cache.metadata) {
+        const ageMinutes = Math.round((Date.now() - cache.fetchedAt) / 60000);
+
+        // Cache is valid if current time is still within the forecast's use window
+        const isWithinWindow = cache.metadata.useWindow &&
+            typeof Utils !== 'undefined' &&
+            Utils.isWithinUseWindow &&
+            Utils.isWithinUseWindow(cache.metadata.useWindow);
+
+        if (isWithinWindow) {
+            console.log(`[Winds Aloft] Using cached ${forecastPeriod}-hour data (age: ${ageMinutes} min, still within use window ${cache.metadata.useWindow})`);
+            return {
+                stations: cache.stations,
+                metadata: cache.metadata
+            };
+        } else {
+            console.log(`[Winds Aloft] Cache expired for ${forecastPeriod}-hour forecast - outside use window ${cache.metadata.useWindow}`);
+        }
+    } else {
+        console.log(`[Winds Aloft] No cached data for ${forecastPeriod}-hour forecast - fetching from API`);
     }
 
     const url = `https://cors.hisenz.com/?url=https://aviationweather.gov/api/data/windtemp?region=us&level=low&fcst=${forecastPeriod}`;
@@ -53,15 +68,18 @@ async function fetchWindsAloft(forecastPeriod = '06') {
         const text = await response.text();
         const parsedData = parseWindsAloft(text);
 
-        // Cache the result
-        windsCache = {
+        // Add forecastPeriod to metadata
+        parsedData.metadata.forecastPeriod = forecastPeriod;
+
+        // Cache the result for this specific forecast period
+        windsCacheByPeriod[forecastPeriod] = {
             stations: parsedData.stations,
             metadata: parsedData.metadata,
-            fetchedAt: Date.now(),
-            forecastPeriod: forecastPeriod
+            fetchedAt: Date.now()
         };
 
-        console.log('[Winds Aloft] Fetched and cached wind data:', {
+        console.log(`[Winds Aloft] Fetched and cached ${forecastPeriod}-hour wind data:`, {
+            forecastPeriod: forecastPeriod,
             dataBasedOn: parsedData.metadata.dataBasedOn,
             validTime: parsedData.metadata.validTime,
             useWindow: parsedData.metadata.useWindow,
@@ -77,19 +95,43 @@ async function fetchWindsAloft(forecastPeriod = '06') {
 }
 
 /**
- * Get cached wind data metadata (if available)
+ * Get cached wind data metadata for a specific forecast period
+ * @param {string} forecastPeriod - '06', '12', or '24'
  * @returns {Object|null} - Metadata or null if no cache
  */
-function getWindsMetadata() {
-    if (!windsCache.metadata) {
+function getWindsMetadata(forecastPeriod = '06') {
+    const cache = windsCacheByPeriod[forecastPeriod];
+
+    if (!cache || !cache.metadata) {
         return null;
     }
 
     return {
-        ...windsCache.metadata,
-        fetchedAt: windsCache.fetchedAt,
-        forecastPeriod: windsCache.forecastPeriod
+        ...cache.metadata,
+        fetchedAt: cache.fetchedAt
     };
+}
+
+/**
+ * Clear the winds aloft cache (all forecast periods or a specific one)
+ * @param {string} forecastPeriod - Optional: '06', '12', or '24' to clear specific period
+ */
+function clearWindsCache(forecastPeriod = null) {
+    if (forecastPeriod) {
+        windsCacheByPeriod[forecastPeriod] = {
+            stations: null,
+            metadata: null,
+            fetchedAt: null
+        };
+        console.log(`[Winds Aloft] Cache cleared for ${forecastPeriod}-hour forecast`);
+    } else {
+        windsCacheByPeriod = {
+            '06': { stations: null, metadata: null, fetchedAt: null },
+            '12': { stations: null, metadata: null, fetchedAt: null },
+            '24': { stations: null, metadata: null, fetchedAt: null }
+        };
+        console.log('[Winds Aloft] All forecast caches cleared');
+    }
 }
 
 /**
@@ -513,6 +555,7 @@ if (typeof window !== 'undefined') {
     window.WindsAloft = {
         fetchWindsAloft,
         getWindsMetadata,
+        clearWindsCache,
         parseWindsAloft,
         parseWindCode,
         findNearestStations,

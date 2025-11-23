@@ -871,7 +871,8 @@ async function handleCalculateRoute() {
             options,
             altitude: altitudeValue, // Always store (mandatory)
             tas: tasValue, // Always store (mandatory)
-            windData: windData
+            windData: windData,
+            windMetadata: windMetadata
         };
 
         // Update flight plan state and auto-save for crash recovery

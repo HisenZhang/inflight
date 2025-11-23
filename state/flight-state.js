@@ -26,7 +26,8 @@ const flightPlan = {
     // Flight parameters
     altitude: null,
     tas: null,
-    windData: null
+    windData: null,
+    windMetadata: null
 };
 
 /**
@@ -52,7 +53,7 @@ const navigation = {
 
 /**
  * Update flight plan with new data
- * @param {object} data - Flight plan data {routeString, departure, destination, routeMiddle, waypoints, legs, totalDistance, totalTime, fuelStatus, options, altitude, tas, windData}
+ * @param {object} data - Flight plan data {routeString, departure, destination, routeMiddle, waypoints, legs, totalDistance, totalTime, fuelStatus, options, altitude, tas, windData, windMetadata}
  */
 function updateFlightPlan(data) {
     flightPlan.routeString = data.routeString || null;
@@ -68,6 +69,7 @@ function updateFlightPlan(data) {
     flightPlan.altitude = data.altitude || null;
     flightPlan.tas = data.tas || null;
     flightPlan.windData = data.windData || null;
+    flightPlan.windMetadata = data.windMetadata || null;
     flightPlan.timestamp = Date.now();
 
     console.log('[FlightState] Flight plan updated:', flightPlan.routeString);
@@ -90,6 +92,7 @@ function clearFlightPlan() {
     flightPlan.altitude = null;
     flightPlan.tas = null;
     flightPlan.windData = null;
+    flightPlan.windMetadata = null;
     flightPlan.timestamp = null;
 
     console.log('[FlightState] Flight plan cleared');
@@ -221,11 +224,12 @@ function saveToStorage() {
             options: flightPlan.options,
             altitude: flightPlan.altitude,
             tas: flightPlan.tas,
-            windData: flightPlan.windData
+            windData: flightPlan.windData,
+            windMetadata: flightPlan.windMetadata
         };
 
         localStorage.setItem(NAVLOG_STORAGE_KEY, JSON.stringify(saveData));
-        console.log('[FlightState] Flight plan saved to storage (including wind data)');
+        console.log('[FlightState] Flight plan saved to storage (including wind data and metadata)');
         return true;
     } catch (error) {
         console.error('[FlightState] Failed to save to storage:', error);
@@ -315,7 +319,8 @@ function exportAsFile() {
             options: flightPlan.options,
             altitude: flightPlan.altitude,
             tas: flightPlan.tas,
-            windData: flightPlan.windData
+            windData: flightPlan.windData,
+            windMetadata: flightPlan.windMetadata
         };
 
         const json = JSON.stringify(exportData, null, 2);

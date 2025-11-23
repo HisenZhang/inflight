@@ -15,6 +15,50 @@ let destinationResults = [];
 let isProcessingAirportSelection = false;
 
 // ============================================
+// HELPER FUNCTIONS
+// ============================================
+
+/**
+ * Calculate age in milliseconds from a Zulu time string
+ * @param {string} zuluTime - Zulu time in DDHHMMZ format (e.g., "230000Z")
+ * @returns {number} Age in milliseconds
+ */
+function calculateZuluAge(zuluTime) {
+    if (!zuluTime || typeof zuluTime !== 'string') {
+        return 0;
+    }
+
+    // Parse DDHHMMZ format
+    const match = zuluTime.match(/^(\d{2})(\d{2})(\d{2})Z$/);
+    if (!match) {
+        return 0;
+    }
+
+    const day = parseInt(match[1]);
+    const hour = parseInt(match[2]);
+    const minute = parseInt(match[3]);
+
+    // Get current UTC time
+    const now = new Date();
+    const currentYear = now.getUTCFullYear();
+    const currentMonth = now.getUTCMonth();
+    const currentDay = now.getUTCDate();
+
+    // Create date object for the Zulu time
+    // Assume same month/year as current (forecasts are always recent)
+    let issueDate = new Date(Date.UTC(currentYear, currentMonth, day, hour, minute, 0));
+
+    // Handle month rollover (e.g., if today is 1st but forecast is from 30th of last month)
+    if (day > currentDay + 1) {
+        // Forecast day is in previous month
+        issueDate = new Date(Date.UTC(currentYear, currentMonth - 1, day, hour, minute, 0));
+    }
+
+    // Return age in milliseconds
+    return now.getTime() - issueDate.getTime();
+}
+
+// ============================================
 // INITIALIZATION
 // ============================================
 
@@ -1149,7 +1193,14 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelSt
         const isWithinWindow = Utils.isWithinUseWindow(metadata.useWindow);
         const validityColor = isWithinWindow ? 'text-metric' : 'text-warning';
         const validityIcon = isWithinWindow ? '✓' : '⚠';
-        const dataAge = Utils.getDataAge(metadata.parsedAt);
+
+        // Calculate issue age (when AWC created the forecast)
+        // metadata.dataBasedOn is like "230000Z" (DDHHMMZ format)
+        const issueAge = calculateZuluAge(metadata.dataBasedOn);
+        const issueAgeText = Utils.getDataAge(Date.now() - issueAge);
+
+        // Calculate fetch age (when we downloaded it from API)
+        const fetchAgeText = Utils.getDataAge(metadata.parsedAt);
 
         // Determine max age based on forecast period
         const forecastPeriod = metadata.forecastPeriod || '06';
@@ -1160,7 +1211,7 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelSt
             maxAge = 6 * 60 * 60 * 1000; // 6 hours for 6hr forecasts
         }
 
-        const isStale = metadata.parsedAt && (Date.now() - metadata.parsedAt) > maxAge;
+        const isStale = issueAge > maxAge;
         const ageColor = isStale ? 'text-warning' : 'text-secondary';
 
         summaryHTML += `
@@ -1174,7 +1225,11 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelSt
         </div>
         <div class="summary-item">
             <span class="summary-label text-secondary text-sm">ISSUED</span>
-            <span class="summary-value ${ageColor}">${Utils.formatZuluTime(metadata.dataBasedOn)} <span class="text-xs">(${dataAge})</span></span>
+            <span class="summary-value ${ageColor}">${Utils.formatZuluTime(metadata.dataBasedOn)} <span class="text-xs">(${issueAgeText})</span></span>
+        </div>
+        <div class="summary-item">
+            <span class="summary-label text-secondary text-sm">FETCHED</span>
+            <span class="summary-value text-secondary text-xs">${fetchAgeText}</span>
         </div>
         `;
     }
@@ -1183,9 +1238,9 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelSt
     if (fuelStatus) {
         const fuelColor = fuelStatus.isSufficient ? 'text-metric' : 'text-error';
         const fuelIcon = fuelStatus.isSufficient ? '✓' : '!';
-        const borderTop = options.windMetadata && options.enableWinds ? '' : 'border-top: 1px solid var(--border-color); padding-top: 8px; margin-top: 8px;';
+        // Always add separator before fuel section (whether or not wind data is present)
         summaryHTML += `
-        <div class="summary-item" style="${borderTop}">
+        <div class="summary-item" style="border-top: 1px solid var(--border-color); padding-top: 8px; margin-top: 8px;">
             <span class="summary-label text-secondary text-sm">FUEL STATUS</span>
             <span class="summary-value ${fuelColor} font-bold">${fuelIcon} ${fuelStatus.isSufficient ? 'SUFFICIENT' : 'INSUFFICIENT'}</span>
         </div>
@@ -1610,7 +1665,7 @@ function displayWindAltitudeTable(legs, filedAltitude) {
 // ============================================
 
 function restoreNavlog(navlogData) {
-    const { routeString, waypoints, legs, totalDistance, totalTime, fuelStatus, options } = navlogData;
+    const { routeString, waypoints, legs, totalDistance, totalTime, fuelStatus, options, windMetadata } = navlogData;
 
     // Restore ICAO-style route inputs (departure/route/destination)
     // Check if saved data has separate fields (new format) or single routeString (legacy)
@@ -1664,8 +1719,12 @@ function restoreNavlog(navlogData) {
         });
     }
 
-    // Display results
-    displayResults(waypoints, legs, totalDistance, totalTime, fuelStatus, options);
+    // Display results - include windMetadata in options if available
+    const displayOptions = { ...options };
+    if (windMetadata) {
+        displayOptions.windMetadata = windMetadata;
+    }
+    displayResults(waypoints, legs, totalDistance, totalTime, fuelStatus, displayOptions);
 
     // Display vector map
     if (typeof window.VectorMap !== 'undefined') {

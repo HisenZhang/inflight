@@ -234,7 +234,7 @@ function formatUseWindow(useWindow) {
 
 /**
  * Check if current UTC time is within a use window
- * @param {string} useWindow - Use window string (e.g., "0200-0900Z")
+ * @param {string} useWindow - Use window string (e.g., "0200-0900Z" or "2000-0300Z")
  * @returns {boolean} True if current time is within window
  */
 function isWithinUseWindow(useWindow) {
@@ -249,13 +249,20 @@ function isWithinUseWindow(useWindow) {
     const startTime = parseInt(match[1] + match[2]);
     const endTime = parseInt(match[3] + match[4]);
 
-    return currentUTC >= startTime && currentUTC <= endTime;
+    // Handle windows that cross midnight (e.g., 2000-0300Z)
+    if (endTime < startTime) {
+        // Window crosses midnight: check if we're after start OR before end
+        return currentUTC >= startTime || currentUTC <= endTime;
+    } else {
+        // Normal window: check if we're between start and end
+        return currentUTC >= startTime && currentUTC <= endTime;
+    }
 }
 
 /**
  * Get age of data in human readable format
  * @param {number} timestamp - Timestamp in milliseconds
- * @returns {string} Age string (e.g., "2 min ago", "1 hr ago")
+ * @returns {string} Age string (e.g., "2m ago", "1h ago")
  */
 function getDataAge(timestamp) {
     if (!timestamp) return '--';
@@ -264,18 +271,19 @@ function getDataAge(timestamp) {
     const ageMinutes = Math.floor(ageMs / 60000);
 
     if (ageMinutes < 1) {
-        return 'Just now';
+        // Show seconds for very recent data
+        const ageSeconds = Math.floor(ageMs / 1000);
+        return `${ageSeconds}s ago`;
     } else if (ageMinutes < 60) {
-        return `${ageMinutes} min ago`;
+        return `${ageMinutes}m ago`;
     } else {
         const ageHours = Math.floor(ageMinutes / 60);
-        if (ageHours === 1) {
-            return '1 hr ago';
-        } else if (ageHours < 24) {
-            return `${ageHours} hrs ago`;
+        const remainingMinutes = ageMinutes % 60;
+        if (ageHours < 24) {
+            return remainingMinutes > 0 ? `${ageHours}h ${remainingMinutes}m ago` : `${ageHours}h ago`;
         } else {
             const ageDays = Math.floor(ageHours / 24);
-            return `${ageDays} day${ageDays > 1 ? 's' : ''} ago`;
+            return `${ageDays}d ago`;
         }
     }
 }

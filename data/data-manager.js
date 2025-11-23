@@ -4,7 +4,8 @@
 const DB_NAME = 'FlightPlanningDB';
 const DB_VERSION = 12; // Updated for checksum validation
 const STORE_NAME = 'flightdata';
-const CACHE_DURATION = 28 * 24 * 60 * 60 * 1000; // 28 days (long-term data)
+// Note: NASR cache validity is now based on actual NASR expiry date (30 days from effective date)
+// instead of a fixed duration. This ensures cache aligns with source data validity.
 
 // Query history
 const HISTORY_KEY = 'flightplan_query_history';
@@ -54,6 +55,7 @@ let chartsCycle = null;              // Current TPP cycle (YYMM)
 let db = null;
 let dataTimestamp = null;
 let dataSources = [];                // Track which sources were loaded
+let nasrInfo = null;                 // NASR validity info (effectiveDate, expiryDate, daysRemaining)
 
 // ============================================
 // INDEXEDDB OPERATIONS
@@ -141,6 +143,8 @@ async function saveToCache() {
                 version: 12,
                 // Track individual file metadata
                 fileMetadata: Object.fromEntries(fileMetadata),
+                // Store NASR validity info
+                nasrInfo: nasrInfo,
                 // Store raw CSV data (compressed if supported, uncompressed otherwise)
                 rawCSV: rawCSVToStore,
                 compressed: isCompressed, // Flag to indicate compression
@@ -239,6 +243,16 @@ async function loadData(onStatusUpdate) {
         if (results[0].status === 'fulfilled') {
             nasrData = results[0].value;
             dataSources.push('NASR');
+
+            // Store NASR validity info
+            if (nasrData.info) {
+                nasrInfo = nasrData.info;
+                console.log('[DataManager] NASR validity:', {
+                    effectiveDate: nasrInfo.effectiveDate,
+                    expiryDate: nasrInfo.expiryDate,
+                    daysRemaining: nasrInfo.daysRemaining
+                });
+            }
 
             // Merge NASR file metadata
             if (nasrData.fileMetadata) {
@@ -666,24 +680,50 @@ async function checkCachedData() {
             // Load from indexed cache (fast - no re-indexing needed)
             await loadFromCache(cachedData);
 
-            // Determine cache status (28-day expiry for long-term data)
-            const cacheExpired = age >= CACHE_DURATION;
+            // Check NASR validity if available (use actual expiry date instead of fixed duration)
+            let cacheExpired = false;
+            let statusMessage = '';
 
-            if (cacheExpired) {
-                return {
-                    loaded: true,
-                    status: `[!] DATABASE LOADED (${daysOld}D OLD - UPDATE RECOMMENDED)`,
-                    type: 'warning'
-                };
+            if (cachedData.nasrInfo && cachedData.nasrInfo.expiryDate) {
+                const expiryDate = new Date(cachedData.nasrInfo.expiryDate);
+                const daysUntilExpiry = Math.floor((expiryDate - Date.now()) / (24 * 60 * 60 * 1000));
+                cacheExpired = daysUntilExpiry <= 0;
+
+                console.log('[DataManager] NASR cache validity:', {
+                    effectiveDate: cachedData.nasrInfo.effectiveDate,
+                    expiryDate: cachedData.nasrInfo.expiryDate,
+                    daysUntilExpiry: daysUntilExpiry,
+                    expired: cacheExpired
+                });
+
+                if (cacheExpired) {
+                    statusMessage = `[!] DATABASE LOADED (NASR EXPIRED ${Math.abs(daysUntilExpiry)}D AGO - UPDATE REQUIRED)`;
+                } else if (daysUntilExpiry <= 7) {
+                    statusMessage = `[!] DATABASE LOADED (NASR EXPIRES IN ${daysUntilExpiry}D - UPDATE RECOMMENDED)`;
+                } else {
+                    const sources = dataSources.join(' + ');
+                    const checksumStatus = cachedData.checksums ? ' [VERIFIED]' : '';
+                    statusMessage = `[OK] INDEXED DATABASE LOADED (${daysOld}D OLD, ${daysUntilExpiry}D VALID - ${sources})${checksumStatus}`;
+                }
             } else {
+                // Fallback to old behavior if NASR info not available (old cache format)
+                const fallbackExpiry = 28 * 24 * 60 * 60 * 1000;
+                cacheExpired = age >= fallbackExpiry;
                 const sources = dataSources.join(' + ');
                 const checksumStatus = cachedData.checksums ? ' [VERIFIED]' : '';
-                return {
-                    loaded: true,
-                    status: `[OK] INDEXED DATABASE LOADED (${daysOld}D OLD - ${sources})${checksumStatus}`,
-                    type: 'success'
-                };
+
+                if (cacheExpired) {
+                    statusMessage = `[!] DATABASE LOADED (${daysOld}D OLD - UPDATE RECOMMENDED)`;
+                } else {
+                    statusMessage = `[OK] INDEXED DATABASE LOADED (${daysOld}D OLD - ${sources})${checksumStatus}`;
+                }
             }
+
+            return {
+                loaded: true,
+                status: statusMessage,
+                type: cacheExpired ? 'warning' : 'success'
+            };
         }
     } catch (error) {
         console.error('Error loading cached data:', error);
@@ -718,6 +758,9 @@ async function loadFromCache(onStatusUpdate) {
         if (cachedData.fileMetadata) {
             fileMetadata = new Map(Object.entries(cachedData.fileMetadata));
         }
+
+        // Restore NASR validity info if available
+        nasrInfo = cachedData.nasrInfo || null;
 
         // DO NOT decompress raw CSV on fast path - only needed for reindexing
         // Raw CSV stays compressed in memory until explicitly needed
@@ -959,7 +1002,17 @@ function getFileStatus() {
         if (metadata) {
             const age = now - metadata.timestamp;
             const daysOld = Math.floor(age / (24 * 60 * 60 * 1000));
-            const expired = age >= CACHE_DURATION;
+
+            // Determine if expired based on NASR validity if available
+            let expired = false;
+            if (file.source === 'NASR' && nasrInfo && nasrInfo.expiryDate) {
+                const expiryDate = new Date(nasrInfo.expiryDate);
+                expired = now >= expiryDate.getTime();
+            } else {
+                // Fallback: use 28 days for non-NASR files or if NASR info not available
+                const fallbackExpiry = 28 * 24 * 60 * 60 * 1000;
+                expired = age >= fallbackExpiry;
+            }
 
             status.push({
                 ...file,
