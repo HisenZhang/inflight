@@ -251,10 +251,17 @@ async function fetchAllPIREPs() {
         const response = await fetch(`${CORS_PROXY}${encodeURIComponent(cacheUrl)}`);
 
         if (!response.ok) {
+            console.error(`[WeatherAPI] PIREP fetch failed: HTTP ${response.status}`);
             throw new Error(`HTTP ${response.status}`);
         }
 
-        const text = await response.text();
+        // Get response as blob, then decompress using DecompressionStream
+        const blob = await response.blob();
+        const decompressedStream = blob.stream().pipeThrough(new DecompressionStream('gzip'));
+        const decompressedBlob = await new Response(decompressedStream).blob();
+        const text = await decompressedBlob.text();
+
+        console.log(`[WeatherAPI] PIREP decompressed: ${text.length} chars`);
 
         // Parse CSV (format: columns are defined in first line, then data rows)
         const lines = text.trim().split('\n');
@@ -343,7 +350,11 @@ async function fetchSIGMETs() {
             throw new Error(`HTTP ${response.status}`);
         }
 
-        const text = await response.text();
+        // Get response as blob, then decompress using DecompressionStream
+        const blob = await response.blob();
+        const decompressedStream = blob.stream().pipeThrough(new DecompressionStream('gzip'));
+        const decompressedBlob = await new Response(decompressedStream).blob();
+        const text = await decompressedBlob.text();
 
         // Parse CSV (format: header row, then data rows)
         const lines = text.trim().split('\n');
@@ -456,7 +467,11 @@ async function fetchGAIRMETs() {
             throw new Error(`HTTP ${response.status}`);
         }
 
-        const text = await response.text();
+        // Get response as blob, then decompress using DecompressionStream
+        const blob = await response.blob();
+        const decompressedStream = blob.stream().pipeThrough(new DecompressionStream('gzip'));
+        const decompressedBlob = await new Response(decompressedStream).blob();
+        const text = await decompressedBlob.text();
 
         // Parse CSV (format: header row, then data rows)
         const lines = text.trim().split('\n');
