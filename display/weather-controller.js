@@ -449,45 +449,99 @@ window.WeatherController = {
             return;
         }
 
-        const pirepHTML = pireps.map(pirep => {
-            const hazards = WeatherAPI.parsePIREPHazards(pirep);
-            const obsTime = pirep.obsTime ? new Date(pirep.obsTime * 1000).toUTCString() : 'Unknown';
+        // Sort PIREPs by time (most recent first)
+        const sortedPireps = [...pireps].sort((a, b) => {
+            const timeA = a.obsTime || 0;
+            const timeB = b.obsTime || 0;
+            return timeB - timeA; // Descending (newest first)
+        });
 
-            // Hazard badges
-            let hazardBadges = '';
-            if (hazards.hasIcing) {
-                hazardBadges += `<span class="flight-category-badge" style="background: cyan; color: black; margin-right: 4px;">ICE</span>`;
+        const pirepHTML = sortedPireps.map(pirep => {
+            // Calculate relative time
+            const getRelativeTime = (obsTime) => {
+                if (!obsTime) return '';
+                const now = Date.now() / 1000;
+                const diffMinutes = Math.round((now - obsTime) / 60);
+                if (diffMinutes < 60) return `${diffMinutes}m ago`;
+                const diffHours = Math.round(diffMinutes / 60);
+                return `${diffHours}h ago`;
+            };
+
+            const obsDate = pirep.obsTime ? new Date(pirep.obsTime * 1000) : null;
+            const timeStr = obsDate ? obsDate.toLocaleString('en-US', {
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            }) : '-';
+            const relTime = getRelativeTime(pirep.obsTime);
+
+            // Flight level
+            let altText = '-';
+            if (pirep.fltlvl !== undefined && pirep.fltlvl !== null && pirep.fltlvl !== '') {
+                const fltLvlNum = parseInt(pirep.fltlvl);
+                if (!isNaN(fltLvlNum)) {
+                    altText = `FL${fltLvlNum} (${fltLvlNum * 100} ft)`;
+                }
             }
-            if (hazards.hasTurbulence) {
-                hazardBadges += `<span class="flight-category-badge" style="background: orange; color: black; margin-right: 4px;">TURB</span>`;
+
+            // Decode additional weather info
+            const decodedInfo = [];
+
+            // Temperature
+            if (pirep.temp !== undefined && pirep.temp !== null && pirep.temp !== 0) {
+                decodedInfo.push(`Temp: ${pirep.temp}°C`);
             }
-            if (hazards.severity) {
-                const severityColor = hazards.severity === 'SEVERE' ? 'red' : hazards.severity === 'MODERATE' ? 'orange' : 'yellow';
-                hazardBadges += `<span class="flight-category-badge" style="background: ${severityColor}; color: black;">${hazards.severity}</span>`;
+
+            // Icing
+            if (pirep.icgInt1 && pirep.icgInt1 !== 'NEG') {
+                let icingStr = `Icing: ${pirep.icgInt1}`;
+                if (pirep.icgType1) icingStr += ` ${pirep.icgType1}`;
+                if (pirep.icgBas1 && pirep.icgTop1) {
+                    icingStr += ` ${pirep.icgBas1}-${pirep.icgTop1}`;
+                }
+                decodedInfo.push(icingStr);
+            }
+
+            // Turbulence
+            if (pirep.tbInt1 && pirep.tbInt1 !== 'NEG') {
+                let turbStr = `Turb: ${pirep.tbInt1}`;
+                if (pirep.tbType1) turbStr += ` ${pirep.tbType1}`;
+                if (pirep.tbFreq1) turbStr += ` ${pirep.tbFreq1}`;
+                if (pirep.tbBas1 && pirep.tbTop1) {
+                    turbStr += ` ${pirep.tbBas1}-${pirep.tbTop1}`;
+                }
+                decodedInfo.push(turbStr);
+            }
+
+            // Sky conditions
+            if (pirep.clouds && pirep.clouds.length > 0) {
+                const clouds = pirep.clouds.map(c => `${c.cover || ''} ${c.base || ''}`).join(', ');
+                decodedInfo.push(`Sky: ${clouds}`);
+            }
+
+            // Wind
+            if (pirep.wdir !== undefined && pirep.wdir !== null && pirep.wdir !== 0 &&
+                pirep.wspd !== undefined && pirep.wspd !== null && pirep.wspd !== 0) {
+                decodedInfo.push(`Wind: ${pirep.wdir}° at ${pirep.wspd} kt`);
             }
 
             return `
-                <div class="stats-card" style="margin-bottom: 8px;">
-                    <h3 class="stats-card-title">
-                        ${pirep.reportType || 'PIREP'}
-                        ${hazardBadges}
-                    </h3>
-                    <div class="stats-grid-compact">
-                        <div class="stat-item">
-                            <span class="stat-label">TIME</span>
-                            <span class="stat-value text-secondary" style="font-size: 0.65rem;">${obsTime}</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-label">ALT</span>
-                            <span class="stat-value text-metric">${pirep.fltlvl ? `FL${pirep.fltlvl}` : '--'}</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-label">A/C</span>
-                            <span class="stat-value text-secondary">${pirep.acType || '--'}</span>
-                        </div>
+                <div class="stats-card" style="margin-bottom: 12px; padding: 12px;">
+                    <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 8px; flex-wrap: wrap;">
+                        <span style="color: #e0e0e0; font-size: 0.9rem;">${timeStr}</span>
+                        ${relTime ? `<span style="color: #ff00ff; font-weight: bold; font-size: 0.85rem;">${relTime}</span>` : ''}
+                        <span style="color: #aaa; font-size: 0.85rem;">${pirep.acType || 'Unknown A/C'}</span>
+                        <span style="color: #00FFFF; font-weight: bold; font-size: 0.9rem;">${altText}</span>
                     </div>
-                    <div style="padding: 12px; margin-top: 8px; background: #0a0a0a; border-radius: 4px;">
-                        <div style="font-family: 'Roboto Mono', monospace; color: #00FFFF; font-size: 0.75rem; line-height: 1.4; word-break: break-all;">
+                    ${decodedInfo.length > 0 ? `
+                    <div style="color: #ffff00; font-size: 0.85rem; margin-bottom: 8px;">
+                        ${decodedInfo.join(' | ')}
+                    </div>
+                    ` : ''}
+                    <div style="padding: 8px; background: #0a0a0a; border-radius: 4px;">
+                        <div style="font-family: 'Roboto Mono', monospace; color: #00FF00; font-size: 0.75rem; line-height: 1.4; word-break: break-all;">
                             ${pirep.rawOb || 'N/A'}
                         </div>
                     </div>
