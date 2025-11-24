@@ -570,24 +570,15 @@
                     <button class="zoom-btn" id="zoomInBtn">+</button>
                     <button class="zoom-btn" id="pirepBtn" title="Toggle PIREPs (Pilot Reports)">PIREP</button>
                     <button class="zoom-btn" id="sigmetBtn" title="Toggle SIGMETs (Significant Meteorological Information)">SIGMET</button>
-                    <button class="zoom-btn" id="gairmetBtn" title="Toggle G-AIRMETs (Graphical Airmen's Meteorological Information)">G-AIRMET</button>
                 </div>
 
-                <!-- Weather Altitude Filter -->
-                <div class="weather-altitude-filter" id="weatherAltitudeFilter" style="display: none;">
-                    <label class="filter-label">
-                        <span class="filter-label-text">MAX WX ALT:</span>
-                        <span class="filter-value" id="weatherAltValue">15000</span>
-                        <span class="filter-unit">FT</span>
-                    </label>
-                    <input type="range" class="altitude-slider" id="weatherAltSlider"
-                           min="0" max="60000" step="500" value="15000">
-                    <div class="slider-ticks">
-                        <span>SFC</span>
-                        <span>FL180</span>
-                        <span>FL360</span>
-                        <span>FL600</span>
-                    </div>
+                <!-- G-AIRMET Hazard Type Buttons -->
+                <div class="gairmet-controls" id="gairmetControls" style="display: none;">
+                    <span class="gairmet-label">G-AIRMET:</span>
+                    <button class="zoom-btn gairmet-btn" id="gairmetIceBtn" title="Toggle Icing G-AIRMETs">ICE</button>
+                    <button class="zoom-btn gairmet-btn" id="gairmetTurbBtn" title="Toggle Turbulence G-AIRMETs">TURB</button>
+                    <button class="zoom-btn gairmet-btn" id="gairmetIfrBtn" title="Toggle IFR G-AIRMETs">IFR</button>
+                    <button class="zoom-btn gairmet-btn" id="gairmetMtnBtn" title="Toggle Mountain Obscuration G-AIRMETs">MTN OBS</button>
                 </div>
             </div>
 

@@ -698,7 +698,10 @@ function generateMap(waypoints, legs) {
     const anyWeatherEnabled = window.VectorMap && (
         window.VectorMap.isWeatherEnabled('pireps') ||
         window.VectorMap.isWeatherEnabled('sigmets') ||
-        window.VectorMap.isWeatherEnabled('gairmets')
+        window.VectorMap.isWeatherEnabled('gairmet-ice') ||
+        window.VectorMap.isWeatherEnabled('gairmet-turb') ||
+        window.VectorMap.isWeatherEnabled('gairmet-ifr') ||
+        window.VectorMap.isWeatherEnabled('gairmet-mtn')
     );
 
     if (anyWeatherEnabled) {
@@ -1609,12 +1612,13 @@ function navigateToNextWaypoint() {
 let weatherOverlaysEnabled = {
     pireps: false,
     sigmets: false,
-    gairmets: false
+    gairmets: {
+        ice: false,
+        turb: false,
+        ifr: false,
+        mtn: false
+    }
 };
-
-// Weather altitude filter (in feet, 0 = surface)
-// Default: 1.5x filed altitude, or unlimited if no altitude
-let weatherMaxAltitude = null; // null = show all altitudes
 
 let cachedWeatherData = {
     pireps: [],
@@ -1625,14 +1629,14 @@ let cachedWeatherData = {
 
 /**
  * Enable/disable weather overlays on map
- * @param {string} type - Weather type: 'pireps', 'sigmets', 'gairmets', or 'all'
+ * @param {string} type - Weather type: 'pireps', 'sigmets', 'gairmet-ice', 'gairmet-turb', 'gairmet-ifr', 'gairmet-mtn'
  * @param {boolean} enabled - Enable or disable
  */
 function toggleWeatherOverlays(type, enabled) {
-    if (type === 'all') {
-        weatherOverlaysEnabled.pireps = enabled;
-        weatherOverlaysEnabled.sigmets = enabled;
-        weatherOverlaysEnabled.gairmets = enabled;
+    // Handle G-AIRMET hazard types
+    if (type.startsWith('gairmet-')) {
+        const hazardType = type.replace('gairmet-', '');
+        weatherOverlaysEnabled.gairmets[hazardType] = enabled;
     } else if (type in weatherOverlaysEnabled) {
         weatherOverlaysEnabled[type] = enabled;
     }
@@ -1640,16 +1644,10 @@ function toggleWeatherOverlays(type, enabled) {
     console.log(`[VectorMap] Weather overlay ${type} ${enabled ? 'ENABLED' : 'DISABLED'}`, weatherOverlaysEnabled);
 
     // Check if ANY weather type is enabled
-    const anyEnabled = weatherOverlaysEnabled.pireps || weatherOverlaysEnabled.sigmets || weatherOverlaysEnabled.gairmets;
+    const anyGairmetEnabled = Object.values(weatherOverlaysEnabled.gairmets).some(v => v);
+    const anyEnabled = weatherOverlaysEnabled.pireps || weatherOverlaysEnabled.sigmets || anyGairmetEnabled;
 
     if (anyEnabled && routeData && !cachedWeatherData.lastFetch) {
-        // Initialize altitude filter to 1.5x current/filed altitude (default)
-        if (weatherMaxAltitude === null) {
-            const filedAltitude = window.FlightState?.getFlightPlan?.()?.altitude || 10000;
-            weatherMaxAltitude = Math.round(filedAltitude * 1.5);
-            console.log(`[VectorMap] Setting default weather altitude filter to ${weatherMaxAltitude} FT (1.5x filed altitude)`);
-        }
-
         // Only fetch if we haven't fetched before
         console.log('[VectorMap] Fetching weather data for route...');
         fetchWeatherForRoute();
@@ -1907,9 +1905,10 @@ function drawWeatherOverlays(project, bounds) {
     }
 
     // ============================================
-    // SUB-LAYER 2B: G-AIRMETs (Dashed polygons)
+    // SUB-LAYER 2B: G-AIRMETs (Dashed polygons) - Filter by hazard type
     // ============================================
-    if (weatherOverlaysEnabled.gairmets) {
+    const anyGairmetEnabled = Object.values(weatherOverlaysEnabled.gairmets).some(v => v);
+    if (anyGairmetEnabled) {
         svg += `<g id="weather-gairmets" opacity="0.7">`;
 
         // Draw G-AIRMETs as polygons (if available in cached data)
@@ -1920,15 +1919,22 @@ function drawWeatherOverlays(project, bounds) {
                 return;
             }
 
-            // Filter by altitude if enabled
-            if (weatherMaxAltitude !== null) {
-                const gairmetAltLow = gairmet.altitudeLow1 || gairmet.altitudeLow || 0;
-                const gairmetAltHigh = gairmet.altitudeHi1 || gairmet.altitudeHi || 999999;
+            // Filter by hazard type
+            const hazardType = (gairmet.hazard || '').toUpperCase();
+            let shouldRender = false;
 
-                // Skip if G-AIRMET base is above our filter altitude
-                if (gairmetAltLow > weatherMaxAltitude) {
-                    return;
-                }
+            if (hazardType.includes('ICE') && weatherOverlaysEnabled.gairmets.ice) {
+                shouldRender = true;
+            } else if (hazardType.includes('TURB') && weatherOverlaysEnabled.gairmets.turb) {
+                shouldRender = true;
+            } else if ((hazardType.includes('IFR') || hazardType.includes('MVFR')) && weatherOverlaysEnabled.gairmets.ifr) {
+                shouldRender = true;
+            } else if (hazardType.includes('MTN') && weatherOverlaysEnabled.gairmets.mtn) {
+                shouldRender = true;
+            }
+
+            if (!shouldRender) {
+                return;
             }
 
             // Project all coordinates
@@ -2064,33 +2070,15 @@ function drawWeatherOverlays(project, bounds) {
 
 /**
  * Check if a specific weather type is enabled
- * @param {string} type - 'pireps', 'sigmets', or 'gairmets'
+ * @param {string} type - 'pireps', 'sigmets', 'gairmet-ice', 'gairmet-turb', 'gairmet-ifr', 'gairmet-mtn'
  * @returns {boolean}
  */
 function isWeatherEnabled(type) {
-    return weatherOverlaysEnabled[type] || false;
-}
-
-/**
- * Set maximum altitude for weather filtering
- * @param {number} altitude - Maximum altitude in feet (0 = surface, null = show all)
- */
-function setWeatherMaxAltitude(altitude) {
-    weatherMaxAltitude = altitude;
-    console.log(`[VectorMap] Weather altitude filter set to ${altitude} FT`);
-
-    // Redraw map with new filter
-    if (routeData && routeData.waypoints && routeData.legs) {
-        generateMap(routeData.waypoints, routeData.legs);
+    if (type.startsWith('gairmet-')) {
+        const hazardType = type.replace('gairmet-', '');
+        return weatherOverlaysEnabled.gairmets[hazardType] || false;
     }
-}
-
-/**
- * Get current weather altitude filter
- * @returns {number|null} Current max altitude or null
- */
-function getWeatherMaxAltitude() {
-    return weatherMaxAltitude;
+    return weatherOverlaysEnabled[type] || false;
 }
 
 // ============================================
@@ -2110,7 +2098,5 @@ window.VectorMap = {
     toggleWeatherOverlays,
     fetchWeatherForRoute,
     drawWeatherOverlays,
-    isWeatherEnabled,
-    setWeatherMaxAltitude,
-    getWeatherMaxAltitude
+    isWeatherEnabled
 };

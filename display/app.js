@@ -198,8 +198,8 @@ function setupEventListeners() {
                 pirepBtn.style.background = '';
             }
 
-            // Show/hide altitude filter when any weather is enabled
-            updateWeatherAltitudeFilterVisibility();
+            // Show/hide G-AIRMET controls when any weather is enabled
+            updateGairmetControlsVisibility();
         });
     }
 
@@ -217,63 +217,53 @@ function setupEventListeners() {
                 sigmetBtn.style.background = '';
             }
 
-            // Show/hide altitude filter when any weather is enabled
-            updateWeatherAltitudeFilterVisibility();
+            // Show/hide G-AIRMET controls when any weather is enabled
+            updateGairmetControlsVisibility();
         });
     }
 
-    if (gairmetBtn) {
-        gairmetBtn.addEventListener('click', () => {
-            const currentState = window.VectorMap.isWeatherEnabled('gairmets');
-            window.VectorMap.toggleWeatherOverlays('gairmets', !currentState);
+// G-AIRMET hazard type buttons
+    const gairmetIceBtn = document.getElementById('gairmetIceBtn');
+    const gairmetTurbBtn = document.getElementById('gairmetTurbBtn');
+    const gairmetIfrBtn = document.getElementById('gairmetIfrBtn');
+    const gairmetMtnBtn = document.getElementById('gairmetMtnBtn');
+    const gairmetControls = document.getElementById('gairmetControls');
+
+    function setupGairmetButton(btn, type) {
+        if (!btn) return;
+        btn.addEventListener('click', () => {
+            const currentState = window.VectorMap.isWeatherEnabled(`gairmet-${type}`);
+            window.VectorMap.toggleWeatherOverlays(`gairmet-${type}`, !currentState);
 
             // Update button appearance
             if (!currentState) {
-                gairmetBtn.classList.add('active');
-                gairmetBtn.style.background = 'var(--primary)';
+                btn.classList.add('active');
             } else {
-                gairmetBtn.classList.remove('active');
-                gairmetBtn.style.background = '';
+                btn.classList.remove('active');
             }
 
-            // Show/hide altitude filter when any weather is enabled
-            updateWeatherAltitudeFilterVisibility();
+            updateGairmetControlsVisibility();
         });
     }
 
-    // Weather altitude filter slider
-    const weatherAltSlider = document.getElementById('weatherAltSlider');
-    const weatherAltValue = document.getElementById('weatherAltValue');
+    setupGairmetButton(gairmetIceBtn, 'ice');
+    setupGairmetButton(gairmetTurbBtn, 'turb');
+    setupGairmetButton(gairmetIfrBtn, 'ifr');
+    setupGairmetButton(gairmetMtnBtn, 'mtn');
 
-    if (weatherAltSlider && weatherAltValue) {
-        weatherAltSlider.addEventListener('input', (e) => {
-            const altitude = parseInt(e.target.value);
-            weatherAltValue.textContent = altitude;
-            window.VectorMap.setWeatherMaxAltitude(altitude);
-        });
-    }
-
-    // Update altitude filter visibility based on weather state
-    function updateWeatherAltitudeFilterVisibility() {
-        const weatherAltitudeFilter = document.getElementById('weatherAltitudeFilter');
-        if (!weatherAltitudeFilter) return;
+    // Show/hide G-AIRMET controls when any weather is enabled
+    function updateGairmetControlsVisibility() {
+        if (!gairmetControls) return;
 
         const anyWeatherEnabled = window.VectorMap.isWeatherEnabled('pireps') ||
                                   window.VectorMap.isWeatherEnabled('sigmets') ||
-                                  window.VectorMap.isWeatherEnabled('gairmets');
+                                  window.VectorMap.isWeatherEnabled('gairmet-ice') ||
+                                  window.VectorMap.isWeatherEnabled('gairmet-turb') ||
+                                  window.VectorMap.isWeatherEnabled('gairmet-ifr') ||
+                                  window.VectorMap.isWeatherEnabled('gairmet-mtn');
 
-        weatherAltitudeFilter.style.display = anyWeatherEnabled ? 'block' : 'none';
-
-        // Update slider value from current filter
-        if (anyWeatherEnabled && weatherAltSlider && weatherAltValue) {
-            const currentAlt = window.VectorMap.getWeatherMaxAltitude();
-            if (currentAlt !== null) {
-                weatherAltSlider.value = currentAlt;
-                weatherAltValue.textContent = currentAlt;
-            }
-        }
+        gairmetControls.style.display = anyWeatherEnabled ? 'flex' : 'none';
     }
-
     // Navlog export/import dropdowns
     setupExportDropdown();
     setupImportDropdown();
