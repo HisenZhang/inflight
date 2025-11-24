@@ -1860,39 +1860,35 @@ async function fetchWeatherForRoute(forceRefresh = false) {
 
 /**
  * Check if a polygon intersects with map bounds
- * Returns true if ANY vertex is inside bounds OR if polygon contains the bounds
+ * Simple check: returns true if ANY vertex is inside expanded bounds
+ * Expanded bounds include 20% padding to catch polygons near edges
  * @param {Array} coords - Array of {lat, lon} coordinates
  * @param {Object} bounds - {minLat, maxLat, minLon, maxLon}
- * @returns {boolean} True if polygon intersects bounds
+ * @returns {boolean} True if polygon likely intersects bounds
  */
 function polygonIntersectsBounds(coords, bounds) {
     if (!coords || coords.length === 0) return false;
     if (!bounds) return true; // No bounds check, show all
 
-    // Check if any vertex is inside bounds
+    // Expand bounds by 20% to catch edge polygons and large areas
+    const latPadding = (bounds.maxLat - bounds.minLat) * 0.2;
+    const lonPadding = (bounds.maxLon - bounds.minLon) * 0.2;
+    const expandedBounds = {
+        minLat: bounds.minLat - latPadding,
+        maxLat: bounds.maxLat + latPadding,
+        minLon: bounds.minLon - lonPadding,
+        maxLon: bounds.maxLon + lonPadding
+    };
+
+    // Check if any vertex is inside expanded bounds
     for (const coord of coords) {
-        if (coord.lat >= bounds.minLat && coord.lat <= bounds.maxLat &&
-            coord.lon >= bounds.minLon && coord.lon <= bounds.maxLon) {
+        if (coord.lat >= expandedBounds.minLat && coord.lat <= expandedBounds.maxLat &&
+            coord.lon >= expandedBounds.minLon && coord.lon <= expandedBounds.maxLon) {
             return true; // At least one vertex inside
         }
     }
 
-    // Check if bounds center is inside polygon (polygon contains the view)
-    // Simple point-in-polygon test for bounds center
-    const centerLat = (bounds.minLat + bounds.maxLat) / 2;
-    const centerLon = (bounds.minLon + bounds.maxLon) / 2;
-
-    let inside = false;
-    for (let i = 0, j = coords.length - 1; i < coords.length; j = i++) {
-        const xi = coords[i].lon, yi = coords[i].lat;
-        const xj = coords[j].lon, yj = coords[j].lat;
-
-        const intersect = ((yi > centerLat) !== (yj > centerLat))
-            && (centerLon < (xj - xi) * (centerLat - yi) / (yj - yi) + xi);
-        if (intersect) inside = !inside;
-    }
-
-    return inside;
+    return false; // All vertices outside expanded bounds
 }
 
 /**
