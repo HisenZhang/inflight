@@ -510,6 +510,12 @@ function generateMap(waypoints, legs) {
     const mapContainer = document.getElementById('mapContainer');
     if (!mapContainer) return;
 
+    // Validate waypoints is an array
+    if (!Array.isArray(waypoints) || waypoints.length === 0) {
+        console.warn('[VectorMap] Invalid waypoints array');
+        return;
+    }
+
     // Calculate bounds based on zoom mode
     let bounds;
 
@@ -1257,7 +1263,7 @@ function zoomIn() {
     const newZoomLevel = Math.min(3.0, zoomLevel * 1.25);
     if (newZoomLevel !== zoomLevel) {
         zoomLevel = newZoomLevel;
-        if (routeData) {
+        if (routeData && routeData.waypoints && routeData.legs) {
             generateMap(routeData.waypoints, routeData.legs);
         }
         console.log(`[VectorMap] Zoomed in to ${zoomLevel.toFixed(2)}x`);
@@ -1274,7 +1280,7 @@ function zoomOut() {
             panOffset = { x: 0, y: 0 };
         }
 
-        if (routeData) {
+        if (routeData && routeData.waypoints && routeData.legs) {
             generateMap(routeData.waypoints, routeData.legs);
         }
         console.log(`[VectorMap] Zoomed out to ${zoomLevel.toFixed(2)}x`);
@@ -1570,6 +1576,7 @@ let weatherOverlaysEnabled = false;
 let cachedWeatherData = {
     pireps: [],
     sigmets: [],
+    gairmets: [],
     lastFetch: null
 };
 
@@ -1578,10 +1585,14 @@ let cachedWeatherData = {
  */
 function toggleWeatherOverlays(enabled) {
     weatherOverlaysEnabled = enabled;
+    console.log(`[VectorMap] Weather overlays ${enabled ? 'ENABLED' : 'DISABLED'}`);
+
     if (enabled && routeData) {
+        console.log('[VectorMap] Fetching weather data for route...');
         fetchWeatherForRoute();
-    } else if (routeData) {
-        displayMap(routeData); // Redraw without weather
+    } else if (routeData && routeData.waypoints && routeData.legs) {
+        console.log('[VectorMap] Redrawing map without weather overlays');
+        generateMap(routeData.waypoints, routeData.legs); // Redraw without weather
     }
 }
 
@@ -1592,19 +1603,42 @@ async function fetchWeatherForRoute() {
     if (!routeData || !routeData.legs || routeData.legs.length === 0) return;
 
     try {
-        // Get departure airport
-        const departureWaypoint = routeData.legs[0].from;
-        const departureIcao = departureWaypoint.icao || departureWaypoint.ident;
+        // Find the first valid airport in the route (not navaid/fix)
+        let referenceAirport = null;
+        for (const waypoint of routeData.waypoints) {
+            if (waypoint.waypointType === 'airport') {
+                referenceAirport = waypoint.icao || waypoint.ident;
+                break;
+            }
+        }
 
-        if (!departureIcao || departureIcao.length !== 4) {
-            console.warn('[VectorMap] Cannot fetch weather: invalid departure ICAO');
+        // If no airport found, use route center coordinates to find nearest airport
+        if (!referenceAirport) {
+            console.log('[VectorMap] No airport in route, using center point for weather fetch');
+            const centerLat = (routeData.waypoints[0].lat + routeData.waypoints[routeData.waypoints.length - 1].lat) / 2;
+            const centerLon = (routeData.waypoints[0].lon + routeData.waypoints[routeData.waypoints.length - 1].lon) / 2;
+
+            // Find nearest airport to route center
+            if (window.QueryEngine) {
+                const nearby = window.QueryEngine.getNearbyPoints(centerLat, centerLon, 100);
+                if (nearby.airports && nearby.airports.length > 0) {
+                    referenceAirport = nearby.airports[0].icao || nearby.airports[0].ident;
+                }
+            }
+        }
+
+        if (!referenceAirport || referenceAirport.length !== 4) {
+            console.warn('[VectorMap] Cannot fetch weather: no valid airport found in route');
             return;
         }
 
-        // Fetch PIREPs and SIGMETs (use larger radius initially, will filter to 50NM corridor)
-        const [allPireps, sigmets] = await Promise.all([
-            window.WeatherAPI.fetchPIREPs(departureIcao, 200, 6), // Fetch wider area
-            window.WeatherAPI.fetchSIGMETs()
+        console.log(`[VectorMap] Fetching weather using reference airport: ${referenceAirport}`);
+
+        // Fetch PIREPs, SIGMETs, and G-AIRMETs (use larger radius initially, will filter to 50NM corridor)
+        const [allPireps, sigmets, gairmets] = await Promise.all([
+            window.WeatherAPI.fetchPIREPs(referenceAirport, 200, 6), // Fetch wider area
+            window.WeatherAPI.fetchSIGMETs(),
+            window.WeatherAPI.fetchGAIRMETs()
         ]);
 
         // Filter PIREPs to only those within 50NM of the route corridor
@@ -1613,14 +1647,15 @@ async function fetchWeatherForRoute() {
         cachedWeatherData = {
             pireps,
             sigmets: sigmets || [],
+            gairmets: gairmets || [],
             lastFetch: Date.now()
         };
 
-        console.log(`[VectorMap] Fetched ${pireps.length} PIREPs (within 50NM left/right of route) and ${sigmets.length} SIGMETs`);
+        console.log(`[VectorMap] Fetched ${pireps.length} PIREPs (within 50NM left/right of route), ${sigmets.length} SIGMETs, and ${gairmets.length} G-AIRMETs`);
 
         // Redraw map with weather overlays
-        if (routeData) {
-            displayMap(routeData);
+        if (routeData && routeData.waypoints && routeData.legs) {
+            generateMap(routeData.waypoints, routeData.legs);
         }
 
     } catch (error) {
@@ -1729,6 +1764,136 @@ function distanceToLineSegment(pointLat, pointLon, segALat, segALon, segBLat, se
 function drawWeatherOverlays(project, bounds) {
     let svg = '';
 
+    console.log(`[VectorMap] Drawing weather overlays - PIREPs: ${cachedWeatherData.pireps.length}, SIGMETs: ${cachedWeatherData.sigmets.length}, G-AIRMETs: ${cachedWeatherData.gairmets.length}`);
+
+    let sigmetCount = 0;
+    let gairmetCount = 0;
+    let pirepCount = 0;
+
+    // Draw SIGMETs as polygons
+    if (cachedWeatherData.sigmets && cachedWeatherData.sigmets.length > 0) {
+        cachedWeatherData.sigmets.forEach(sigmet => {
+            // Check if sigmet has coordinates
+            if (!sigmet.coords || !Array.isArray(sigmet.coords) || sigmet.coords.length < 3) {
+                console.log('[VectorMap] Skipping SIGMET with insufficient coordinates');
+                return;
+            }
+
+            // Project all coordinates
+            const projectedPoints = sigmet.coords.map(coord => {
+                if (coord.lat !== undefined && coord.lon !== undefined) {
+                    return project(coord.lat, coord.lon);
+                }
+                return null;
+            }).filter(p => p !== null);
+
+            if (projectedPoints.length < 3) return;
+
+            // Create polygon points string
+            const pointsStr = projectedPoints.map(p => `${p.x},${p.y}`).join(' ');
+
+            // Determine fill color based on hazard type
+            const hazardType = sigmet.hazard || '';
+            let fillColor = '#888888';
+            let strokeColor = '#888888';
+            if (hazardType.includes('TURB')) {
+                fillColor = '#FFA500';
+                strokeColor = '#FF8C00';
+            } else if (hazardType.includes('ICE')) {
+                fillColor = '#00FFFF';
+                strokeColor = '#00CED1';
+            } else if (hazardType.includes('IFR')) {
+                fillColor = '#FF0000';
+                strokeColor = '#DC143C';
+            } else if (hazardType.includes('TS') || hazardType.includes('CONVECTIVE')) {
+                fillColor = '#FFFF00';
+                strokeColor = '#FFD700';
+            }
+
+            // Draw SIGMET polygon
+            svg += `<polygon points="${pointsStr}"
+                    fill="${fillColor}" fill-opacity="0.15"
+                    stroke="${strokeColor}" stroke-width="2" stroke-opacity="0.6"
+                    data-sigmet="${encodeURIComponent(sigmet.rawAirSigmet || sigmet.hazard || 'SIGMET')}"
+                    class="sigmet-polygon"/>`;
+
+            // Add label at centroid
+            if (projectedPoints.length > 0) {
+                const centroid = {
+                    x: projectedPoints.reduce((sum, p) => sum + p.x, 0) / projectedPoints.length,
+                    y: projectedPoints.reduce((sum, p) => sum + p.y, 0) / projectedPoints.length
+                };
+                svg += `<text x="${centroid.x}" y="${centroid.y}"
+                        font-size="10" font-weight="bold" text-anchor="middle"
+                        fill="${strokeColor}" stroke="#000000" stroke-width="0.5">
+                        ${hazardType}
+                        </text>`;
+            }
+
+            sigmetCount++;
+        });
+    }
+
+    // Draw G-AIRMETs as polygons (if available in cached data)
+    if (cachedWeatherData.gairmets && cachedWeatherData.gairmets.length > 0) {
+        cachedWeatherData.gairmets.forEach(gairmet => {
+            // Check if gairmet has coordinates
+            if (!gairmet.coords || !Array.isArray(gairmet.coords) || gairmet.coords.length < 3) {
+                return;
+            }
+
+            // Project all coordinates
+            const projectedPoints = gairmet.coords.map(coord => {
+                if (coord.lat !== undefined && coord.lon !== undefined) {
+                    return project(coord.lat, coord.lon);
+                }
+                return null;
+            }).filter(p => p !== null);
+
+            if (projectedPoints.length < 3) return;
+
+            // Create polygon points string
+            const pointsStr = projectedPoints.map(p => `${p.x},${p.y}`).join(' ');
+
+            // Determine fill color based on hazard type
+            const hazardType = gairmet.hazard || '';
+            let fillColor = '#FFFF00';
+            let strokeColor = '#FFD700';
+            if (hazardType.includes('TURB')) {
+                fillColor = '#FFA500';
+                strokeColor = '#FF8C00';
+            } else if (hazardType.includes('ICE')) {
+                fillColor = '#00FFFF';
+                strokeColor = '#00CED1';
+            } else if (hazardType.includes('IFR') || hazardType.includes('MTN')) {
+                fillColor = '#FF0000';
+                strokeColor = '#DC143C';
+            }
+
+            // Draw G-AIRMET polygon
+            svg += `<polygon points="${pointsStr}"
+                    fill="${fillColor}" fill-opacity="0.1"
+                    stroke="${strokeColor}" stroke-width="1.5" stroke-opacity="0.5" stroke-dasharray="4,4"
+                    data-gairmet="${encodeURIComponent(gairmet.hazard || 'G-AIRMET')}"
+                    class="gairmet-polygon"/>`;
+
+            // Add label at centroid
+            if (projectedPoints.length > 0) {
+                const centroid = {
+                    x: projectedPoints.reduce((sum, p) => sum + p.x, 0) / projectedPoints.length,
+                    y: projectedPoints.reduce((sum, p) => sum + p.y, 0) / projectedPoints.length
+                };
+                svg += `<text x="${centroid.x}" y="${centroid.y}"
+                        font-size="9" font-weight="normal" text-anchor="middle"
+                        fill="${strokeColor}" stroke="#000000" stroke-width="0.5" opacity="0.8">
+                        ${hazardType}
+                        </text>`;
+            }
+
+            gairmetCount++;
+        });
+    }
+
     // Draw PIREPs as markers
     cachedWeatherData.pireps.forEach(pirep => {
         if (!pirep.lat || !pirep.lon) return;
@@ -1787,7 +1952,11 @@ function drawWeatherOverlays(project, bounds) {
         } else if (hazards.hasTurbulence) {
             svg += `<text x="${pos.x}" y="${pos.y + 1}" font-size="8" font-weight="bold" text-anchor="middle" fill="#000000">T</text>`;
         }
+
+        pirepCount++;
     });
+
+    console.log(`[VectorMap] Rendered weather overlays - ${pirepCount} PIREPs, ${sigmetCount} SIGMETs, ${gairmetCount} G-AIRMETs`);
 
     return svg;
 }

@@ -718,8 +718,8 @@ const InflightController = (() => {
         let minDistance = Infinity;
 
         for (const [code, airport] of airportsData) {
-            // Only use airports with 4-letter ICAO codes
-            if (!code || code.length !== 4) continue;
+            // Only use airports with valid 4-letter ICAO codes (must be ALL LETTERS, no digits)
+            if (!code || code.length !== 4 || /\d/.test(code)) continue;
 
             const distance = calculateDistance(lat, lon, airport.lat, airport.lon);
             if (distance < minDistance) {

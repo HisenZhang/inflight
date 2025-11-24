@@ -130,6 +130,12 @@ async function fetchTAF(icao) {
  * @returns {Promise<Array>} Array of PIREP objects
  */
 async function fetchPIREPs(icao, radiusNM = 100, ageHours = 6) {
+    // Validate ICAO code (must be 4 letters, cannot start with number)
+    if (!icao || icao.length !== 4 || /^\d/.test(icao)) {
+        console.warn(`[WeatherAPI] Invalid ICAO code for PIREP fetch: ${icao}`);
+        return [];
+    }
+
     console.log(`[WeatherAPI] Fetching PIREPs for ${icao} (${radiusNM}NM, ${ageHours}hr)`);
 
     // Check cache first
@@ -148,6 +154,11 @@ async function fetchPIREPs(icao, radiusNM = 100, ageHours = 6) {
         const response = await fetch(`${CORS_PROXY}${encodeURIComponent(apiUrl)}`);
 
         if (!response.ok) {
+            // Don't throw on 400 errors, just return empty array
+            if (response.status === 400) {
+                console.warn(`[WeatherAPI] Invalid PIREP request for ${icao} (HTTP 400)`);
+                return [];
+            }
             throw new Error(`HTTP ${response.status}`);
         }
 

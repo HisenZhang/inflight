@@ -330,7 +330,7 @@ window.WeatherController = {
     },
 
     /**
-     * Render TAF display
+     * Render TAF display (table format matching wx.hisenz.com)
      */
     renderTAF() {
         const container = document.getElementById('wxTafDisplay');
@@ -349,39 +349,47 @@ window.WeatherController = {
             month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false
         }) : 'Unknown';
 
-        // Build forecast periods
-        let forecastHTML = '';
+        // Build forecast table rows
+        let tableRowsHTML = '';
         if (taf.fcsts && Array.isArray(taf.fcsts)) {
-            forecastHTML = taf.fcsts.map((fcst, index) => {
+            tableRowsHTML = taf.fcsts.map((fcst, index) => {
                 // Format time period
                 const timeFrom = fcst.timeFrom ? new Date(fcst.timeFrom * 1000) : null;
                 const timeTo = fcst.timeTo ? new Date(fcst.timeTo * 1000) : null;
 
                 const timeFromStr = timeFrom ? timeFrom.toLocaleString('en-US', {
-                    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false
+                    month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false
                 }) : '??';
                 const timeToStr = timeTo ? timeTo.toLocaleString('en-US', {
-                    hour: '2-digit', minute: '2-digit', hour12: false
+                    month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false
                 }) : '??';
 
-                const changeType = fcst.fcstChange || (index === 0 ? 'BASE' : 'FM');
+                const changeType = fcst.fcstChange || (index === 0 ? '' : 'FM');
 
                 // Wind
                 const windDir = fcst.wdir !== null && fcst.wdir !== undefined ? `${fcst.wdir.toString().padStart(3, '0')}°` : 'VRB';
-                const windSpd = fcst.wspd !== null && fcst.wspd !== undefined ? `${fcst.wspd}` : '0';
-                const windGust = fcst.wgst ? ` G${fcst.wgst}` : '';
-                const windStr = `${windDir} at ${windSpd}${windGust} kt`;
+                const windSpd = fcst.wspd !== null && fcst.wspd !== undefined ? `${fcst.wspd}KT` : '0KT';
+                const windGust = fcst.wgst ? ` G${fcst.wgst}KT` : '';
+                const windStr = `${windDir} ${windSpd}${windGust}`;
 
                 // Visibility
                 const visib = fcst.visib !== null && fcst.visib !== undefined ?
-                    (fcst.visib >= 10 ? '10+ SM' : `${fcst.visib} SM`) : '--';
+                    (fcst.visib >= 10 ? '10+SM' : `${fcst.visib}SM`) : '--';
 
                 // Weather
-                const wx = fcst.wxString && fcst.wxString.trim() !== '' ?
-                    this.decodeWxString(fcst.wxString) : 'None';
+                const wx = fcst.wxString && fcst.wxString.trim() !== '' ? fcst.wxString : '';
 
-                // Clouds (human readable)
-                const clouds = this.formatClouds(fcst.clouds);
+                // Clouds (abbreviated)
+                let cloudStr = '';
+                if (fcst.clouds && Array.isArray(fcst.clouds) && fcst.clouds.length > 0) {
+                    cloudStr = fcst.clouds.map(c => {
+                        if (c.cover === 'SKC' || c.cover === 'CLR') return c.cover;
+                        const base = c.base !== undefined ? c.base.toString().padStart(3, '0') : '';
+                        return base ? `${c.cover}${base}` : c.cover;
+                    }).join(' ');
+                } else {
+                    cloudStr = 'SKC';
+                }
 
                 // Determine flight category for this period
                 let ceiling = null;
@@ -397,38 +405,24 @@ window.WeatherController = {
                 const visibility = fcst.visib || 10;
                 const ceilingStr = ceiling !== null ? ceiling.toString() : 'CLR';
                 const flightCat = window.WeatherAPI.determineFlightCategory(visibility.toString(), ceilingStr);
-                const flightCatBadge = this.getFlightCategoryBadge(flightCat);
+
+                // Flight category color
+                let catColor = '#808080';
+                if (flightCat === 'VFR') catColor = '#00FF00';
+                else if (flightCat === 'MVFR') catColor = '#0077FF';
+                else if (flightCat === 'IFR') catColor = '#FF0000';
+                else if (flightCat === 'LIFR') catColor = '#FF00FF';
 
                 return `
-                    <div class="stats-card" style="margin-bottom: 12px; padding: 12px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                            <div>
-                                <span style="color: #00FFFF; font-weight: bold; font-size: 0.9rem;">${changeType}</span>
-                                <span style="color: #e0e0e0; font-size: 0.85rem; margin-left: 8px;">${timeFromStr} - ${timeToStr}</span>
-                            </div>
-                            ${flightCatBadge}
-                        </div>
-                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; font-size: 0.85rem;">
-                            <div>
-                                <span style="color: #888;">Wind:</span>
-                                <span style="color: #fff; margin-left: 4px;">${windStr}</span>
-                            </div>
-                            <div>
-                                <span style="color: #888;">Visibility:</span>
-                                <span style="color: #fff; margin-left: 4px;">${visib}</span>
-                            </div>
-                            <div style="grid-column: 1 / -1;">
-                                <span style="color: #888;">Sky:</span>
-                                <span style="color: #aaa; margin-left: 4px;">${clouds}</span>
-                            </div>
-                            ${wx !== 'None' ? `
-                            <div style="grid-column: 1 / -1;">
-                                <span style="color: #888;">Weather:</span>
-                                <span style="color: #ffff00; margin-left: 4px;">${wx}</span>
-                            </div>
-                            ` : ''}
-                        </div>
-                    </div>
+                    <tr>
+                        <td style="color: #00FFFF; font-weight: bold;">${changeType}</td>
+                        <td style="color: #e0e0e0; font-size: 0.75rem; white-space: nowrap;">${timeFromStr} - ${timeToStr}</td>
+                        <td style="color: #fff;">${windStr}</td>
+                        <td style="color: #fff;">${visib}</td>
+                        <td style="color: #ffff00;">${wx}</td>
+                        <td style="color: #aaa;">${cloudStr}</td>
+                        <td style="color: ${catColor}; font-weight: bold; text-align: center;">${flightCat}</td>
+                    </tr>
                 `;
             }).join('');
         }
@@ -438,6 +432,7 @@ window.WeatherController = {
         if (rawTAF !== 'N/A') {
             rawTAF = rawTAF.replace(/(^|\s)(FM\d{2,6})/g, (_match, p1, p2) => `${p1}<br/>&nbsp;&nbsp;&nbsp;&nbsp;${p2}`);
             rawTAF = rawTAF.replace(/(^|\s)(TEMPO\b)/g, (_match, p1, p2) => `${p1}<br/>&nbsp;&nbsp;&nbsp;&nbsp;${p2}`);
+            rawTAF = rawTAF.replace(/(^|\s)(BECMG\b)/g, (_match, p1, p2) => `${p1}<br/>&nbsp;&nbsp;&nbsp;&nbsp;${p2}`);
         }
 
         container.innerHTML = `
@@ -448,7 +443,24 @@ window.WeatherController = {
                 </div>
             </div>
 
-            ${forecastHTML}
+            <div class="stats-card" style="padding: 0; overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid var(--border-color); background: rgba(0,0,0,0.3);">
+                            <th style="padding: 8px; text-align: left; color: #888; font-weight: 600;">TYPE</th>
+                            <th style="padding: 8px; text-align: left; color: #888; font-weight: 600;">TIME</th>
+                            <th style="padding: 8px; text-align: left; color: #888; font-weight: 600;">WIND</th>
+                            <th style="padding: 8px; text-align: left; color: #888; font-weight: 600;">VIS</th>
+                            <th style="padding: 8px; text-align: left; color: #888; font-weight: 600;">WX</th>
+                            <th style="padding: 8px; text-align: left; color: #888; font-weight: 600;">SKY</th>
+                            <th style="padding: 8px; text-align: center; color: #888; font-weight: 600;">CAT</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${tableRowsHTML}
+                    </tbody>
+                </table>
+            </div>
 
             <div class="stats-card">
                 <h3 class="stats-card-title">RAW TAF</h3>
@@ -508,6 +520,14 @@ window.WeatherController = {
             }) : '-';
             const relTime = getRelativeTime(pirep.obsTime);
 
+            // Location (lat/lon from API)
+            let locationText = '';
+            if (pirep.lat !== undefined && pirep.lat !== null && pirep.lon !== undefined && pirep.lon !== null) {
+                const latStr = Math.abs(pirep.lat).toFixed(2) + (pirep.lat >= 0 ? 'N' : 'S');
+                const lonStr = Math.abs(pirep.lon).toFixed(2) + (pirep.lon >= 0 ? 'E' : 'W');
+                locationText = `${latStr} ${lonStr}`;
+            }
+
             // Flight level (API returns fltLvl as string in hundreds of feet, e.g., "230" = FL230)
             let altText = '-';
             if (pirep.fltLvl !== undefined && pirep.fltLvl !== null && pirep.fltLvl !== '') {
@@ -519,6 +539,11 @@ window.WeatherController = {
 
             // Decode additional weather info
             const decodedInfo = [];
+
+            // Add location if available
+            if (locationText) {
+                decodedInfo.push(`Location: ${locationText}`);
+            }
 
             // Temperature
             if (pirep.temp !== undefined && pirep.temp !== null && pirep.temp !== 0) {
@@ -622,20 +647,36 @@ window.WeatherController = {
             else if (hazardType.includes('IFR')) hazardColor = 'red';
             else if (hazardType.includes('TS')) hazardColor = 'yellow';
 
+            // Decode area coordinates
+            let areaText = sigmet.firId || '--';
+            if (sigmet.coords && Array.isArray(sigmet.coords) && sigmet.coords.length > 0) {
+                const coordsStr = sigmet.coords.map(coord => {
+                    if (coord.lat !== undefined && coord.lon !== undefined) {
+                        const latStr = Math.abs(coord.lat).toFixed(2) + (coord.lat >= 0 ? 'N' : 'S');
+                        const lonStr = Math.abs(coord.lon).toFixed(2) + (coord.lon >= 0 ? 'E' : 'W');
+                        return `${latStr} ${lonStr}`;
+                    }
+                    return '';
+                }).filter(s => s).join(', ');
+                if (coordsStr) {
+                    areaText = `${sigmet.coords.length} points: ${coordsStr.substring(0, 100)}${coordsStr.length > 100 ? '...' : ''}`;
+                }
+            }
+
             return `
                 <div class="stats-card" style="margin-bottom: 8px;">
                     <h3 class="stats-card-title">
-                        ${sigmet.airsigmetType || 'SIGMET'}
+                        ${sigmet.airSigmetType || 'SIGMET'}
                         <span class="flight-category-badge" style="background: ${hazardColor}; color: black; margin-left: 8px;">${hazardType}</span>
                     </h3>
                     <div class="stats-grid-compact">
                         <div class="stat-item">
                             <span class="stat-label">AREA</span>
-                            <span class="stat-value text-secondary">${sigmet.firId || '--'}</span>
+                            <span class="stat-value text-secondary" style="font-size: 0.7rem; word-break: break-word;">${areaText}</span>
                         </div>
                         <div class="stat-item">
                             <span class="stat-label">ALT</span>
-                            <span class="stat-value text-metric">${sigmet.altitudeLow || '--'} - ${sigmet.altitudeHi || '--'} FT</span>
+                            <span class="stat-value text-metric">${sigmet.altitudeLow1 || sigmet.altitudeLow || '--'} - ${sigmet.altitudeHi1 || sigmet.altitudeHi || '--'} FT</span>
                         </div>
                     </div>
                     <div class="stats-grid-compact" style="margin-top: 8px;">
@@ -689,11 +730,11 @@ window.WeatherController = {
 
         const gairmetHTML = gairmets.map(gairmet => {
             const hazard = gairmet.hazard || 'UNKNOWN';
-            const validFrom = gairmet.validTimeFrom
-                ? new Date(gairmet.validTimeFrom).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+            const validFrom = gairmet.validTime
+                ? new Date(gairmet.validTime).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
                 : 'N/A';
-            const validTo = gairmet.validTimeTo
-                ? new Date(gairmet.validTimeTo).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+            const issueTime = gairmet.issueTime
+                ? new Date(gairmet.issueTime * 1000).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
                 : 'N/A';
 
             // Determine hazard color based on type
@@ -702,30 +743,64 @@ window.WeatherController = {
                 hazardColor = '#FFA500'; // Orange for turbulence
             } else if (hazard.includes('ICE') || hazard.includes('ICING')) {
                 hazardColor = '#00FFFF'; // Cyan for icing
-            } else if (hazard.includes('IFR') || hazard.includes('MTN OBSCN')) {
+            } else if (hazard.includes('IFR') || hazard.includes('MTN') || hazard.includes('MNT')) {
                 hazardColor = '#FF0000'; // Red for IFR/mountain obscuration
             }
+
+            // Decode area coordinates
+            let areaText = '';
+            if (gairmet.coords && Array.isArray(gairmet.coords) && gairmet.coords.length > 0) {
+                const coordsStr = gairmet.coords.slice(0, 3).map(coord => {
+                    if (coord.lat !== undefined && coord.lon !== undefined) {
+                        const latStr = Math.abs(coord.lat).toFixed(2) + (coord.lat >= 0 ? 'N' : 'S');
+                        const lonStr = Math.abs(coord.lon).toFixed(2) + (coord.lon >= 0 ? 'E' : 'W');
+                        return `${latStr} ${lonStr}`;
+                    }
+                    return '';
+                }).filter(s => s).join(', ');
+                if (coordsStr) {
+                    areaText = `${gairmet.coords.length} points: ${coordsStr}${gairmet.coords.length > 3 ? '...' : ''}`;
+                }
+            }
+
+            const product = gairmet.product || '';
+            const dueToText = gairmet.due_to ? `Due to: ${gairmet.due_to}` : '';
 
             return `
                 <div class="stats-card" style="margin-top: 8px; border-left: 3px solid ${hazardColor};">
                     <div style="padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color);">
                         <span style="font-weight: 700; color: ${hazardColor};">${hazard}</span>
+                        ${product ? `<span style="color: #888; font-size: 0.7rem;">${product}</span>` : ''}
                     </div>
                     <div style="padding: 8px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
                         <div class="stat-item">
-                            <span class="stat-label">VALID FROM</span>
+                            <span class="stat-label">VALID TIME</span>
                             <span class="stat-value text-secondary" style="font-size: 0.65rem;">${validFrom}</span>
                         </div>
                         <div class="stat-item">
-                            <span class="stat-label">VALID TO</span>
-                            <span class="stat-value text-secondary" style="font-size: 0.65rem;">${validTo}</span>
+                            <span class="stat-label">ISSUED</span>
+                            <span class="stat-value text-secondary" style="font-size: 0.65rem;">${issueTime}</span>
                         </div>
+                        ${areaText ? `
+                        <div class="stat-item" style="grid-column: 1 / -1;">
+                            <span class="stat-label">AREA</span>
+                            <span class="stat-value text-secondary" style="font-size: 0.65rem; word-break: break-word;">${areaText}</span>
+                        </div>
+                        ` : ''}
+                        ${dueToText ? `
+                        <div class="stat-item" style="grid-column: 1 / -1;">
+                            <span class="stat-label">DETAILS</span>
+                            <span class="stat-value text-warning" style="font-size: 0.7rem;">${dueToText}</span>
+                        </div>
+                        ` : ''}
                     </div>
+                    ${gairmet.rawGAirmet ? `
                     <div style="padding: 12px; margin-top: 8px; background: #0a0a0a; border-radius: 4px;">
                         <div style="font-family: 'Roboto Mono', monospace; color: #FFFF00; font-size: 0.75rem; line-height: 1.4; word-break: break-all;">
-                            ${gairmet.rawGAirmet || gairmet.hazard || 'N/A'}
+                            ${gairmet.rawGAirmet}
                         </div>
                     </div>
+                    ` : ''}
                 </div>
             `;
         }).join('');
