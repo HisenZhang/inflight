@@ -1859,6 +1859,43 @@ async function fetchWeatherForRoute(forceRefresh = false) {
 }
 
 /**
+ * Check if a polygon intersects with map bounds
+ * Returns true if ANY vertex is inside bounds OR if polygon contains the bounds
+ * @param {Array} coords - Array of {lat, lon} coordinates
+ * @param {Object} bounds - {minLat, maxLat, minLon, maxLon}
+ * @returns {boolean} True if polygon intersects bounds
+ */
+function polygonIntersectsBounds(coords, bounds) {
+    if (!coords || coords.length === 0) return false;
+    if (!bounds) return true; // No bounds check, show all
+
+    // Check if any vertex is inside bounds
+    for (const coord of coords) {
+        if (coord.lat >= bounds.minLat && coord.lat <= bounds.maxLat &&
+            coord.lon >= bounds.minLon && coord.lon <= bounds.maxLon) {
+            return true; // At least one vertex inside
+        }
+    }
+
+    // Check if bounds center is inside polygon (polygon contains the view)
+    // Simple point-in-polygon test for bounds center
+    const centerLat = (bounds.minLat + bounds.maxLat) / 2;
+    const centerLon = (bounds.minLon + bounds.maxLon) / 2;
+
+    let inside = false;
+    for (let i = 0, j = coords.length - 1; i < coords.length; j = i++) {
+        const xi = coords[i].lon, yi = coords[i].lat;
+        const xj = coords[j].lon, yj = coords[j].lat;
+
+        const intersect = ((yi > centerLat) !== (yj > centerLat))
+            && (centerLon < (xj - xi) * (centerLat - yi) / (yj - yi) + xi);
+        if (intersect) inside = !inside;
+    }
+
+    return inside;
+}
+
+/**
  * Filter weather reports to only those within specified NM corridor of route
  * @param {Array} weatherReports - Array of weather reports with lat/lon
  * @param {number} corridorNM - Corridor radius (perpendicular distance from route centerline)
@@ -1976,7 +2013,11 @@ function drawWeatherOverlays(project, bounds) {
         cachedWeatherData.sigmets.forEach(sigmet => {
             // Check if sigmet has coordinates
             if (!sigmet.coords || !Array.isArray(sigmet.coords) || sigmet.coords.length < 3) {
-                console.log('[VectorMap] Skipping SIGMET with insufficient coordinates');
+                return;
+            }
+
+            // Check if SIGMET intersects map bounds (skip if completely outside view)
+            if (!polygonIntersectsBounds(sigmet.coords, bounds)) {
                 return;
             }
 
@@ -2085,6 +2126,11 @@ function drawWeatherOverlays(project, bounds) {
         currentGairmets.forEach(gairmet => {
             // Check if gairmet has coordinates
             if (!gairmet.coords || !Array.isArray(gairmet.coords) || gairmet.coords.length < 3) {
+                return;
+            }
+
+            // Check if G-AIRMET intersects map bounds (skip if completely outside view)
+            if (!polygonIntersectsBounds(gairmet.coords, bounds)) {
                 return;
             }
 
