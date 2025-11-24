@@ -94,8 +94,9 @@ async function fetchMETAR(icao) {
         return metarData;
 
     } catch (error) {
-        console.error(`[WeatherAPI] METAR fetch error for ${icao}:`, error);
-        throw error;
+        // Silently return null for airports without weather stations (e.g., small GA airports)
+        // This is expected behavior and not an error condition
+        return null;
     }
 }
 
@@ -137,8 +138,9 @@ async function fetchTAF(icao) {
         return tafData;
 
     } catch (error) {
-        console.error(`[WeatherAPI] TAF fetch error for ${icao}:`, error);
-        throw error;
+        // Silently return null for airports without TAF service (e.g., small GA airports)
+        // This is expected behavior and not an error condition
+        return null;
     }
 }
 
