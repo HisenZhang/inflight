@@ -1612,6 +1612,10 @@ let weatherOverlaysEnabled = {
     gairmets: false
 };
 
+// Weather altitude filter (in feet, 0 = surface)
+// Default: 1.5x filed altitude, or unlimited if no altitude
+let weatherMaxAltitude = null; // null = show all altitudes
+
 let cachedWeatherData = {
     pireps: [],
     sigmets: [],
@@ -1639,6 +1643,13 @@ function toggleWeatherOverlays(type, enabled) {
     const anyEnabled = weatherOverlaysEnabled.pireps || weatherOverlaysEnabled.sigmets || weatherOverlaysEnabled.gairmets;
 
     if (anyEnabled && routeData && !cachedWeatherData.lastFetch) {
+        // Initialize altitude filter to 1.5x current/filed altitude (default)
+        if (weatherMaxAltitude === null) {
+            const filedAltitude = window.FlightState?.getFlightPlan?.()?.altitude || 10000;
+            weatherMaxAltitude = Math.round(filedAltitude * 1.5);
+            console.log(`[VectorMap] Setting default weather altitude filter to ${weatherMaxAltitude} FT (1.5x filed altitude)`);
+        }
+
         // Only fetch if we haven't fetched before
         console.log('[VectorMap] Fetching weather data for route...');
         fetchWeatherForRoute();
@@ -1882,8 +1893,8 @@ function drawWeatherOverlays(project, bounds) {
                     y: projectedPoints.reduce((sum, p) => sum + p.y, 0) / projectedPoints.length
                 };
                 svg += `<text x="${centroid.x}" y="${centroid.y}"
-                        font-size="10" font-weight="bold" text-anchor="middle"
-                        fill="${strokeColor}" stroke="#000000" stroke-width="0.5">
+                        font-size="20" font-weight="bold" text-anchor="middle"
+                        fill="${strokeColor}" stroke="#000000" stroke-width="1.0">
                         ${hazardType}
                         </text>`;
             }
@@ -1907,6 +1918,17 @@ function drawWeatherOverlays(project, bounds) {
             // Check if gairmet has coordinates
             if (!gairmet.coords || !Array.isArray(gairmet.coords) || gairmet.coords.length < 3) {
                 return;
+            }
+
+            // Filter by altitude if enabled
+            if (weatherMaxAltitude !== null) {
+                const gairmetAltLow = gairmet.altitudeLow1 || gairmet.altitudeLow || 0;
+                const gairmetAltHigh = gairmet.altitudeHi1 || gairmet.altitudeHi || 999999;
+
+                // Skip if G-AIRMET base is above our filter altitude
+                if (gairmetAltLow > weatherMaxAltitude) {
+                    return;
+                }
             }
 
             // Project all coordinates
@@ -1951,8 +1973,8 @@ function drawWeatherOverlays(project, bounds) {
                     y: projectedPoints.reduce((sum, p) => sum + p.y, 0) / projectedPoints.length
                 };
                 svg += `<text x="${centroid.x}" y="${centroid.y}"
-                        font-size="9" font-weight="normal" text-anchor="middle"
-                        fill="${strokeColor}" stroke="#000000" stroke-width="0.5" opacity="0.8">
+                        font-size="18" font-weight="bold" text-anchor="middle"
+                        fill="${strokeColor}" stroke="#000000" stroke-width="1.0" opacity="0.9">
                         ${hazardType}
                         </text>`;
             }
@@ -2049,6 +2071,28 @@ function isWeatherEnabled(type) {
     return weatherOverlaysEnabled[type] || false;
 }
 
+/**
+ * Set maximum altitude for weather filtering
+ * @param {number} altitude - Maximum altitude in feet (0 = surface, null = show all)
+ */
+function setWeatherMaxAltitude(altitude) {
+    weatherMaxAltitude = altitude;
+    console.log(`[VectorMap] Weather altitude filter set to ${altitude} FT`);
+
+    // Redraw map with new filter
+    if (routeData && routeData.waypoints && routeData.legs) {
+        generateMap(routeData.waypoints, routeData.legs);
+    }
+}
+
+/**
+ * Get current weather altitude filter
+ * @returns {number|null} Current max altitude or null
+ */
+function getWeatherMaxAltitude() {
+    return weatherMaxAltitude;
+}
+
 // ============================================
 // EXPORTS
 // ============================================
@@ -2066,5 +2110,7 @@ window.VectorMap = {
     toggleWeatherOverlays,
     fetchWeatherForRoute,
     drawWeatherOverlays,
-    isWeatherEnabled
+    isWeatherEnabled,
+    setWeatherMaxAltitude,
+    getWeatherMaxAltitude
 };

@@ -197,6 +197,9 @@ function setupEventListeners() {
                 pirepBtn.classList.remove('active');
                 pirepBtn.style.background = '';
             }
+
+            // Show/hide altitude filter when any weather is enabled
+            updateWeatherAltitudeFilterVisibility();
         });
     }
 
@@ -213,6 +216,9 @@ function setupEventListeners() {
                 sigmetBtn.classList.remove('active');
                 sigmetBtn.style.background = '';
             }
+
+            // Show/hide altitude filter when any weather is enabled
+            updateWeatherAltitudeFilterVisibility();
         });
     }
 
@@ -229,7 +235,43 @@ function setupEventListeners() {
                 gairmetBtn.classList.remove('active');
                 gairmetBtn.style.background = '';
             }
+
+            // Show/hide altitude filter when any weather is enabled
+            updateWeatherAltitudeFilterVisibility();
         });
+    }
+
+    // Weather altitude filter slider
+    const weatherAltSlider = document.getElementById('weatherAltSlider');
+    const weatherAltValue = document.getElementById('weatherAltValue');
+
+    if (weatherAltSlider && weatherAltValue) {
+        weatherAltSlider.addEventListener('input', (e) => {
+            const altitude = parseInt(e.target.value);
+            weatherAltValue.textContent = altitude;
+            window.VectorMap.setWeatherMaxAltitude(altitude);
+        });
+    }
+
+    // Update altitude filter visibility based on weather state
+    function updateWeatherAltitudeFilterVisibility() {
+        const weatherAltitudeFilter = document.getElementById('weatherAltitudeFilter');
+        if (!weatherAltitudeFilter) return;
+
+        const anyWeatherEnabled = window.VectorMap.isWeatherEnabled('pireps') ||
+                                  window.VectorMap.isWeatherEnabled('sigmets') ||
+                                  window.VectorMap.isWeatherEnabled('gairmets');
+
+        weatherAltitudeFilter.style.display = anyWeatherEnabled ? 'block' : 'none';
+
+        // Update slider value from current filter
+        if (anyWeatherEnabled && weatherAltSlider && weatherAltValue) {
+            const currentAlt = window.VectorMap.getWeatherMaxAltitude();
+            if (currentAlt !== null) {
+                weatherAltSlider.value = currentAlt;
+                weatherAltValue.textContent = currentAlt;
+            }
+        }
     }
 
     // Navlog export/import dropdowns
