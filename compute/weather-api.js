@@ -13,11 +13,12 @@
 
 // Cache configuration
 const WEATHER_CACHE_DURATION = {
-    metar: 5 * 60 * 1000,      // 5 minutes
-    taf: 30 * 60 * 1000,       // 30 minutes
-    pirep: 10 * 60 * 1000,     // 10 minutes
-    sigmet: 15 * 60 * 1000,    // 15 minutes
-    airport: 24 * 60 * 60 * 1000  // 24 hours
+    metar: 5 * 60 * 1000,        // 5 minutes (METARs issued hourly)
+    taf: 30 * 60 * 1000,         // 30 minutes (TAFs issued every 6 hours)
+    pirep: 10 * 60 * 1000,       // 10 minutes (AWC updates every minute, but we check every 10min)
+    sigmet: 10 * 60 * 1000,      // 10 minutes (AWC updates every minute, but we check every 10min)
+    gairmet: 10 * 60 * 1000,     // 10 minutes (AWC updates every minute, but we check every 10min)
+    airport: 24 * 60 * 60 * 1000 // 24 hours (static data)
 };
 
 // CORS proxy configuration (reuse existing)
@@ -196,11 +197,82 @@ async function fetchPIREPs(icao, radiusNM = 100, ageHours = 6) {
 }
 
 /**
- * Fetch SIGMET/AIRMET data (US)
+ * Fetch ALL PIREPs from AWC cache file (more efficient than location-based queries)
+ * @returns {Promise<Array>} Array of all current PIREP objects
+ */
+async function fetchAllPIREPs() {
+    console.log('[WeatherAPI] Fetching ALL PIREPs from cache file');
+
+    // Check cache first (use 'all' as cache key)
+    const cached = getCachedWeather('pirep', 'all');
+    if (cached) {
+        console.log('[WeatherAPI] Using cached PIREPs (all)');
+        return cached;
+    }
+
+    try {
+        // Fetch from AWC bulk cache (CSV is smaller than XML)
+        const cacheUrl = 'https://aviationweather.gov/data/cache/aircraftreports.cache.csv.gz';
+        const response = await fetch(`${CORS_PROXY}${encodeURIComponent(cacheUrl)}`);
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const text = await response.text();
+
+        // Parse CSV (format: columns are defined in first line, then data rows)
+        // We'll convert to same JSON format as the regular API for compatibility
+        const lines = text.trim().split('\n');
+        if (lines.length < 2) {
+            console.log('[WeatherAPI] No PIREPs in cache file');
+            cacheWeather('pirep', 'all', []);
+            return [];
+        }
+
+        // Parse CSV header to get column indices
+        const headers = lines[0].split(',');
+        const data = [];
+
+        for (let i = 1; i < lines.length; i++) {
+            const values = lines[i].split(',');
+            const pirep = {};
+
+            headers.forEach((header, idx) => {
+                const value = values[idx];
+                // Map important fields
+                if (header === 'raw_text') pirep.rawOb = value;
+                if (header === 'latitude') pirep.lat = parseFloat(value);
+                if (header === 'longitude') pirep.lon = parseFloat(value);
+                if (header === 'observation_time') pirep.obsTime = Math.floor(new Date(value).getTime() / 1000);
+                if (header === 'altitude_ft_msl') pirep.fltLvl = parseInt(value) || null;
+                if (header === 'report_type') pirep.reportType = value;
+            });
+
+            if (pirep.lat && pirep.lon) {
+                data.push(pirep);
+            }
+        }
+
+        // Cache the result
+        cacheWeather('pirep', 'all', data);
+
+        console.log(`[WeatherAPI] ${data.length} PIREPs fetched from cache file`);
+        return data;
+
+    } catch (error) {
+        console.error('[WeatherAPI] PIREP cache file fetch error:', error);
+        // Fallback: return empty array
+        return [];
+    }
+}
+
+/**
+ * Fetch SIGMET/AIRMET data (US) from AWC bulk cache file
  * @returns {Promise<Array>} Array of SIGMET/AIRMET objects
  */
 async function fetchSIGMETs() {
-    console.log('[WeatherAPI] Fetching SIGMETs');
+    console.log('[WeatherAPI] Fetching ALL SIGMETs from cache file');
 
     // Check cache first
     if (weatherCache.sigmet && (Date.now() - weatherCache.sigmet.timestamp < WEATHER_CACHE_DURATION.sigmet)) {
@@ -209,15 +281,71 @@ async function fetchSIGMETs() {
     }
 
     try {
-        const apiUrl = `${AWC_BASE_URL}/airsigmet?format=json`;
-        const response = await fetch(`${CORS_PROXY}${encodeURIComponent(apiUrl)}`);
+        // Fetch from AWC bulk cache (CSV is smaller and faster)
+        const cacheUrl = 'https://aviationweather.gov/data/cache/airsigmets.cache.csv.gz';
+        const response = await fetch(`${CORS_PROXY}${encodeURIComponent(cacheUrl)}`);
 
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
         }
 
-        const jsonData = await response.json();
-        const data = Array.isArray(jsonData) ? jsonData : [];
+        const text = await response.text();
+
+        // Parse CSV (format: header row, then data rows)
+        const lines = text.trim().split('\n');
+        if (lines.length < 2) {
+            console.log('[WeatherAPI] No SIGMETs in cache file');
+            weatherCache.sigmet = { data: [], timestamp: Date.now() };
+            return [];
+        }
+
+        // Parse CSV header to get column indices
+        const headers = lines[0].split(',');
+        const data = [];
+
+        for (let i = 1; i < lines.length; i++) {
+            const values = lines[i].split(',');
+            const sigmet = {};
+
+            // Map fields from CSV to our expected format
+            headers.forEach((header, idx) => {
+                const value = values[idx];
+
+                // Map critical fields
+                if (header === 'raw_text') sigmet.rawAirSigmet = value;
+                // Convert ISO timestamps to Unix timestamps (seconds) for compatibility
+                if (header === 'valid_time_from') sigmet.validTimeFrom = value ? Math.floor(new Date(value).getTime() / 1000) : null;
+                if (header === 'valid_time_to') sigmet.validTimeTo = value ? Math.floor(new Date(value).getTime() / 1000) : null;
+                if (header === 'min_ft_msl') sigmet.altitudeLow1 = parseInt(value) || null;
+                if (header === 'max_ft_msl') sigmet.altitudeHi1 = parseInt(value) || null;
+                if (header === 'hazard') sigmet.hazard = value;
+                if (header === 'severity') sigmet.severity = value;
+                if (header === 'airsigmet_type') sigmet.airSigmetType = value;
+
+                // Parse polygon points from "lon:lat points" column
+                if (header === 'lon:lat points' && value) {
+                    const points = [];
+                    const pairs = value.split(';');
+                    for (const pair of pairs) {
+                        const [lon, lat] = pair.split(':');
+                        if (lon && lat) {
+                            points.push({
+                                longitude: parseFloat(lon),
+                                latitude: parseFloat(lat)
+                            });
+                        }
+                    }
+                    if (points.length > 0) {
+                        sigmet.area = points;
+                    }
+                }
+            });
+
+            // Only add if we have valid polygon data
+            if (sigmet.area && sigmet.area.length > 0) {
+                data.push(sigmet);
+            }
+        }
 
         // Cache the result
         weatherCache.sigmet = {
@@ -225,38 +353,88 @@ async function fetchSIGMETs() {
             timestamp: Date.now()
         };
 
-        console.log(`[WeatherAPI] ${data.length} SIGMETs fetched`);
+        console.log(`[WeatherAPI] ${data.length} SIGMETs fetched from cache file`);
         return data;
 
     } catch (error) {
-        console.error('[WeatherAPI] SIGMET fetch error:', error);
-        throw error;
+        console.error('[WeatherAPI] SIGMET cache file fetch error:', error);
+        return [];
     }
 }
 
 /**
- * Fetch G-AIRMET data (US)
+ * Fetch G-AIRMET data (US) from AWC bulk cache file
  * @returns {Promise<Array>} Array of G-AIRMET objects
  */
 async function fetchGAIRMETs() {
-    console.log('[WeatherAPI] Fetching G-AIRMETs');
+    console.log('[WeatherAPI] Fetching ALL G-AIRMETs from cache file');
 
     // Check cache first
-    if (weatherCache.gairmet && (Date.now() - weatherCache.gairmet.timestamp < WEATHER_CACHE_DURATION.sigmet)) {
+    if (weatherCache.gairmet && (Date.now() - weatherCache.gairmet.timestamp < WEATHER_CACHE_DURATION.gairmet)) {
         console.log('[WeatherAPI] Using cached G-AIRMETs');
         return weatherCache.gairmet.data;
     }
 
     try {
-        const apiUrl = `${AWC_BASE_URL}/gairmet?format=json`;
-        const response = await fetch(`${CORS_PROXY}${encodeURIComponent(apiUrl)}`);
+        // Fetch from AWC bulk cache XML
+        const cacheUrl = 'https://aviationweather.gov/data/cache/gairmets.cache.xml.gz';
+        const response = await fetch(`${CORS_PROXY}${encodeURIComponent(cacheUrl)}`);
 
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
         }
 
-        const jsonData = await response.json();
-        const data = Array.isArray(jsonData) ? jsonData : [];
+        const text = await response.text();
+
+        // Parse XML using DOMParser
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(text, 'text/xml');
+
+        // Check for parsing errors
+        const parserError = xmlDoc.querySelector('parsererror');
+        if (parserError) {
+            throw new Error('XML parsing error');
+        }
+
+        const data = [];
+        const gairmets = xmlDoc.querySelectorAll('GAIRMET');
+
+        gairmets.forEach(gairmet => {
+            const hazardElement = gairmet.querySelector('hazard');
+            const areaElement = gairmet.querySelector('area');
+
+            if (!hazardElement || !areaElement) return;
+
+            const hazardType = hazardElement.getAttribute('type');
+            const points = [];
+
+            // Parse polygon points
+            const pointElements = areaElement.querySelectorAll('point');
+            pointElements.forEach(pointEl => {
+                const lon = pointEl.querySelector('longitude');
+                const lat = pointEl.querySelector('latitude');
+                if (lon && lat) {
+                    points.push({
+                        longitude: parseFloat(lon.textContent),
+                        latitude: parseFloat(lat.textContent)
+                    });
+                }
+            });
+
+            if (points.length > 0) {
+                data.push({
+                    hazard: hazardType,
+                    severity: hazardElement.getAttribute('severity') || '',
+                    validTime: gairmet.querySelector('valid_time')?.textContent || '',
+                    issueTime: gairmet.querySelector('issue_time')?.textContent || '',
+                    expireTime: gairmet.querySelector('expire_time')?.textContent || '',
+                    area: points,
+                    product: gairmet.querySelector('product')?.textContent || '',
+                    tag: gairmet.querySelector('tag')?.textContent || '',
+                    dueTo: gairmet.querySelector('due_to')?.textContent || ''
+                });
+            }
+        });
 
         // Cache the result
         weatherCache.gairmet = {
@@ -264,12 +442,12 @@ async function fetchGAIRMETs() {
             timestamp: Date.now()
         };
 
-        console.log(`[WeatherAPI] ${data.length} G-AIRMETs fetched`);
+        console.log(`[WeatherAPI] ${data.length} G-AIRMETs fetched from cache file`);
         return data;
 
     } catch (error) {
-        console.error('[WeatherAPI] G-AIRMET fetch error:', error);
-        throw error;
+        console.error('[WeatherAPI] G-AIRMET cache file fetch error:', error);
+        return [];
     }
 }
 
@@ -533,6 +711,7 @@ if (typeof window !== 'undefined') {
         fetchMETAR,
         fetchTAF,
         fetchPIREPs,
+        fetchAllPIREPs,
         fetchSIGMETs,
         fetchGAIRMETs,
         fetchAirportInfo,
