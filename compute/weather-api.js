@@ -395,19 +395,19 @@ async function fetchSIGMETs() {
                         const [lon, lat] = pair.split(':');
                         if (lon && lat) {
                             points.push({
-                                longitude: parseFloat(lon),
-                                latitude: parseFloat(lat)
+                                lon: parseFloat(lon),
+                                lat: parseFloat(lat)
                             });
                         }
                     }
                     if (points.length > 0) {
-                        sigmet.area = points;
+                        sigmet.coords = points; // Use 'coords' for display compatibility
                     }
                 }
             });
 
             // Only add if we have valid polygon data
-            if (sigmet.area && sigmet.area.length > 0) {
+            if (sigmet.coords && sigmet.coords.length > 0) {
                 newSigmets.push(sigmet);
             }
         }
@@ -510,19 +510,19 @@ async function fetchGAIRMETs() {
                         const [lon, lat] = pair.split(':');
                         if (lon && lat) {
                             points.push({
-                                longitude: parseFloat(lon),
-                                latitude: parseFloat(lat)
+                                lon: parseFloat(lon),
+                                lat: parseFloat(lat)
                             });
                         }
                     }
                     if (points.length > 0) {
-                        gairmet.area = points;
+                        gairmet.coords = points; // Use 'coords' for display compatibility
                     }
                 }
             });
 
             // Only add if we have valid polygon data
-            if (gairmet.area && gairmet.area.length > 0) {
+            if (gairmet.coords && gairmet.coords.length > 0) {
                 newGairmets.push(gairmet);
             }
         }
