@@ -233,15 +233,7 @@ window.WeatherController = {
         // Format observation time
         const obsTime = metar.obsTime ? new Date(metar.obsTime * 1000).toUTCString() : 'Unknown';
 
-        // Extract cloud layers
-        let cloudLayers = 'Unknown';
-        if (metar.clouds && Array.isArray(metar.clouds)) {
-            cloudLayers = metar.clouds.map(cloud => {
-                const cover = cloud.cover || '';
-                const base = cloud.base ? cloud.base.toString().padStart(3, '0') : '';
-                return base ? `${cover}${base}` : cover;
-            }).join(' ') || 'Clear';
-        }
+        // Cloud layers (human readable) - already computed below as cloudsFull
 
         // Wind information
         const windDir = metar.wdir !== null && metar.wdir !== undefined ? `${metar.wdir.toString().padStart(3, '0')}°` : 'VRB';
@@ -477,10 +469,10 @@ window.WeatherController = {
             }) : '-';
             const relTime = getRelativeTime(pirep.obsTime);
 
-            // Flight level
+            // Flight level (API returns fltLvl as string in hundreds of feet, e.g., "230" = FL230)
             let altText = '-';
-            if (pirep.fltlvl !== undefined && pirep.fltlvl !== null && pirep.fltlvl !== '') {
-                const fltLvlNum = parseInt(pirep.fltlvl);
+            if (pirep.fltLvl !== undefined && pirep.fltLvl !== null && pirep.fltLvl !== '') {
+                const fltLvlNum = parseInt(pirep.fltLvl);
                 if (!isNaN(fltLvlNum)) {
                     altText = `FL${fltLvlNum} (${fltLvlNum * 100} ft)`;
                 }

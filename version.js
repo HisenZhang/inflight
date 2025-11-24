@@ -25,7 +25,7 @@ const AppVersion = {
     // Semantic version (sync with package.json)
     MAJOR: 2,
     MINOR: 7,
-    PATCH: 4,
+    PATCH: 5,
 
     // Full version string
     get VERSION() {
@@ -34,7 +34,7 @@ const AppVersion = {
 
     // Service worker cache version
     // Increment this number to force PWA updates
-    CACHE_VERSION: 119,
+    CACHE_VERSION: 120,
 
     // Full cache name for service worker
     get CACHE_NAME() {
@@ -45,7 +45,7 @@ const AppVersion = {
     BUILD_DATE: '2025-11-23',
 
     // Release name (optional)
-    RELEASE_NAME: 'Enhancement: Improved PIREP parsing matching wx.hisenz.com',
+    RELEASE_NAME: 'Fix: Correct PIREP altitude field name (fltLvl not fltlvl)',
 
     /**
      * Get full version info object

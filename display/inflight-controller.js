@@ -691,7 +691,7 @@ const InflightController = (() => {
                             <span class="text-secondary" style="font-size: 0.75rem;">${obsTime}Z</span>
                         </div>
                         <div style="font-size: 0.75rem; color: var(--text-secondary);">
-                            ${pirep.fltlvl ? `FL${pirep.fltlvl}` : '--'} • ${pirep.acType || 'UNK A/C'}
+                            ${pirep.fltLvl ? `FL${pirep.fltLvl}` : '--'} • ${pirep.acType || 'UNK A/C'}
                         </div>
                         <div style="font-size: 0.7rem; margin-top: 4px; font-family: 'Roboto Mono', monospace; color: var(--text-metric);">
                             ${pirep.rawOb ? pirep.rawOb.substring(0, 100) : 'No details'}${pirep.rawOb && pirep.rawOb.length > 100 ? '...' : ''}
