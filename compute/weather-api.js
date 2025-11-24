@@ -376,8 +376,8 @@ async function fetchGAIRMETs() {
     }
 
     try {
-        // Fetch from AWC bulk cache XML
-        const cacheUrl = 'https://aviationweather.gov/data/cache/gairmets.cache.xml.gz';
+        // Fetch from AWC bulk cache (CSV is much smaller than XML: 19KB vs 85KB)
+        const cacheUrl = 'https://aviationweather.gov/data/cache/gairmets.cache.csv.gz';
         const response = await fetch(`${CORS_PROXY}${encodeURIComponent(cacheUrl)}`);
 
         if (!response.ok) {
@@ -386,55 +386,59 @@ async function fetchGAIRMETs() {
 
         const text = await response.text();
 
-        // Parse XML using DOMParser
-        const parser = new DOMParser();
-        const xmlDoc = parser.parseFromString(text, 'text/xml');
-
-        // Check for parsing errors
-        const parserError = xmlDoc.querySelector('parsererror');
-        if (parserError) {
-            throw new Error('XML parsing error');
+        // Parse CSV (format: header row, then data rows)
+        const lines = text.trim().split('\n');
+        if (lines.length < 2) {
+            console.log('[WeatherAPI] No G-AIRMETs in cache file');
+            weatherCache.gairmet = { data: [], timestamp: Date.now() };
+            return [];
         }
 
+        // Parse CSV header to get column indices
+        const headers = lines[0].split(',');
         const data = [];
-        const gairmets = xmlDoc.querySelectorAll('GAIRMET');
 
-        gairmets.forEach(gairmet => {
-            const hazardElement = gairmet.querySelector('hazard');
-            const areaElement = gairmet.querySelector('area');
+        for (let i = 1; i < lines.length; i++) {
+            const values = lines[i].split(',');
+            const gairmet = {};
 
-            if (!hazardElement || !areaElement) return;
+            // Map fields from CSV to our expected format
+            headers.forEach((header, idx) => {
+                const value = values[idx];
 
-            const hazardType = hazardElement.getAttribute('type');
-            const points = [];
+                // Map critical fields
+                if (header === 'hazard') gairmet.hazard = value;
+                if (header === 'valid_time') gairmet.validTime = value;
+                if (header === 'issue_time') gairmet.issueTime = value;
+                if (header === 'expire_time') gairmet.expireTime = value;
+                if (header === 'product') gairmet.product = value;
+                if (header === 'tag') gairmet.tag = value;
+                if (header === 'due_to') gairmet.dueTo = value;
 
-            // Parse polygon points
-            const pointElements = areaElement.querySelectorAll('point');
-            pointElements.forEach(pointEl => {
-                const lon = pointEl.querySelector('longitude');
-                const lat = pointEl.querySelector('latitude');
-                if (lon && lat) {
-                    points.push({
-                        longitude: parseFloat(lon.textContent),
-                        latitude: parseFloat(lat.textContent)
-                    });
+                // Parse polygon points from "lon:lat points" column
+                if (header === 'lon:lat points' && value) {
+                    const points = [];
+                    const pairs = value.split(';');
+                    for (const pair of pairs) {
+                        const [lon, lat] = pair.split(':');
+                        if (lon && lat) {
+                            points.push({
+                                longitude: parseFloat(lon),
+                                latitude: parseFloat(lat)
+                            });
+                        }
+                    }
+                    if (points.length > 0) {
+                        gairmet.area = points;
+                    }
                 }
             });
 
-            if (points.length > 0) {
-                data.push({
-                    hazard: hazardType,
-                    severity: hazardElement.getAttribute('severity') || '',
-                    validTime: gairmet.querySelector('valid_time')?.textContent || '',
-                    issueTime: gairmet.querySelector('issue_time')?.textContent || '',
-                    expireTime: gairmet.querySelector('expire_time')?.textContent || '',
-                    area: points,
-                    product: gairmet.querySelector('product')?.textContent || '',
-                    tag: gairmet.querySelector('tag')?.textContent || '',
-                    dueTo: gairmet.querySelector('due_to')?.textContent || ''
-                });
+            // Only add if we have valid polygon data
+            if (gairmet.area && gairmet.area.length > 0) {
+                data.push(gairmet);
             }
-        });
+        }
 
         // Cache the result
         weatherCache.gairmet = {
