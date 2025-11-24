@@ -249,17 +249,29 @@ window.WeatherController = {
         const windGust = metar.wgst ? ` G${metar.wgst} KT` : '';
 
         // Temperature and dewpoint
-        const temp = metar.temp !== null && metar.temp !== undefined ? `${metar.temp}°C` : '--';
-        const dewp = metar.dewp !== null && metar.dewp !== undefined ? `${metar.dewp}°C` : '--';
+        const tempC = metar.temp !== null && metar.temp !== undefined ? metar.temp : null;
+        const dewpC = metar.dewp !== null && metar.dewp !== undefined ? metar.dewp : null;
+        const tempF = tempC !== null ? Math.round(tempC * 9/5 + 32) : null;
+        const dewpF = dewpC !== null ? Math.round(dewpC * 9/5 + 32) : null;
+        const spread = (tempC !== null && dewpC !== null) ? (tempC - dewpC).toFixed(1) : null;
+
+        const temp = tempC !== null ? `${tempC}°C (${tempF}°F)` : '--';
+        const dewp = dewpC !== null ? `${dewpC}°C (${dewpF}°F)` : '--';
 
         // Altimeter
-        const altim = metar.altim ? `${metar.altim.toFixed(2)}" Hg` : '--';
+        const altimInHg = metar.altim || 29.92;
+        const altim = `${altimInHg.toFixed(2)}" Hg (${Math.round(altimInHg * 33.8639)} mb)`;
 
         // Visibility
-        const visib = metar.visib ? `${metar.visib} SM` : '--';
+        const visib = metar.visib ? (metar.visib >= 10 ? '10+ SM' : `${metar.visib} SM`) : '--';
 
         // Weather string
-        const wx = metar.wxString || 'None';
+        const wxRaw = metar.wxString || '';
+        const wx = wxRaw.trim() !== '' ? wxRaw : 'None';
+        const wxDecoded = wxRaw.trim() !== '' ? this.decodeWxString(wxRaw) : 'None reported';
+
+        // Cloud layers (human readable)
+        const cloudsFull = this.formatClouds(metar.clouds);
 
         container.innerHTML = `
             <div class="stats-card">
@@ -280,38 +292,39 @@ window.WeatherController = {
                         <span class="stat-value text-metric">${windDir} ${windSpd}${windGust}</span>
                     </div>
                     <div class="stat-item">
-                        <span class="stat-label">VIS</span>
+                        <span class="stat-label">VISIBILITY</span>
                         <span class="stat-value text-metric">${visib}</span>
                     </div>
                     <div class="stat-item">
-                        <span class="stat-label">TEMP</span>
+                        <span class="stat-label">TEMPERATURE</span>
                         <span class="stat-value text-metric">${temp}</span>
                     </div>
                     <div class="stat-item">
-                        <span class="stat-label">DEWPT</span>
+                        <span class="stat-label">DEWPOINT</span>
                         <span class="stat-value text-metric">${dewp}</span>
                     </div>
+                    ${spread !== null ? `
                     <div class="stat-item">
-                        <span class="stat-label">ALTIM</span>
+                        <span class="stat-label">TEMP/DEWPT SPREAD</span>
+                        <span class="stat-value text-metric">${spread}°C</span>
+                    </div>
+                    ` : ''}
+                    <div class="stat-item">
+                        <span class="stat-label">ALTIMETER</span>
                         <span class="stat-value text-metric">${altim}</span>
                     </div>
-                    <div class="stat-item">
-                        <span class="stat-label">CLOUDS</span>
-                        <span class="stat-value text-secondary">${cloudLayers}</span>
-                    </div>
-                </div>
-            </div>
-
-            ${wx !== 'None' ? `
-            <div class="stats-card">
-                <h3 class="stats-card-title">WEATHER</h3>
-                <div class="stats-grid-compact">
                     <div class="stat-item" style="grid-column: 1 / -1;">
-                        <span class="stat-value text-warning">${wx}</span>
+                        <span class="stat-label">SKY CONDITION</span>
+                        <span class="stat-value text-secondary">${cloudsFull}</span>
                     </div>
+                    ${wx !== 'None' ? `
+                    <div class="stat-item" style="grid-column: 1 / -1;">
+                        <span class="stat-label">PRESENT WEATHER</span>
+                        <span class="stat-value text-warning">${wxDecoded}</span>
+                    </div>
+                    ` : ''}
                 </div>
             </div>
-            ` : ''}
 
             <div class="stats-card">
                 <h3 class="stats-card-title">RAW METAR</h3>
@@ -720,6 +733,91 @@ window.WeatherController = {
             console.warn(`[WeatherController] Could not fetch weather for ${icao}:`, error.message);
             container.style.display = 'none';
         }
+    },
+
+    /**
+     * Format cloud layers for human-readable display
+     */
+    formatClouds(clouds) {
+        if (!clouds || !Array.isArray(clouds) || clouds.length === 0) return 'Clear';
+
+        const cloudLayers = clouds.map(c => {
+            if (c.cover === 'SKC' || c.cover === 'CLR') return 'Clear';
+
+            const coverNames = {
+                'FEW': 'Few',
+                'SCT': 'Scattered',
+                'BKN': 'Broken',
+                'OVC': 'Overcast',
+                'VV': 'Vertical Visibility'
+            };
+
+            const coverText = coverNames[c.cover] || c.cover;
+            const baseText = c.base !== undefined ? ` at ${c.base} ft` : '';
+            return `${coverText}${baseText}`;
+        });
+
+        return cloudLayers.join(', ');
+    },
+
+    /**
+     * Decode weather string (present weather codes)
+     */
+    decodeWxString(wxString) {
+        if (!wxString || wxString.trim() === '') return 'None reported';
+
+        const wxCodes = {
+            // Intensity
+            '-': 'Light',
+            '+': 'Heavy',
+            'VC': 'Vicinity',
+
+            // Descriptor
+            'MI': 'Shallow',
+            'PR': 'Partial',
+            'BC': 'Patches',
+            'DR': 'Low Drifting',
+            'BL': 'Blowing',
+            'SH': 'Showers',
+            'TS': 'Thunderstorm',
+            'FZ': 'Freezing',
+
+            // Precipitation
+            'DZ': 'Drizzle',
+            'RA': 'Rain',
+            'SN': 'Snow',
+            'SG': 'Snow Grains',
+            'IC': 'Ice Crystals',
+            'PL': 'Ice Pellets',
+            'GR': 'Hail',
+            'GS': 'Small Hail',
+            'UP': 'Unknown Precipitation',
+
+            // Obscuration
+            'BR': 'Mist',
+            'FG': 'Fog',
+            'FU': 'Smoke',
+            'VA': 'Volcanic Ash',
+            'DU': 'Dust',
+            'SA': 'Sand',
+            'HZ': 'Haze',
+            'PY': 'Spray',
+
+            // Other
+            'PO': 'Dust Whirls',
+            'SQ': 'Squalls',
+            'FC': 'Funnel Cloud',
+            'SS': 'Sandstorm',
+            'DS': 'Duststorm'
+        };
+
+        let decoded = wxString;
+        for (const [code, desc] of Object.entries(wxCodes)) {
+            const escapedCode = code.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            decoded = decoded.replace(new RegExp(escapedCode, 'g'), desc);
+        }
+
+        return decoded;
     },
 
     /**
