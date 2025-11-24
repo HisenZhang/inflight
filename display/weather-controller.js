@@ -342,70 +342,109 @@ window.WeatherController = {
         }
 
         // Format valid times
-        const validFrom = taf.validTimeFrom ? new Date(taf.validTimeFrom * 1000).toUTCString() : 'Unknown';
-        const validTo = taf.validTimeTo ? new Date(taf.validTimeTo * 1000).toUTCString() : 'Unknown';
+        const validFrom = taf.validTimeFrom ? new Date(taf.validTimeFrom * 1000).toLocaleString('en-US', {
+            month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false
+        }) : 'Unknown';
+        const validTo = taf.validTimeTo ? new Date(taf.validTimeTo * 1000).toLocaleString('en-US', {
+            month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false
+        }) : 'Unknown';
 
-        // Build forecast groups
+        // Build forecast periods
         let forecastHTML = '';
         if (taf.fcsts && Array.isArray(taf.fcsts)) {
-            forecastHTML = taf.fcsts.map(fcst => {
-                const timeFrom = fcst.timeFrom ? new Date(fcst.timeFrom * 1000).toUTCString().substring(17, 22) : '??:??';
-                const changeType = fcst.fcstChange || 'FM';
+            forecastHTML = taf.fcsts.map((fcst, index) => {
+                // Format time period
+                const timeFrom = fcst.timeFrom ? new Date(fcst.timeFrom * 1000) : null;
+                const timeTo = fcst.timeTo ? new Date(fcst.timeTo * 1000) : null;
 
+                const timeFromStr = timeFrom ? timeFrom.toLocaleString('en-US', {
+                    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false
+                }) : '??';
+                const timeToStr = timeTo ? timeTo.toLocaleString('en-US', {
+                    hour: '2-digit', minute: '2-digit', hour12: false
+                }) : '??';
+
+                const changeType = fcst.fcstChange || (index === 0 ? 'BASE' : 'FM');
+
+                // Wind
                 const windDir = fcst.wdir !== null && fcst.wdir !== undefined ? `${fcst.wdir.toString().padStart(3, '0')}°` : 'VRB';
-                const windSpd = fcst.wspd !== null && fcst.wspd !== undefined ? `${fcst.wspd} KT` : '0 KT';
+                const windSpd = fcst.wspd !== null && fcst.wspd !== undefined ? `${fcst.wspd}` : '0';
                 const windGust = fcst.wgst ? ` G${fcst.wgst}` : '';
+                const windStr = `${windDir} at ${windSpd}${windGust} kt`;
 
-                const visib = fcst.visib || '--';
-                const wx = fcst.wxString || 'None';
+                // Visibility
+                const visib = fcst.visib !== null && fcst.visib !== undefined ?
+                    (fcst.visib >= 10 ? '10+ SM' : `${fcst.visib} SM`) : '--';
 
-                let clouds = 'Unknown';
+                // Weather
+                const wx = fcst.wxString && fcst.wxString.trim() !== '' ?
+                    this.decodeWxString(fcst.wxString) : 'None';
+
+                // Clouds (human readable)
+                const clouds = this.formatClouds(fcst.clouds);
+
+                // Determine flight category for this period
+                let ceiling = null;
                 if (fcst.clouds && Array.isArray(fcst.clouds)) {
-                    clouds = fcst.clouds.map(cloud => {
-                        const cover = cloud.cover || '';
-                        const base = cloud.base ? cloud.base.toString().padStart(3, '0') : '';
-                        return base ? `${cover}${base}` : cover;
-                    }).join(' ') || 'Clear';
+                    for (const cloud of fcst.clouds) {
+                        if (cloud.cover && (cloud.cover === 'BKN' || cloud.cover === 'OVC') &&
+                            cloud.base !== null && cloud.base !== undefined) {
+                            ceiling = cloud.base;
+                            break;
+                        }
+                    }
                 }
+                const visibility = fcst.visib || 10;
+                const ceilingStr = ceiling !== null ? ceiling.toString() : 'CLR';
+                const flightCat = window.WeatherAPI.determineFlightCategory(visibility.toString(), ceilingStr);
+                const flightCatBadge = this.getFlightCategoryBadge(flightCat);
 
                 return `
-                    <div class="stats-card" style="margin-bottom: 8px;">
-                        <h3 class="stats-card-title">${changeType} ${timeFrom}Z</h3>
-                        <div class="stats-grid-compact">
-                            <div class="stat-item">
-                                <span class="stat-label">WIND</span>
-                                <span class="stat-value text-metric">${windDir} ${windSpd}${windGust}</span>
+                    <div class="stats-card" style="margin-bottom: 12px; padding: 12px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <div>
+                                <span style="color: #00FFFF; font-weight: bold; font-size: 0.9rem;">${changeType}</span>
+                                <span style="color: #e0e0e0; font-size: 0.85rem; margin-left: 8px;">${timeFromStr} - ${timeToStr}</span>
                             </div>
-                            <div class="stat-item">
-                                <span class="stat-label">VIS</span>
-                                <span class="stat-value text-metric">${visib} SM</span>
+                            ${flightCatBadge}
+                        </div>
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; font-size: 0.85rem;">
+                            <div>
+                                <span style="color: #888;">Wind:</span>
+                                <span style="color: #fff; margin-left: 4px;">${windStr}</span>
                             </div>
-                            <div class="stat-item">
-                                <span class="stat-label">WX</span>
-                                <span class="stat-value text-secondary">${wx}</span>
+                            <div>
+                                <span style="color: #888;">Visibility:</span>
+                                <span style="color: #fff; margin-left: 4px;">${visib}</span>
                             </div>
-                            <div class="stat-item">
-                                <span class="stat-label">CLOUDS</span>
-                                <span class="stat-value text-secondary">${clouds}</span>
+                            <div style="grid-column: 1 / -1;">
+                                <span style="color: #888;">Sky:</span>
+                                <span style="color: #aaa; margin-left: 4px;">${clouds}</span>
                             </div>
+                            ${wx !== 'None' ? `
+                            <div style="grid-column: 1 / -1;">
+                                <span style="color: #888;">Weather:</span>
+                                <span style="color: #ffff00; margin-left: 4px;">${wx}</span>
+                            </div>
+                            ` : ''}
                         </div>
                     </div>
                 `;
             }).join('');
         }
 
+        // Format raw TAF with line breaks for FM/TEMPO
+        let rawTAF = taf.rawTAF || 'N/A';
+        if (rawTAF !== 'N/A') {
+            rawTAF = rawTAF.replace(/(^|\s)(FM\d{2,6})/g, (_match, p1, p2) => `${p1}<br/>&nbsp;&nbsp;&nbsp;&nbsp;${p2}`);
+            rawTAF = rawTAF.replace(/(^|\s)(TEMPO\b)/g, (_match, p1, p2) => `${p1}<br/>&nbsp;&nbsp;&nbsp;&nbsp;${p2}`);
+        }
+
         container.innerHTML = `
             <div class="stats-card">
                 <h3 class="stats-card-title">${this.weatherData.icao} TAF</h3>
-                <div class="stats-grid-compact">
-                    <div class="stat-item">
-                        <span class="stat-label">VALID FROM</span>
-                        <span class="stat-value text-secondary" style="font-size: 0.7rem;">${validFrom}</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-label">VALID TO</span>
-                        <span class="stat-value text-secondary" style="font-size: 0.7rem;">${validTo}</span>
-                    </div>
+                <div style="padding: 12px; color: var(--text-secondary); font-size: 0.85rem;">
+                    Valid: ${validFrom} - ${validTo}
                 </div>
             </div>
 
@@ -414,8 +453,8 @@ window.WeatherController = {
             <div class="stats-card">
                 <h3 class="stats-card-title">RAW TAF</h3>
                 <div style="padding: 12px;">
-                    <div style="font-family: 'Roboto Mono', monospace; color: #00FF00; font-size: 0.8rem; line-height: 1.4; word-break: break-all;">
-                        ${taf.rawTAF || 'N/A'}
+                    <div style="font-family: 'Roboto Mono', monospace; color: #00FF00; font-size: 0.75rem; line-height: 1.6;">
+                        ${rawTAF}
                     </div>
                 </div>
             </div>
