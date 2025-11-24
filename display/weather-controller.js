@@ -98,11 +98,12 @@ window.WeatherController = {
             console.log(`[WeatherController] Fetching weather for ${icao}`);
 
             // Fetch all weather data in parallel
-            const [metar, taf, pireps, sigmets] = await Promise.allSettled([
+            const [metar, taf, pireps, sigmets, gairmets] = await Promise.allSettled([
                 WeatherAPI.fetchMETAR(icao),
                 WeatherAPI.fetchTAF(icao),
                 WeatherAPI.fetchPIREPs(icao, 100, 6),
-                WeatherAPI.fetchSIGMETs()
+                WeatherAPI.fetchSIGMETs(),
+                WeatherAPI.fetchGAIRMETs()
             ]);
 
             this.weatherData = {
@@ -110,7 +111,8 @@ window.WeatherController = {
                 metar: metar.status === 'fulfilled' ? metar.value : null,
                 taf: taf.status === 'fulfilled' ? taf.value : null,
                 pireps: pireps.status === 'fulfilled' ? pireps.value : [],
-                sigmets: sigmets.status === 'fulfilled' ? sigmets.value : []
+                sigmets: sigmets.status === 'fulfilled' ? sigmets.value : [],
+                gairmets: gairmets.status === 'fulfilled' ? gairmets.value : []
             };
 
             // Hide loading, show subtabs
@@ -147,6 +149,7 @@ window.WeatherController = {
         document.getElementById('wxTafDisplay').innerHTML = '';
         document.getElementById('wxPirepDisplay').innerHTML = '';
         document.getElementById('wxSigmetDisplay').innerHTML = '';
+        document.getElementById('wxGairmetDisplay').innerHTML = '';
     },
 
     /**
@@ -174,7 +177,8 @@ window.WeatherController = {
             metar: 'wxMetarView',
             taf: 'wxTafView',
             pirep: 'wxPirepView',
-            sigmet: 'wxSigmetView'
+            sigmet: 'wxSigmetView',
+            gairmet: 'wxGairmetView'
         };
 
         const viewId = viewMap[subtab];
@@ -204,6 +208,9 @@ window.WeatherController = {
                 break;
             case 'sigmet':
                 this.renderSIGMETs();
+                break;
+            case 'gairmet':
+                this.renderGAIRMETs();
                 break;
         }
     },
@@ -560,6 +567,79 @@ window.WeatherController = {
                 </div>
             </div>
             ${sigmetHTML}
+        `;
+    },
+
+    /**
+     * Render G-AIRMETs display
+     */
+    renderGAIRMETs() {
+        const container = document.getElementById('wxGairmetDisplay');
+        const gairmets = this.weatherData.gairmets || [];
+
+        if (gairmets.length === 0) {
+            container.innerHTML = `
+                <div class="stats-card">
+                    <h3 class="stats-card-title">G-AIRMETs</h3>
+                    <div style="padding: 12px; color: var(--text-secondary); font-size: 0.75rem;">
+                        No active G-AIRMETs found
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        const gairmetHTML = gairmets.map(gairmet => {
+            const hazard = gairmet.hazard || 'UNKNOWN';
+            const validFrom = gairmet.validTimeFrom
+                ? new Date(gairmet.validTimeFrom).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                : 'N/A';
+            const validTo = gairmet.validTimeTo
+                ? new Date(gairmet.validTimeTo).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                : 'N/A';
+
+            // Determine hazard color based on type
+            let hazardColor = '#FFFF00'; // Default yellow
+            if (hazard.includes('TURB') || hazard.includes('TURBULENCE')) {
+                hazardColor = '#FFA500'; // Orange for turbulence
+            } else if (hazard.includes('ICE') || hazard.includes('ICING')) {
+                hazardColor = '#00FFFF'; // Cyan for icing
+            } else if (hazard.includes('IFR') || hazard.includes('MTN OBSCN')) {
+                hazardColor = '#FF0000'; // Red for IFR/mountain obscuration
+            }
+
+            return `
+                <div class="stats-card" style="margin-top: 8px; border-left: 3px solid ${hazardColor};">
+                    <div style="padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color);">
+                        <span style="font-weight: 700; color: ${hazardColor};">${hazard}</span>
+                    </div>
+                    <div style="padding: 8px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                        <div class="stat-item">
+                            <span class="stat-label">VALID FROM</span>
+                            <span class="stat-value text-secondary" style="font-size: 0.65rem;">${validFrom}</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">VALID TO</span>
+                            <span class="stat-value text-secondary" style="font-size: 0.65rem;">${validTo}</span>
+                        </div>
+                    </div>
+                    <div style="padding: 12px; margin-top: 8px; background: #0a0a0a; border-radius: 4px;">
+                        <div style="font-family: 'Roboto Mono', monospace; color: #FFFF00; font-size: 0.75rem; line-height: 1.4; word-break: break-all;">
+                            ${gairmet.rawGAirmet || gairmet.hazard || 'N/A'}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        container.innerHTML = `
+            <div class="stats-card">
+                <h3 class="stats-card-title">ACTIVE G-AIRMETs (${gairmets.length})</h3>
+                <div style="padding: 12px; color: var(--text-secondary); font-size: 0.75rem;">
+                    Graphical Airmen's Meteorological Information
+                </div>
+            </div>
+            ${gairmetHTML}
         `;
     },
 

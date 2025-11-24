@@ -437,7 +437,7 @@
                 </div>
 
                 <p class="help-text">
-                    <span class="text-secondary">Real-time METAR, TAF, PIREPs, and SIGMETs • Internet required</span>
+                    <span class="text-secondary">Real-time METAR, TAF, PIREPs, SIGMETs, and G-AIRMETs • Internet required</span>
                 </p>
             </div>
 
@@ -448,6 +448,7 @@
                     <button class="btn btn-secondary btn-sm wx-subtab" data-subtab="taf">TAF</button>
                     <button class="btn btn-secondary btn-sm wx-subtab" data-subtab="pirep">PIREP</button>
                     <button class="btn btn-secondary btn-sm wx-subtab" data-subtab="sigmet">SIGMET</button>
+                    <button class="btn btn-secondary btn-sm wx-subtab" data-subtab="gairmet">G-AIRMET</button>
                 </div>
 
                 <!-- METAR View -->
@@ -468,6 +469,11 @@
                 <!-- SIGMET View -->
                 <div id="wxSigmetView" class="wx-subtab-content" style="display: none;">
                     <div id="wxSigmetDisplay"></div>
+                </div>
+
+                <!-- G-AIRMET View -->
+                <div id="wxGairmetView" class="wx-subtab-content" style="display: none;">
+                    <div id="wxGairmetDisplay"></div>
                 </div>
             </div>
 
