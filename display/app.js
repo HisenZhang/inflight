@@ -179,20 +179,55 @@ function setupEventListeners() {
         zoomOutBtn.addEventListener('click', () => VectorMap.zoomOut());
     }
 
-    // Weather overlay toggle button
-    const weatherOverlayBtn = document.getElementById('weatherOverlayBtn');
-    if (weatherOverlayBtn) {
-        weatherOverlayBtn.addEventListener('click', () => {
-            const currentState = window.VectorMap.weatherOverlaysEnabled;
-            window.VectorMap.toggleWeatherOverlays(!currentState);
+    // Weather overlay toggle buttons
+    const pirepBtn = document.getElementById('pirepBtn');
+    const sigmetBtn = document.getElementById('sigmetBtn');
+    const gairmetBtn = document.getElementById('gairmetBtn');
+
+    if (pirepBtn) {
+        pirepBtn.addEventListener('click', () => {
+            const currentState = window.VectorMap.isWeatherEnabled('pireps');
+            window.VectorMap.toggleWeatherOverlays('pireps', !currentState);
 
             // Update button appearance
             if (!currentState) {
-                weatherOverlayBtn.classList.add('active');
-                weatherOverlayBtn.style.background = 'var(--primary)';
+                pirepBtn.classList.add('active');
+                pirepBtn.style.background = 'var(--primary)';
             } else {
-                weatherOverlayBtn.classList.remove('active');
-                weatherOverlayBtn.style.background = '';
+                pirepBtn.classList.remove('active');
+                pirepBtn.style.background = '';
+            }
+        });
+    }
+
+    if (sigmetBtn) {
+        sigmetBtn.addEventListener('click', () => {
+            const currentState = window.VectorMap.isWeatherEnabled('sigmets');
+            window.VectorMap.toggleWeatherOverlays('sigmets', !currentState);
+
+            // Update button appearance
+            if (!currentState) {
+                sigmetBtn.classList.add('active');
+                sigmetBtn.style.background = 'var(--primary)';
+            } else {
+                sigmetBtn.classList.remove('active');
+                sigmetBtn.style.background = '';
+            }
+        });
+    }
+
+    if (gairmetBtn) {
+        gairmetBtn.addEventListener('click', () => {
+            const currentState = window.VectorMap.isWeatherEnabled('gairmets');
+            window.VectorMap.toggleWeatherOverlays('gairmets', !currentState);
+
+            // Update button appearance
+            if (!currentState) {
+                gairmetBtn.classList.add('active');
+                gairmetBtn.style.background = 'var(--primary)';
+            } else {
+                gairmetBtn.classList.remove('active');
+                gairmetBtn.style.background = '';
             }
         });
     }

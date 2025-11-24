@@ -684,10 +684,33 @@ function generateMap(waypoints, legs) {
     // Create a transform group for pan offset (applied via CSS transform for performance)
     svg += `<g id="mapContent" transform="translate(${panOffset.x}, ${panOffset.y})">`;
 
-    // Draw airspace (background layer - drawn first so it appears behind everything)
+    // ============================================
+    // LAYER 1: AIRSPACE (Background)
+    // ============================================
+    svg += `<g id="layer-airspace" opacity="1.0">`;
     svg += drawAirspace(waypoints, project, strokeWidth, bounds);
+    svg += `</g>`;
 
-    // Draw route lines
+    // ============================================
+    // LAYER 2: WEATHER OVERLAYS (Behind route)
+    // ============================================
+    svg += `<g id="layer-weather" opacity="1.0">`;
+    const anyWeatherEnabled = window.VectorMap && (
+        window.VectorMap.isWeatherEnabled('pireps') ||
+        window.VectorMap.isWeatherEnabled('sigmets') ||
+        window.VectorMap.isWeatherEnabled('gairmets')
+    );
+
+    if (anyWeatherEnabled) {
+        console.log('[VectorMap] Weather overlays enabled, drawing...');
+        svg += window.VectorMap.drawWeatherOverlays(project, bounds);
+    }
+    svg += `</g>`;
+
+    // ============================================
+    // LAYER 3: ROUTE LINES (Above weather)
+    // ============================================
+    svg += `<g id="layer-route" opacity="1.0">`;
     for (let i = 0; i < legs.length; i++) {
         const leg = legs[i];
         const from = project(leg.from.lat, leg.from.lon);
@@ -695,6 +718,7 @@ function generateMap(waypoints, legs) {
 
         svg += `<line x1="${from.x}" y1="${from.y}" x2="${to.x}" y2="${to.y}" class="route-line"/>`;
     }
+    svg += `</g>`;
 
     // Draw waypoints with label de-crowding
     const waypointData = waypoints.map((waypoint, index) => {
@@ -756,6 +780,11 @@ function generateMap(waypoints, legs) {
         }
     }
 
+    // ============================================
+    // LAYER 4: WAYPOINTS (Above route)
+    // ============================================
+    svg += `<g id="layer-waypoints" opacity="1.0">`;
+
     // Draw waypoints (all get circles, but only non-colliding get labels)
     waypointData.forEach(({ waypoint, index, pos, code, color, labelY }) => {
         // Check if this is the target waypoint (next waypoint we're heading to)
@@ -771,6 +800,13 @@ function generateMap(waypoints, legs) {
 
         svg += `</g>`;
     });
+
+    svg += `</g>`;
+
+    // ============================================
+    // LAYER 5: GPS POSITION (Top layer)
+    // ============================================
+    svg += `<g id="layer-gps" opacity="1.0">`;
 
     // Draw current position if available (tall isosceles triangle, classic vector style)
     if (currentPosition) {
@@ -798,15 +834,9 @@ function generateMap(waypoints, legs) {
         svg += `</g>`;
     }
 
-    // Draw weather overlays (PIREPs and SIGMETs) if enabled
-    if (window.VectorMap && window.VectorMap.weatherOverlaysEnabled) {
-        console.log('[VectorMap] Weather overlays enabled, drawing...');
-        svg += window.VectorMap.drawWeatherOverlays(project, bounds);
-    } else {
-        console.log(`[VectorMap] Weather overlays check - enabled: ${window.VectorMap?.weatherOverlaysEnabled || false}`);
-    }
+    svg += `</g>`; // Close GPS layer
 
-    // Close the transform group
+    // Close the transform group (mapContent)
     svg += `</g>`;
 
 
@@ -1575,7 +1605,13 @@ function navigateToNextWaypoint() {
 // WEATHER OVERLAYS
 // ============================================
 
-let weatherOverlaysEnabled = false;
+// Individual weather overlay toggles
+let weatherOverlaysEnabled = {
+    pireps: false,
+    sigmets: false,
+    gairmets: false
+};
+
 let cachedWeatherData = {
     pireps: [],
     sigmets: [],
@@ -1585,17 +1621,30 @@ let cachedWeatherData = {
 
 /**
  * Enable/disable weather overlays on map
+ * @param {string} type - Weather type: 'pireps', 'sigmets', 'gairmets', or 'all'
+ * @param {boolean} enabled - Enable or disable
  */
-function toggleWeatherOverlays(enabled) {
-    weatherOverlaysEnabled = enabled;
-    console.log(`[VectorMap] Weather overlays ${enabled ? 'ENABLED' : 'DISABLED'}`);
+function toggleWeatherOverlays(type, enabled) {
+    if (type === 'all') {
+        weatherOverlaysEnabled.pireps = enabled;
+        weatherOverlaysEnabled.sigmets = enabled;
+        weatherOverlaysEnabled.gairmets = enabled;
+    } else if (type in weatherOverlaysEnabled) {
+        weatherOverlaysEnabled[type] = enabled;
+    }
 
-    if (enabled && routeData) {
+    console.log(`[VectorMap] Weather overlay ${type} ${enabled ? 'ENABLED' : 'DISABLED'}`, weatherOverlaysEnabled);
+
+    // Check if ANY weather type is enabled
+    const anyEnabled = weatherOverlaysEnabled.pireps || weatherOverlaysEnabled.sigmets || weatherOverlaysEnabled.gairmets;
+
+    if (anyEnabled && routeData && !cachedWeatherData.lastFetch) {
+        // Only fetch if we haven't fetched before
         console.log('[VectorMap] Fetching weather data for route...');
         fetchWeatherForRoute();
     } else if (routeData && routeData.waypoints && routeData.legs) {
-        console.log('[VectorMap] Redrawing map without weather overlays');
-        generateMap(routeData.waypoints, routeData.legs); // Redraw without weather
+        console.log('[VectorMap] Redrawing map with updated weather layers');
+        generateMap(routeData.waypoints, routeData.legs); // Redraw with current settings
     }
 }
 
@@ -1773,8 +1822,14 @@ function drawWeatherOverlays(project, bounds) {
     let gairmetCount = 0;
     let pirepCount = 0;
 
-    // Draw SIGMETs as polygons
-    if (cachedWeatherData.sigmets && cachedWeatherData.sigmets.length > 0) {
+    // ============================================
+    // SUB-LAYER 2A: SIGMETs (Filled polygons)
+    // ============================================
+    if (weatherOverlaysEnabled.sigmets) {
+        svg += `<g id="weather-sigmets" opacity="0.8">`;
+
+        // Draw SIGMETs as polygons
+        if (cachedWeatherData.sigmets && cachedWeatherData.sigmets.length > 0) {
         cachedWeatherData.sigmets.forEach(sigmet => {
             // Check if sigmet has coordinates
             if (!sigmet.coords || !Array.isArray(sigmet.coords) || sigmet.coords.length < 3) {
@@ -1835,10 +1890,19 @@ function drawWeatherOverlays(project, bounds) {
 
             sigmetCount++;
         });
+        }
+
+        svg += `</g>`; // Close SIGMETs group
     }
 
-    // Draw G-AIRMETs as polygons (if available in cached data)
-    if (cachedWeatherData.gairmets && cachedWeatherData.gairmets.length > 0) {
+    // ============================================
+    // SUB-LAYER 2B: G-AIRMETs (Dashed polygons)
+    // ============================================
+    if (weatherOverlaysEnabled.gairmets) {
+        svg += `<g id="weather-gairmets" opacity="0.7">`;
+
+        // Draw G-AIRMETs as polygons (if available in cached data)
+        if (cachedWeatherData.gairmets && cachedWeatherData.gairmets.length > 0) {
         cachedWeatherData.gairmets.forEach(gairmet => {
             // Check if gairmet has coordinates
             if (!gairmet.coords || !Array.isArray(gairmet.coords) || gairmet.coords.length < 3) {
@@ -1895,10 +1959,19 @@ function drawWeatherOverlays(project, bounds) {
 
             gairmetCount++;
         });
+        }
+
+        svg += `</g>`; // Close G-AIRMETs group
     }
 
-    // Draw PIREPs as markers
-    cachedWeatherData.pireps.forEach(pirep => {
+    // ============================================
+    // SUB-LAYER 2C: PIREPs (Dots/markers)
+    // ============================================
+    if (weatherOverlaysEnabled.pireps) {
+        svg += `<g id="weather-pireps" opacity="0.9">`;
+
+        // Draw PIREPs as markers
+        cachedWeatherData.pireps.forEach(pirep => {
         if (!pirep.lat || !pirep.lon) return;
 
         // Check if PIREP is within visible bounds
@@ -1957,11 +2030,23 @@ function drawWeatherOverlays(project, bounds) {
         }
 
         pirepCount++;
-    });
+        });
+
+        svg += `</g>`; // Close PIREPs group
+    }
 
     console.log(`[VectorMap] Rendered weather overlays - ${pirepCount} PIREPs, ${sigmetCount} SIGMETs, ${gairmetCount} G-AIRMETs`);
 
     return svg;
+}
+
+/**
+ * Check if a specific weather type is enabled
+ * @param {string} type - 'pireps', 'sigmets', or 'gairmets'
+ * @returns {boolean}
+ */
+function isWeatherEnabled(type) {
+    return weatherOverlaysEnabled[type] || false;
 }
 
 // ============================================
@@ -1981,7 +2066,5 @@ window.VectorMap = {
     toggleWeatherOverlays,
     fetchWeatherForRoute,
     drawWeatherOverlays,
-    get weatherOverlaysEnabled() {
-        return weatherOverlaysEnabled;
-    }
+    isWeatherEnabled
 };
