@@ -1616,7 +1616,7 @@ async function fetchWeatherForRoute() {
             lastFetch: Date.now()
         };
 
-        console.log(`[VectorMap] Fetched ${pireps.length} PIREPs (within 50NM corridor) and ${sigmets.length} SIGMETs`);
+        console.log(`[VectorMap] Fetched ${pireps.length} PIREPs (within 50NM left/right of route) and ${sigmets.length} SIGMETs`);
 
         // Redraw map with weather overlays
         if (routeData) {
@@ -1629,9 +1629,10 @@ async function fetchWeatherForRoute() {
 }
 
 /**
- * Filter weather reports to only those within specified NM of route
+ * Filter weather reports to only those within specified NM corridor of route
  * @param {Array} weatherReports - Array of weather reports with lat/lon
- * @param {number} corridorNM - Corridor width in nautical miles
+ * @param {number} corridorNM - Corridor radius (perpendicular distance from route centerline)
+ *                               e.g., 50NM = 50NM left + 50NM right = 100NM total width
  * @returns {Array} Filtered weather reports
  */
 function filterWeatherWithinCorridor(weatherReports, corridorNM) {
@@ -1642,7 +1643,8 @@ function filterWeatherWithinCorridor(weatherReports, corridorNM) {
     return weatherReports.filter(report => {
         if (!report.lat || !report.lon) return false;
 
-        // Check if report is within corridorNM of any route leg
+        // Check if report is within corridorNM perpendicular distance of any route leg
+        // (cross-track distance from route centerline)
         for (const leg of routeData.legs) {
             const fromLat = leg.from.lat;
             const fromLon = leg.from.lon;
@@ -1651,7 +1653,7 @@ function filterWeatherWithinCorridor(weatherReports, corridorNM) {
 
             if (!fromLat || !fromLon || !toLat || !toLon) continue;
 
-            // Calculate minimum distance from report to this leg
+            // Calculate perpendicular distance from report to this route leg
             const distToLeg = distanceToLineSegment(
                 report.lat, report.lon,
                 fromLat, fromLon,
@@ -1659,7 +1661,7 @@ function filterWeatherWithinCorridor(weatherReports, corridorNM) {
             );
 
             if (distToLeg <= corridorNM) {
-                return true; // Within corridor
+                return true; // Within corridor (50NM left or right of route)
             }
         }
 
