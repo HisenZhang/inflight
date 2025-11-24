@@ -800,7 +800,10 @@ function generateMap(waypoints, legs) {
 
     // Draw weather overlays (PIREPs and SIGMETs) if enabled
     if (window.VectorMap && window.VectorMap.weatherOverlaysEnabled) {
+        console.log('[VectorMap] Weather overlays enabled, drawing...');
         svg += window.VectorMap.drawWeatherOverlays(project, bounds);
+    } else {
+        console.log(`[VectorMap] Weather overlays check - enabled: ${window.VectorMap?.weatherOverlaysEnabled || false}`);
     }
 
     // Close the transform group
@@ -1978,5 +1981,7 @@ window.VectorMap = {
     toggleWeatherOverlays,
     fetchWeatherForRoute,
     drawWeatherOverlays,
-    weatherOverlaysEnabled
+    get weatherOverlaysEnabled() {
+        return weatherOverlaysEnabled;
+    }
 };
