@@ -1601,19 +1601,22 @@ async function fetchWeatherForRoute() {
             return;
         }
 
-        // Fetch PIREPs and SIGMETs
-        const [pireps, sigmets] = await Promise.all([
-            window.WeatherAPI.fetchPIREPs(departureIcao, 200, 6), // 200NM radius
+        // Fetch PIREPs and SIGMETs (use larger radius initially, will filter to 50NM corridor)
+        const [allPireps, sigmets] = await Promise.all([
+            window.WeatherAPI.fetchPIREPs(departureIcao, 200, 6), // Fetch wider area
             window.WeatherAPI.fetchSIGMETs()
         ]);
 
+        // Filter PIREPs to only those within 50NM of the route corridor
+        const pireps = filterWeatherWithinCorridor(allPireps || [], 50);
+
         cachedWeatherData = {
-            pireps: pireps || [],
+            pireps,
             sigmets: sigmets || [],
             lastFetch: Date.now()
         };
 
-        console.log(`[VectorMap] Fetched ${pireps.length} PIREPs and ${sigmets.length} SIGMETs`);
+        console.log(`[VectorMap] Fetched ${pireps.length} PIREPs (within 50NM corridor) and ${sigmets.length} SIGMETs`);
 
         // Redraw map with weather overlays
         if (routeData) {
@@ -1623,6 +1626,96 @@ async function fetchWeatherForRoute() {
     } catch (error) {
         console.error('[VectorMap] Weather fetch error:', error);
     }
+}
+
+/**
+ * Filter weather reports to only those within specified NM of route
+ * @param {Array} weatherReports - Array of weather reports with lat/lon
+ * @param {number} corridorNM - Corridor width in nautical miles
+ * @returns {Array} Filtered weather reports
+ */
+function filterWeatherWithinCorridor(weatherReports, corridorNM) {
+    if (!routeData || !routeData.legs || routeData.legs.length === 0) {
+        return weatherReports;
+    }
+
+    return weatherReports.filter(report => {
+        if (!report.lat || !report.lon) return false;
+
+        // Check if report is within corridorNM of any route leg
+        for (const leg of routeData.legs) {
+            const fromLat = leg.from.lat;
+            const fromLon = leg.from.lon;
+            const toLat = leg.to.lat;
+            const toLon = leg.to.lon;
+
+            if (!fromLat || !fromLon || !toLat || !toLon) continue;
+
+            // Calculate minimum distance from report to this leg
+            const distToLeg = distanceToLineSegment(
+                report.lat, report.lon,
+                fromLat, fromLon,
+                toLat, toLon
+            );
+
+            if (distToLeg <= corridorNM) {
+                return true; // Within corridor
+            }
+        }
+
+        return false; // Not within corridor of any leg
+    });
+}
+
+/**
+ * Calculate minimum distance from point to line segment (Vincenty formula)
+ * @param {number} pointLat - Point latitude
+ * @param {number} pointLon - Point longitude
+ * @param {number} segALat - Segment point A latitude
+ * @param {number} segALon - Segment point A longitude
+ * @param {number} segBLat - Segment point B latitude
+ * @param {number} segBLon - Segment point B longitude
+ * @returns {number} Distance in nautical miles
+ */
+function distanceToLineSegment(pointLat, pointLon, segALat, segALon, segBLat, segBLon) {
+    // Use Vincenty formula for great circle distances
+    const R = 3440.065; // Earth radius in nautical miles
+
+    // Helper: great circle distance between two points
+    const gcDistance = (lat1, lon1, lat2, lon2) => {
+        const φ1 = lat1 * Math.PI / 180;
+        const φ2 = lat2 * Math.PI / 180;
+        const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+        const y = Math.sqrt(
+            Math.pow(Math.cos(φ2) * Math.sin(Δλ), 2) +
+            Math.pow(Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ), 2)
+        );
+        const x = Math.sin(φ1) * Math.sin(φ2) + Math.cos(φ1) * Math.cos(φ2) * Math.cos(Δλ);
+        return R * Math.atan2(y, x);
+    };
+
+    const distToA = gcDistance(pointLat, pointLon, segALat, segALon);
+    const distToB = gcDistance(pointLat, pointLon, segBLat, segBLon);
+    const legDist = gcDistance(segALat, segALon, segBLat, segBLon);
+
+    // If leg has zero length, return distance to point A
+    if (legDist < 0.01) return distToA;
+
+    // Use law of cosines to find cross-track distance
+    // First check if point is within the perpendicular bounds of the segment
+    const cosA = (distToA * distToA + legDist * legDist - distToB * distToB) / (2 * distToA * legDist);
+    const cosB = (distToB * distToB + legDist * legDist - distToA * distToA) / (2 * distToB * legDist);
+
+    // If point is beyond segment endpoints, return distance to nearest endpoint
+    if (cosA < 0) return distToA;
+    if (cosB < 0) return distToB;
+
+    // Calculate cross-track distance (perpendicular distance to great circle)
+    const distAP = distToA;
+    const crossTrack = Math.abs(Math.asin(Math.sin(distAP / R) * Math.sin(Math.acos(cosA))) * R);
+
+    return crossTrack;
 }
 
 /**

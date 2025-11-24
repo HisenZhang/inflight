@@ -25,7 +25,7 @@ const AppVersion = {
     // Semantic version (sync with package.json)
     MAJOR: 2,
     MINOR: 7,
-    PATCH: 2,
+    PATCH: 3,
 
     // Full version string
     get VERSION() {
@@ -34,7 +34,7 @@ const AppVersion = {
 
     // Service worker cache version
     // Increment this number to force PWA updates
-    CACHE_VERSION: 117,
+    CACHE_VERSION: 118,
 
     // Full cache name for service worker
     get CACHE_NAME() {
@@ -45,7 +45,7 @@ const AppVersion = {
     BUILD_DATE: '2025-11-23',
 
     // Release name (optional)
-    RELEASE_NAME: 'Enhancement: Enhanced METAR display with wx.hisenz.com parsing',
+    RELEASE_NAME: 'Enhancement: Filter weather to 50NM corridor of route',
 
     /**
      * Get full version info object
