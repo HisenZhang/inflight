@@ -1818,11 +1818,8 @@ async function fetchWeatherForRoute(forceRefresh = false) {
             }
         }
 
-        if (!referenceAirport || referenceAirport.length !== 4) {
-            console.warn('[VectorMap] Cannot fetch weather: no valid airport found in route');
-            return;
-        }
-
+        // Note: referenceAirport is only used for logging, not required for fetching
+        // We fetch all weather data and filter by route corridor
         console.log(`[VectorMap] Fetching weather data (all PIREPs + SIGMETs + G-AIRMETs)`);
 
         // Fetch all weather data in parallel
