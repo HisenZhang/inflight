@@ -224,21 +224,26 @@ async function fetchAllPIREPs() {
     const now = Date.now();
     const cache = weatherCache.bulkPireps;
 
-    // Filter out expired PIREPs (older than 6 hours)
+    // Check if we need to fetch new data (every 10 minutes)
+    const timeSinceLastFetch = now - cache.lastFetch;
+    const shouldFetch = timeSinceLastFetch >= BULK_CACHE_FETCH_INTERVAL.pirep;
+
+    if (!shouldFetch) {
+        // Return cached data without fetching
+        console.log(`[WeatherAPI] Using cached PIREPs (${cache.items.length} items, next fetch in ${Math.floor((BULK_CACHE_FETCH_INTERVAL.pirep - timeSinceLastFetch) / 1000)}s)`);
+        return cache.items;
+    }
+
+    // Time to fetch: first remove expired PIREPs (older than 6 hours)
     const MAX_PIREP_AGE = 6 * 60 * 60 * 1000; // 6 hours in milliseconds
+    const beforeCleanup = cache.items.length;
     cache.items = cache.items.filter(pirep => {
         const age = now - (pirep.obsTime * 1000); // obsTime is in seconds
         return age < MAX_PIREP_AGE;
     });
+    const expiredCount = beforeCleanup - cache.items.length;
 
-    // Check if we need to fetch new data
-    const timeSinceLastFetch = now - cache.lastFetch;
-    if (timeSinceLastFetch < BULK_CACHE_FETCH_INTERVAL.pirep && cache.items.length > 0) {
-        console.log(`[WeatherAPI] Using cached PIREPs (${cache.items.length} items, ${Math.floor(timeSinceLastFetch / 1000)}s old)`);
-        return cache.items;
-    }
-
-    console.log('[WeatherAPI] Fetching new PIREPs from cache file');
+    console.log(`[WeatherAPI] 10-minute check: removed ${expiredCount} expired PIREPs, fetching new data...`);
 
     try {
         // Fetch from AWC bulk cache (CSV is smaller than XML)
@@ -309,20 +314,25 @@ async function fetchSIGMETs() {
     const now = Date.now();
     const cache = weatherCache.bulkSigmets;
 
-    // Filter out expired SIGMETs (past their validTimeTo)
+    // Check if we need to fetch new data (every 10 minutes)
+    const timeSinceLastFetch = now - cache.lastFetch;
+    const shouldFetch = timeSinceLastFetch >= BULK_CACHE_FETCH_INTERVAL.sigmet;
+
+    if (!shouldFetch) {
+        // Return cached data without fetching
+        console.log(`[WeatherAPI] Using cached SIGMETs (${cache.items.length} items, next fetch in ${Math.floor((BULK_CACHE_FETCH_INTERVAL.sigmet - timeSinceLastFetch) / 1000)}s)`);
+        return cache.items;
+    }
+
+    // Time to fetch: first remove expired SIGMETs (past their validTimeTo)
+    const beforeCleanup = cache.items.length;
     cache.items = cache.items.filter(sigmet => {
         if (!sigmet.validTimeTo) return true; // Keep if no expiry time
         return (sigmet.validTimeTo * 1000) > now; // validTimeTo is in seconds
     });
+    const expiredCount = beforeCleanup - cache.items.length;
 
-    // Check if we need to fetch new data
-    const timeSinceLastFetch = now - cache.lastFetch;
-    if (timeSinceLastFetch < BULK_CACHE_FETCH_INTERVAL.sigmet && cache.items.length > 0) {
-        console.log(`[WeatherAPI] Using cached SIGMETs (${cache.items.length} items, ${Math.floor(timeSinceLastFetch / 1000)}s old)`);
-        return cache.items;
-    }
-
-    console.log('[WeatherAPI] Fetching new SIGMETs from cache file');
+    console.log(`[WeatherAPI] 10-minute check: removed ${expiredCount} expired SIGMETs, fetching new data...`);
 
     try {
         // Fetch from AWC bulk cache (CSV is smaller and faster)
@@ -417,20 +427,25 @@ async function fetchGAIRMETs() {
     const now = Date.now();
     const cache = weatherCache.bulkGairmets;
 
-    // Filter out expired G-AIRMETs (past their expireTime)
+    // Check if we need to fetch new data (every 10 minutes)
+    const timeSinceLastFetch = now - cache.lastFetch;
+    const shouldFetch = timeSinceLastFetch >= BULK_CACHE_FETCH_INTERVAL.gairmet;
+
+    if (!shouldFetch) {
+        // Return cached data without fetching
+        console.log(`[WeatherAPI] Using cached G-AIRMETs (${cache.items.length} items, next fetch in ${Math.floor((BULK_CACHE_FETCH_INTERVAL.gairmet - timeSinceLastFetch) / 1000)}s)`);
+        return cache.items;
+    }
+
+    // Time to fetch: first remove expired G-AIRMETs (past their expireTime)
+    const beforeCleanup = cache.items.length;
     cache.items = cache.items.filter(gairmet => {
         if (!gairmet.expireTime) return true; // Keep if no expiry time
         return new Date(gairmet.expireTime).getTime() > now; // expireTime is ISO string
     });
+    const expiredCount = beforeCleanup - cache.items.length;
 
-    // Check if we need to fetch new data
-    const timeSinceLastFetch = now - cache.lastFetch;
-    if (timeSinceLastFetch < BULK_CACHE_FETCH_INTERVAL.gairmet && cache.items.length > 0) {
-        console.log(`[WeatherAPI] Using cached G-AIRMETs (${cache.items.length} items, ${Math.floor(timeSinceLastFetch / 1000)}s old)`);
-        return cache.items;
-    }
-
-    console.log('[WeatherAPI] Fetching new G-AIRMETs from cache file');
+    console.log(`[WeatherAPI] 10-minute check: removed ${expiredCount} expired G-AIRMETs, fetching new data...`);
 
     try {
         // Fetch from AWC bulk cache (CSV is much smaller than XML: 19KB vs 85KB)
