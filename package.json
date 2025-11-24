@@ -1,6 +1,6 @@
 {
   "name": "inflight",
-  "version": "2.6.1",
+  "version": "2.9.0",
   "description": "Lightweight web-based flight planning application with comprehensive navlog and interactive map display",
   "main": "index.html",
   "scripts": {

@@ -12,8 +12,17 @@
     border-bottom: 2px solid var(--border-color);
     padding: var(--space-md);
     display: flex;
-    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
     align-items: center;
+}
+
+/* Mobile: Stack vertically */
+@media (max-width: 768px) {
+    .map-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
 }
 
 .map-header h2 {
@@ -50,29 +59,17 @@
     font-weight: 700;
 }
 
-/* G-AIRMET Hazard Type Controls */
-.gairmet-controls {
+/* Weather Overlay Controls */
+.weather-overlay-controls {
     display: flex;
     align-items: center;
     gap: 4px;
-    margin-top: 8px;
-    padding: 6px 8px;
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: 2px;
-}
-
-.gairmet-label {
-    font-family: 'Roboto Mono', monospace;
-    font-size: 10px;
-    font-weight: 600;
-    color: var(--text-secondary);
-    margin-right: 4px;
+    flex-wrap: wrap;
 }
 
 .gairmet-btn {
-    font-size: 9px;
-    padding: 3px 6px;
+    font-size: 10px;
+    padding: 4px 8px;
 }
 
 .map-route-info {

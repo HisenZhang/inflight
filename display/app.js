@@ -150,10 +150,10 @@ function setupEventListeners() {
     const prevNavWptBtn = document.getElementById('prevNavWptBtn');
     const nextNavWptBtn = document.getElementById('nextNavWptBtn');
     if (prevNavWptBtn) {
-        prevNavWptBtn.addEventListener('click', () => VectorMap.navigateToPrevWaypoint());
+        prevNavWptBtn.addEventListener('click', () => window.VectorMap.navigateToPrevWaypoint());
     }
     if (nextNavWptBtn) {
-        nextNavWptBtn.addEventListener('click', () => VectorMap.navigateToNextWaypoint());
+        nextNavWptBtn.addEventListener('click', () => window.VectorMap.navigateToNextWaypoint());
     }
 
     // Zoom controls
@@ -161,7 +161,7 @@ function setupEventListeners() {
     zoomBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             const zoomMode = btn.getAttribute('data-zoom');
-            VectorMap.setZoomMode(zoomMode);
+            window.VectorMap.setZoomMode(zoomMode);
 
             // Update active state
             zoomBtns.forEach(b => b.classList.remove('active'));
@@ -173,10 +173,10 @@ function setupEventListeners() {
     const zoomInBtn = document.getElementById('zoomInBtn');
     const zoomOutBtn = document.getElementById('zoomOutBtn');
     if (zoomInBtn) {
-        zoomInBtn.addEventListener('click', () => VectorMap.zoomIn());
+        zoomInBtn.addEventListener('click', () => window.VectorMap.zoomIn());
     }
     if (zoomOutBtn) {
-        zoomOutBtn.addEventListener('click', () => VectorMap.zoomOut());
+        zoomOutBtn.addEventListener('click', () => window.VectorMap.zoomOut());
     }
 
     // Weather overlay toggle buttons
@@ -192,14 +192,9 @@ function setupEventListeners() {
             // Update button appearance
             if (!currentState) {
                 pirepBtn.classList.add('active');
-                pirepBtn.style.background = 'var(--primary)';
             } else {
                 pirepBtn.classList.remove('active');
-                pirepBtn.style.background = '';
             }
-
-            // Show/hide G-AIRMET controls when any weather is enabled
-            updateGairmetControlsVisibility();
         });
     }
 
@@ -211,14 +206,9 @@ function setupEventListeners() {
             // Update button appearance
             if (!currentState) {
                 sigmetBtn.classList.add('active');
-                sigmetBtn.style.background = 'var(--primary)';
             } else {
                 sigmetBtn.classList.remove('active');
-                sigmetBtn.style.background = '';
             }
-
-            // Show/hide G-AIRMET controls when any weather is enabled
-            updateGairmetControlsVisibility();
         });
     }
 
@@ -227,6 +217,7 @@ function setupEventListeners() {
     const gairmetTurbBtn = document.getElementById('gairmetTurbBtn');
     const gairmetIfrBtn = document.getElementById('gairmetIfrBtn');
     const gairmetMtnBtn = document.getElementById('gairmetMtnBtn');
+    const gairmetFzlvlBtn = document.getElementById('gairmetFzlvlBtn');
     const gairmetControls = document.getElementById('gairmetControls');
 
     function setupGairmetButton(btn, type) {
@@ -241,8 +232,6 @@ function setupEventListeners() {
             } else {
                 btn.classList.remove('active');
             }
-
-            updateGairmetControlsVisibility();
         });
     }
 
@@ -250,20 +239,7 @@ function setupEventListeners() {
     setupGairmetButton(gairmetTurbBtn, 'turb');
     setupGairmetButton(gairmetIfrBtn, 'ifr');
     setupGairmetButton(gairmetMtnBtn, 'mtn');
-
-    // Show/hide G-AIRMET controls when any weather is enabled
-    function updateGairmetControlsVisibility() {
-        if (!gairmetControls) return;
-
-        const anyWeatherEnabled = window.VectorMap.isWeatherEnabled('pireps') ||
-                                  window.VectorMap.isWeatherEnabled('sigmets') ||
-                                  window.VectorMap.isWeatherEnabled('gairmet-ice') ||
-                                  window.VectorMap.isWeatherEnabled('gairmet-turb') ||
-                                  window.VectorMap.isWeatherEnabled('gairmet-ifr') ||
-                                  window.VectorMap.isWeatherEnabled('gairmet-mtn');
-
-        gairmetControls.style.display = anyWeatherEnabled ? 'flex' : 'none';
-    }
+    setupGairmetButton(gairmetFzlvlBtn, 'fzlvl');
     // Navlog export/import dropdowns
     setupExportDropdown();
     setupImportDropdown();
@@ -931,7 +907,7 @@ async function handleCalculateRoute() {
         UIController.displayResults(waypoints, legs, totalDistance, totalTime, fuelStatus, { ...options, windMetadata });
 
         // Display vector map
-        VectorMap.displayMap(waypoints, legs, options);
+        window.VectorMap.displayMap(waypoints, legs, options);
 
         // Update Flight Tracker with fuel data
         if (window.FlightTracker && fuelEnabled) {

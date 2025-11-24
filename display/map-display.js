@@ -21,6 +21,9 @@ let touchStartPositions = null; // Track touch positions for pan and pinch
 // Cached DOM elements for navigation display (avoid repeated querySelector calls)
 let navElements = null;
 
+// Cached projection function (updated by generateMap, used by updateGPSMarker)
+let project = null;
+
 function cacheNavElements() {
     if (!navElements) {
         navElements = {
@@ -40,6 +43,62 @@ function cacheNavElements() {
 // ============================================
 // GPS TRACKING
 // ============================================
+
+// Throttle map redraws - only redraw when position changes significantly
+let lastMapRedrawPosition = null;
+let lastMapRedrawTime = 0;
+let lastWeatherCheckTime = 0;
+const MAP_REDRAW_MIN_DISTANCE = 0.1; // nautical miles
+const WEATHER_CHECK_INTERVAL = 600000; // Check for new weather every 10 minutes (600 seconds)
+
+/**
+ * Update GPS position marker without full redraw (efficient)
+ * @param {number} lat - Latitude
+ * @param {number} lon - Longitude
+ * @param {number} heading - Heading in degrees
+ */
+function updateGPSMarker(lat, lon, heading) {
+    const gpsLayer = document.querySelector('#layer-gps .gps-arrow');
+    if (!gpsLayer || !routeData || !project) return;
+
+    // Use current projection to convert lat/lon to screen coordinates
+    const pos = project(lat, lon);
+
+    // Update transform (position + rotation)
+    gpsLayer.setAttribute('transform', `translate(${pos.x}, ${pos.y}) rotate(${heading - 90})`);
+}
+
+/**
+ * Check for updated weather data and redraw if new data was fetched
+ * @returns {Promise<boolean>} True if new data was fetched and map was redrawn
+ */
+async function checkAndUpdateWeather() {
+    if (!routeData || !routeData.waypoints || routeData.waypoints.length === 0) return false;
+
+    // Store current cached weather timestamp
+    const oldPirepTimestamp = cachedWeatherData.lastFetch || 0;
+
+    // Attempt to fetch fresh weather (will use cache if within cache duration)
+    const anyWeatherEnabled = weatherOverlaysEnabled.pireps || weatherOverlaysEnabled.sigmets ||
+                              Object.values(weatherOverlaysEnabled.gairmets).some(v => v);
+
+    if (!anyWeatherEnabled) return false;
+
+    // Fetch weather (respects cache)
+    await fetchWeatherForRoute();
+
+    // Check if new data was actually fetched (timestamp changed)
+    const newDataFetched = cachedWeatherData.lastFetch > oldPirepTimestamp;
+
+    if (newDataFetched) {
+        console.log('[VectorMap] New weather data fetched, redrawing map...');
+        generateMap(routeData.waypoints, routeData.legs);
+        lastMapRedrawTime = Date.now();
+        return true;
+    }
+
+    return false;
+}
 
 function startGPSTracking() {
     if (!navigator.geolocation) {
@@ -321,9 +380,49 @@ function updateLiveNavigation() {
         verticalAccuracy
     });
 
-    // Redraw map if in destination or surrounding zoom mode (to update GPS position)
+    // Update GPS position on map
+    // Strategy: Quick marker update every GPS tick, full redraw only when needed
     if (currentZoomMode === 'destination' || currentZoomMode === 'surrounding-50' || currentZoomMode === 'surrounding-25') {
-        generateMap(waypoints, legs);
+        const now = Date.now();
+        let shouldFullRedraw = false;
+
+        // Check if moved significantly (>0.1NM)
+        if (lastMapRedrawPosition) {
+            const distanceMoved = window.RouteCalculator.calculateDistance(
+                lastMapRedrawPosition.lat,
+                lastMapRedrawPosition.lon,
+                currentPosition.lat,
+                currentPosition.lon
+            );
+            if (distanceMoved >= MAP_REDRAW_MIN_DISTANCE) {
+                shouldFullRedraw = true;
+            }
+        } else {
+            // First update - need full redraw
+            shouldFullRedraw = true;
+        }
+
+        // Check for new weather data every 60 seconds (but only redraw if actually fetched new data)
+        if (!shouldFullRedraw && (now - lastWeatherCheckTime >= WEATHER_CHECK_INTERVAL)) {
+            lastWeatherCheckTime = now;
+            // This will only redraw if new weather data was fetched (not from cache)
+            checkAndUpdateWeather().then(didRedraw => {
+                if (didRedraw) {
+                    lastMapRedrawPosition = { lat: currentPosition.lat, lon: currentPosition.lon };
+                }
+            });
+            return; // Skip marker update this tick, weather check handles it
+        }
+
+        if (shouldFullRedraw) {
+            // Full redraw (map + weather overlays)
+            lastMapRedrawPosition = { lat: currentPosition.lat, lon: currentPosition.lon };
+            lastMapRedrawTime = now;
+            generateMap(waypoints, legs);
+        } else {
+            // Quick update: just move the GPS marker (no full redraw)
+            updateGPSMarker(currentPosition.lat, currentPosition.lon, currentPosition.heading || 0);
+        }
     }
 }
 
@@ -672,7 +771,7 @@ function generateMap(waypoints, legs) {
     const centerY = (minProjY + maxProjY) / 2;
 
     // Optimized projection function (reuses pre-calculated values)
-    const project = (lat, lon) => {
+    project = (lat, lon) => {
         const projected = projectToSphere(lat, lon);
         const screenX = width / 2 + (projected.x - centerX) * scale;
         const screenY = height / 2 - (projected.y - centerY) * scale;
@@ -701,7 +800,8 @@ function generateMap(waypoints, legs) {
         window.VectorMap.isWeatherEnabled('gairmet-ice') ||
         window.VectorMap.isWeatherEnabled('gairmet-turb') ||
         window.VectorMap.isWeatherEnabled('gairmet-ifr') ||
-        window.VectorMap.isWeatherEnabled('gairmet-mtn')
+        window.VectorMap.isWeatherEnabled('gairmet-mtn') ||
+        window.VectorMap.isWeatherEnabled('gairmet-fzlvl')
     );
 
     if (anyWeatherEnabled) {
@@ -1616,7 +1716,8 @@ let weatherOverlaysEnabled = {
         ice: false,
         turb: false,
         ifr: false,
-        mtn: false
+        mtn: false,
+        fzlvl: false
     }
 };
 
@@ -1624,7 +1725,8 @@ let cachedWeatherData = {
     pireps: [],
     sigmets: [],
     gairmets: [],
-    lastFetch: null
+    lastFetch: null,
+    routeHash: null  // Track which route the weather was fetched for
 };
 
 /**
@@ -1658,10 +1760,38 @@ function toggleWeatherOverlays(type, enabled) {
 }
 
 /**
- * Fetch weather data for current route
+ * Generate a simple hash for the current route (to detect route changes)
+ * @returns {string} Route hash
  */
-async function fetchWeatherForRoute() {
+function getRouteHash() {
+    if (!routeData || !routeData.waypoints) return '';
+    // Simple hash: concatenate waypoint identifiers
+    return routeData.waypoints.map(w => w.ident || `${w.lat},${w.lon}`).join('-');
+}
+
+/**
+ * Fetch weather data for current route
+ * @param {boolean} forceRefresh - Force fresh fetch even if route hasn't changed
+ */
+async function fetchWeatherForRoute(forceRefresh = false) {
     if (!routeData || !routeData.legs || routeData.legs.length === 0) return;
+
+    // Check if route has changed (force refetch if it has)
+    const currentRouteHash = getRouteHash();
+    const routeChanged = cachedWeatherData.routeHash !== currentRouteHash;
+
+    if (routeChanged) {
+        console.log('[VectorMap] Route changed, forcing fresh weather data check');
+        forceRefresh = true;
+        cachedWeatherData.routeHash = currentRouteHash;
+        // PIREPs, SIGMETs, and G-AIRMETs are all fetched nationally now
+        // Will filter to route corridor after fetching
+    }
+
+    // If not forcing refresh and we have recent data, skip fetch
+    if (!forceRefresh && cachedWeatherData.lastFetch) {
+        return;
+    }
 
     try {
         // Find the first valid airport in the route (not navaid/fix)
@@ -1693,17 +1823,18 @@ async function fetchWeatherForRoute() {
             return;
         }
 
-        console.log(`[VectorMap] Fetching weather using reference airport: ${referenceAirport}`);
+        console.log(`[VectorMap] Fetching weather data (all PIREPs + SIGMETs + G-AIRMETs)`);
 
-        // Fetch PIREPs, SIGMETs, and G-AIRMETs (use larger radius initially, will filter to 50NM corridor)
+        // Fetch all weather data in parallel
+        // Use fetchAllPIREPs to get complete US dataset (more efficient than location queries)
         const [allPireps, sigmets, gairmets] = await Promise.all([
-            window.WeatherAPI.fetchPIREPs(referenceAirport, 200, 6), // Fetch wider area
+            window.WeatherAPI.fetchAllPIREPs(),
             window.WeatherAPI.fetchSIGMETs(),
             window.WeatherAPI.fetchGAIRMETs()
         ]);
 
         // Filter PIREPs to only those within 50NM of the route corridor
-        const pireps = filterWeatherWithinCorridor(allPireps || [], 50);
+        const pireps = filterWeatherWithinCorridor(allPireps, 50);
 
         cachedWeatherData = {
             pireps,
@@ -1713,6 +1844,12 @@ async function fetchWeatherForRoute() {
         };
 
         console.log(`[VectorMap] Fetched ${pireps.length} PIREPs (within 50NM left/right of route), ${sigmets.length} SIGMETs, and ${gairmets.length} G-AIRMETs`);
+
+        // Log G-AIRMET hazard types for debugging
+        if (gairmets && gairmets.length > 0) {
+            const hazardTypes = gairmets.map(g => g.hazard).filter(h => h);
+            console.log('[VectorMap] G-AIRMET hazard types:', [...new Set(hazardTypes)]);
+        }
 
         // Redraw map with weather overlays
         if (routeData && routeData.waypoints && routeData.legs) {
@@ -1880,7 +2017,7 @@ function drawWeatherOverlays(project, bounds) {
             // Draw SIGMET polygon
             svg += `<polygon points="${pointsStr}"
                     fill="${fillColor}" fill-opacity="0.15"
-                    stroke="${strokeColor}" stroke-width="2" stroke-opacity="0.6"
+                    stroke="${strokeColor}" stroke-width="3.0" stroke-opacity="1.0"
                     data-sigmet="${encodeURIComponent(sigmet.rawAirSigmet || sigmet.hazard || 'SIGMET')}"
                     class="sigmet-polygon"/>`;
 
@@ -1913,23 +2050,69 @@ function drawWeatherOverlays(project, bounds) {
 
         // Draw G-AIRMETs as polygons (if available in cached data)
         if (cachedWeatherData.gairmets && cachedWeatherData.gairmets.length > 0) {
-        cachedWeatherData.gairmets.forEach(gairmet => {
+            // Filter to only current time period for each unique area
+            // G-AIRMETs issue multiple forecasts (3hr, 6hr, 9hr, 12hr) for the same area
+            // We only want to DRAW the current forecast period to avoid visual clutter
+            const now = Date.now();
+            const areaGroups = new Map();
+
+            // Group by product+tag (unique area identifier)
+            for (const gairmet of cachedWeatherData.gairmets) {
+                if (!gairmet.product || !gairmet.tag || !gairmet.validTime) continue;
+                const key = `${gairmet.product}_${gairmet.tag}`;
+                if (!areaGroups.has(key)) {
+                    areaGroups.set(key, []);
+                }
+                areaGroups.get(key).push(gairmet);
+            }
+
+            // For each area, keep only the most recent validTime that's <= now (current period)
+            const currentGairmets = [];
+            for (const [key, gairmets] of areaGroups) {
+                // Sort by validTime descending (most recent first)
+                gairmets.sort((a, b) => {
+                    const timeA = new Date(a.validTime).getTime();
+                    const timeB = new Date(b.validTime).getTime();
+                    return timeB - timeA;
+                });
+
+                // Find the most recent validTime that has already started (validTime <= now)
+                const current = gairmets.find(g => new Date(g.validTime).getTime() <= now);
+                if (current) {
+                    currentGairmets.push(current);
+                }
+            }
+
+            console.log(`[VectorMap] Filtered G-AIRMETs for display: ${cachedWeatherData.gairmets.length} cached → ${currentGairmets.length} current period only`);
+
+        currentGairmets.forEach(gairmet => {
             // Check if gairmet has coordinates
             if (!gairmet.coords || !Array.isArray(gairmet.coords) || gairmet.coords.length < 3) {
                 return;
             }
 
-            // Filter by hazard type
+            // Filter by hazard type (API returns: ICE, TURB-HI, TURB-LO, LLWS, IFR, MT_OBSC, FZLVL, M_FZLVL)
             const hazardType = (gairmet.hazard || '').toUpperCase();
             let shouldRender = false;
 
-            if (hazardType.includes('ICE') && weatherOverlaysEnabled.gairmets.ice) {
+            // ICE button: matches "ICE"
+            if (hazardType === 'ICE' && weatherOverlaysEnabled.gairmets.ice) {
                 shouldRender = true;
-            } else if (hazardType.includes('TURB') && weatherOverlaysEnabled.gairmets.turb) {
+            }
+            // TURB button: matches "TURB-HI", "TURB-LO", "LLWS" (Low-Level Wind Shear is a type of turbulence)
+            if ((hazardType === 'TURB-HI' || hazardType === 'TURB-LO' || hazardType === 'LLWS') && weatherOverlaysEnabled.gairmets.turb) {
                 shouldRender = true;
-            } else if ((hazardType.includes('IFR') || hazardType.includes('MVFR')) && weatherOverlaysEnabled.gairmets.ifr) {
+            }
+            // IFR button: matches "IFR"
+            if (hazardType === 'IFR' && weatherOverlaysEnabled.gairmets.ifr) {
                 shouldRender = true;
-            } else if (hazardType.includes('MTN') && weatherOverlaysEnabled.gairmets.mtn) {
+            }
+            // MTN OBS button: matches "MT_OBSC" (Mountain Obscuration)
+            if (hazardType === 'MT_OBSC' && weatherOverlaysEnabled.gairmets.mtn) {
+                shouldRender = true;
+            }
+            // FZLVL button: matches "FZLVL", "M_FZLVL" (Freezing Level, Multiple Freezing Level)
+            if ((hazardType === 'FZLVL' || hazardType === 'M_FZLVL') && weatherOverlaysEnabled.gairmets.fzlvl) {
                 shouldRender = true;
             }
 
@@ -1951,24 +2134,40 @@ function drawWeatherOverlays(project, bounds) {
             const pointsStr = projectedPoints.map(p => `${p.x},${p.y}`).join(' ');
 
             // Determine fill color based on hazard type
-            const hazardType = gairmet.hazard || '';
-            let fillColor = '#FFFF00';
-            let strokeColor = '#FFD700';
-            if (hazardType.includes('TURB')) {
-                fillColor = '#FFA500';
-                strokeColor = '#FF8C00';
-            } else if (hazardType.includes('ICE')) {
+            // Using bright colors for visibility on black background
+            let fillColor = '#FFFF00';  // Default bright yellow
+            let strokeColor = '#FFFF00';
+
+            if (hazardType === 'TURB-HI' || hazardType === 'TURB-LO') {
+                // Turbulence: Bright red
+                fillColor = '#FF3333';
+                strokeColor = '#FF6666';
+            } else if (hazardType === 'LLWS') {
+                // Low-Level Wind Shear: Bright orange-red
+                fillColor = '#FF4500';
+                strokeColor = '#FF6347';
+            } else if (hazardType === 'ICE') {
+                // Icing: Bright cyan
                 fillColor = '#00FFFF';
-                strokeColor = '#00CED1';
-            } else if (hazardType.includes('IFR') || hazardType.includes('MTN')) {
-                fillColor = '#FF0000';
-                strokeColor = '#DC143C';
+                strokeColor = '#66FFFF';
+            } else if (hazardType === 'IFR') {
+                // IFR: Bright magenta
+                fillColor = '#FF00FF';
+                strokeColor = '#FF66FF';
+            } else if (hazardType === 'MT_OBSC') {
+                // Mountain Obscuration: Bright brown/orange
+                fillColor = '#FF8C00';
+                strokeColor = '#FFA500';
+            } else if (hazardType === 'FZLVL' || hazardType === 'M_FZLVL') {
+                // Freezing Level: Bright blue
+                fillColor = '#1E90FF';
+                strokeColor = '#4169E1';
             }
 
             // Draw G-AIRMET polygon
             svg += `<polygon points="${pointsStr}"
                     fill="${fillColor}" fill-opacity="0.1"
-                    stroke="${strokeColor}" stroke-width="1.5" stroke-opacity="0.5" stroke-dasharray="4,4"
+                    stroke="${strokeColor}" stroke-width="3.0" stroke-opacity="1.0"
                     data-gairmet="${encodeURIComponent(gairmet.hazard || 'G-AIRMET')}"
                     class="gairmet-polygon"/>`;
 
@@ -2027,34 +2226,34 @@ function drawWeatherOverlays(project, bounds) {
             markerColor = '#FFA500'; // Orange for turbulence
         }
 
-        // Draw marker based on shape
+        // Draw marker based on shape (larger and more visible)
         if (markerShape === 'diamond') {
             // Diamond for severe
-            const size = 8;
+            const size = 12;
             svg += `<polygon points="${pos.x},${pos.y - size} ${pos.x + size},${pos.y} ${pos.x},${pos.y + size} ${pos.x - size},${pos.y}"
-                    fill="${markerColor}" stroke="#FFFFFF" stroke-width="2" opacity="0.8"
+                    fill="${markerColor}" stroke="#FFFFFF" stroke-width="3" opacity="1.0"
                     data-pirep="${encodeURIComponent(pirep.rawOb || '')}"
                     class="pirep-marker"/>`;
         } else if (markerShape === 'triangle') {
             // Triangle for moderate
-            const size = 8;
+            const size = 12;
             svg += `<polygon points="${pos.x},${pos.y - size} ${pos.x + size},${pos.y + size} ${pos.x - size},${pos.y + size}"
-                    fill="${markerColor}" stroke="#FFFFFF" stroke-width="2" opacity="0.8"
+                    fill="${markerColor}" stroke="#FFFFFF" stroke-width="3" opacity="1.0"
                     data-pirep="${encodeURIComponent(pirep.rawOb || '')}"
                     class="pirep-marker"/>`;
         } else {
             // Circle for light/unknown
-            svg += `<circle cx="${pos.x}" cy="${pos.y}" r="6"
-                    fill="${markerColor}" stroke="#FFFFFF" stroke-width="2" opacity="0.8"
+            svg += `<circle cx="${pos.x}" cy="${pos.y}" r="9"
+                    fill="${markerColor}" stroke="#FFFFFF" stroke-width="3" opacity="1.0"
                     data-pirep="${encodeURIComponent(pirep.rawOb || '')}"
                     class="pirep-marker"/>`;
         }
 
-        // Add hazard icon overlay
+        // Add hazard icon overlay (larger text)
         if (hazards.hasIcing) {
-            svg += `<text x="${pos.x}" y="${pos.y + 1}" font-size="8" font-weight="bold" text-anchor="middle" fill="#000000">I</text>`;
+            svg += `<text x="${pos.x}" y="${pos.y + 4}" font-size="12" font-weight="bold" text-anchor="middle" fill="#000000">I</text>`;
         } else if (hazards.hasTurbulence) {
-            svg += `<text x="${pos.x}" y="${pos.y + 1}" font-size="8" font-weight="bold" text-anchor="middle" fill="#000000">T</text>`;
+            svg += `<text x="${pos.x}" y="${pos.y + 4}" font-size="12" font-weight="bold" text-anchor="middle" fill="#000000">T</text>`;
         }
 
         pirepCount++;

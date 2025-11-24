@@ -224,6 +224,19 @@ async function fetchAllPIREPs() {
     const now = Date.now();
     const cache = weatherCache.bulkPireps;
 
+    // Always filter out expired PIREPs (older than 6 hours) before returning
+    const MAX_PIREP_AGE = 6 * 60 * 60 * 1000; // 6 hours in milliseconds
+    const beforeCleanup = cache.items.length;
+    cache.items = cache.items.filter(pirep => {
+        const age = now - (pirep.obsTime * 1000); // obsTime is in seconds
+        return age < MAX_PIREP_AGE;
+    });
+    const expiredCount = beforeCleanup - cache.items.length;
+
+    if (expiredCount > 0) {
+        console.log(`[WeatherAPI] Removed ${expiredCount} expired PIREPs from cache`);
+    }
+
     // Check if we need to fetch new data (every 10 minutes)
     const timeSinceLastFetch = now - cache.lastFetch;
     const shouldFetch = timeSinceLastFetch >= BULK_CACHE_FETCH_INTERVAL.pirep;
@@ -233,15 +246,6 @@ async function fetchAllPIREPs() {
         console.log(`[WeatherAPI] Using cached PIREPs (${cache.items.length} items, next fetch in ${Math.floor((BULK_CACHE_FETCH_INTERVAL.pirep - timeSinceLastFetch) / 1000)}s)`);
         return cache.items;
     }
-
-    // Time to fetch: first remove expired PIREPs (older than 6 hours)
-    const MAX_PIREP_AGE = 6 * 60 * 60 * 1000; // 6 hours in milliseconds
-    const beforeCleanup = cache.items.length;
-    cache.items = cache.items.filter(pirep => {
-        const age = now - (pirep.obsTime * 1000); // obsTime is in seconds
-        return age < MAX_PIREP_AGE;
-    });
-    const expiredCount = beforeCleanup - cache.items.length;
 
     console.log(`[WeatherAPI] 10-minute check: removed ${expiredCount} expired PIREPs, fetching new data...`);
 
@@ -321,6 +325,18 @@ async function fetchSIGMETs() {
     const now = Date.now();
     const cache = weatherCache.bulkSigmets;
 
+    // Always filter out expired SIGMETs (past their validTimeTo) before returning
+    const beforeCleanup = cache.items.length;
+    cache.items = cache.items.filter(sigmet => {
+        if (!sigmet.validTimeTo) return true; // Keep if no expiry time
+        return (sigmet.validTimeTo * 1000) > now; // validTimeTo is in seconds
+    });
+    const expiredCount = beforeCleanup - cache.items.length;
+
+    if (expiredCount > 0) {
+        console.log(`[WeatherAPI] Removed ${expiredCount} expired SIGMETs from cache`);
+    }
+
     // Check if we need to fetch new data (every 10 minutes)
     const timeSinceLastFetch = now - cache.lastFetch;
     const shouldFetch = timeSinceLastFetch >= BULK_CACHE_FETCH_INTERVAL.sigmet;
@@ -330,14 +346,6 @@ async function fetchSIGMETs() {
         console.log(`[WeatherAPI] Using cached SIGMETs (${cache.items.length} items, next fetch in ${Math.floor((BULK_CACHE_FETCH_INTERVAL.sigmet - timeSinceLastFetch) / 1000)}s)`);
         return cache.items;
     }
-
-    // Time to fetch: first remove expired SIGMETs (past their validTimeTo)
-    const beforeCleanup = cache.items.length;
-    cache.items = cache.items.filter(sigmet => {
-        if (!sigmet.validTimeTo) return true; // Keep if no expiry time
-        return (sigmet.validTimeTo * 1000) > now; // validTimeTo is in seconds
-    });
-    const expiredCount = beforeCleanup - cache.items.length;
 
     console.log(`[WeatherAPI] 10-minute check: removed ${expiredCount} expired SIGMETs, fetching new data...`);
 
@@ -442,106 +450,110 @@ async function fetchGAIRMETs() {
     const timeSinceLastFetch = now - cache.lastFetch;
     const shouldFetch = timeSinceLastFetch >= BULK_CACHE_FETCH_INTERVAL.gairmet;
 
-    if (!shouldFetch) {
-        // Return cached data without fetching
-        console.log(`[WeatherAPI] Using cached G-AIRMETs (${cache.items.length} items, next fetch in ${Math.floor((BULK_CACHE_FETCH_INTERVAL.gairmet - timeSinceLastFetch) / 1000)}s)`);
-        return cache.items;
+    if (shouldFetch) {
+        console.log(`[WeatherAPI] 10-minute interval reached, fetching new G-AIRMETs...`);
+
+        try {
+            // Fetch from AWC bulk cache (CSV is much smaller than XML: 19KB vs 85KB)
+            const cacheUrl = 'https://aviationweather.gov/data/cache/gairmets.cache.csv.gz';
+            const response = await fetch(`${CORS_PROXY}${encodeURIComponent(cacheUrl)}`);
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            // Get response as blob, then decompress using DecompressionStream
+            const blob = await response.blob();
+            const decompressedStream = blob.stream().pipeThrough(new DecompressionStream('gzip'));
+            const decompressedBlob = await new Response(decompressedStream).blob();
+            const text = await decompressedBlob.text();
+
+            // Parse CSV (format: header row, then data rows)
+            const lines = text.trim().split('\n');
+            if (lines.length < 2) {
+                console.log('[WeatherAPI] No G-AIRMETs in cache file');
+                cache.lastFetch = now;
+                // Continue to deduplication below
+            } else {
+                // Parse CSV header to get column indices
+                const headers = lines[0].split(',');
+                const newGairmets = [];
+
+                for (let i = 1; i < lines.length; i++) {
+                    const values = lines[i].split(',');
+                    const gairmet = {};
+
+                    // Map fields from CSV to our expected format
+                    headers.forEach((header, idx) => {
+                        const value = values[idx];
+
+                        // Map critical fields
+                        if (header === 'hazard') gairmet.hazard = value;
+                        if (header === 'valid_time') gairmet.validTime = value;
+                        if (header === 'issue_time') gairmet.issueTime = value;
+                        if (header === 'expire_time') gairmet.expireTime = value;
+                        if (header === 'product') gairmet.product = value;
+                        if (header === 'tag') gairmet.tag = value;
+                        if (header === 'due_to') gairmet.dueTo = value;
+
+                        // Parse polygon points from "lon:lat points" column
+                        if (header === 'lon:lat points' && value) {
+                            const points = [];
+                            const pairs = value.split(';');
+                            for (const pair of pairs) {
+                                const [lon, lat] = pair.split(':');
+                                if (lon && lat) {
+                                    points.push({
+                                        lon: parseFloat(lon),
+                                        lat: parseFloat(lat)
+                                    });
+                                }
+                            }
+                            if (points.length > 0) {
+                                gairmet.coords = points; // Use 'coords' for display compatibility
+                            }
+                        }
+                    });
+
+                    // Only add if we have valid polygon data
+                    if (gairmet.coords && gairmet.coords.length > 0) {
+                        newGairmets.push(gairmet);
+                    }
+                }
+
+                // Merge new G-AIRMETs with existing ones (deduplicate by product+tag+validTime)
+                const existingKeys = new Set(cache.items.map(g => `${g.product}_${g.tag}_${g.validTime}`));
+                const uniqueNewGairmets = newGairmets.filter(g => !existingKeys.has(`${g.product}_${g.tag}_${g.validTime}`));
+
+                cache.items.push(...uniqueNewGairmets);
+                cache.lastFetch = now;
+
+                console.log(`[WeatherAPI] ${newGairmets.length} G-AIRMETs fetched (${uniqueNewGairmets.length} new, total: ${cache.items.length})`);
+            }
+
+        } catch (error) {
+            console.error('[WeatherAPI] G-AIRMET cache file fetch error:', error);
+            // Continue to deduplication with existing data
+        }
     }
 
-    // Time to fetch: first remove expired G-AIRMETs (past their expireTime)
+    // Filter out expired items before returning
     const beforeCleanup = cache.items.length;
     cache.items = cache.items.filter(gairmet => {
-        if (!gairmet.expireTime) return true; // Keep if no expiry time
-        return new Date(gairmet.expireTime).getTime() > now; // expireTime is ISO string
+        if (!gairmet.expireTime) return false;
+        return new Date(gairmet.expireTime).getTime() > now;
     });
     const expiredCount = beforeCleanup - cache.items.length;
 
-    console.log(`[WeatherAPI] 10-minute check: removed ${expiredCount} expired G-AIRMETs, fetching new data...`);
-
-    try {
-        // Fetch from AWC bulk cache (CSV is much smaller than XML: 19KB vs 85KB)
-        const cacheUrl = 'https://aviationweather.gov/data/cache/gairmets.cache.csv.gz';
-        const response = await fetch(`${CORS_PROXY}${encodeURIComponent(cacheUrl)}`);
-
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-        }
-
-        // Get response as blob, then decompress using DecompressionStream
-        const blob = await response.blob();
-        const decompressedStream = blob.stream().pipeThrough(new DecompressionStream('gzip'));
-        const decompressedBlob = await new Response(decompressedStream).blob();
-        const text = await decompressedBlob.text();
-
-        // Parse CSV (format: header row, then data rows)
-        const lines = text.trim().split('\n');
-        if (lines.length < 2) {
-            console.log('[WeatherAPI] No G-AIRMETs in cache file');
-            cache.lastFetch = now;
-            return cache.items;
-        }
-
-        // Parse CSV header to get column indices
-        const headers = lines[0].split(',');
-        const newGairmets = [];
-
-        for (let i = 1; i < lines.length; i++) {
-            const values = lines[i].split(',');
-            const gairmet = {};
-
-            // Map fields from CSV to our expected format
-            headers.forEach((header, idx) => {
-                const value = values[idx];
-
-                // Map critical fields
-                if (header === 'hazard') gairmet.hazard = value;
-                if (header === 'valid_time') gairmet.validTime = value;
-                if (header === 'issue_time') gairmet.issueTime = value;
-                if (header === 'expire_time') gairmet.expireTime = value;
-                if (header === 'product') gairmet.product = value;
-                if (header === 'tag') gairmet.tag = value;
-                if (header === 'due_to') gairmet.dueTo = value;
-
-                // Parse polygon points from "lon:lat points" column
-                if (header === 'lon:lat points' && value) {
-                    const points = [];
-                    const pairs = value.split(';');
-                    for (const pair of pairs) {
-                        const [lon, lat] = pair.split(':');
-                        if (lon && lat) {
-                            points.push({
-                                lon: parseFloat(lon),
-                                lat: parseFloat(lat)
-                            });
-                        }
-                    }
-                    if (points.length > 0) {
-                        gairmet.coords = points; // Use 'coords' for display compatibility
-                    }
-                }
-            });
-
-            // Only add if we have valid polygon data
-            if (gairmet.coords && gairmet.coords.length > 0) {
-                newGairmets.push(gairmet);
-            }
-        }
-
-        // Merge new G-AIRMETs with existing ones (deduplicate by product+tag+validTime)
-        const existingKeys = new Set(cache.items.map(g => `${g.product}_${g.tag}_${g.validTime}`));
-        const uniqueNewGairmets = newGairmets.filter(g => !existingKeys.has(`${g.product}_${g.tag}_${g.validTime}`));
-
-        cache.items.push(...uniqueNewGairmets);
-        cache.lastFetch = now;
-
-        console.log(`[WeatherAPI] ${newGairmets.length} G-AIRMETs fetched (${uniqueNewGairmets.length} new, total: ${cache.items.length})`);
-        return cache.items;
-
-    } catch (error) {
-        console.error('[WeatherAPI] G-AIRMET cache file fetch error:', error);
-        // Return existing valid data on error
-        return cache.items;
+    if (expiredCount > 0) {
+        console.log(`[WeatherAPI] Removed ${expiredCount} expired G-AIRMETs from cache`);
     }
+
+    if (!shouldFetch) {
+        console.log(`[WeatherAPI] Using cached G-AIRMETs (${cache.items.length} items, next fetch in ${Math.floor((BULK_CACHE_FETCH_INTERVAL.gairmet - timeSinceLastFetch) / 1000)}s)`);
+    }
+
+    return cache.items;
 }
 
 /**

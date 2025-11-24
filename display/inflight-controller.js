@@ -65,10 +65,10 @@ const InflightController = (() => {
     }
 
     function setupUpdateInterval() {
-        // Update every 5 seconds
+        // Update every 60 seconds (weather data is cached and doesn't change that frequently)
         updateInterval = setInterval(() => {
             updateDisplay();
-        }, 5000);
+        }, 60000);
 
         // Initial update
         updateDisplay();
