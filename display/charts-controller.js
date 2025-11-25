@@ -68,21 +68,21 @@ window.ChartsController = {
         const airportInput = document.getElementById('chartsAirportInput');
         if (!airportInput) return;
 
-        const icao = airportInput.value.trim().toUpperCase();
-        if (!icao) {
-            this.showError('Please enter an airport ICAO code');
+        const code = airportInput.value.trim().toUpperCase();
+        if (!code) {
+            this.showError('Please enter an airport code (ICAO or IATA)');
             return;
         }
 
-        this.showChartsForAirport(icao);
+        this.showChartsForAirport(code);
     },
 
     /**
      * Shows charts for an airport (called from navlog or search)
-     * @param {string} icao - Airport ICAO code
+     * @param {string} code - Airport ICAO or IATA code
      * @param {string} name - Optional airport name for display
      */
-    showChartsForAirport(icao, name) {
+    showChartsForAirport(code, name) {
         // Switch to charts tab
         const chartsTab = document.querySelector('[data-tab="charts"]');
         if (chartsTab) {
@@ -92,24 +92,28 @@ window.ChartsController = {
         // Set input value
         const airportInput = document.getElementById('chartsAirportInput');
         if (airportInput) {
-            airportInput.value = icao;
+            airportInput.value = code;
         }
 
-        const charts = window.DataManager.getCharts(icao);
+        const charts = window.DataManager.getCharts(code);
 
         if (!charts || charts.length === 0) {
-            this._showNoCharts(icao, name);
+            this._showNoCharts(code, name);
             return;
         }
 
-        // Get airport name if not provided
-        if (!name) {
-            const airport = window.DataManager.getAirport(icao);
-            name = airport ? airport.name : icao;
+        // Get airport info if not provided
+        // Try ICAO first, then IATA
+        let airport = window.DataManager.getAirport(code);
+        if (!airport && code.length === 3) {
+            airport = window.DataManager.getAirportByIATA(code);
         }
 
+        const displayCode = airport ? airport.icao : code;
+        const displayName = name || (airport ? airport.name : code);
+
         const cycle = window.DataManager.getChartsCycle();
-        this._renderCharts(icao, name, charts, cycle);
+        this._renderCharts(displayCode, displayName, charts, cycle);
     },
 
     /**

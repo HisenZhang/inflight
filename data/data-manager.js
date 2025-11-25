@@ -47,6 +47,7 @@ let starsData = new Map();           // STARs (NASR only)
 let dpsData = new Map();             // DPs (NASR only)
 let airspaceData = new Map();        // Airspace class by airport ID (NASR only)
 let chartsData = new Map();          // Charts by airport ICAO code (FAA d-TPP)
+let chartsIataMap = new Map();       // IATA to ICAO mapping for charts
 let tokenTypeMap = new Map();        // Fast lookup: token -> type (AIRPORT/NAVAID/FIX/AIRWAY/PROCEDURE)
 let fileMetadata = new Map();        // Track individual file load times and validity
 let rawCSVData = {};                 // Raw CSV data for reindexing
@@ -115,6 +116,7 @@ async function saveToCache() {
             dps: dpsData,
             airspace: airspaceData,
             charts: chartsData,
+            chartsIata: chartsIataMap,
             rawCSV: rawCSVToStore // Checksum compressed/raw CSV data
         });
         console.log('[DataManager] Checksums calculated:', window.ChecksumUtils.getStats(checksums));
@@ -138,6 +140,7 @@ async function saveToCache() {
                 dps: Array.from(dpsData.entries()),
                 airspace: Array.from(airspaceData.entries()),
                 charts: Array.from(chartsData.entries()),
+                chartsIataMap: Array.from(chartsIataMap.entries()),
                 dataSources: dataSources,
                 timestamp: Date.now(),
                 version: 12,
@@ -309,12 +312,14 @@ async function loadData(onStatusUpdate) {
 
             if (chartsResult.success && chartsResult.data) {
                 chartsData = chartsResult.data.chartsMap;
+                chartsIataMap = chartsResult.data.iataToIcaoMap || new Map();
                 rawChartsXML = chartsResult.rawXML;
                 chartsCycle = chartsResult.data.cycle;
                 dataSources.push('Charts');
 
                 console.log('[DataManager] Charts loaded successfully:', {
                     chartsDataSize: chartsData.size,
+                    iataMapSize: chartsIataMap.size,
                     chartsCycle: chartsCycle,
                     rawXMLLength: rawChartsXML ? rawChartsXML.length : 0
                 });
@@ -747,6 +752,7 @@ async function loadFromCache(onStatusUpdate) {
         dpsData = new Map(cachedData.dps || []);
         airspaceData = new Map(cachedData.airspace || []);
         chartsData = new Map(cachedData.charts || []);
+        chartsIataMap = new Map(cachedData.chartsIataMap || []);
         dataSources = cachedData.dataSources || [];
         dataTimestamp = cachedData.timestamp;
 
@@ -1617,9 +1623,23 @@ window.DataManager = {
     getDataStats,
     getDpsData: () => dpsData,
     getStarsData: () => starsData,
-    getCharts: (icao) => {
-        const airportCharts = chartsData.get(icao);
-        return airportCharts ? airportCharts.charts : null;
+    getCharts: (code) => {
+        // Try direct ICAO lookup first
+        let airportCharts = chartsData.get(code);
+        if (airportCharts) {
+            return airportCharts.charts;
+        }
+
+        // If not found and code is 3 letters, try IATA→ICAO mapping
+        if (code && code.length === 3 && /^[A-Z]{3}$/.test(code)) {
+            const icao = chartsIataMap.get(code);
+            if (icao) {
+                airportCharts = chartsData.get(icao);
+                return airportCharts ? airportCharts.charts : null;
+            }
+        }
+
+        return null;
     },
     getChartsCycle: () => chartsCycle,
 

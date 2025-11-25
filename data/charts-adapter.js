@@ -100,6 +100,7 @@ window.ChartsAdapter = {
         console.log(`[ChartsAdapter] TPP Cycle: ${cycle} (${fromDate} to ${toDate})`);
 
         const chartsMap = new Map();
+        const iataToIcaoMap = new Map();
         let totalCharts = 0;
 
         const airports = doc.querySelectorAll('airport_name');
@@ -147,18 +148,25 @@ window.ChartsAdapter = {
                     military: military,
                     charts: charts
                 });
+
+                // Build IATA to ICAO mapping for 3-letter codes
+                if (ident && ident.length === 3 && /^[A-Z]{3}$/.test(ident)) {
+                    iataToIcaoMap.set(ident, icao);
+                }
             }
         });
 
         const parseTime = Date.now() - startTime;
 
         console.log(`[ChartsAdapter] Parsed ${totalCharts} charts for ${chartsMap.size} airports in ${parseTime}ms`);
+        console.log(`[ChartsAdapter] Built IATA→ICAO mapping for ${iataToIcaoMap.size} airports`);
 
         return {
             cycle: cycle,
             fromDate: fromDate,
             toDate: toDate,
             chartsMap: chartsMap,
+            iataToIcaoMap: iataToIcaoMap,
             totalCharts: totalCharts,
             totalAirports: chartsMap.size
         };
