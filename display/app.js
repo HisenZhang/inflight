@@ -96,22 +96,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Check for saved navlog (crash recovery) - use FlightState instead of DataManager
         const savedNavlog = window.FlightState ? window.FlightState.loadFromStorage() : null;
         if (savedNavlog && cacheResult.loaded) {
-            // Prompt user to restore
-            const ageMinutes = Math.floor((Date.now() - savedNavlog.timestamp) / (1000 * 60));
-            const ageText = ageMinutes < 60 ? `${ageMinutes}m ago` : `${Math.floor(ageMinutes / 60)}h ago`;
+            // Automatically restore saved flight plan
+            console.log('[App] Restoring saved flight plan:', savedNavlog.routeString);
+            UIController.restoreNavlog(savedNavlog);
 
-            if (confirm(`SAVED NAVLOG FOUND\n\nRoute: ${savedNavlog.routeString}\nSaved: ${ageText}\n\nRestore this flight plan?`)) {
-                UIController.restoreNavlog(savedNavlog);
+            // Restore currentNavlogData so export works
+            currentNavlogData = savedNavlog;
 
-                // Restore currentNavlogData so export works
-                currentNavlogData = savedNavlog;
-
-                // Restore FlightState
-                if (window.FlightState) {
-                    window.FlightState.restoreFlightPlan(savedNavlog);
-                }
-            } else {
-                if (window.FlightState) window.FlightState.clearStorage();
+            // Restore FlightState
+            if (window.FlightState) {
+                window.FlightState.restoreFlightPlan(savedNavlog);
             }
         }
 
