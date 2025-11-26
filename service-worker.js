@@ -52,6 +52,7 @@ const ASSETS_TO_CACHE = [
     './compute/route-expander.js',
     './compute/route-calculator.js',
     './compute/query-engine.js',
+    './compute/terrain-analyzer.js',
     // State Management
     './state/flight-state.js',
     './state/flight-tracker.js',

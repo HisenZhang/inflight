@@ -579,10 +579,21 @@
                     <button class="zoom-btn gairmet-btn" id="gairmetIfrBtn" title="Toggle IFR G-AIRMETs">IFR</button>
                     <button class="zoom-btn gairmet-btn" id="gairmetMtnBtn" title="Toggle Mountain Obscuration G-AIRMETs">MTN</button>
                     <button class="zoom-btn gairmet-btn" id="gairmetFzlvlBtn" title="Toggle Freezing Level G-AIRMETs">FZLVL</button>
+                    <button class="zoom-btn terrain-btn" id="terrainBtn" title="Toggle Terrain Profile (MEF)">TERR</button>
                 </div>
             </div>
 
             <div id="mapContainer" class="map-container"></div>
+
+            <!-- Terrain Profile (MEF Visualization) -->
+            <div id="terrainProfileContainer" class="terrain-profile-container hidden">
+                <div class="terrain-profile-header">
+                    <span class="terrain-title">TERRAIN PROFILE</span>
+                    <span id="terrainStatus" class="terrain-status"></span>
+                    <button id="terrainProfileClose" class="terrain-close-btn" title="Close terrain profile">×</button>
+                </div>
+                <div id="terrainProfile" class="terrain-profile"></div>
+            </div>
 
             <!-- Map Info Status Bar -->
             <div id="mapStatusBar" class="map-status-bar hidden">
@@ -1430,6 +1441,7 @@
     <script src="compute/route-expander.js"></script>   <!-- Airway/STAR/DP expansion module -->
     <script src="compute/route-calculator.js"></script> <!-- Navigation calculations module -->
     <script src="compute/query-engine.js"></script>     <!-- Spatial queries & search -->
+    <script src="compute/terrain-analyzer.js"></script> <!-- MEF terrain analysis & altitude checking -->
 
     <!-- State Management -->
     <script src="state/flight-state.js"></script>       <!-- Flight plan & navigation state -->

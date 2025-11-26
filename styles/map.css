@@ -557,3 +557,179 @@
     fill: none;
     stroke: #4169e1;
 }
+
+/* ============================================ */
+/* Terrain Profile (MEF Visualization) */
+/* ============================================ */
+
+.terrain-btn {
+    background: #654321 !important; /* Brown for terrain */
+}
+
+.terrain-btn.active {
+    background: #8B4513 !important;
+    box-shadow: 0 0 8px rgba(139, 69, 19, 0.8);
+}
+
+.terrain-profile-container {
+    background: var(--bg-panel);
+    border-top: 2px solid var(--border-color);
+    padding: var(--space-sm);
+}
+
+.terrain-profile-container.hidden {
+    display: none;
+}
+
+.terrain-profile-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-sm);
+    padding-bottom: var(--space-xs);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.terrain-title {
+    font-size: 12px;
+    font-weight: bold;
+    color: var(--text-primary);
+}
+
+.terrain-status {
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+
+.terrain-status.ok {
+    color: var(--status-ok);
+}
+
+.terrain-status.marginal {
+    color: var(--status-marginal);
+}
+
+.terrain-status.unsafe {
+    color: var(--status-alert);
+}
+
+.terrain-close-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 18px;
+    cursor: pointer;
+    padding: 0 4px;
+    line-height: 1;
+}
+
+.terrain-close-btn:hover {
+    color: var(--text-primary);
+}
+
+.terrain-profile {
+    height: 120px;
+    width: 100%;
+    position: relative;
+}
+
+.terrain-profile svg {
+    width: 100%;
+    height: 100%;
+}
+
+/* Terrain fill gradient */
+.terrain-fill {
+    fill: url(#terrainGradient);
+    stroke: none;
+}
+
+.terrain-line {
+    fill: none;
+    stroke: #8B4513;
+    stroke-width: 2;
+}
+
+/* Cruise altitude line */
+.cruise-line {
+    fill: none;
+    stroke: var(--status-ok);
+    stroke-width: 2;
+    stroke-dasharray: 8, 4;
+}
+
+/* MEF line (minimum safe altitude) */
+.mef-line {
+    fill: none;
+    stroke: var(--status-marginal);
+    stroke-width: 1.5;
+    stroke-dasharray: 4, 2;
+}
+
+/* Axis labels */
+.terrain-axis-label {
+    font-size: 10px;
+    fill: var(--text-secondary);
+}
+
+/* Waypoint markers */
+.terrain-waypoint-marker {
+    stroke: var(--text-secondary);
+    stroke-width: 1;
+    stroke-dasharray: 2, 2;
+}
+
+.terrain-waypoint-label {
+    font-size: 9px;
+    fill: var(--text-secondary);
+    text-anchor: middle;
+}
+
+/* Clearance warning zones */
+.clearance-warning {
+    fill: rgba(255, 165, 0, 0.2);
+}
+
+.clearance-danger {
+    fill: rgba(255, 0, 0, 0.2);
+}
+
+/* Loading state */
+.terrain-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+.terrain-loading::after {
+    content: '';
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--text-secondary);
+    border-top-color: transparent;
+    border-radius: 50%;
+    margin-left: 8px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+    .terrain-profile {
+        height: 100px;
+    }
+
+    .terrain-title {
+        font-size: 10px;
+    }
+
+    .terrain-status {
+        font-size: 9px;
+    }
+}

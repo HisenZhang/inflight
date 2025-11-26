@@ -2320,6 +2320,294 @@ function isWeatherEnabled(type) {
 }
 
 // ============================================
+// TERRAIN PROFILE VISUALIZATION
+// ============================================
+
+let terrainProfileEnabled = false;
+let terrainAnalysisData = null;
+
+/**
+ * Toggle terrain profile visibility
+ */
+async function toggleTerrainProfile() {
+    const container = document.getElementById('terrainProfileContainer');
+    const btn = document.getElementById('terrainBtn');
+
+    terrainProfileEnabled = !terrainProfileEnabled;
+
+    if (terrainProfileEnabled) {
+        btn?.classList.add('active');
+        container?.classList.remove('hidden');
+
+        // Analyze terrain if we have route data
+        if (routeData && routeData.waypoints && routeData.waypoints.length >= 2) {
+            await analyzeAndRenderTerrain();
+        } else {
+            showTerrainMessage('NO ROUTE - Enter a route to analyze terrain');
+        }
+    } else {
+        btn?.classList.remove('active');
+        container?.classList.add('hidden');
+    }
+}
+
+/**
+ * Show loading or message in terrain profile
+ * @param {string} message - Message to display
+ */
+function showTerrainMessage(message) {
+    const profileDiv = document.getElementById('terrainProfile');
+    if (profileDiv) {
+        profileDiv.innerHTML = `<div class="terrain-loading">${message}</div>`;
+    }
+}
+
+/**
+ * Analyze terrain and render the profile
+ */
+async function analyzeAndRenderTerrain() {
+    if (!window.TerrainAnalyzer) {
+        showTerrainMessage('Terrain analyzer not available');
+        return;
+    }
+
+    if (!routeData || !routeData.waypoints || routeData.waypoints.length < 2) {
+        showTerrainMessage('NO ROUTE');
+        return;
+    }
+
+    showTerrainMessage('Analyzing terrain');
+
+    try {
+        // Analyze terrain for the route
+        terrainAnalysisData = await window.TerrainAnalyzer.analyzeRouteTerrain(
+            routeData.waypoints,
+            routeData.legs
+        );
+
+        if (terrainAnalysisData.error) {
+            showTerrainMessage(terrainAnalysisData.error);
+            return;
+        }
+
+        // Get cruise altitude from flight state if available
+        let cruiseAltitude = null;
+        if (window.FlightState && window.FlightState.flightPlan) {
+            cruiseAltitude = window.FlightState.flightPlan.altitude;
+        }
+
+        // Render the profile
+        renderTerrainProfile(terrainAnalysisData, cruiseAltitude);
+
+        // Update status
+        updateTerrainStatus(terrainAnalysisData, cruiseAltitude);
+
+    } catch (error) {
+        console.error('[VectorMap] Terrain analysis error:', error);
+        showTerrainMessage('Error analyzing terrain');
+    }
+}
+
+/**
+ * Render terrain profile SVG
+ * @param {Object} analysis - Terrain analysis data
+ * @param {number|null} cruiseAltitude - Filed altitude in feet
+ */
+function renderTerrainProfile(analysis, cruiseAltitude) {
+    const profileDiv = document.getElementById('terrainProfile');
+    if (!profileDiv) return;
+
+    const profile = analysis.terrainProfile;
+    const waypoints = analysis.waypoints;
+    const stats = analysis.statistics;
+
+    if (!profile || profile.length === 0) {
+        showTerrainMessage('No terrain data available');
+        return;
+    }
+
+    // SVG dimensions
+    const width = 800;
+    const height = 120;
+    const padding = { top: 15, right: 50, bottom: 25, left: 50 };
+    const chartWidth = width - padding.left - padding.right;
+    const chartHeight = height - padding.top - padding.bottom;
+
+    // Calculate scales
+    const maxDistance = analysis.totalDistanceNM;
+    const validElevations = profile.map(p => p.elevationFt).filter(e => e !== null);
+    const maxElevation = Math.max(...validElevations, stats.mef || 0, cruiseAltitude || 0);
+    const minElevation = Math.min(...validElevations, 0);
+
+    // Add padding to elevation range
+    const elevRange = maxElevation - minElevation;
+    const elevPadding = elevRange * 0.1;
+    const yMin = Math.max(0, minElevation - elevPadding);
+    const yMax = maxElevation + elevPadding;
+
+    // Scale functions
+    const xScale = (distNM) => padding.left + (distNM / maxDistance) * chartWidth;
+    const yScale = (elev) => padding.top + chartHeight - ((elev - yMin) / (yMax - yMin)) * chartHeight;
+
+    // Build SVG
+    let svg = `<svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="xMidYMid meet">`;
+
+    // Gradient definition for terrain fill
+    svg += `<defs>
+        <linearGradient id="terrainGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" style="stop-color:#8B4513;stop-opacity:0.8"/>
+            <stop offset="100%" style="stop-color:#654321;stop-opacity:0.6"/>
+        </linearGradient>
+    </defs>`;
+
+    // Draw clearance zones (if cruise altitude is set)
+    if (cruiseAltitude && stats.maxElevation !== null) {
+        const clearance = stats.requiredClearance;
+        const unsafeLevel = stats.maxElevation;
+        const marginalLevel = stats.maxElevation + clearance;
+
+        // Danger zone (below required clearance)
+        if (cruiseAltitude < marginalLevel) {
+            const unsafeY = yScale(unsafeLevel);
+            const cruiseY = yScale(cruiseAltitude);
+            svg += `<rect x="${padding.left}" y="${Math.min(unsafeY, cruiseY)}"
+                    width="${chartWidth}" height="${Math.abs(unsafeY - cruiseY)}"
+                    class="clearance-danger"/>`;
+        }
+    }
+
+    // Build terrain path
+    const terrainPoints = [];
+    const linePoints = [];
+
+    profile.forEach((point, index) => {
+        if (point.elevationFt !== null) {
+            const x = xScale(point.distanceNM);
+            const y = yScale(point.elevationFt);
+            terrainPoints.push(`${x},${y}`);
+            linePoints.push({ x, y });
+        }
+    });
+
+    // Create filled area path (terrain fill)
+    if (terrainPoints.length > 0) {
+        const baseY = yScale(yMin);
+        const firstX = xScale(0);
+        const lastX = xScale(maxDistance);
+        svg += `<path class="terrain-fill" d="M ${firstX},${baseY} L ${terrainPoints.join(' L ')} L ${lastX},${baseY} Z"/>`;
+
+        // Draw terrain outline
+        svg += `<path class="terrain-line" d="M ${linePoints.map(p => `${p.x},${p.y}`).join(' L ')}"/>`;
+    }
+
+    // Draw MEF line (minimum safe altitude)
+    if (stats.mef !== null) {
+        const mefY = yScale(stats.mef);
+        svg += `<line x1="${padding.left}" y1="${mefY}" x2="${padding.left + chartWidth}" y2="${mefY}" class="mef-line"/>`;
+        svg += `<text x="${padding.left + chartWidth + 5}" y="${mefY + 4}" class="terrain-axis-label">MEF ${stats.mef}</text>`;
+    }
+
+    // Draw cruise altitude line (if set)
+    if (cruiseAltitude) {
+        const cruiseY = yScale(cruiseAltitude);
+        svg += `<line x1="${padding.left}" y1="${cruiseY}" x2="${padding.left + chartWidth}" y2="${cruiseY}" class="cruise-line"/>`;
+        svg += `<text x="${padding.left + chartWidth + 5}" y="${cruiseY + 4}" class="terrain-axis-label" fill="#00ff00">${cruiseAltitude}</text>`;
+    }
+
+    // Draw waypoint markers
+    let cumulativeDistance = 0;
+    waypoints.forEach((wp, index) => {
+        const x = xScale(cumulativeDistance);
+        svg += `<line x1="${x}" y1="${padding.top}" x2="${x}" y2="${height - padding.bottom}" class="terrain-waypoint-marker"/>`;
+        svg += `<text x="${x}" y="${height - 5}" class="terrain-waypoint-label">${wp.ident || `WP${index + 1}`}</text>`;
+
+        // Update cumulative distance for next waypoint
+        if (index < waypoints.length - 1 && routeData.legs && routeData.legs[index]) {
+            cumulativeDistance += routeData.legs[index].distance || 0;
+        }
+    });
+
+    // Y-axis labels
+    const yTicks = 4;
+    for (let i = 0; i <= yTicks; i++) {
+        const elev = yMin + (i / yTicks) * (yMax - yMin);
+        const y = yScale(elev);
+        svg += `<text x="${padding.left - 5}" y="${y + 3}" class="terrain-axis-label" text-anchor="end">${Math.round(elev / 100) * 100}</text>`;
+    }
+
+    // X-axis distance label
+    svg += `<text x="${padding.left + chartWidth / 2}" y="${height - 2}" class="terrain-axis-label" text-anchor="middle">${Math.round(maxDistance)} NM</text>`;
+
+    svg += '</svg>';
+    profileDiv.innerHTML = svg;
+}
+
+/**
+ * Update terrain status indicator
+ * @param {Object} analysis - Terrain analysis data
+ * @param {number|null} cruiseAltitude - Filed altitude
+ */
+function updateTerrainStatus(analysis, cruiseAltitude) {
+    const statusEl = document.getElementById('terrainStatus');
+    if (!statusEl) return;
+
+    const stats = analysis.statistics;
+
+    if (!cruiseAltitude) {
+        statusEl.textContent = `MAX: ${stats.maxElevation || '—'}ft | MEF: ${stats.mef || '—'}ft | ENTER ALTITUDE TO CHECK CLEARANCE`;
+        statusEl.className = 'terrain-status';
+        return;
+    }
+
+    const clearance = window.TerrainAnalyzer.checkTerrainClearance(cruiseAltitude, analysis);
+
+    if (clearance.status === 'OK') {
+        statusEl.textContent = `✓ ${clearance.actualClearance}ft clearance | MEF: ${stats.mef}ft`;
+        statusEl.className = 'terrain-status ok';
+    } else if (clearance.status === 'MARGINAL') {
+        statusEl.textContent = `⚠ Marginal: ${clearance.actualClearance}ft clearance | MEF: ${stats.mef}ft`;
+        statusEl.className = 'terrain-status marginal';
+    } else if (clearance.status === 'UNSAFE') {
+        statusEl.textContent = `✗ UNSAFE: Only ${clearance.actualClearance}ft above terrain! Need ${clearance.requiredClearance}ft`;
+        statusEl.className = 'terrain-status unsafe';
+    } else {
+        statusEl.textContent = `MAX: ${stats.maxElevation || '—'}ft | MEF: ${stats.mef || '—'}ft`;
+        statusEl.className = 'terrain-status';
+    }
+}
+
+/**
+ * Refresh terrain profile (call when altitude changes)
+ */
+function refreshTerrainProfile() {
+    if (!terrainProfileEnabled || !terrainAnalysisData) return;
+
+    let cruiseAltitude = null;
+    if (window.FlightState && window.FlightState.flightPlan) {
+        cruiseAltitude = window.FlightState.flightPlan.altitude;
+    }
+
+    renderTerrainProfile(terrainAnalysisData, cruiseAltitude);
+    updateTerrainStatus(terrainAnalysisData, cruiseAltitude);
+}
+
+/**
+ * Check if terrain profile is enabled
+ * @returns {boolean}
+ */
+function isTerrainEnabled() {
+    return terrainProfileEnabled;
+}
+
+/**
+ * Get terrain analysis data
+ * @returns {Object|null}
+ */
+function getTerrainAnalysis() {
+    return terrainAnalysisData;
+}
+
+// ============================================
 // EXPORTS
 // ============================================
 
@@ -2336,5 +2624,12 @@ window.VectorMap = {
     toggleWeatherOverlays,
     fetchWeatherForRoute,
     drawWeatherOverlays,
-    isWeatherEnabled
+    isWeatherEnabled,
+
+    // Terrain profile
+    toggleTerrainProfile,
+    refreshTerrainProfile,
+    isTerrainEnabled,
+    getTerrainAnalysis,
+    analyzeAndRenderTerrain
 };
