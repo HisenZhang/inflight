@@ -412,6 +412,15 @@
             <!-- Wind Altitude Table (shown when wind correction enabled) -->
             <div id="windAltitudeTable" class="wind-altitude-table" style="display: none;"></div>
 
+            <!-- Terrain Profile (MORA analysis) -->
+            <div id="navlogTerrainProfile" class="navlog-terrain-profile" style="display: none;">
+                <div class="terrain-profile-header">
+                    <span class="terrain-title">TERRAIN PROFILE (MORA)</span>
+                    <span id="navlogTerrainStatus" class="terrain-status"></span>
+                </div>
+                <div id="navlogTerrainChart" class="terrain-profile"></div>
+            </div>
+
             <div id="navlogTable" class="navlog-table"></div>
         </div>
         </div>
@@ -579,21 +588,11 @@
                     <button class="zoom-btn gairmet-btn" id="gairmetIfrBtn" title="Toggle IFR G-AIRMETs">IFR</button>
                     <button class="zoom-btn gairmet-btn" id="gairmetMtnBtn" title="Toggle Mountain Obscuration G-AIRMETs">MTN</button>
                     <button class="zoom-btn gairmet-btn" id="gairmetFzlvlBtn" title="Toggle Freezing Level G-AIRMETs">FZLVL</button>
-                    <button class="zoom-btn terrain-btn" id="terrainBtn" title="Toggle Terrain Profile (MEF)">TERR</button>
+                    <button class="zoom-btn terrain-btn" id="terrainBtn" title="Toggle MORA Grid Overlay">MORA</button>
                 </div>
             </div>
 
             <div id="mapContainer" class="map-container"></div>
-
-            <!-- Terrain Profile (MEF Visualization) -->
-            <div id="terrainProfileContainer" class="terrain-profile-container hidden">
-                <div class="terrain-profile-header">
-                    <span class="terrain-title">TERRAIN PROFILE</span>
-                    <span id="terrainStatus" class="terrain-status"></span>
-                    <button id="terrainProfileClose" class="terrain-close-btn" title="Close terrain profile">×</button>
-                </div>
-                <div id="terrainProfile" class="terrain-profile"></div>
-            </div>
 
             <!-- Map Info Status Bar -->
             <div id="mapStatusBar" class="map-status-bar hidden">

@@ -1,11 +1,14 @@
-// Terrain Analyzer Module - MEF (Maximum Elevation Figure) analysis for route planning
-// Calculates terrain elevation along route and checks for altitude clearance
+// Terrain Analyzer Module - MORA (Minimum Off-Route Altitude) analysis for route planning
+// Uses global MORA data: FAA CIFP for US, terrain-derived for worldwide coverage
 // Caches elevation data in IndexedDB for offline use
 
 // API configuration for Open Topo Data (free, no API key required)
 // Use CORS proxy for browser requests
 const ELEVATION_API_BASE = 'https://api.opentopodata.org/v1/srtm30m';
-const CORS_PROXY = 'https://cors.hisenz.com/?url=';
+const TERRAIN_CORS_PROXY = 'https://cors.hisenz.com/?url=';
+
+// Global MORA data from NASR API (1° x 1° grid, FAA + terrain-derived)
+const NASR_MORA_URL = 'https://nasr.hisenz.com/files/MORA.csv';
 
 /**
  * Build proxied API URL with location parameters
@@ -14,7 +17,7 @@ const CORS_PROXY = 'https://cors.hisenz.com/?url=';
  */
 function buildElevationUrl(locations) {
     const fullUrl = `${ELEVATION_API_BASE}?locations=${locations}`;
-    const proxiedUrl = CORS_PROXY + encodeURIComponent(fullUrl);
+    const proxiedUrl = TERRAIN_CORS_PROXY + encodeURIComponent(fullUrl);
     console.log('[TerrainAnalyzer] API URL:', proxiedUrl);
     return proxiedUrl;
 }
@@ -26,14 +29,20 @@ const MOUNTAINOUS_CLEARANCE_FT = 2000; // Required clearance in mountainous terr
 
 // IndexedDB configuration for persistent elevation cache
 const TERRAIN_DB_NAME = 'TerrainElevationDB';
-const TERRAIN_DB_VERSION = 1;
+const TERRAIN_DB_VERSION = 4; // Bumped for MORA store (was OROCA)
 const TERRAIN_STORE_NAME = 'elevations';
+const MORA_STORE_NAME = 'mora_grid'; // Global MORA data store (1° grid)
 const CACHE_GRID_RESOLUTION = 0.01; // Grid resolution in degrees (~1.1km or ~0.6nm)
+
+// MORA grid size: 1 degree (matches FAA CIFP Grid MORA)
+const MORA_GRID_SIZE_DEG = 1.0;
 
 // In-memory cache (populated from IndexedDB on init)
 let terrainCache = new Map(); // Key: lat,lon (grid), Value: elevation in feet
+let moraCache = new Map(); // Key: "lat,lon" (grid SW corner), Value: {mora, source}
 let terrainDB = null;
 let dbInitialized = false;
+let moraDataLoaded = false;
 let lastAnalysis = null;
 
 // ============================================
@@ -72,6 +81,21 @@ async function initTerrainDB() {
                     // Index by region for bulk queries (rounded to 1 degree)
                     store.createIndex('region', 'region', { unique: false });
                     console.log('[TerrainAnalyzer] Created elevation cache store');
+                }
+                // Delete old MEF store if it exists
+                if (db.objectStoreNames.contains('mef_quadrangles')) {
+                    db.deleteObjectStore('mef_quadrangles');
+                    console.log('[TerrainAnalyzer] Deleted old MEF store');
+                }
+                // Delete old OROCA store if it exists (replaced by MORA)
+                if (db.objectStoreNames.contains('oroca_grid')) {
+                    db.deleteObjectStore('oroca_grid');
+                    console.log('[TerrainAnalyzer] Deleted old OROCA store');
+                }
+                if (!db.objectStoreNames.contains(MORA_STORE_NAME)) {
+                    // Store global MORA data with grid key as primary key
+                    db.createObjectStore(MORA_STORE_NAME, { keyPath: 'key' });
+                    console.log('[TerrainAnalyzer] Created MORA grid store');
                 }
             };
         } catch (error) {
@@ -266,6 +290,201 @@ async function getCacheStats() {
 }
 
 // ============================================
+// GLOBAL MORA DATA (from NASR API)
+// ============================================
+
+/**
+ * Load global MORA data from NASR API
+ * Format: lat,lon,mora_ft,source (one row per 1°×1° grid, center coordinates at x.5)
+ * Source: FAA (official CIFP) or TERRAIN (computed from ETOPO)
+ * @returns {Promise<boolean>} True if loaded successfully
+ */
+async function loadMORAData() {
+    if (moraDataLoaded && moraCache.size > 0) {
+        console.log(`[TerrainAnalyzer] MORA data already loaded (${moraCache.size} grid cells)`);
+        return true;
+    }
+
+    await initTerrainDB();
+
+    // Try to load from IndexedDB first
+    if (terrainDB) {
+        try {
+            const loaded = await loadMORAFromDB();
+            if (loaded > 0) {
+                moraDataLoaded = true;
+                console.log(`[TerrainAnalyzer] Loaded ${loaded} MORA grid cells from IndexedDB`);
+                return true;
+            }
+        } catch (error) {
+            console.warn('[TerrainAnalyzer] Error loading MORA from IndexedDB:', error);
+        }
+    }
+
+    // Fetch from NASR API
+    console.log('[TerrainAnalyzer] Fetching global MORA data from NASR API...');
+    try {
+        const response = await fetch(NASR_MORA_URL);
+        if (!response.ok) {
+            console.error(`[TerrainAnalyzer] MORA fetch failed: ${response.status}`);
+            return false;
+        }
+
+        const csvText = await response.text();
+        const lines = csvText.trim().split('\n');
+
+        // Skip header row (lat,lon,mora_ft,source)
+        const dataLines = lines.slice(1);
+        const moraEntries = [];
+
+        for (const line of dataLines) {
+            const parts = line.split(',');
+            if (parts.length >= 3) {
+                // CSV contains center coordinates at x.5 (e.g., 49.5, -124.5)
+                const centerLat = parseFloat(parts[0]);
+                const centerLon = parseFloat(parts[1]);
+                const mora = parseInt(parts[2], 10);
+                const source = parts[3] || 'TERRAIN'; // FAA or TERRAIN
+
+                if (!isNaN(centerLat) && !isNaN(centerLon) && !isNaN(mora)) {
+                    // Convert center to SW corner (subtract half grid size = 0.5)
+                    const swLat = centerLat - MORA_GRID_SIZE_DEG / 2;
+                    const swLon = centerLon - MORA_GRID_SIZE_DEG / 2;
+                    // Key uses SW corner as integer for 1° grid alignment
+                    const key = `${Math.round(swLat)},${Math.round(swLon)}`;
+                    const entry = { key, lat: swLat, lon: swLon, mora, source };
+                    moraCache.set(key, entry);
+                    moraEntries.push(entry);
+                }
+            }
+        }
+
+        console.log(`[TerrainAnalyzer] Parsed ${moraCache.size} MORA grid cells (global coverage)`);
+
+        // Save to IndexedDB for offline use
+        if (terrainDB && moraEntries.length > 0) {
+            await saveMORAToDB(moraEntries);
+        }
+
+        moraDataLoaded = true;
+        return true;
+    } catch (error) {
+        console.error('[TerrainAnalyzer] Error loading MORA data:', error);
+        return false;
+    }
+}
+
+/**
+ * Load MORA data from IndexedDB
+ * @returns {Promise<number>} Number of entries loaded
+ */
+async function loadMORAFromDB() {
+    if (!terrainDB) return 0;
+
+    return new Promise((resolve) => {
+        try {
+            const tx = terrainDB.transaction(MORA_STORE_NAME, 'readonly');
+            const store = tx.objectStore(MORA_STORE_NAME);
+            const request = store.openCursor();
+            let count = 0;
+
+            request.onsuccess = (event) => {
+                const cursor = event.target.result;
+                if (cursor) {
+                    const entry = cursor.value;
+                    moraCache.set(entry.key, entry);
+                    count++;
+                    cursor.continue();
+                } else {
+                    resolve(count);
+                }
+            };
+            request.onerror = () => resolve(0);
+        } catch (error) {
+            resolve(0);
+        }
+    });
+}
+
+/**
+ * Save MORA data to IndexedDB
+ * @param {Array} entries - MORA entries to save
+ */
+async function saveMORAToDB(entries) {
+    if (!terrainDB || entries.length === 0) return;
+
+    try {
+        const tx = terrainDB.transaction(MORA_STORE_NAME, 'readwrite');
+        const store = tx.objectStore(MORA_STORE_NAME);
+
+        // Clear existing data first
+        store.clear();
+
+        // Add all entries
+        for (const entry of entries) {
+            store.put(entry);
+        }
+
+        console.log(`[TerrainAnalyzer] Saved ${entries.length} MORA entries to IndexedDB`);
+    } catch (error) {
+        console.warn('[TerrainAnalyzer] Error saving MORA to IndexedDB:', error);
+    }
+}
+
+/**
+ * Get MORA for a specific grid cell by lat/lon
+ * @param {number} lat - Latitude (will be snapped to 1° grid SW corner)
+ * @param {number} lon - Longitude (will be snapped to 1° grid SW corner)
+ * @returns {Object|null} MORA data {mora, source, lat, lon, key} or null
+ */
+function getMORAForGrid(lat, lon) {
+    // Snap to 1 degree grid - SW corner of grid cell
+    const latGrid = Math.floor(lat);
+    const lonGrid = Math.floor(lon);
+    const key = `${latGrid},${lonGrid}`;
+
+    return moraCache.get(key) || null;
+}
+
+/**
+ * Get all MORA grid cells that intersect with bounds
+ * @param {Object} bounds - {minLat, maxLat, minLon, maxLon}
+ * @returns {Array} MORA entries that intersect bounds
+ */
+function getMORAInBounds(bounds) {
+    const results = [];
+
+    for (const [key, entry] of moraCache) {
+        // entry.lat/lon is SW corner, calculate NE corner (1° grid)
+        const neLat = entry.lat + MORA_GRID_SIZE_DEG;
+        const neLon = entry.lon + MORA_GRID_SIZE_DEG;
+
+        // Check if grid cell intersects bounds (not just if SW corner is inside)
+        // Grid cell intersects if it's not completely outside on any side
+        const intersects = !(
+            neLat < bounds.minLat ||  // Grid cell is completely below bounds
+            entry.lat > bounds.maxLat ||  // Grid cell is completely above bounds
+            neLon < bounds.minLon ||  // Grid cell is completely left of bounds
+            entry.lon > bounds.maxLon     // Grid cell is completely right of bounds
+        );
+
+        if (intersects) {
+            results.push(entry);
+        }
+    }
+
+    return results;
+}
+
+/**
+ * Check if MORA data is loaded
+ * @returns {boolean}
+ */
+function isMORADataLoaded() {
+    return moraDataLoaded && moraCache.size > 0;
+}
+
+// ============================================
 // ELEVATION API QUERIES
 // ============================================
 
@@ -387,13 +606,17 @@ async function getElevationsForPoints(points) {
 
         try {
             const apiUrl = buildElevationUrl(locationsStr);
+            console.log(`[TerrainAnalyzer] Fetching batch ${batchIndex + 1}/${batches.length}...`);
             const response = await fetch(apiUrl);
+            console.log(`[TerrainAnalyzer] Batch ${batchIndex + 1} response status: ${response.status}`);
             if (!response.ok) {
-                console.warn(`[TerrainAnalyzer] Batch ${batchIndex + 1} API error: ${response.status}`);
+                const errorText = await response.text();
+                console.warn(`[TerrainAnalyzer] Batch ${batchIndex + 1} API error: ${response.status}`, errorText);
                 continue;
             }
 
             const data = await response.json();
+            console.log(`[TerrainAnalyzer] Batch ${batchIndex + 1} data:`, data.status, data.results?.length || 0, 'results');
             if (data.status === 'OK' && data.results) {
                 data.results.forEach((result, i) => {
                     const globalIndex = batchIndex * ELEVATION_BATCH_SIZE + i;
@@ -489,12 +712,15 @@ function generateSamplePoints(from, to, intervalNM = ELEVATION_SAMPLE_INTERVAL_N
 }
 
 /**
- * Analyze terrain along entire route
+ * Analyze terrain along entire route using offline OROCA data
+ * Uses pre-computed OROCA grid cells that the route passes through
  * @param {Array} waypoints - Array of waypoint objects with lat, lon
  * @param {Array} legs - Array of leg objects (optional, for distance reference)
  * @returns {Promise<Object>} Terrain analysis results
  */
 async function analyzeRouteTerrain(waypoints, legs = []) {
+    console.log('[TerrainAnalyzer] analyzeRouteTerrain called with:', waypoints?.length, 'waypoints');
+
     if (!waypoints || waypoints.length < 2) {
         return { error: 'Need at least 2 waypoints for terrain analysis' };
     }
@@ -503,7 +729,6 @@ async function analyzeRouteTerrain(waypoints, legs = []) {
 
     // Generate sample points along entire route
     const allPoints = [];
-    const legBoundaries = [0]; // Track where each leg starts in the points array
     let cumulativeDistanceNM = 0;
 
     for (let i = 0; i < waypoints.length - 1; i++) {
@@ -526,13 +751,144 @@ async function analyzeRouteTerrain(waypoints, legs = []) {
         // Update cumulative distance
         const legDistance = legPoints[legPoints.length - 1].distanceNM;
         cumulativeDistanceNM += legDistance;
-        legBoundaries.push(allPoints.length);
     }
 
     console.log(`[TerrainAnalyzer] Generated ${allPoints.length} sample points over ${cumulativeDistanceNM.toFixed(1)}nm`);
 
+    // Use offline MORA data if available
+    if (moraDataLoaded && moraCache.size > 0) {
+        console.log('[TerrainAnalyzer] Using offline MORA data for terrain analysis');
+        return analyzeRouteWithMORA(waypoints, allPoints, cumulativeDistanceNM);
+    }
+
+    // Fallback to API-based elevation lookup
+    console.log('[TerrainAnalyzer] MORA data not available, using elevation API...');
+    return analyzeRouteWithAPI(waypoints, allPoints, cumulativeDistanceNM);
+}
+
+/**
+ * Analyze route terrain using offline global MORA data
+ * Shows only grid cells that the route passes through
+ */
+function analyzeRouteWithMORA(waypoints, allPoints, totalDistanceNM) {
+    // Find unique MORA grid cells along the route
+    const routeGridCells = new Map(); // key -> {mora, firstDistance, lastDistance}
+
+    allPoints.forEach(point => {
+        const moraData = getMORAForGrid(point.lat, point.lon);
+        if (moraData) {
+            const existing = routeGridCells.get(moraData.key);
+            if (existing) {
+                existing.lastDistance = point.distanceNM;
+            } else {
+                routeGridCells.set(moraData.key, {
+                    ...moraData,
+                    firstDistance: point.distanceNM,
+                    lastDistance: point.distanceNM,
+                    legIndex: point.legIndex
+                });
+            }
+        }
+    });
+
+    console.log(`[TerrainAnalyzer] Route passes through ${routeGridCells.size} MORA grid cells`);
+
+    // Build terrain profile from MORA data
+    // MORA already includes obstacle clearance
+    const terrainProfile = allPoints.map(point => {
+        const moraData = getMORAForGrid(point.lat, point.lon);
+        // MORA is a safe altitude, estimate terrain as MORA - 1000 (standard clearance)
+        const estimatedTerrain = moraData ? Math.max(0, moraData.mora - 1000) : null;
+        return {
+            lat: point.lat,
+            lon: point.lon,
+            distanceNM: point.distanceNM,
+            legIndex: point.legIndex,
+            elevationFt: estimatedTerrain,
+            mora: moraData ? moraData.mora : null,
+            source: moraData ? moraData.source : null
+        };
+    });
+
+    // Calculate statistics from MORA values
+    const moraValues = Array.from(routeGridCells.values()).map(g => g.mora);
+    const maxMORA = moraValues.length > 0 ? Math.max(...moraValues) : null;
+    const minMORA = moraValues.length > 0 ? Math.min(...moraValues) : null;
+
+    // Estimate max terrain (MORA - standard clearance)
+    const maxElevation = maxMORA ? Math.max(0, maxMORA - 1000) : null;
+    const minElevation = minMORA ? Math.max(0, minMORA - 1000) : null;
+    const avgElevation = moraValues.length > 0
+        ? Math.round(moraValues.reduce((a, b) => a + b, 0) / moraValues.length) - 1000
+        : null;
+
+    const isMountainous = maxElevation !== null && maxElevation >= MOUNTAINOUS_THRESHOLD_FT;
+    const requiredClearance = isMountainous ? MOUNTAINOUS_CLEARANCE_FT : MIN_TERRAIN_CLEARANCE_FT;
+
+    // Per-leg analysis
+    const legAnalysis = [];
+    for (let i = 0; i < waypoints.length - 1; i++) {
+        const legCells = Array.from(routeGridCells.values()).filter(g => g.legIndex === i);
+        const legMORAs = legCells.map(g => g.mora);
+
+        if (legMORAs.length > 0) {
+            const legMaxMORA = Math.max(...legMORAs);
+            const legMaxTerrain = Math.max(0, legMaxMORA - 1000);
+            const legIsMountainous = legMaxTerrain >= MOUNTAINOUS_THRESHOLD_FT;
+
+            legAnalysis.push({
+                legIndex: i,
+                from: waypoints[i].ident || waypoints[i].icao || `WPT${i + 1}`,
+                to: waypoints[i + 1].ident || waypoints[i + 1].icao || `WPT${i + 2}`,
+                maxElevation: legMaxTerrain,
+                mora: legMaxMORA,
+                isMountainous: legIsMountainous,
+                requiredClearance: legIsMountainous ? MOUNTAINOUS_CLEARANCE_FT : MIN_TERRAIN_CLEARANCE_FT,
+                gridCellCount: legCells.length
+            });
+        }
+    }
+
+    // Store analysis results
+    lastAnalysis = {
+        timestamp: Date.now(),
+        terrainProfile,
+        totalDistanceNM,
+        statistics: {
+            maxElevation,
+            minElevation,
+            avgElevation,
+            isMountainous,
+            requiredClearance,
+            mora: maxMORA,
+            sampleCount: allPoints.length,
+            validSamples: terrainProfile.filter(p => p.mora !== null).length,
+            gridCellCount: routeGridCells.size,
+            dataSource: 'offline_mora'
+        },
+        legAnalysis,
+        routeGridCells: Array.from(routeGridCells.values()),
+        waypoints: waypoints.map(w => ({
+            ident: w.ident || w.icao,
+            lat: w.lat,
+            lon: w.lon,
+            elevation: w.elevation
+        }))
+    };
+
+    console.log(`[TerrainAnalyzer] Offline analysis complete. Max MORA: ${maxMORA}ft, Est. terrain: ${maxElevation}ft`);
+
+    return lastAnalysis;
+}
+
+/**
+ * Analyze route terrain using elevation API (fallback)
+ */
+async function analyzeRouteWithAPI(waypoints, allPoints, totalDistanceNM) {
     // Fetch elevations for all sample points
+    console.log('[TerrainAnalyzer] Calling getElevationsForPoints...');
     const elevations = await getElevationsForPoints(allPoints);
+    console.log('[TerrainAnalyzer] Got elevations:', elevations?.length, 'results, valid:', elevations?.filter(e => e !== null).length);
 
     // Build terrain profile
     const terrainProfile = allPoints.map((point, index) => ({
@@ -589,7 +945,7 @@ async function analyzeRouteTerrain(waypoints, legs = []) {
     lastAnalysis = {
         timestamp: Date.now(),
         terrainProfile,
-        totalDistanceNM: cumulativeDistanceNM,
+        totalDistanceNM,
         statistics: {
             maxElevation,
             minElevation,
@@ -598,7 +954,8 @@ async function analyzeRouteTerrain(waypoints, legs = []) {
             requiredClearance,
             mef,
             sampleCount: allPoints.length,
-            validSamples: validElevations.length
+            validSamples: validElevations.length,
+            dataSource: 'elevation_api'
         },
         legAnalysis,
         waypoints: waypoints.map(w => ({
@@ -609,7 +966,7 @@ async function analyzeRouteTerrain(waypoints, legs = []) {
         }))
     };
 
-    console.log(`[TerrainAnalyzer] Analysis complete. Max terrain: ${maxElevation}ft, MEF: ${mef}ft`);
+    console.log(`[TerrainAnalyzer] API analysis complete. Max terrain: ${maxElevation}ft, MEF: ${mef}ft`);
 
     return lastAnalysis;
 }
@@ -757,6 +1114,100 @@ async function clearAllCache() {
     }
 }
 
+// ============================================
+// MORA GRID HELPER FUNCTIONS
+// ============================================
+
+/**
+ * Calculate grid cell key for a lat/lon (1° MORA grid)
+ * @param {number} lat - Latitude
+ * @param {number} lon - Longitude
+ * @returns {string} Grid cell key "latGrid,lonGrid"
+ */
+function getGridCellKey(lat, lon) {
+    const latGrid = Math.floor(lat);
+    const lonGrid = Math.floor(lon);
+    return `${latGrid},${lonGrid}`;
+}
+
+/**
+ * Get grid cell center coordinates (1° MORA grid)
+ * @param {string} cellKey - Grid cell key "latGrid,lonGrid"
+ * @returns {{lat: number, lon: number}} Center coordinates
+ */
+function getGridCellCenter(cellKey) {
+    const [latGrid, lonGrid] = cellKey.split(',').map(Number);
+    return {
+        lat: latGrid + MORA_GRID_SIZE_DEG / 2,
+        lon: lonGrid + MORA_GRID_SIZE_DEG / 2
+    };
+}
+
+/**
+ * Get grid cell bounds (1° MORA grid)
+ * @param {string} cellKey - Grid cell key
+ * @returns {{minLat: number, maxLat: number, minLon: number, maxLon: number}}
+ */
+function getGridCellBounds(cellKey) {
+    const [latGrid, lonGrid] = cellKey.split(',').map(Number);
+    return {
+        minLat: latGrid,
+        maxLat: latGrid + MORA_GRID_SIZE_DEG,
+        minLon: lonGrid,
+        maxLon: lonGrid + MORA_GRID_SIZE_DEG
+    };
+}
+
+/**
+ * Get MORA grid data for the visible map bounds
+ * Uses pre-computed global MORA data from NASR API (offline capable)
+ * @param {Object} bounds - Optional {minLat, maxLat, minLon, maxLon} - if not provided, uses last analysis
+ * @returns {Array|null} Grid MORA array [{cellKey, center, bounds, mora, source}, ...]
+ */
+async function getGridMORAData(bounds = null) {
+    // If MORA data is loaded, use pre-computed data
+    if (moraDataLoaded && moraCache.size > 0) {
+        if (!bounds && lastAnalysis) {
+            // Calculate bounds from terrain profile
+            const profile = lastAnalysis.terrainProfile;
+            if (profile && profile.length > 0) {
+                const lats = profile.map(p => p.lat);
+                const lons = profile.map(p => p.lon);
+                bounds = {
+                    minLat: Math.min(...lats) - 1.0,
+                    maxLat: Math.max(...lats) + 1.0,
+                    minLon: Math.min(...lons) - 1.0,
+                    maxLon: Math.max(...lons) + 1.0
+                };
+            }
+        }
+
+        if (bounds) {
+            const moraEntries = getMORAInBounds(bounds);
+            return moraEntries.map(entry => ({
+                cellKey: entry.key,
+                center: {
+                    lat: entry.lat + MORA_GRID_SIZE_DEG / 2,
+                    lon: entry.lon + MORA_GRID_SIZE_DEG / 2
+                },
+                bounds: {
+                    minLat: entry.lat,
+                    maxLat: entry.lat + MORA_GRID_SIZE_DEG,
+                    minLon: entry.lon,
+                    maxLon: entry.lon + MORA_GRID_SIZE_DEG
+                },
+                mora: entry.mora,
+                source: entry.source,
+                // Estimate terrain as MORA - 1000ft (standard clearance)
+                maxTerrain: Math.max(0, entry.mora - 1000),
+                isMountainous: (entry.mora - 1000) >= MOUNTAINOUS_THRESHOLD_FT
+            }));
+        }
+    }
+
+    return null;
+}
+
 // Export module
 window.TerrainAnalyzer = {
     // Core analysis functions
@@ -766,6 +1217,15 @@ window.TerrainAnalyzer = {
     getTerrainProfile,
     getLegAnalysis,
     getLastAnalysis,
+
+    // MORA grid data (global coverage)
+    getGridMORAData,
+
+    // Pre-computed MORA data (NASR API)
+    loadMORAData,
+    getMORAForGrid,
+    getMORAInBounds,
+    isMORADataLoaded,
 
     // Elevation queries
     getElevationAtPoint,
@@ -782,5 +1242,8 @@ window.TerrainAnalyzer = {
     MIN_TERRAIN_CLEARANCE_FT,
     MOUNTAINOUS_THRESHOLD_FT,
     MOUNTAINOUS_CLEARANCE_FT,
-    CACHE_GRID_RESOLUTION
+    CACHE_GRID_RESOLUTION,
+    MORA_GRID_SIZE_DEG
 };
+
+console.log('[TerrainAnalyzer] Module loaded, window.TerrainAnalyzer =', !!window.TerrainAnalyzer);

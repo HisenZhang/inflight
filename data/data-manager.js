@@ -235,12 +235,13 @@ async function loadData(onStatusUpdate) {
     };
 
     try {
-        // Load NASR and OurAirports in parallel for better performance
+        // Load NASR, OurAirports, and MORA data in parallel for better performance
         onStatusUpdate('[...] LOADING DATA SOURCES IN PARALLEL', 'loading');
 
         const results = await Promise.allSettled([
             window.NASRAdapter.loadNASRData(onStatusUpdate, onFileLoaded),
-            window.OurAirportsAdapter.loadOurAirportsData(onStatusUpdate, onFileLoaded)
+            window.OurAirportsAdapter.loadOurAirportsData(onStatusUpdate, onFileLoaded),
+            window.TerrainAnalyzer ? window.TerrainAnalyzer.loadMORAData() : Promise.resolve(false)
         ]);
 
         if (results[0].status === 'fulfilled') {
@@ -294,6 +295,14 @@ async function loadData(onStatusUpdate) {
                 throw new Error('Both NASR and OurAirports failed to load');
             }
             onStatusUpdate('[!] OURAIRPORTS UNAVAILABLE', 'warning');
+        }
+
+        // Handle MORA data result
+        if (results[2].status === 'fulfilled' && results[2].value === true) {
+            dataSources.push('MORA');
+            console.log('[DataManager] MORA terrain data loaded successfully');
+        } else {
+            console.warn('[DataManager] MORA loading skipped or failed');
         }
 
         // Merge data sources

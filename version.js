@@ -24,7 +24,7 @@
 const AppVersion = {
     // Semantic version (sync with package.json)
     MAJOR: 2,
-    MINOR: 9,
+    MINOR: 10,
     PATCH: 0,
 
     // Full version string
@@ -34,7 +34,7 @@ const AppVersion = {
 
     // Service worker cache version
     // Increment this number to force PWA updates
-    CACHE_VERSION: 122,
+    CACHE_VERSION: 143,
 
     // Full cache name for service worker
     get CACHE_NAME() {
@@ -42,10 +42,10 @@ const AppVersion = {
     },
 
     // Build metadata (optional)
-    BUILD_DATE: '2025-11-24',
+    BUILD_DATE: '2025-11-26',
 
     // Release name (optional)
-    RELEASE_NAME: 'Feature: Weather overlay improvements - AWC bulk cache, validity filtering, G-AIRMET deduplication',
+    RELEASE_NAME: 'Feature: Terrain profile in navlog with MORA overlay and collision detection',
 
     /**
      * Get full version info object

@@ -1264,6 +1264,9 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelSt
         elements.windAltitudeTable.style.display = 'none';
     }
 
+    // Display terrain profile (async - will populate when data is ready)
+    displayNavlogTerrainProfile(waypoints, legs, options.altitude);
+
     // Build navlog table
     let tableHTML = `
         <table>
@@ -1658,6 +1661,362 @@ function displayWindAltitudeTable(legs, filedAltitude) {
 
     elements.windAltitudeTable.innerHTML = tableHTML;
     elements.windAltitudeTable.style.display = 'block';
+}
+
+// ============================================
+// NAVLOG TERRAIN PROFILE
+// ============================================
+
+/**
+ * Display terrain profile in navlog section
+ * Shows MORA-based terrain analysis with planned altitude overlay
+ * @param {Array} waypoints - Route waypoints
+ * @param {Array} legs - Route legs
+ * @param {number|null} plannedAltitude - Planned cruise altitude in feet
+ */
+// Store terrain profile data for resize redraw
+let _terrainProfileData = null;
+
+async function displayNavlogTerrainProfile(waypoints, legs, plannedAltitude) {
+    const container = document.getElementById('navlogTerrainProfile');
+    const chartDiv = document.getElementById('navlogTerrainChart');
+    const statusEl = document.getElementById('navlogTerrainStatus');
+
+    if (!container || !chartDiv) return;
+
+    // Need at least 2 waypoints for terrain analysis
+    if (!waypoints || waypoints.length < 2) {
+        container.style.display = 'none';
+        _terrainProfileData = null;
+        return;
+    }
+
+    // Show container with loading state
+    container.style.display = 'block';
+    chartDiv.innerHTML = '<div class="terrain-loading">Analyzing terrain...</div>';
+
+    try {
+        // Ensure TerrainAnalyzer is available
+        if (!window.TerrainAnalyzer) {
+            chartDiv.innerHTML = '<div class="terrain-loading">Terrain analyzer not available</div>';
+            return;
+        }
+
+        // Load MORA data if not already loaded
+        if (!window.TerrainAnalyzer.isMORADataLoaded()) {
+            await window.TerrainAnalyzer.loadMORAData();
+        }
+
+        // Analyze terrain for the route
+        const analysis = await window.TerrainAnalyzer.analyzeRouteTerrain(waypoints, legs);
+
+        if (analysis.error) {
+            chartDiv.innerHTML = `<div class="terrain-loading">${analysis.error}</div>`;
+            _terrainProfileData = null;
+            return;
+        }
+
+        // Store data for resize redraw
+        _terrainProfileData = { analysis, waypoints, legs, plannedAltitude };
+
+        // Render the terrain profile (defer to ensure container is fully laid out)
+        setTimeout(() => {
+            renderNavlogTerrainProfile(chartDiv, analysis, waypoints, legs, plannedAltitude);
+        }, 50);
+
+        // Update status with collision check
+        updateNavlogTerrainStatus(statusEl, analysis, plannedAltitude);
+
+    } catch (error) {
+        console.error('[UIController] Terrain analysis error:', error);
+        chartDiv.innerHTML = '<div class="terrain-loading">Error analyzing terrain</div>';
+        _terrainProfileData = null;
+    }
+}
+
+// Redraw terrain profile on resize
+let _terrainResizeTimeout = null;
+window.addEventListener('resize', () => {
+    if (!_terrainProfileData) return;
+
+    // Debounce resize events
+    clearTimeout(_terrainResizeTimeout);
+    _terrainResizeTimeout = setTimeout(() => {
+        const chartDiv = document.getElementById('navlogTerrainChart');
+        if (chartDiv && _terrainProfileData) {
+            const { analysis, waypoints, legs, plannedAltitude } = _terrainProfileData;
+            renderNavlogTerrainProfile(chartDiv, analysis, waypoints, legs, plannedAltitude);
+        }
+    }, 100);
+});
+
+/**
+ * Render terrain profile SVG for navlog
+ * @param {HTMLElement} container - Container element
+ * @param {Object} analysis - Terrain analysis data
+ * @param {Array} waypoints - Route waypoints
+ * @param {Array} legs - Route legs
+ * @param {number|null} plannedAltitude - Planned altitude in feet
+ */
+function renderNavlogTerrainProfile(container, analysis, waypoints, legs, plannedAltitude) {
+    const profile = analysis.terrainProfile;
+    const stats = analysis.statistics;
+
+    if (!profile || profile.length === 0) {
+        container.innerHTML = '<div class="terrain-loading">No terrain data available</div>';
+        return;
+    }
+
+    // Get actual container dimensions for proper aspect ratio
+    const width = container.clientWidth || 800;
+    const height = container.clientHeight || 100;
+
+    // Padding in pixels (extra right padding for destination label overflow, bottom for labels)
+    const padding = { top: 10, right: 30, bottom: 32, left: 38 };
+    const chartWidth = width - padding.left - padding.right;
+    const chartHeight = height - padding.top - padding.bottom;
+
+    // Font size based on height (so it scales with container)
+    const labelFontSize = Math.max(9, Math.min(12, height / 9));
+
+    // Calculate scales
+    const maxDistance = analysis.totalDistanceNM;
+    const validElevations = profile.map(p => p.elevationFt).filter(e => e !== null);
+    const maxMORA = stats.mora || 0;
+    const maxElevation = Math.max(
+        ...validElevations,
+        maxMORA,
+        plannedAltitude || 0
+    );
+    const minElevation = Math.min(...validElevations, 0);
+
+    // Add padding to elevation range
+    const elevRange = maxElevation - minElevation;
+    const elevPadding = elevRange * 0.15;
+    const yMin = Math.max(0, minElevation - elevPadding);
+    const yMax = maxElevation + elevPadding;
+
+    // Scale functions
+    const xScale = (distNM) => padding.left + (distNM / maxDistance) * chartWidth;
+    const yScale = (elev) => padding.top + chartHeight - ((elev - yMin) / (yMax - yMin)) * chartHeight;
+
+    // Build SVG - viewBox defines coordinate system, CSS controls actual size
+    let svg = `<svg viewBox="0 0 ${width} ${height}">`;
+
+    // Gradient definition for terrain fill
+    svg += `<defs>
+        <linearGradient id="navlogTerrainGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" style="stop-color:#8B4513;stop-opacity:0.8"/>
+            <stop offset="100%" style="stop-color:#654321;stop-opacity:0.6"/>
+        </linearGradient>
+    </defs>`;
+
+    // Check terrain clearance along entire route
+    // The terrain profile data IS MORA - compare planned altitude directly
+    let hasTerrainConflict = false;
+    if (plannedAltitude && profile.length > 0) {
+        for (const point of profile) {
+            if (point.elevationFt && plannedAltitude < point.elevationFt) {
+                hasTerrainConflict = true;
+                break;
+            }
+        }
+    }
+
+    // Draw collision zone where altitude is below terrain (MORA)
+    if (plannedAltitude && hasTerrainConflict) {
+        // Draw red zone for each segment where planned altitude < terrain
+        let inConflict = false;
+        let conflictStartX = 0;
+
+        profile.forEach((point, i) => {
+            const x = xScale(point.distanceNM);
+            const terrainElev = point.elevationFt || 0;
+
+            if (plannedAltitude < terrainElev) {
+                if (!inConflict) {
+                    inConflict = true;
+                    conflictStartX = x;
+                }
+            } else if (inConflict) {
+                // End of conflict zone
+                const altY = yScale(plannedAltitude);
+                const terrainY = yScale(profile[i - 1].elevationFt || maxMORA);
+                svg += `<rect x="${conflictStartX}" y="${terrainY}" width="${x - conflictStartX}" height="${altY - terrainY}" class="terrain-collision-zone"/>`;
+                inConflict = false;
+            }
+        });
+
+        // Close final conflict zone if still in conflict
+        if (inConflict) {
+            const lastX = xScale(maxDistance);
+            const altY = yScale(plannedAltitude);
+            const lastElev = profile[profile.length - 1].elevationFt || maxMORA;
+            const terrainY = yScale(lastElev);
+            svg += `<rect x="${conflictStartX}" y="${terrainY}" width="${lastX - conflictStartX}" height="${altY - terrainY}" class="terrain-collision-zone"/>`;
+        }
+    }
+
+    // Build terrain path (this IS the MORA data)
+    const terrainPoints = [];
+    const linePoints = [];
+
+    profile.forEach((point) => {
+        if (point.elevationFt !== null) {
+            const x = xScale(point.distanceNM);
+            const y = yScale(point.elevationFt);
+            terrainPoints.push(`${x},${y}`);
+            linePoints.push({ x, y, dist: point.distanceNM });
+        }
+    });
+
+    // Create filled area path (terrain fill)
+    if (terrainPoints.length > 0) {
+        const baseY = yScale(yMin);
+        const firstX = xScale(0);
+        const lastX = xScale(maxDistance);
+        svg += `<path d="M ${firstX},${baseY} L ${terrainPoints.join(' L ')} L ${lastX},${baseY} Z" fill="url(#navlogTerrainGradient)"/>`;
+
+        // Draw terrain outline
+        svg += `<path d="M ${linePoints.map(p => `${p.x},${p.y}`).join(' L ')}" class="terrain-line"/>`;
+    }
+
+    // Draw planned altitude line (dashed green, no label needed)
+    if (plannedAltitude) {
+        const altY = yScale(plannedAltitude);
+        svg += `<line x1="${padding.left}" y1="${altY}" x2="${padding.left + chartWidth}" y2="${altY}"
+                stroke="#00ff00" stroke-width="2.5" stroke-dasharray="12,6" fill="none"/>`;
+    }
+
+    // Draw waypoint markers with selective label display
+    let cumulativeDistance = 0;
+    const waypointPositions = [];
+
+    // First pass: calculate all waypoint positions
+    waypoints.forEach((wp, index) => {
+        const x = xScale(cumulativeDistance);
+        const label = wp.ident || wp.icao || `WP${index + 1}`;
+        waypointPositions.push({ x, label, dist: cumulativeDistance, index });
+
+        if (index < waypoints.length - 1 && legs && legs[index]) {
+            cumulativeDistance += legs[index].distance || 0;
+        }
+    });
+
+    // Second pass: draw markers and selectively show labels
+    const minLabelSpacing = 60; // Minimum pixels between labels
+    const visibleLabels = new Set();
+
+    // Always show first and last
+    visibleLabels.add(0);
+    visibleLabels.add(waypointPositions.length - 1);
+
+    // Check intermediate waypoints
+    for (let i = 1; i < waypointPositions.length - 1; i++) {
+        const pos = waypointPositions[i];
+        let tooClose = false;
+
+        for (const visIdx of visibleLabels) {
+            const visPos = waypointPositions[visIdx];
+            if (Math.abs(pos.x - visPos.x) < minLabelSpacing) {
+                tooClose = true;
+                break;
+            }
+        }
+
+        if (!tooClose) {
+            visibleLabels.add(i);
+        }
+    }
+
+    // Draw waypoint markers and labels
+    waypointPositions.forEach(({ x, label, index }) => {
+        // Always draw the vertical marker line
+        svg += `<line x1="${x}" y1="${padding.top}" x2="${x}" y2="${height - padding.bottom}"
+                stroke="#666" stroke-width="1" stroke-dasharray="3,3"/>`;
+
+        // Only draw label if not too close to others
+        if (visibleLabels.has(index)) {
+            svg += `<text x="${x}" y="${height - 18}" text-anchor="middle"
+                    font-size="${labelFontSize}" fill="#999" font-family="Roboto Mono, monospace">${label}</text>`;
+        }
+    });
+
+    // Y-axis labels (elevation)
+    const yTicks = 4;
+    for (let i = 0; i <= yTicks; i++) {
+        const elev = yMin + (i / yTicks) * (yMax - yMin);
+        const y = yScale(elev);
+        const elevLabel = Math.round(elev / 100) * 100;
+        svg += `<text x="${padding.left - 8}" y="${y + 5}" text-anchor="end"
+                font-size="${labelFontSize}" fill="#999" font-family="Roboto Mono, monospace">${elevLabel}</text>`;
+    }
+
+    // X-axis distance labels at 0%, 25%, 50%, 75%, 100%
+    const distanceMarkers = [0, 0.25, 0.5, 0.75, 1];
+    distanceMarkers.forEach(pct => {
+        const x = padding.left + pct * chartWidth;
+        const dist = Math.round(pct * maxDistance);
+        svg += `<text x="${x}" y="${height - 4}" text-anchor="middle"
+                font-size="${labelFontSize}" fill="#999" font-family="Roboto Mono, monospace">${dist}</text>`;
+    });
+
+    svg += '</svg>';
+    container.innerHTML = svg;
+}
+
+/**
+ * Update terrain status with collision detection
+ * Checks planned altitude against MORA along entire route
+ * The terrain profile data IS MORA (already includes 1000'/2000' buffer)
+ * @param {HTMLElement} statusEl - Status element
+ * @param {Object} analysis - Terrain analysis data
+ * @param {number|null} plannedAltitude - Planned altitude
+ */
+function updateNavlogTerrainStatus(statusEl, analysis, plannedAltitude) {
+    if (!statusEl) return;
+
+    const profile = analysis.terrainProfile || [];
+
+    // Find the max terrain (MORA) along the route
+    let maxTerrain = 0;
+    for (const point of profile) {
+        const elev = point.elevationFt || 0;
+        if (elev > maxTerrain) {
+            maxTerrain = elev;
+        }
+    }
+
+    if (!plannedAltitude) {
+        statusEl.textContent = `MAX MORA: ${maxTerrain || '—'}' | Enter altitude to check clearance`;
+        statusEl.className = 'terrain-status';
+        return;
+    }
+
+    // Check altitude against terrain at each point along the route
+    // Terrain profile data IS MORA - altitude >= terrain is safe
+    let hasConflict = false;
+    let maxConflict = 0;
+
+    for (const point of profile) {
+        const elev = point.elevationFt || 0;
+        if (plannedAltitude < elev) {
+            hasConflict = true;
+            if (elev > maxConflict) {
+                maxConflict = elev;
+            }
+        }
+    }
+
+    if (!hasConflict) {
+        const margin = plannedAltitude - maxTerrain;
+        statusEl.textContent = `✓ CLEAR: ${margin}' above terrain`;
+        statusEl.className = 'terrain-status ok';
+    } else {
+        const deficit = maxConflict - plannedAltitude;
+        statusEl.textContent = `✗ TERRAIN: ${deficit}' below! Minimum safe: ${maxConflict}'`;
+        statusEl.className = 'terrain-status unsafe';
+    }
 }
 
 // ============================================

@@ -235,18 +235,11 @@ function setupEventListeners() {
     setupGairmetButton(gairmetMtnBtn, 'mtn');
     setupGairmetButton(gairmetFzlvlBtn, 'fzlvl');
 
-    // Terrain profile button
+    // MORA grid toggle button
     const terrainBtn = document.getElementById('terrainBtn');
-    const terrainProfileClose = document.getElementById('terrainProfileClose');
 
     if (terrainBtn) {
         terrainBtn.addEventListener('click', () => {
-            window.VectorMap.toggleTerrainProfile();
-        });
-    }
-
-    if (terrainProfileClose) {
-        terrainProfileClose.addEventListener('click', () => {
             window.VectorMap.toggleTerrainProfile();
         });
     }
@@ -919,11 +912,6 @@ async function handleCalculateRoute() {
 
         // Display vector map
         window.VectorMap.displayMap(waypoints, legs, options);
-
-        // Refresh terrain profile if enabled (route changed, may need new analysis)
-        if (window.VectorMap.isTerrainEnabled()) {
-            window.VectorMap.analyzeAndRenderTerrain();
-        }
 
         // Update Flight Tracker with fuel data
         if (window.FlightTracker && fuelEnabled) {
