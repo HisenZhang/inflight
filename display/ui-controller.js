@@ -58,6 +58,49 @@ function calculateZuluAge(zuluTime) {
     return now.getTime() - issueDate.getTime();
 }
 
+/**
+ * Parse route string into components
+ * @param {string} routeString - Full route string (e.g., "KALB ALB SYR KSYR")
+ * @returns {Object|null} { departure, routeMiddle, destination, waypoints } or null if invalid
+ */
+function parseRouteString(routeString) {
+    if (!routeString) return null;
+    const waypoints = routeString.trim().split(/\s+/).filter(w => w.length > 0);
+    if (waypoints.length < 2) return null;
+    return {
+        departure: waypoints[0],
+        destination: waypoints[waypoints.length - 1],
+        routeMiddle: waypoints.slice(1, -1).join(' '),
+        waypoints
+    };
+}
+
+/**
+ * Set route input field values
+ * @param {string} departure - Departure airport
+ * @param {string} routeMiddle - Middle waypoints
+ * @param {string} destination - Destination airport
+ */
+function setRouteInputs(departure, routeMiddle, destination) {
+    elements.departureInput.value = departure || '';
+    elements.routeInput.value = routeMiddle || '';
+    elements.destinationInput.value = destination || '';
+}
+
+/**
+ * Set radio button selection by data attribute
+ * @param {string} selector - CSS selector for radio buttons
+ * @param {string} dataAttr - Data attribute name (e.g., 'period', 'reserve')
+ * @param {string|number} value - Value to select
+ */
+function setRadioSelection(selector, dataAttr, value) {
+    document.querySelectorAll(selector).forEach(btn => {
+        btn.classList.remove('selected');
+        const btnValue = btn.getAttribute(`data-${dataAttr}`);
+        if (btnValue == value) btn.classList.add('selected');
+    });
+}
+
 // ============================================
 // INITIALIZATION
 // ============================================
@@ -569,6 +612,36 @@ function setupFeatureToggles() {
         const selected = document.querySelector('.radio-btn.selected[data-reserve]');
         return selected ? parseInt(selected.getAttribute('data-reserve')) : 30;
     };
+
+    // Store state setters (for crash recovery restore)
+    elements.setWindsEnabled = (enabled) => {
+        windsEnabled = enabled;
+        if (enabled) {
+            elements.enableWindsToggle.classList.add('checked');
+            elements.windInputs.classList.remove('hidden');
+        } else {
+            elements.enableWindsToggle.classList.remove('checked');
+            elements.windInputs.classList.add('hidden');
+        }
+    };
+    elements.setFuelEnabled = (enabled) => {
+        fuelEnabled = enabled;
+        if (enabled) {
+            elements.enableFuelToggle.classList.add('checked');
+            elements.fuelInputs.classList.remove('hidden');
+            if (!elements.routeInput.disabled) {
+                elements.usableFuelInput.disabled = false;
+                elements.taxiFuelInput.disabled = false;
+                elements.burnRateInput.disabled = false;
+            }
+        } else {
+            elements.enableFuelToggle.classList.remove('checked');
+            elements.fuelInputs.classList.add('hidden');
+            elements.usableFuelInput.disabled = true;
+            elements.taxiFuelInput.disabled = true;
+            elements.burnRateInput.disabled = true;
+        }
+    };
 }
 
 // ============================================
@@ -592,15 +665,12 @@ function displayQueryHistory() {
         item.className = 'history-item';
         item.textContent = query;
         item.addEventListener('click', () => {
-            // Parse the route to extract departure, middle, and destination
-            const routeParts = query.trim().split(/\s+/).filter(w => w.length > 0);
-            if (routeParts.length >= 2) {
-                elements.departureInput.value = routeParts[0];
-                elements.destinationInput.value = routeParts[routeParts.length - 1];
-                elements.routeInput.value = routeParts.slice(1, -1).join(' ');
+            const parsed = parseRouteString(query);
+            if (parsed) {
+                setRouteInputs(parsed.departure, parsed.routeMiddle, parsed.destination);
             } else {
                 // Fallback: put everything in routeInput
-                elements.routeInput.value = query;
+                setRouteInputs('', query, '');
             }
             elements.routeInput.focus();
         });
@@ -1120,6 +1190,149 @@ function selectDestinationItem(index) {
 // RESULTS DISPLAY
 // ============================================
 
+// Store current hazard data for terrain analysis updates
+let _currentHazardData = {
+    fuelStatus: null,
+    windMetadata: null,
+    options: {},
+    terrainStatus: null
+};
+
+/**
+ * Build hazard summary HTML for insertion into route summary
+ * @param {Object} fuelStatus - Fuel calculation results
+ * @param {Object} windMetadata - Wind data metadata
+ * @param {Object} options - Route calculation options
+ * @param {Object} terrainStatus - Terrain clearance status (updated async)
+ * @returns {string} HTML string for hazard summary
+ */
+function buildHazardSummaryHTML(fuelStatus, windMetadata, options, terrainStatus = null) {
+    const hazards = [];
+
+    // Check fuel hazards
+    if (fuelStatus && !fuelStatus.isSufficient) {
+        const deficit = (fuelStatus.requiredReserve - fuelStatus.finalFob).toFixed(1);
+        hazards.push({
+            type: 'FUEL',
+            severity: 'critical',
+            icon: '✗',
+            message: `Insufficient - ${deficit} GAL below reserve`
+        });
+    }
+
+    // Check terrain hazards (updated asynchronously)
+    // Terrain data is MORA - planned altitude must be >= MORA to be safe
+    if (terrainStatus) {
+        if (terrainStatus.status === 'UNSAFE') {
+            hazards.push({
+                type: 'TERRAIN',
+                severity: 'critical',
+                icon: '✗',
+                message: `${terrainStatus.deficit?.toLocaleString()}' below MORA (${terrainStatus.maxMORA?.toLocaleString()}')`
+            });
+        }
+        // status === 'OK' means no hazard
+    } else if (options.altitude) {
+        // Terrain analysis pending indicator
+        hazards.push({
+            type: 'TERRAIN',
+            severity: 'warning',
+            icon: '...',
+            message: 'Analyzing...'
+        });
+    }
+
+    // Check wind data hazards
+    if (options.enableWinds && windMetadata) {
+        const isWithinWindow = Utils.isWithinUseWindow(windMetadata.useWindow);
+        const dataAge = Date.now() - windMetadata.parsedAt;
+
+        // Determine max age based on forecast period
+        const forecastPeriod = options.forecastPeriod || '06';
+        let maxAge;
+        if (forecastPeriod === '24' || forecastPeriod === '12') {
+            maxAge = 12 * 60 * 60 * 1000;
+        } else {
+            maxAge = 6 * 60 * 60 * 1000;
+        }
+        const isStale = dataAge > maxAge;
+
+        if (!isWithinWindow) {
+            hazards.push({
+                type: 'WINDS',
+                severity: 'warning',
+                icon: '⚠',
+                message: `Outside valid window`
+            });
+        } else if (isStale) {
+            const ageHours = Math.floor(dataAge / (60 * 60 * 1000));
+            hazards.push({
+                type: 'WINDS',
+                severity: 'warning',
+                icon: '⚠',
+                message: `Data is ${ageHours}h old`
+            });
+        }
+    }
+
+    // Build HTML - use summary-item style consistent with route summary
+    let html = `
+        <div class="summary-item" style="border-top: 1px solid var(--border-color); padding-top: 8px; margin-top: 8px;">
+            <span class="summary-label text-secondary text-sm">HAZARDS</span>
+            <span class="summary-value">`;
+
+    if (hazards.length === 0) {
+        html += `<span class="text-metric font-bold">✓ NONE DETECTED</span>`;
+    } else {
+        const items = hazards.map(h => {
+            const color = h.severity === 'critical' ? 'text-error' : 'text-warning';
+            return `<span class="${color}">${h.icon} ${h.type}</span>`;
+        });
+        html += items.join(' ');
+    }
+
+    html += `</span></div>`;
+
+    // Add detail rows for each hazard
+    hazards.forEach(hazard => {
+        const color = hazard.severity === 'critical' ? 'text-error' : 'text-warning';
+        html += `
+        <div class="summary-item">
+            <span class="summary-label ${color} text-sm">${hazard.icon} ${hazard.type}</span>
+            <span class="summary-value ${color}">${hazard.message}</span>
+        </div>
+        `;
+    });
+
+    return html;
+}
+
+/**
+ * Update hazard summary with terrain status
+ * Called after async terrain analysis completes
+ * @param {Object} terrainStatus - Terrain clearance check result
+ */
+function updateHazardSummaryTerrain(terrainStatus) {
+    _currentHazardData.terrainStatus = terrainStatus;
+    // Re-render the full route summary with updated terrain status
+    refreshHazardDisplay();
+}
+
+/**
+ * Refresh the hazard display portion of route summary
+ */
+function refreshHazardDisplay() {
+    const hazardContainer = document.getElementById('hazardSummaryInline');
+    if (hazardContainer) {
+        hazardContainer.innerHTML = buildHazardSummaryHTML(
+            _currentHazardData.fuelStatus,
+            _currentHazardData.windMetadata,
+            _currentHazardData.options,
+            _currentHazardData.terrainStatus
+        );
+    }
+}
+
 function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelStatus = null, options = {}) {
     // Route summary
     const expandedRoute = waypoints.map(w => RouteCalculator.getWaypointCode(w)).join(' ');
@@ -1186,6 +1399,9 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelSt
         </div>
         `;
     }
+
+    // Add hazard summary (inline, updatable container for async terrain updates)
+    summaryHTML += `<div id="hazardSummaryInline">${buildHazardSummaryHTML(fuelStatus, options.windMetadata, options, null)}</div>`;
 
     // Add wind data validity if available
     if (options.windMetadata && options.enableWinds) {
@@ -1256,6 +1472,14 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelSt
     }
 
     elements.routeSummary.innerHTML = summaryHTML;
+
+    // Store hazard data for async terrain updates
+    _currentHazardData = {
+        fuelStatus,
+        windMetadata: options.windMetadata,
+        options,
+        terrainStatus: null
+    };
 
     // Display wind altitude table if wind correction enabled
     if (options.enableWinds && legs.some(leg => leg.windsAtAltitudes)) {
@@ -1727,10 +1951,36 @@ async function displayNavlogTerrainProfile(waypoints, legs, plannedAltitude) {
         // Update status with collision check
         updateNavlogTerrainStatus(statusEl, analysis, plannedAltitude);
 
+        // Update hazard summary with terrain status
+        // Terrain profile data IS MORA (already includes 1000'/2000' buffer)
+        // So we check planned altitude directly against MORA
+        if (plannedAltitude) {
+            const profile = analysis.terrainProfile || [];
+            let maxMORA = 0;
+            let hasConflict = false;
+
+            for (const point of profile) {
+                const elev = point.elevationFt || 0;
+                if (elev > maxMORA) maxMORA = elev;
+                if (plannedAltitude < elev) hasConflict = true;
+            }
+
+            const terrainStatus = hasConflict
+                ? { status: 'UNSAFE', deficit: maxMORA - plannedAltitude, maxMORA }
+                : { status: 'OK', margin: plannedAltitude - maxMORA, maxMORA };
+
+            updateHazardSummaryTerrain(terrainStatus);
+        } else {
+            // No altitude specified - clear terrain hazard
+            updateHazardSummaryTerrain({ status: 'UNKNOWN' });
+        }
+
     } catch (error) {
         console.error('[UIController] Terrain analysis error:', error);
         chartDiv.innerHTML = '<div class="terrain-loading">Error analyzing terrain</div>';
         _terrainProfileData = null;
+        // Clear terrain hazard on error
+        updateHazardSummaryTerrain({ status: 'UNKNOWN' });
     }
 }
 
@@ -2027,55 +2277,34 @@ function restoreNavlog(navlogData) {
     const { routeString, waypoints, legs, totalDistance, totalTime, fuelStatus, options, windMetadata } = navlogData;
 
     // Restore ICAO-style route inputs (departure/route/destination)
-    // Check if saved data has separate fields (new format) or single routeString (legacy)
     if (navlogData.departure && navlogData.destination) {
         // New format: restore to separate fields
-        elements.departureInput.value = navlogData.departure;
-        elements.routeInput.value = navlogData.routeMiddle || '';
-        elements.destinationInput.value = navlogData.destination;
+        setRouteInputs(navlogData.departure, navlogData.routeMiddle, navlogData.destination);
     } else {
         // Legacy format: parse routeString to extract departure and destination
-        const routeParts = routeString.trim().split(/\s+/).filter(w => w.length > 0);
-        if (routeParts.length >= 2) {
-            elements.departureInput.value = routeParts[0];
-            elements.destinationInput.value = routeParts[routeParts.length - 1];
-            elements.routeInput.value = routeParts.slice(1, -1).join(' ');
+        const parsed = parseRouteString(routeString);
+        if (parsed) {
+            setRouteInputs(parsed.departure, parsed.routeMiddle, parsed.destination);
         } else {
             // Fallback: put everything in routeInput for backward compatibility
-            elements.routeInput.value = routeString;
+            setRouteInputs('', routeString, '');
         }
     }
 
-    // Restore optional feature settings
-    if (options.enableWinds) {
-        document.getElementById('enableWindsToggle').classList.add('active');
-        document.getElementById('windInputs').classList.remove('hidden');
+    // Restore optional feature settings using setters (updates both UI and internal state)
+    if (options.enableWinds && elements.setWindsEnabled) {
+        elements.setWindsEnabled(true);
         if (options.altitude) elements.altitudeInput.value = options.altitude;
         if (options.tas) elements.tasInput.value = options.tas;
-
-        // Restore forecast period
-        document.querySelectorAll('.radio-btn[data-period]').forEach(btn => {
-            btn.classList.remove('selected');
-            if (btn.getAttribute('data-period') === options.forecastPeriod) {
-                btn.classList.add('selected');
-            }
-        });
+        setRadioSelection('.radio-btn[data-period]', 'period', options.forecastPeriod);
     }
 
-    if (options.enableFuel) {
-        document.getElementById('enableFuelToggle').classList.add('active');
-        document.getElementById('fuelInputs').classList.remove('hidden');
+    if (options.enableFuel && elements.setFuelEnabled) {
+        elements.setFuelEnabled(true);
         if (options.usableFuel) elements.usableFuelInput.value = options.usableFuel;
         if (options.taxiFuel) elements.taxiFuelInput.value = options.taxiFuel;
         if (options.burnRate) elements.burnRateInput.value = options.burnRate;
-
-        // Restore reserve setting
-        document.querySelectorAll('.radio-btn[data-reserve]').forEach(btn => {
-            btn.classList.remove('selected');
-            if (parseInt(btn.getAttribute('data-reserve')) === options.vfrReserve) {
-                btn.classList.add('selected');
-            }
-        });
+        setRadioSelection('.radio-btn[data-reserve]', 'reserve', options.vfrReserve);
     }
 
     // Display results - include windMetadata in options if available
