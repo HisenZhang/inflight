@@ -217,6 +217,10 @@ header {
     gap: 4px;
 }
 
+.navlog-actions select {
+    width: 5.5rem;
+}
+
 /* Input Section */
 .input-section {
     background: var(--bg-primary);

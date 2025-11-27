@@ -2010,11 +2010,11 @@ function updateNavlogTerrainStatus(statusEl, analysis, plannedAltitude) {
 
     if (!hasConflict) {
         const margin = plannedAltitude - maxTerrain;
-        statusEl.textContent = `✓ CLEAR: ${margin}' above terrain`;
+        statusEl.textContent = `✓ CLEAR: ${margin}' above MORA`;
         statusEl.className = 'terrain-status ok';
     } else {
         const deficit = maxConflict - plannedAltitude;
-        statusEl.textContent = `✗ TERRAIN: ${deficit}' below! Minimum safe: ${maxConflict}'`;
+        statusEl.textContent = `✗ TERRAIN: ${deficit}' below! MORA: ${maxConflict}'`;
         statusEl.className = 'terrain-status unsafe';
     }
 }
