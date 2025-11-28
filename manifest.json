@@ -2,7 +2,7 @@
   "name": "IN-FLIGHT",
   "short_name": "IN-FLIGHT",
   "id": "/",
-  "version": "2.10.0",
+  "version": "3.0.0",
   "description": "Open source terminal-style flight planner with offline database and moving map",
   "start_url": "./",
   "scope": "./",

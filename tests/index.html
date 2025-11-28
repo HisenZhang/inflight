@@ -3,24 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IN-FLIGHT Test Suite</title>
+    <title>IN-FLIGHT Test Suite - Browser</title>
     <style>
+        * {
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: 'Roboto Mono', monospace;
+            font-family: 'Roboto Mono', 'Courier New', monospace;
             background: #0a0a0a;
-            color: #ffffff;
+            color: #e0e0e0;
             padding: 20px;
             margin: 0;
+            line-height: 1.4;
         }
 
         h1 {
             color: #00ff00;
             border-bottom: 2px solid #00ff00;
             padding-bottom: 10px;
+            margin-bottom: 20px;
         }
 
         .test-controls {
             margin: 20px 0;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
         }
 
         button {
@@ -28,14 +38,43 @@
             color: #000;
             border: none;
             padding: 10px 20px;
-            font-family: 'Roboto Mono', monospace;
+            font-family: inherit;
             font-weight: bold;
             cursor: pointer;
-            margin-right: 10px;
+            font-size: 14px;
         }
 
         button:hover {
             background: #00cc00;
+        }
+
+        button.secondary {
+            background: #333;
+            color: #fff;
+        }
+
+        button.secondary:hover {
+            background: #444;
+        }
+
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 5px;
+        }
+
+        .filter-btn {
+            padding: 8px 12px;
+            font-size: 12px;
+        }
+
+        .filter-btn.active {
+            background: #00ff00;
+            color: #000;
         }
 
         #results {
@@ -44,6 +83,8 @@
             padding: 15px;
             margin-top: 20px;
             min-height: 400px;
+            max-height: 70vh;
+            overflow-y: auto;
             font-size: 13px;
         }
 
@@ -52,118 +93,357 @@
             padding: 15px;
             margin: 20px 0;
             border-left: 4px solid #00ff00;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .summary.failed {
+            border-left-color: #ff0000;
+        }
+
+        .summary-stats {
+            display: flex;
+            gap: 20px;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: #888;
         }
 
         .pass { color: #00ff00; }
         .fail { color: #ff0000; }
         .warning { color: #ffaa00; }
+        .info { color: #00aaff; }
+        .muted { color: #666; }
+
+        .suite-header {
+            color: #00aaff;
+            font-weight: bold;
+            margin-top: 15px;
+            padding: 5px 0;
+            border-bottom: 1px solid #333;
+        }
+
+        .test-result {
+            padding: 2px 0;
+            padding-left: 20px;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #333;
+            border-top-color: #00ff00;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .version-info {
+            color: #666;
+            font-size: 12px;
+            margin-top: 20px;
+        }
     </style>
 </head>
 <body>
     <h1>IN-FLIGHT Test Suite</h1>
 
     <div class="test-controls">
-        <button onclick="runTests()">Run All Tests</button>
-        <button onclick="clearResults()">Clear Results</button>
+        <button onclick="runTests()" id="runBtn">Run All Tests</button>
+        <button onclick="clearResults()" class="secondary">Clear</button>
+
+        <div class="filter-group">
+            <button class="secondary filter-btn active" data-filter="all">All</button>
+            <button class="secondary filter-btn" data-filter="v3">v3 Only</button>
+            <button class="secondary filter-btn" data-filter="legacy">Legacy</button>
+        </div>
     </div>
 
     <div class="summary" id="summary" style="display: none;">
-        <div id="summary-content"></div>
+        <div class="summary-stats">
+            <div class="stat">
+                <div class="stat-value" id="total-count">0</div>
+                <div class="stat-label">TOTAL</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value pass" id="pass-count">0</div>
+                <div class="stat-label">PASSED</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value fail" id="fail-count">0</div>
+                <div class="stat-label">FAILED</div>
+            </div>
+        </div>
+        <div id="summary-time" class="muted"></div>
     </div>
 
     <div id="results">
-        <p style="color: #666;">Click "Run All Tests" to begin testing...</p>
+        <p class="muted">Click "Run All Tests" to begin testing...</p>
     </div>
 
-    <!-- Load dependencies in order (3-Engine Architecture) -->
+    <div class="version-info">
+        Architecture v3.0.0 | Browser Test Runner
+    </div>
 
-    <!-- External Libraries -->
+    <!-- ============================================ -->
+    <!-- LIBRARIES -->
+    <!-- ============================================ -->
     <script src="../lib/geodesy.js"></script>
     <script src="../lib/wind-stations.js"></script>
 
-    <!-- Utilities Layer -->
+    <!-- ============================================ -->
+    <!-- UTILITIES -->
+    <!-- ============================================ -->
     <script src="../utils/formatters.js"></script>
     <script src="../utils/checksum.js"></script>
+    <script src="../utils/compression.js"></script>
 
-    <!-- State Management -->
+    <!-- ============================================ -->
+    <!-- DATA LAYER - v3 Architecture -->
+    <!-- ============================================ -->
+    <script src="../data/core/data-source.js"></script>
+    <script src="../data/core/storage-adapter.js"></script>
+    <script src="../data/core/cache-strategy.js"></script>
+    <script src="../data/storage/memory-storage.js"></script>
+    <script src="../data/repository.js"></script>
+
+    <!-- ============================================ -->
+    <!-- DATA LAYER - Legacy -->
+    <!-- ============================================ -->
+    <script src="../data/data-manager.js"></script>
+
+    <!-- ============================================ -->
+    <!-- QUERY LAYER - v3 Architecture -->
+    <!-- ============================================ -->
+    <script src="../query/core/index-strategy.js"></script>
+    <script src="../query/indexes/map-index.js"></script>
+    <script src="../query/indexes/trie-index.js"></script>
+    <script src="../query/indexes/spatial-grid-index.js"></script>
+    <script src="../query/query-engine-v2.js"></script>
+
+    <!-- ============================================ -->
+    <!-- COMPUTE LAYER - v3 Pure Functions -->
+    <!-- ============================================ -->
+    <script src="../compute/navigation.js"></script>
+    <script src="../compute/terrain.js"></script>
+    <script src="../compute/weather.js"></script>
+
+    <!-- ============================================ -->
+    <!-- COMPUTE LAYER - Legacy -->
+    <!-- ============================================ -->
+    <script src="../compute/weather-api.js"></script>
+    <script src="../compute/query-engine.js"></script>
+    <script src="../compute/route-lexer.js"></script>
+    <script src="../compute/route-parser.js"></script>
+    <script src="../compute/route-resolver.js"></script>
+    <script src="../compute/route-engine.js"></script>
+    <script src="../compute/route-calculator.js"></script>
+    <script src="../compute/winds-aloft.js"></script>
+    <script src="../compute/terrain-analyzer.js"></script>
+
+    <!-- ============================================ -->
+    <!-- STATE MANAGEMENT -->
+    <!-- ============================================ -->
     <script src="../state/flight-state.js"></script>
+    <script src="../state/flight-tracker.js"></script>
 
-    <!-- Test Framework -->
+    <!-- ============================================ -->
+    <!-- SERVICE LAYER - v3 Architecture -->
+    <!-- ============================================ -->
+    <script src="../services/route-service.js"></script>
+    <script src="../services/weather-service.js"></script>
+
+    <!-- ============================================ -->
+    <!-- TEST FRAMEWORK -->
+    <!-- ============================================ -->
     <script src="test-framework.js"></script>
 
-    <!-- Test Suites -->
+    <!-- ============================================ -->
+    <!-- TEST SUITES - v3 Architecture -->
+    <!-- ============================================ -->
+    <script src="test-data-core.js"></script>
+    <script src="test-query-indexes.js"></script>
+    <script src="test-navigation.js"></script>
+    <script src="test-terrain.js"></script>
+    <script src="test-weather.js"></script>
+    <script src="test-services.js"></script>
+    <script src="test-integration.js"></script>
+
+    <!-- ============================================ -->
+    <!-- TEST SUITES - Legacy -->
+    <!-- ============================================ -->
     <script src="test-utils.js"></script>
     <script src="test-state.js"></script>
     <script src="test-checksum.js"></script>
+    <script src="test-winds.js"></script>
+    <script src="test-weather-api.js"></script>
+    <script src="test-geodesy.js"></script>
+    <script src="test-route-calculator.js"></script>
+    <script src="test-route-parser.js"></script>
+    <script src="test-flight-tracker.js"></script>
+    <script src="test-compression.js"></script>
+    <script src="test-terrain-analyzer.js"></script>
+    <script src="test-query-engine.js"></script>
+    <script src="test-data-manager.js"></script>
 
     <script>
-        // Intercept console output for display
+        // Test runner state
+        let currentFilter = 'all';
         const resultsDiv = document.getElementById('results');
         const summaryDiv = document.getElementById('summary');
-        const summaryContent = document.getElementById('summary-content');
 
-        const originalLog = console.log;
-        const originalError = console.error;
+        // Filter buttons
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentFilter = btn.dataset.filter;
+            });
+        });
 
-        function interceptConsole() {
-            resultsDiv.innerHTML = '';
-
-            console.log = function(...args) {
-                originalLog.apply(console, args);
-
-                const message = args.map(arg => {
-                    if (typeof arg === 'string') {
-                        // Extract style from %c format
-                        if (arg.includes('%c')) {
-                            const cleanMsg = arg.replace(/%c/g, '');
-                            const style = args[1] || '';
-                            let className = '';
-
-                            if (style.includes('color: #00ff00')) className = 'pass';
-                            else if (style.includes('color: #ff0000')) className = 'fail';
-                            else if (style.includes('color: #ffaa00')) className = 'warning';
-
-                            return `<div class="${className}">${cleanMsg}</div>`;
-                        }
-                        return `<div>${arg}</div>`;
-                    }
-                    return `<div>${String(arg)}</div>`;
-                }).join('');
-
-                resultsDiv.innerHTML += message;
-            };
-
-            console.error = function(...args) {
-                originalError.apply(console, args);
-                const message = args.map(arg => String(arg)).join(' ');
-                resultsDiv.innerHTML += `<div class="fail">    ${message}</div>`;
-            };
-        }
-
-        function restoreConsole() {
-            console.log = originalLog;
-            console.error = originalError;
-        }
-
+        // Run tests
         async function runTests() {
-            interceptConsole();
+            const runBtn = document.getElementById('runBtn');
+            runBtn.disabled = true;
+            runBtn.textContent = 'Running...';
 
-            const results = await TestFramework.runAll();
+            resultsDiv.innerHTML = '<div class="loading"><div class="spinner"></div> Running tests...</div>';
+            summaryDiv.style.display = 'none';
 
-            // Display summary
-            summaryDiv.style.display = 'block';
-            summaryContent.innerHTML = `
-                <strong>Total Tests:</strong> ${results.passed + results.failed}<br>
-                <span class="pass">✓ Passed: ${results.passed}</span><br>
-                <span class="fail">✗ Failed: ${results.failed}</span>
-            `;
+            const startTime = performance.now();
 
-            restoreConsole();
+            try {
+                // Run based on filter
+                let results;
+                if (currentFilter === 'v3') {
+                    results = await runV3Tests();
+                } else if (currentFilter === 'legacy') {
+                    results = await runLegacyTests();
+                } else {
+                    results = await TestFramework.runAll();
+                }
+
+                const elapsed = Math.round(performance.now() - startTime);
+
+                // Display summary
+                summaryDiv.style.display = 'flex';
+                summaryDiv.className = results.failed > 0 ? 'summary failed' : 'summary';
+
+                document.getElementById('total-count').textContent = results.passed + results.failed;
+                document.getElementById('pass-count').textContent = results.passed;
+                document.getElementById('fail-count').textContent = results.failed;
+                document.getElementById('summary-time').textContent = `Completed in ${elapsed}ms`;
+
+                // Format results
+                displayResults(results);
+
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="fail">Error running tests: ${error.message}</div>`;
+                console.error(error);
+            }
+
+            runBtn.disabled = false;
+            runBtn.textContent = 'Run All Tests';
         }
 
+        // Run only v3 architecture tests
+        async function runV3Tests() {
+            const v3Suites = [
+                'DataSource', 'StorageAdapter', 'CacheStrategy', 'TTLStrategy',
+                'PermanentStrategy', 'VersionStrategy', 'MemoryStorage', 'DataRepository',
+                'IndexStrategy', 'MapIndex', 'TrieIndex', 'SpatialGridIndex', 'QueryEngine v2',
+                'Navigation', 'Terrain', 'Weather',
+                'RouteService', 'WeatherService', 'Service Layer'
+            ];
+
+            return TestFramework.runFiltered(suite =>
+                v3Suites.some(v3 => suite.includes(v3))
+            );
+        }
+
+        // Run only legacy tests
+        async function runLegacyTests() {
+            const v3Suites = [
+                'DataSource', 'StorageAdapter', 'CacheStrategy', 'TTLStrategy',
+                'PermanentStrategy', 'VersionStrategy', 'MemoryStorage', 'DataRepository',
+                'IndexStrategy', 'MapIndex', 'TrieIndex', 'SpatialGridIndex', 'QueryEngine v2',
+                'Navigation -', 'Terrain -', 'Weather -',
+                'RouteService', 'WeatherService', 'Service Layer'
+            ];
+
+            return TestFramework.runFiltered(suite =>
+                !v3Suites.some(v3 => suite.includes(v3))
+            );
+        }
+
+        // Display formatted results
+        function displayResults(results) {
+            let html = '';
+
+            if (results.suites) {
+                for (const suite of results.suites) {
+                    html += `<div class="suite-header">${suite.name}</div>`;
+                    for (const test of suite.tests) {
+                        if (test.passed) {
+                            html += `<div class="test-result pass">✓ ${test.name}</div>`;
+                        } else {
+                            html += `<div class="test-result fail">✗ ${test.name}</div>`;
+                            if (test.error) {
+                                html += `<div class="test-result fail" style="padding-left: 40px; font-size: 12px;">${test.error}</div>`;
+                            }
+                        }
+                    }
+                }
+            } else {
+                html = `<div class="pass">✓ ${results.passed} tests passed</div>`;
+                if (results.failed > 0) {
+                    html += `<div class="fail">✗ ${results.failed} tests failed</div>`;
+                }
+            }
+
+            resultsDiv.innerHTML = html;
+        }
+
+        // Clear results
         function clearResults() {
-            resultsDiv.innerHTML = '<p style="color: #666;">Results cleared. Click "Run All Tests" to run again...</p>';
+            resultsDiv.innerHTML = '<p class="muted">Results cleared. Click "Run All Tests" to run again...</p>';
             summaryDiv.style.display = 'none';
+        }
+
+        // Add runFiltered to TestFramework if not present
+        if (typeof TestFramework !== 'undefined' && !TestFramework.runFiltered) {
+            TestFramework.runFiltered = async function(filterFn) {
+                const allSuites = this._suites || [];
+                const filtered = allSuites.filter(s => filterFn(s.name));
+                const originalSuites = this._suites;
+                this._suites = filtered;
+                const results = await this.runAll();
+                this._suites = originalSuites;
+                return results;
+            };
         }
     </script>
 </body>

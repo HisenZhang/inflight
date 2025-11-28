@@ -57,6 +57,9 @@ const files = {
     routeService: fs.readFileSync(path.join(projectRoot, 'services/route-service.js'), 'utf8'),
     weatherService: fs.readFileSync(path.join(projectRoot, 'services/weather-service.js'), 'utf8'),
 
+    // Bootstrap
+    mainJs: fs.readFileSync(path.join(projectRoot, 'main.js'), 'utf8'),
+
     // Source files - State
     state: fs.readFileSync(path.join(projectRoot, 'state/flight-state.js'), 'utf8'),
     flightTracker: fs.readFileSync(path.join(projectRoot, 'state/flight-tracker.js'), 'utf8'),
@@ -96,7 +99,8 @@ const files = {
     testNavigation: fs.readFileSync(path.join(__dirname, 'test-navigation.js'), 'utf8'),
     testTerrain: fs.readFileSync(path.join(__dirname, 'test-terrain.js'), 'utf8'),
     testWeather: fs.readFileSync(path.join(__dirname, 'test-weather.js'), 'utf8'),
-    testServices: fs.readFileSync(path.join(__dirname, 'test-services.js'), 'utf8')
+    testServices: fs.readFileSync(path.join(__dirname, 'test-services.js'), 'utf8'),
+    testIntegration: fs.readFileSync(path.join(__dirname, 'test-integration.js'), 'utf8')
 };
 
 // Create a minimal DOM environment
@@ -220,6 +224,9 @@ let testResults = {
             ${wrapInIIFE(files.routeService)}
             ${wrapInIIFE(files.weatherService)}
 
+            // Bootstrap v3
+            ${wrapInIIFE(files.mainJs)}
+
             // State
             ${wrapInIIFE(files.state)}
             ${wrapInIIFE(files.flightTracker)}
@@ -245,6 +252,7 @@ let testResults = {
             ${wrapInIIFE(files.testTerrain)}
             ${wrapInIIFE(files.testWeather)}
             ${wrapInIIFE(files.testServices)}
+            ${wrapInIIFE(files.testIntegration)}
 
             // Test suites - Legacy
             ${wrapInIIFE(files.testUtils)}

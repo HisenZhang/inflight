@@ -2,31 +2,41 @@
 
 ## Overview
 
-IN-FLIGHT is a browser-based flight planning and navigation application built with a **3-Engine Architecture** that cleanly separates data management, business logic, and presentation concerns.
+IN-FLIGHT is a browser-based flight planning and navigation application built with a **5-Layer Architecture** (v3.0.0) that cleanly separates concerns and enables testable, maintainable code.
+
+## Architecture Version
+
+**Current: v3.0.0** - Complete layered architecture with dependency injection
 
 ## Design Philosophy
 
 ### Core Principles
 
-1. **Separation of Concerns**: Each engine has a single, well-defined responsibility
-2. **Hybrid Module Pattern**: Uses `window.X` globals for universal browser compatibility (no ES6 modules, no build tools required)
-3. **Offline-First**: Works entirely in-browser with IndexedDB caching and service worker support
-4. **Progressive Enhancement**: Core features work without internet; enhanced features (winds aloft) require connectivity
+1. **Separation of Concerns**: Each layer has a single, well-defined responsibility
+2. **Dependencies Flow Downward**: Higher layers depend on lower layers, never the reverse
+3. **Pure Functions in Compute**: Calculations are stateless and side-effect free
+4. **Dependency Injection**: Components receive dependencies, enabling testing
+5. **Offline-First**: Works entirely in-browser with IndexedDB caching and service worker support
 
-### Why 3-Engine Architecture?
+### Why 5-Layer Architecture?
 
-The application has three distinct operational phases:
-1. **Data Loading**: Fetch and cache aviation databases
-2. **Planning (Pre-Flight)**: Route calculation, wind correction, fuel planning
-3. **Navigation (In-Flight)**: GPS tracking, real-time guidance
+The v3 architecture addresses fundamental design issues from earlier versions:
 
-This architecture maps directly to these phases while maintaining clear boundaries.
+| Problem (v2) | Solution (v3) |
+|--------------|---------------|
+| Data layer calling compute layer | Dependencies flow downward only |
+| Multiple storage systems | Single `DataRepository` facade |
+| Circular dependencies | Clear layer boundaries |
+| Untestable calculations | Pure functions in Compute layer |
+| Hard-coded dependencies | Dependency injection throughout |
 
 ## Directory Structure
 
 ```
 inflight/
 ├── index.html                  # Entry point
+├── main.js                     # v3 Application bootstrap
+├── version.js                  # Version management
 ├── styles/                     # CSS modules
 │   ├── base.css
 │   ├── components.css
@@ -36,719 +46,483 @@ inflight/
 ├── manifest.json               # PWA manifest
 ├── service-worker.js           # Offline support
 │
-├── lib/                        # External Libraries (No dependencies)
-│   ├── geodesy.js              # WGS84 + WMM2025 (geo calculations, mag variation)
-│   ├── wind-stations.js        # 254 wind reporting stations
+├── lib/                        # External Libraries
+│   ├── geodesy.js              # WGS84 + WMM2025
+│   ├── wind-stations.js        # Wind reporting stations
 │   └── wind-stations.csv       # Station data
 │
 ├── utils/                      # Shared Utilities (Pure functions)
-│   └── formatters.js           # Coordinate, frequency, distance, time formatters
+│   ├── formatters.js           # Coordinate, frequency, distance, time
+│   ├── checksum.js             # Data integrity
+│   └── compression.js          # Data compression
 │
-├── data/                       # DATA ENGINE (Data Layer)
-│   ├── data-manager.js         # IndexedDB orchestrator, CRUD operations
-│   ├── nasr-adapter.js         # FAA NASR data parser (US airports/navaids/airways)
-│   └── ourairports-adapter.js  # OurAirports parser (worldwide fallback)
+├── data/                       # DATA LAYER
+│   ├── core/
+│   │   ├── data-source.js      # Abstract DataSource (Template Method)
+│   │   ├── storage-adapter.js  # Abstract StorageAdapter interface
+│   │   └── cache-strategy.js   # Cache strategies (TTL, Permanent, Version)
+│   ├── storage/
+│   │   └── memory-storage.js   # In-memory StorageAdapter
+│   ├── repository.js           # DataRepository (L1/L2/L3 caching)
+│   ├── data-manager.js         # Legacy: IndexedDB orchestrator
+│   ├── nasr-adapter.js         # FAA NASR data parser
+│   └── ourairports-adapter.js  # OurAirports parser
 │
-├── compute/                    # COMPUTE ENGINE (Business Logic)
-│   ├── query-engine.js         # Spatial queries, search, autocomplete
-│   ├── route-engine.js         # Route orchestrator
+├── query/                      # QUERY LAYER
+│   ├── core/
+│   │   └── index-strategy.js   # Abstract IndexStrategy
+│   ├── indexes/
+│   │   ├── map-index.js        # O(1) key-value index
+│   │   ├── trie-index.js       # Prefix search index
+│   │   └── spatial-grid-index.js # Spatial queries
+│   └── query-engine-v2.js      # QueryEngineV2 (index coordinator)
+│
+├── compute/                    # COMPUTE LAYER
+│   ├── navigation.js           # Pure: distance, bearing, wind correction
+│   ├── terrain.js              # Pure: terrain analysis, clearance
+│   ├── weather.js              # Pure: METAR parsing, flight category
+│   ├── query-engine.js         # Legacy: spatial queries
+│   ├── route-engine.js         # Legacy: route orchestrator
 │   ├── route-lexer.js          # Tokenization
 │   ├── route-parser.js         # Parsing
 │   ├── route-resolver.js       # Semantic analysis
-│   ├── route-calculator.js     # Navigation calculations (distance, bearing, wind)
+│   ├── route-calculator.js     # Legacy: navigation math
 │   ├── route-expander.js       # Airway/STAR/DP expansion
-│   └── winds-aloft.js          # Wind data fetching & interpolation
+│   └── winds-aloft.js          # Wind data fetching
+│
+├── services/                   # SERVICE LAYER
+│   ├── route-service.js        # Route planning orchestration
+│   └── weather-service.js      # Weather data orchestration
 │
 ├── state/                      # STATE MANAGEMENT
-│   ├── flight-state.js         # Flight plan & navigation state, persistence
+│   ├── flight-state.js         # Flight plan state + persistence
 │   └── flight-tracker.js       # GPS tracking & logging
 │
-├── display/                    # DISPLAY LAYER (Presentation)
-│   ├── app.js                  # Application coordinator, event handlers
-│   ├── ui-controller.js        # Form inputs, navlog table, status display
-│   ├── map-display.js     # Vector map, GPS tracking, popups
+├── display/                    # DISPLAY LAYER
+│   ├── app.js                  # Application coordinator
+│   ├── ui-controller.js        # Form inputs, navlog, status
+│   ├── map-display.js          # Vector map, GPS tracking
 │   ├── checklist-controller.js # Interactive checklist
-│   └── stats-controller.js     # Flight statistics & monitoring
+│   └── stats-controller.js     # Flight statistics
 │
-└── docs/                       # Documentation
-    ├── user-guide/             # Pilot documentation
-    └── developer/              # Developer documentation
+└── tests/                      # Test suites
+    ├── test-runner.js          # Node.js + JSDOM runner
+    ├── index.html              # Browser test runner
+    └── test-*.js               # Test files
 ```
 
-## Three-Engine Model
+## Five-Layer Model
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│ DISPLAY LAYER (Presentation)                           │
-│ ┌─────────────────────────────────────────────────────┐ │
-│ │ app.js              - Orchestration, event handling │ │
-│ │ ui-controller.js    - Forms, tables, status         │ │
-│ │ map-display.js - Vector map, GPS visualization │ │
-│ │ checklist-controller.js - Interactive checklist     │ │
-│ │ stats-controller.js - Flight monitoring             │ │
-│ └─────────────────────────────────────────────────────┘ │
-│                         ↑ (read outputs)                │
-└─────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────┐
-│ STATE MANAGEMENT                                        │
-│ ┌─────────────────────────────────────────────────────┐ │
-│ │ flight-state.js    - Flight plan state              │ │
-│ │ flight-tracker.js  - GPS tracking & logging         │ │
-│ └─────────────────────────────────────────────────────┘ │
-│                    ↑ (read/write) ↓                     │
-└─────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────┐
-│ COMPUTE ENGINE (Business Logic)                        │
-│ ┌─────────────────────────────────────────────────────┐ │
-│ │ route-engine.js      - Route orchestrator           │ │
-│ │ route-lexer.js       - Tokenization                 │ │
-│ │ route-parser.js      - Parsing                      │ │
-│ │ route-resolver.js    - Semantic analysis            │ │
-│ │ query-engine.js      - Spatial queries, search      │ │
-│ │ route-calculator.js  - Distance, bearing, wind calc │ │
-│ │ route-expander.js    - Airway/STAR/DP expansion     │ │
-│ │ winds-aloft.js       - Wind fetch & interpolation   │ │
-│ └─────────────────────────────────────────────────────┘ │
-│                    ↑ (query) ↓ (results)                │
-└─────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────┐
-│ DATA ENGINE (Data Layer)                                │
-│ ┌─────────────────────────────────────────────────────┐ │
-│ │ data-manager.js         - IndexedDB, caching        │ │
-│ │ nasr-adapter.js         - FAA NASR parser           │ │
-│ │ ourairports-adapter.js  - OurAirports parser        │ │
-│ └─────────────────────────────────────────────────────┘ │
-│                    (CRUD operations only)               │
-└─────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│ DISPLAY LAYER (Presentation)                                │
+│ app.js, ui-controller.js, map-display.js                    │
+│ - Renders UI, handles events                                │
+│ - Calls Services only (not Data/Query directly)             │
+└─────────────────────────────────────────────────────────────┘
+                            │ calls
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│ SERVICE LAYER (Orchestration)                               │
+│ route-service.js, weather-service.js                        │
+│ - Orchestrates operations across layers                     │
+│ - Entry point for all business operations                   │
+│ - Combines Query + Compute results                          │
+└─────────────────────────────────────────────────────────────┘
+                            │ uses
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│ COMPUTE LAYER (Pure Functions)                              │
+│ navigation.js, terrain.js, weather.js                       │
+│ - Stateless calculations                                    │
+│ - NO fetching, NO caching, NO storage                       │
+│ - Input → Output only (easily testable)                     │
+└─────────────────────────────────────────────────────────────┘
+                            │ uses
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│ QUERY LAYER (Indexes & Search)                              │
+│ query-engine-v2.js, indexes/*                               │
+│ - Owns all indexes (Map, Trie, Spatial)                     │
+│ - Spatial queries, search, lookups                          │
+│ - Requests data from Repository                             │
+└─────────────────────────────────────────────────────────────┘
+                            │ uses
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│ DATA LAYER (Storage & Retrieval)                            │
+│ repository.js, data-source.js, storage-adapter.js           │
+│ - Single source of truth for all data                       │
+│ - L1 (memory) / L2 (persistent) / L3 (source) caching       │
+│ - NO business logic, NO indexing                            │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ## Data Flow
 
-### 1. Data Loading Phase (Bootstrap)
-
-```
-User clicks "LOAD DATABASE"
-    ↓
-app.js (handleLoadData)
-    ↓
-DataManager.loadData()
-    ↓
-NASRAdapter.loadNASRData() + OurAirportsAdapter.loadOurAirportsData()
-    ↓
-IndexedDB (store parsed data)
-    ↓
-QueryEngine.init(data references)
-    ↓
-UIController.showDataInfo()
-```
-
-### 2. Planning Phase (Pre-Flight)
+### Route Planning Flow
 
 ```
 User enters route + options
     ↓
-app.js (handleCalculateRoute)
+Display: app.js calls RouteService.planRoute()
     ↓
-RouteEngine.processRoute()
+Service: RouteService orchestrates:
+    ├── Query: Resolve waypoints via QueryEngineV2
+    ├── Compute: Calculate route via Navigation.calculateRoute()
+    ├── Data: Get MORA data via DataRepository
+    └── Compute: Analyze terrain via Terrain.analyzeProfile()
     ↓
-RouteLexer.tokenize() → RouteParser.parse() → RouteResolver.resolve()
+Service: Returns combined result
     ↓
-RouteExpander.expandAirways()       ← expands "V25" to waypoint sequence
+Display: UIController.displayResults() renders navlog
     ↓
-WindsAloft.fetchWindData()          ← fetches real-time winds (if enabled)
-    ↓
-RouteCalculator.calculateRoute()    ← computes legs, wind correction, fuel
-    ↓
-FlightState.updateFlightPlan()      ← stores result
-    ↓
-FlightState.saveToStorage()         ← auto-save for crash recovery
-    ↓
-UIController.displayResults()       ← render navlog table
-    ↓
-MapDisplay.displayMap()        ← render vector map
+Display: MapDisplay.displayMap() renders vector map
 ```
 
-### 3. Navigation Phase (In-Flight)
+### Weather Lookup Flow
 
 ```
-App initialization (automatic)
+User requests weather
     ↓
-MapDisplay.startGPSTracking()
+Display: calls WeatherService.getMETAR()
     ↓
-navigator.geolocation.watchPosition() (1Hz updates)
+Service: WeatherService orchestrates:
+    ├── Data: Get raw METAR via DataRepository
+    └── Compute: Parse via Weather.parseMETAR()
     ↓
-Position callback → currentPosition
+Service: Returns parsed METAR
     ↓
-FlightTracker.updateFlightState(groundSpeed)  ← detect takeoff/landing at 40kt threshold
-    ↓
-FlightTracker.recordGPSPoint()                ← record GPS track point
-    ↓
-MapDisplay.updateLiveNavigation()        ← update map & navigation display
-    ↓
-RouteCalculator.calculateDistance/Bearing()   ← compute to next waypoint
-    ↓
-FlightState.updateNavigation()                ← store real-time state
-    ↓
-MapDisplay.generateMap()                 ← redraw with GPS position
+Display: Renders weather information
 ```
 
-## Map Projection System
+## Design Patterns
 
-### Orthographic Projection
-
-IN-FLIGHT uses **orthographic projection** for the moving map display. This is a perspective projection from an infinite distance that creates a planar view of the sphere.
-
-**Implementation:** [map-display.js:470-480](../display/map-display.js#L470-L480)
+### Strategy Pattern (Indexes & Cache)
 
 ```javascript
-// Orthographic projection formulas
-const projectToSphere = (lat, lon) => {
-    const latRad = lat * Math.PI / 180;
-    const lonRad = lon * Math.PI / 180;
-    const dLon = lonRad - centerLonRad;
+// query/core/index-strategy.js - Abstract base
+class IndexStrategy {
+    build(data) { throw new Error('not implemented'); }
+    query(params) { throw new Error('not implemented'); }
+    // ...
+}
 
-    const x = Math.cos(latRad) * Math.sin(dLon);
-    const y = Math.cos(centerLatRad) * Math.sin(latRad) -
-              Math.sin(centerLatRad) * Math.cos(latRad) * Math.cos(dLon);
+// query/indexes/map-index.js - Concrete implementation
+class MapIndex extends IndexStrategy {
+    build(data) { /* Map-based implementation */ }
+    query({ key }) { return this._map.get(key); }
+}
 
-    return { x, y };
-};
+// Usage: Swap strategies without changing QueryEngine
+queryEngine.registerIndex('airports', new MapIndex());
+queryEngine.registerIndex('airports_search', new TrieIndex());
 ```
 
-**Mathematical Formula:**
-```
-x = cos(lat) * sin(dLon)
-y = cos(centerLat) * sin(lat) - sin(centerLat) * cos(lat) * cos(dLon)
-
-where:
-  dLon = lon - centerLon (both in radians)
-  centerLat, centerLon = projection center (middle of visible bounds)
-```
-
-### Coordinate Transformation Pipeline
-
-The system converts geographic coordinates (lat/lon) to SVG pixel coordinates through a multi-step process:
-
-**1. Project to sphere** (spherical → projected plane)
-```javascript
-const {x, y} = projectToSphere(lat, lon);
-```
-
-**2. Scale and center** (projected plane → SVG viewport)
-```javascript
-const screenX = width/2 + (x - centerX) * scale;
-const screenY = height/2 - (y - centerY) * scale;  // Y-axis inverted for SVG
-```
-
-**3. Apply pan offset** (SVG viewport → panned view)
-```javascript
-<g id="mapContent" transform="translate(${panOffset.x}, ${panOffset.y})">
-```
-
-**Scale Calculation:** [map-display.js:500-507](../display/map-display.js#L500-L507)
-
-The scale factor ensures all waypoints fit in the viewport with 5% padding:
+### Template Method Pattern (Data Sources)
 
 ```javascript
-const scaleX = width / (projRangeX * (1 + 2 * padding));
-const scaleY = height / (projRangeY * (1 + 2 * padding));
-const baseScale = Math.min(scaleX, scaleY);
-const scale = baseScale * zoomLevel; // Apply pinch zoom
-```
-
-### Aspect Ratio Handling
-
-IN-FLIGHT adjusts for latitude-dependent longitude distances:
-
-**Implementation:** [map-display.js:422-429](../display/map-display.js#L422-L429)
-
-```javascript
-// One degree of longitude varies by latitude: 1° lon = 60nm * cos(latitude)
-const avgLat = (bounds.minLat + bounds.maxLat) / 2;
-const latToLonRatio = Math.cos(avgLat * Math.PI / 180);
-const physicalLonRange = lonRange * latToLonRatio;
-const routeAspectRatio = physicalLonRange / latRange;
-```
-
-SVG dimensions adapt to route orientation:
-- **Wide routes** (E-W): 1400×700px (landscape)
-- **Tall routes** (N-S): 700×1400px (portrait)
-- **Square routes**: 1400×980px (balanced)
-
-### Pan and Zoom
-
-**Zoom Range:** 1.0x (full view) to 3.0x (detailed view)
-
-**Pinch-to-Zoom:** [map-display.js:1164-1175](../display/map-display.js#L1164-L1175)
-```javascript
-const currentDistance = getPinchDistance(e.touches);
-const scale = currentDistance / initialPinchDistance;
-const newZoomLevel = Math.max(1.0, Math.min(3.0, zoomLevel * scale));
-```
-
-**Pan Limits:** [map-display.js:1142-1149](../display/map-display.js#L1142-L1149)
-```javascript
-// Allow panning proportional to zoom level
-const maxPanX = zoomLevel * svgDimensions.width / 2;
-const maxPanY = zoomLevel * svgDimensions.height / 2;
-
-panOffset.x = Math.max(-maxPanX, Math.min(maxPanX, panOffset.x));
-panOffset.y = Math.max(-maxPanY, Math.min(maxPanY, panOffset.y));
-```
-
-At 2x zoom, the user can pan by the full viewport width to explore all areas.
-
-## GPS Tracking System
-
-### Geolocation API Configuration
-
-IN-FLIGHT uses `navigator.geolocation.watchPosition()` for continuous GPS tracking.
-
-**Implementation:** [map-display.js:44-90](../display/map-display.js#L44-L90)
-
-```javascript
-watchId = navigator.geolocation.watchPosition(
-    (position) => {
-        currentPosition = {
-            lat: position.coords.latitude,
-            lon: position.coords.longitude,
-            accuracy: position.coords.accuracy,          // horizontal accuracy (meters)
-            altitudeAccuracy: position.coords.altitudeAccuracy,  // vertical accuracy (meters)
-            altitude: position.coords.altitude,          // meters MSL
-            heading: position.coords.heading,            // true heading (degrees)
-            speed: position.coords.speed                 // m/s
-        };
-        // ... feed to FlightTracker
-    },
-    (error) => { console.error('[VectorMap] GPS error:', error); },
-    {
-        enableHighAccuracy: true,  // Use GPS instead of network location when available
-        maximumAge: 1000,          // Accept cached position up to 1 second old
-        timeout: 5000              // Wait 5 seconds for position before calling error callback
-    }
-);
-```
-
-**Options Explained:**
-- `enableHighAccuracy: true`: Requests GPS instead of network triangulation
-- `maximumAge: 1000`: Allows 1-second-old cached positions for performance
-- `timeout: 5000`: 5-second timeout prevents indefinite waiting
-
-### GPS vs Network Location
-
-The Geolocation API does not distinguish between GPS and network location. IN-FLIGHT relies on:
-
-1. **`enableHighAccuracy: true` flag**: Requests GPS when available
-2. **Accuracy thresholds**: Infers signal quality from `position.coords.accuracy`
-
-**Accuracy Color Coding:** [map-display.js:1000-1035](../display/map-display.js#L1000-L1035)
-
-| Accuracy | Color | Likely Source |
-|----------|-------|---------------|
-| < 50m (164ft) | Green | GPS |
-| 50-100m (164-328ft) | Yellow | Degraded GPS or WiFi |
-| > 100m (328ft) | Red | Network triangulation |
-
-### Flight State Detection
-
-IN-FLIGHT automatically detects takeoff and landing using a **40-knot speed threshold**.
-
-**Implementation:** [flight-tracker.js:41-87](../state/flight-tracker.js#L41-L87)
-
-```javascript
-const TAKEOFF_SPEED_THRESHOLD = 40; // knots
-const MIN_SPEED_FOR_FLIGHT = 40;    // knots
-
-function updateFlightState(groundSpeed) {
-    const now = Date.now();
-
-    // Detect takeoff (>40kt)
-    if (!isInFlight && groundSpeed >= TAKEOFF_SPEED_THRESHOLD) {
-        isInFlight = true;
-        takeoffTime = now;
-        if (recordingMode === 'auto') {
-            startRecording(); // Auto-start recording
+// data/core/data-source.js
+class DataSource {
+    // Template method - DO NOT override
+    async load() {
+        const raw = await this.fetch();       // Hook 1
+        const parsed = await this.parse(raw);  // Hook 2
+        if (!await this.validate(parsed)) {    // Hook 3
+            throw new Error('Validation failed');
         }
+        return await this.transform(parsed);   // Hook 4
     }
 
-    // Detect landing (<40kt for 10+ seconds)
-    if (isInFlight && groundSpeed < MIN_SPEED_FOR_FLIGHT) {
-        if (lastUpdateTime && (now - lastUpdateTime) > 10000) { // 10 seconds
-            isInFlight = false;
-            if (recordingMode === 'auto') {
-                stopRecording(); // Auto-stop and save track
-            }
+    // Hooks - Override in subclasses
+    async fetch() { throw new Error('not implemented'); }
+    async parse(raw) { throw new Error('not implemented'); }
+    async validate(data) { return true; }  // Optional
+    async transform(data) { return data; } // Optional
+}
+```
+
+### Repository Pattern (Data Access)
+
+```javascript
+// data/repository.js
+class DataRepository {
+    async get(sourceName, key) {
+        // L1: Memory cache
+        if (cache.memory.has(key)) return cache.memory.get(key);
+
+        // L2: Persistent storage
+        if (this._storage) {
+            const stored = await this._storage.get(key);
+            if (stored && cache.strategy.isValid(stored)) return stored;
         }
+
+        // L3: Source fetch
+        const data = await source.load();
+        // ... cache and return
     }
 }
 ```
 
-**State Machine:**
-- **ON GROUND → IN FLIGHT**: `groundSpeed >= 40 knots`
-- **IN FLIGHT → ON GROUND**: `groundSpeed < 40 knots` for 10+ seconds
-
-The 10-second requirement prevents false landing detection from temporary speed dips (e.g., strong headwinds, slow flight).
-
-### GPS Track Recording
-
-**Track Point Structure:** [flight-tracker.js:111-139](../state/flight-tracker.js#L111-L139)
+### Dependency Injection (Services)
 
 ```javascript
-const point = {
-    timestamp: Date.now(),              // Unix timestamp (milliseconds)
-    lat: position.lat,                  // Decimal degrees
-    lon: position.lon,                  // Decimal degrees
-    alt: position.altitude || null,     // meters MSL
-    speed: position.speed || null,      // knots
-    heading: position.heading || null,  // true heading (degrees)
-    accuracy: position.accuracy || null,          // horizontal accuracy (meters)
-    verticalAccuracy: position.verticalAccuracy || null  // vertical accuracy (meters)
-};
+// services/route-service.js
+class RouteService {
+    constructor({ queryEngine, dataRepository }) {
+        this._query = queryEngine;      // Injected
+        this._repo = dataRepository;    // Injected
+    }
 
-gpsTrack.push(point);
+    async planRoute(routeString, options) {
+        // Uses injected dependencies
+        const waypoints = await this._resolveWaypoints(routeString);
+        // ...
+    }
+}
+
+// Testable with mocks:
+const service = new RouteService({
+    queryEngine: mockQueryEngine,
+    dataRepository: mockRepository
+});
 ```
 
-**Storage:** localStorage under key `'flight_tracks'` [flight-tracker.js:187-213](../state/flight-tracker.js#L187-L213)
+## Pure Functions (Compute Layer)
 
-**GeoJSON Export:** [flight-tracker.js:253-282](../state/flight-tracker.js#L253-L282)
+All Compute layer functions are **pure** - same input always produces same output:
 
 ```javascript
-const geojson = {
-    type: "Feature",
-    properties: {
-        name: `Flight Track ${new Date(track.timestamp).toLocaleString()}`,
-        timestamp: track.timestamp,
-        date: track.date,
-        takeoffTime: track.takeoffTime,
-        landingTime: track.landingTime,
-        flightDuration: track.flightDuration,
-        pointCount: track.pointCount
+// compute/navigation.js
+const Navigation = {
+    // Pure: No side effects, no state, no external dependencies
+    calculateDistance(lat1, lon1, lat2, lon2) {
+        return Geodesy.vincentyDistance(lat1, lon1, lat2, lon2);
     },
-    geometry: {
-        type: "LineString",
-        coordinates: track.points.map(p => [p.lon, p.lat, p.alt || 0])  // [lon, lat, alt]
+
+    calculateWindCorrection(course, tas, windDir, windSpeed) {
+        // Pure math - no fetching, no caching
+        const wca = Math.asin((windSpeed / tas) * Math.sin(windRad - courseRad));
+        // ...
+        return { heading, groundSpeed, windCorrectionAngle };
     }
 };
 ```
 
-**GeoJSON coordinates use `[longitude, latitude, altitude]` order** (GeoJSON standard), not `[lat, lon]`.
+**Benefits:**
+- Easily testable (no mocks needed)
+- Predictable behavior
+- Thread-safe
+- Cacheable results
 
-## State Management
-
-### Flight Plan State (window.FlightState)
-
-Managed by [state/flight-state.js](../state/flight-state.js):
+## Application Bootstrap
 
 ```javascript
-flightPlan = {
-    routeString: "KJFK RBV Q430 AIR CLPRR3 KCMH",
-    waypoints: [...],
-    legs: [...],
-    totalDistance: 432.1,  // nautical miles
-    totalTime: 81.3,       // minutes
-    fuelStatus: {...},
-    options: {...},
-    timestamp: 1699564823000
+// main.js
+async function bootstrap() {
+    // 1. Create storage
+    const storage = new MemoryStorage();
+
+    // 2. Create repository with sources
+    const repository = new DataRepository()
+        .setStorage(storage)
+        .registerSource('airports', airportSource, new TTLStrategy(7 * 24 * 60 * 60 * 1000));
+
+    // 3. Create query engine with indexes
+    const queryEngine = new QueryEngineV2()
+        .registerIndex('airports', new MapIndex())
+        .registerIndex('airports_search', new TrieIndex())
+        .registerIndex('airports_spatial', new SpatialGridIndex());
+
+    // 4. Create services with injected dependencies
+    const routeService = new RouteService({ queryEngine, dataRepository: repository });
+    const weatherService = new WeatherService({ dataRepository: repository });
+
+    // 5. Export to window.App
+    window.App = {
+        repository,
+        queryEngine,
+        routeService,
+        weatherService,
+        Navigation: window.Navigation,
+        Terrain: window.Terrain,
+        Weather: window.Weather,
+        architecture: 'v3',
+        version: '3.0.0'
+    };
 }
 ```
 
-**Lifecycle**:
-- **Created**: When user calculates route
-- **Persisted**: Auto-saved to `localStorage` for crash recovery
-- **Cleared**: When user clicks "CLEAR" or loads new route
+## Legacy Compatibility
 
-### Navigation State (window.FlightState)
+v3 coexists with legacy code during migration:
 
+| v3 Component | Legacy Equivalent | Status |
+|--------------|-------------------|--------|
+| `DataRepository` | `DataManager` | Parallel |
+| `QueryEngineV2` | `QueryEngine` | Parallel |
+| `Navigation` | `RouteCalculator` | Parallel |
+| `RouteService` | `RouteEngine` | Parallel |
+| `WeatherService` | `WeatherAPI` | Parallel |
+
+Access v3 via `window.App`:
 ```javascript
-navigation = {
-    isActive: false,
-    currentPosition: {lat, lon, heading, speed, accuracy},
-    activeLegIndex: 0,
-    distanceToNext: 12.3,    // nautical miles
-    headingToNext: 045,      // degrees
-    etaNext: Date,
-    etaDest: Date,
-    groundSpeed: 110         // knots
-}
+// v3 way
+const airport = window.App.queryEngine.getAirport('KSFO');
+const route = await window.App.routeService.planRoute('KSFO KLAX');
+
+// Legacy way (still works)
+const airport = DataManager.getAirport('KSFO');
+const route = await RouteEngine.processRoute('KSFO KLAX');
 ```
 
-**Lifecycle**:
-- **Created**: When GPS tracking starts (automatic)
-- **Updated**: Every GPS position update (~1 Hz)
-- **Cleared**: Never explicitly cleared (updates continuously)
+## Index Types
 
-### GPS Tracking State (window.FlightTracker)
+| Index | Use Case | Complexity |
+|-------|----------|------------|
+| `MapIndex` | Exact key lookup | O(1) |
+| `TrieIndex` | Prefix search / autocomplete | O(k) where k = prefix length |
+| `SpatialGridIndex` | Nearby / in-bounds queries | O(n/g²) where g = grid cells |
 
-Managed by [state/flight-tracker.js](../state/flight-tracker.js):
+## Cache Strategies
 
-```javascript
-{
-    isInFlight: false,           // State: ON GROUND or IN FLIGHT
-    takeoffTime: null,           // Unix timestamp
-    flightDuration: 0,           // seconds
-    isRecording: false,          // Recording active (auto or manual)
-    recordingMode: 'auto',       // 'auto' or 'manual'
-    gpsTrack: [],                // Array of GPS points
-    totalDistance: 0             // nautical miles flown
-}
-```
+| Strategy | Use Case | Behavior |
+|----------|----------|----------|
+| `TTLStrategy` | Weather data | Expires after duration |
+| `PermanentStrategy` | Terrain data | Never expires |
+| `VersionStrategy` | Aviation data | Expires on version change |
 
 ## Module Communication
 
 ### Hybrid Pattern (window.X Globals)
 
-All modules export to `window` for universal browser compatibility:
+All modules export to `window` for browser compatibility:
 
 ```javascript
-// Each module exports a namespace
-window.DataManager = { ... };
-window.RouteEngine = { ... };
-window.RouteCalculator = { ... };
-window.QueryEngine = { ... };
-window.FlightState = { ... };
-window.FlightTracker = { ... };
-window.UIController = { ... };
-window.MapDisplay = { ... };
-window.Utils = { ... };
+// Each layer exports namespaces
+window.DataRepository = DataRepository;
+window.QueryEngineV2 = QueryEngineV2;
+window.Navigation = Navigation;
+window.RouteService = RouteService;
+
+// v3 components via App
+window.App = { repository, queryEngine, routeService, ... };
 ```
 
-**Benefits**:
-- ✅ No build step required
-- ✅ Works with `file://` protocol
-- ✅ No CORS issues during development
-- ✅ Service worker compatible
-- ✅ Easy debugging (modules visible in console)
+**Benefits:**
+- No build step required
+- Works with `file://` protocol
+- Service worker compatible
+- Easy debugging (visible in console)
 
-**Trade-offs**:
-- ❌ Manual dependency management (order matters in HTML)
-- ❌ No tree-shaking
-- ❌ Global namespace pollution (mitigated by namespacing)
-
-### Dependency Graph
-
-```
-Display Layer → State Management → Compute Engine → Data Engine
-     ↓               ↓                    ↓               ↓
-  (events)      (read/write)         (queries)       (CRUD)
-                                         ↓
-                                       Utils
-```
-
-**Loading Order** (see [index.html](../index.html)):
-1. External libraries (geodesy, wind-stations)
-2. Utilities (formatters)
-3. Data Engine (adapters, data-manager)
-4. Compute Engine (route-lexer, parser, resolver, expander, calculator, query, winds)
-5. State Management (flight-state, flight-tracker)
-6. Display Layer (ui-controller, checklist-controller, stats-controller, map-display, app)
-
-## Key Design Patterns
-
-### 1. Pure Data Engine (CRUD Only)
-
-`data-manager.js` provides **only** data access:
-
-```javascript
-window.DataManager = {
-    getAirport(code),          // Returns raw object or null
-    getNavaid(ident),          // Returns raw object or null
-    getFix(name),              // Returns raw object or null
-    getAllAirports(),          // Returns Map<code, airport>
-    getAllNavaids(),           // Returns Map<ident, navaid>
-    // NO business logic (queries, searches, calculations)
-};
-```
-
-### 2. Compute Engine Receives Data References
-
-`query-engine.js` is initialized with references to data:
-
-```javascript
-// In data-manager.js after loading:
-QueryEngine.init(
-    airportsData,   // Map reference
-    navaidsData,    // Map reference
-    fixesData,      // Map reference
-    tokenTypeMap    // Map reference
-);
-
-// QueryEngine can now query without calling DataManager
-```
-
-### 3. State-Driven UI Updates
-
-UI components are stateless; they render from `FlightState`:
-
-```javascript
-// app.js
-async function handleCalculateRoute() {
-    const result = await RouteEngine.processRoute(...);
-
-    // Update centralized state
-    FlightState.updateFlightPlan(result);
-    FlightState.saveToStorage();
-
-    // Display components read from state
-    UIController.displayResults();     // Reads FlightState.getFlightPlan()
-    MapDisplay.displayMap();      // Reads FlightState.getFlightPlan()
-}
-```
-
-### 4. Event-Driven Architecture
-
-`app.js` coordinates between engines via event handlers:
-
-```javascript
-setupEventListeners() {
-    calculateBtn.addEventListener('click', handleCalculateRoute);
-    clearRouteBtn.addEventListener('click', handleClearRoute);
-    // ... etc
-}
-```
+**Trade-offs:**
+- Manual dependency management (order matters in HTML)
+- Global namespace (mitigated by namespacing)
 
 ## Performance Optimizations
 
-### 1. Incremental Data Loading
+### Three-Level Caching (DataRepository)
 
-NASR and OurAirports load in parallel using `Promise.allSettled()`:
-
-```javascript
-const results = await Promise.allSettled([
-    NASRAdapter.loadNASRData(),
-    OurAirportsAdapter.loadOurAirportsData()
-]);
+```
+L1: Memory Map (fastest)
+    ↓ miss
+L2: IndexedDB/LocalStorage (persistent)
+    ↓ miss
+L3: Network fetch (slowest)
 ```
 
-### 2. Token Type Map (O(1) Lookups)
-
-Pre-built index for autocomplete and route parsing:
+### Spatial Grid Index
 
 ```javascript
-tokenTypeMap = new Map([
-    ['KSFO', 'airport'],
-    ['OAK', 'navaid'],
-    ['V25', 'airway'],
-    // ... 60,000+ entries
-]);
-
-// Fast lookup
-QueryEngine.getTokenType('KSFO');  // O(1) → 'airport'
+// O(n/g²) queries instead of O(n) full scan
+const index = new SpatialGridIndex(1.0); // 1-degree grid
+index.build(airports); // 70,000 airports
+index.query({ lat: 37.5, lon: -122.5, radiusNM: 50 }); // Fast!
 ```
 
-### 3. Spatial Query Optimization
+### SVG Transform for Pan/Zoom
 
-Route-based queries check distance to leg midpoints (not full segments):
-
-```javascript
-for (const leg of legs) {
-    const distToFrom = calculateDistance(..., leg.from);
-    const distToTo = calculateDistance(..., leg.to);
-
-    const midLat = (leg.from.lat + leg.to.lat) / 2;
-    const midLon = (leg.from.lon + leg.to.lon) / 2;
-    const distToMid = calculateDistance(..., midLat, midLon);
-
-    minDistance = Math.min(distToFrom, distToTo, distToMid);
-}
-```
-
-### 4. SVG Transform for Pan/Zoom
-
-Map panning uses transform attributes instead of regenerating SVG:
-
-```javascript
-// Wrap map content in transform group
-svg += `<g id="mapContent" transform="translate(${panOffset.x}, ${panOffset.y})">`;
-
-// On pan: only update transform
-const mapContent = document.getElementById('mapContent');
-mapContent.setAttribute('transform', `translate(${newX}, ${newY})`);
-```
-
-## Persistence Strategy
-
-| Data Type | Storage | Lifespan | Size |
-|-----------|---------|----------|------|
-| Aviation database | IndexedDB | 7 days (cache) | ~50MB |
-| Token type map | IndexedDB | 7 days (cache) | ~2MB |
-| Flight plan (crash recovery) | LocalStorage | Session | ~50KB |
-| GPS tracks | LocalStorage | Permanent | ~100KB per track |
-| Checklist state | LocalStorage | Permanent | ~5KB |
+Map panning uses transform attributes instead of regenerating SVG.
 
 ## Testing Strategy
 
-See [Testing & Deployment](06-testing-deployment.md) for comprehensive testing documentation.
-
-**Test Coverage**:
-- `utils/formatters.js`: 100% ✅
-- `state/flight-state.js`: 95% ✅
-- `compute/route-parser.js`: 90% ✅
-- `compute/route-expansion.js`: 85% ✅
-
-## Debugging Tips
-
-### 1. Check Module Load Order
+### Pure Functions (No Mocks)
 
 ```javascript
-// In browser console
-Object.keys(window).filter(k =>
-    ['DataManager', 'RouteEngine', 'FlightState', 'FlightTracker', 'UIController', 'MapDisplay'].includes(k)
-);
-// Should return all module names if loaded correctly
+// Compute layer - test directly
+it('calculates distance correctly', () => {
+    const result = Navigation.calculateDistance(37.62, -122.38, 33.94, -118.41);
+    assert.isTrue(result > 288 && result < 300);
+});
 ```
 
-### 2. Inspect Flight State
+### Services (Mock Dependencies)
 
 ```javascript
-FlightState.getFlightPlan();        // See current route
-FlightState.getNavigationState();   // See GPS tracking state
-FlightTracker.getFlightState();     // See flight tracking state
-FlightTracker.getCurrentTrack();    // See GPS track points
+// Service layer - inject mocks
+const service = new RouteService({
+    queryEngine: { getAirport: () => mockAirport },
+    dataRepository: { get: () => Promise.resolve(mockData) }
+});
+const result = await service.planRoute('KSFO KLAX');
 ```
 
-### 3. Query Engine Diagnostics
+### Integration (Real Components)
 
 ```javascript
-QueryEngine.searchWaypoints('SFO', 10);  // Test autocomplete
-QueryEngine.getTokenType('V25');          // Test token lookup
+// Test component interactions
+const qe = new QueryEngineV2()
+    .registerIndex('airports', new MapIndex());
+qe._indexes.get('airports').build(airports);
+
+const service = new RouteService({ queryEngine: qe, ... });
+const result = await service.planRoute('KSFO KLAX');
 ```
 
-### 4. Data Engine Integrity
+## Debugging
+
+### Access v3 Components
 
 ```javascript
-DataManager.getDataStats();  // Check counts
-DataManager.getFileStatus(); // Check individual files
+// Browser console
+window.App.queryEngine.getStats();
+window.App.repository._sources;
+window.App.routeService.getAirport('KSFO');
 ```
 
-### 5. GPS Tracking Diagnostics
+### Check Architecture Version
 
 ```javascript
-MapDisplay.getCurrentPosition();  // See current GPS position
-FlightTracker.getFlightState();       // See flight state (in flight or on ground)
+window.App.architecture; // 'v3'
+window.App.version;      // '3.0.0'
 ```
 
-## Contributing Guidelines
+### Test Pure Functions
+
+```javascript
+Navigation.calculateDistance(37.62, -122.38, 33.94, -118.41); // ~294nm
+Weather.getFlightCategory(10, 5000);  // 'VFR'
+Terrain.checkClearance({ maxMORA: 6000 }, 8000); // { status: 'OK' }
+```
+
+## Contributing
 
 ### Adding New Features
 
-1. **Identify the right engine**: Data, Compute, State, or Display?
-2. **Check dependencies**: Does it need new data? New calculations?
-3. **Update state if needed**: Does it require persistent state?
-4. **Write pure functions**: Avoid side effects in utilities
-5. **Document exports**: Add to `window.X` exports section
-6. **Add tests**: Write tests for new functionality
+1. **Identify the layer**: Data, Query, Compute, Service, or Display?
+2. **Use patterns**: Strategy for variants, Template for workflows
+3. **Keep Compute pure**: No side effects in calculations
+4. **Inject dependencies**: Services receive dependencies via constructor
+5. **Write tests**: Pure functions first, then integration
 
 ### Code Style
 
 - **Naming**: camelCase for functions, UPPER_SNAKE_CASE for constants
-- **Comments**: JSDoc for public functions, inline for complex logic
-- **Formatting**: 4-space indentation, single quotes for strings
+- **Comments**: JSDoc for public functions
+- **Formatting**: 4-space indentation, single quotes
 - **Console logs**: Prefix with module name `[ModuleName]`
 
 ---
 
-**Last Updated**: January 2025
-**Architecture Version**: 3-Engine v2.0
+**Last Updated**: November 2025
+**Architecture Version**: v3.0.0
