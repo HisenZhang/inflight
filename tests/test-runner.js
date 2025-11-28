@@ -31,12 +31,16 @@ const files = {
     checksum: fs.readFileSync(path.join(projectRoot, 'utils/checksum.js'), 'utf8'),
     compression: fs.readFileSync(path.join(projectRoot, 'utils/compression.js'), 'utf8'),
 
+    // Source files - Data
+    dataManager: fs.readFileSync(path.join(projectRoot, 'data/data-manager.js'), 'utf8'),
+
     // Source files - State
     state: fs.readFileSync(path.join(projectRoot, 'state/flight-state.js'), 'utf8'),
     flightTracker: fs.readFileSync(path.join(projectRoot, 'state/flight-tracker.js'), 'utf8'),
 
     // Source files - Compute
     weatherAPI: fs.readFileSync(path.join(projectRoot, 'compute/weather-api.js'), 'utf8'),
+    queryEngine: fs.readFileSync(path.join(projectRoot, 'compute/query-engine.js'), 'utf8'),
     routeLexer: fs.readFileSync(path.join(projectRoot, 'compute/route-lexer.js'), 'utf8'),
     routeParser: fs.readFileSync(path.join(projectRoot, 'compute/route-parser.js'), 'utf8'),
     routeResolver: fs.readFileSync(path.join(projectRoot, 'compute/route-resolver.js'), 'utf8'),
@@ -59,7 +63,9 @@ const files = {
     testRouteCalculator: fs.readFileSync(path.join(__dirname, 'test-route-calculator.js'), 'utf8'),
     testFlightTracker: fs.readFileSync(path.join(__dirname, 'test-flight-tracker.js'), 'utf8'),
     testCompression: fs.readFileSync(path.join(__dirname, 'test-compression.js'), 'utf8'),
-    testTerrainAnalyzer: fs.readFileSync(path.join(__dirname, 'test-terrain-analyzer.js'), 'utf8')
+    testTerrainAnalyzer: fs.readFileSync(path.join(__dirname, 'test-terrain-analyzer.js'), 'utf8'),
+    testQueryEngine: fs.readFileSync(path.join(__dirname, 'test-query-engine.js'), 'utf8'),
+    testDataManager: fs.readFileSync(path.join(__dirname, 'test-data-manager.js'), 'utf8')
 };
 
 // Create a minimal DOM environment
@@ -88,16 +94,20 @@ global.localStorage = localStorageMock;
 window.localStorage = localStorageMock;
 
 // Mock URL and Blob for export tests
-global.URL = {
-    createObjectURL: () => 'blob:mock',
-    revokeObjectURL: () => {}
-};
+class MockURL {
+    static createObjectURL() { return 'blob:mock'; }
+    static revokeObjectURL() {}
+}
+global.URL = MockURL;
+window.URL = MockURL;
+
 global.Blob = class Blob {
     constructor(parts, options) {
         this.parts = parts;
         this.options = options;
     }
 };
+window.Blob = global.Blob;
 
 // Mock TextEncoder/TextDecoder for compression tests
 const { TextEncoder, TextDecoder } = require('util');
@@ -153,12 +163,16 @@ let testResults = {
             ${wrapInIIFE(files.checksum)}
             ${wrapInIIFE(files.compression)}
 
+            // Data (must be before query-engine)
+            ${wrapInIIFE(files.dataManager)}
+
             // State
             ${wrapInIIFE(files.state)}
             ${wrapInIIFE(files.flightTracker)}
 
             // Compute (order matters for dependencies)
             ${wrapInIIFE(files.weatherAPI)}
+            ${wrapInIIFE(files.queryEngine)}
             ${wrapInIIFE(files.routeLexer)}
             ${wrapInIIFE(files.routeParser)}
             ${wrapInIIFE(files.routeResolver)}
@@ -182,6 +196,8 @@ let testResults = {
             ${wrapInIIFE(files.testFlightTracker)}
             ${wrapInIIFE(files.testCompression)}
             ${wrapInIIFE(files.testTerrainAnalyzer)}
+            ${wrapInIIFE(files.testQueryEngine)}
+            ${wrapInIIFE(files.testDataManager)}
         `;
 
         // Evaluate in window context
