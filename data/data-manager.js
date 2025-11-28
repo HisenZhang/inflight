@@ -649,17 +649,19 @@ async function checkCachedData() {
             if (cachedData.version >= 12 && cachedData.checksums) {
                 console.log('[DataManager] Verifying cached data structures...');
 
+                // Use fallbacks to prevent TypeError if any field is undefined
+                // This can happen with corrupted or partially saved cache
                 const dataToVerify = {
-                    airports: new Map(cachedData.airports),
-                    iataToIcao: new Map(cachedData.iataToIcao),
-                    navaids: new Map(cachedData.navaids),
-                    fixes: new Map(cachedData.fixes),
-                    frequencies: new Map(cachedData.frequencies),
-                    runways: new Map(cachedData.runways),
-                    airways: new Map(cachedData.airways),
-                    stars: new Map(cachedData.stars),
-                    dps: new Map(cachedData.dps),
-                    airspace: new Map(cachedData.airspace)
+                    airports: new Map(cachedData.airports || []),
+                    iataToIcao: new Map(cachedData.iataToIcao || []),
+                    navaids: new Map(cachedData.navaids || []),
+                    fixes: new Map(cachedData.fixes || []),
+                    frequencies: new Map(cachedData.frequencies || []),
+                    runways: new Map(cachedData.runways || []),
+                    airways: new Map(cachedData.airways || []),
+                    stars: new Map(cachedData.stars || []),
+                    dps: new Map(cachedData.dps || []),
+                    airspace: new Map(cachedData.airspace || [])
                     // rawCSV is NOT verified here (only during reindexing)
                 };
 

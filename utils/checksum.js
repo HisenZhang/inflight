@@ -112,10 +112,14 @@ window.ChecksumUtils = {
         if (data instanceof Map) {
             const entries = Array.from(data.entries());
             // Sort by key for deterministic output
+            // IMPORTANT: Use simple ASCII comparison, NOT localeCompare
+            // localeCompare results vary by device locale settings, causing checksum mismatches
             entries.sort((a, b) => {
                 const keyA = String(a[0]);
                 const keyB = String(b[0]);
-                return keyA.localeCompare(keyB);
+                if (keyA < keyB) return -1;
+                if (keyA > keyB) return 1;
+                return 0;
             });
             return JSON.stringify(entries);
         }
