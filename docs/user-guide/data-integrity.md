@@ -276,7 +276,6 @@ Everything is working correctly!
 ## Related Documentation
 
 - [Data Management](./tab-data.md) - How to load and manage aviation data
-- [Offline Usage](./offline-usage.md) - Using IN-FLIGHT without internet
 - [Troubleshooting](./troubleshooting.md) - Common issues and solutions
 
 ---
