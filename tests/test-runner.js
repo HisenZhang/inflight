@@ -23,22 +23,43 @@ console.log(`${colors.cyan}${colors.bright}IN-FLIGHT Test Suite${colors.reset}\n
 // Read all required source files
 const projectRoot = path.join(__dirname, '..');
 const files = {
+    // Source files - Libraries
+    geodesy: fs.readFileSync(path.join(projectRoot, 'lib/geodesy.js'), 'utf8'),
+
+    // Source files - Utils
     utils: fs.readFileSync(path.join(projectRoot, 'utils/formatters.js'), 'utf8'),
     checksum: fs.readFileSync(path.join(projectRoot, 'utils/checksum.js'), 'utf8'),
+    compression: fs.readFileSync(path.join(projectRoot, 'utils/compression.js'), 'utf8'),
+
+    // Source files - State
     state: fs.readFileSync(path.join(projectRoot, 'state/flight-state.js'), 'utf8'),
+    flightTracker: fs.readFileSync(path.join(projectRoot, 'state/flight-tracker.js'), 'utf8'),
+
+    // Source files - Compute
     weatherAPI: fs.readFileSync(path.join(projectRoot, 'compute/weather-api.js'), 'utf8'),
     routeLexer: fs.readFileSync(path.join(projectRoot, 'compute/route-lexer.js'), 'utf8'),
     routeParser: fs.readFileSync(path.join(projectRoot, 'compute/route-parser.js'), 'utf8'),
     routeResolver: fs.readFileSync(path.join(projectRoot, 'compute/route-resolver.js'), 'utf8'),
     routeEngine: fs.readFileSync(path.join(projectRoot, 'compute/route-engine.js'), 'utf8'),
+    routeCalculator: fs.readFileSync(path.join(projectRoot, 'compute/route-calculator.js'), 'utf8'),
     windsAloft: fs.readFileSync(path.join(projectRoot, 'compute/winds-aloft.js'), 'utf8'),
+    terrainAnalyzer: fs.readFileSync(path.join(projectRoot, 'compute/terrain-analyzer.js'), 'utf8'),
+
+    // Test framework
     testFramework: fs.readFileSync(path.join(__dirname, 'test-framework.js'), 'utf8'),
+
+    // Test suites
     testUtils: fs.readFileSync(path.join(__dirname, 'test-utils.js'), 'utf8'),
     testState: fs.readFileSync(path.join(__dirname, 'test-state.js'), 'utf8'),
     testRouteParser: fs.readFileSync(path.join(__dirname, 'test-route-parser.js'), 'utf8'),
     testChecksum: fs.readFileSync(path.join(__dirname, 'test-checksum.js'), 'utf8'),
     testWinds: fs.readFileSync(path.join(__dirname, 'test-winds.js'), 'utf8'),
-    testWeatherAPI: fs.readFileSync(path.join(__dirname, 'test-weather-api.js'), 'utf8')
+    testWeatherAPI: fs.readFileSync(path.join(__dirname, 'test-weather-api.js'), 'utf8'),
+    testGeodesy: fs.readFileSync(path.join(__dirname, 'test-geodesy.js'), 'utf8'),
+    testRouteCalculator: fs.readFileSync(path.join(__dirname, 'test-route-calculator.js'), 'utf8'),
+    testFlightTracker: fs.readFileSync(path.join(__dirname, 'test-flight-tracker.js'), 'utf8'),
+    testCompression: fs.readFileSync(path.join(__dirname, 'test-compression.js'), 'utf8'),
+    testTerrainAnalyzer: fs.readFileSync(path.join(__dirname, 'test-terrain-analyzer.js'), 'utf8')
 };
 
 // Create a minimal DOM environment
@@ -78,6 +99,24 @@ global.Blob = class Blob {
     }
 };
 
+// Mock TextEncoder/TextDecoder for compression tests
+const { TextEncoder, TextDecoder } = require('util');
+global.TextEncoder = TextEncoder;
+global.TextDecoder = TextDecoder;
+window.TextEncoder = TextEncoder;
+window.TextDecoder = TextDecoder;
+
+// Mock CompressionStream/DecompressionStream (not available in Node.js)
+// Tests will use fallback path
+global.CompressionStream = undefined;
+global.DecompressionStream = undefined;
+
+// Mock performance.now() for timing tests
+if (!global.performance) {
+    global.performance = { now: () => Date.now() };
+}
+window.performance = global.performance;
+
 // Mock FileReader for import tests
 global.FileReader = class FileReader {
     readAsText(blob) {
@@ -101,23 +140,48 @@ let testResults = {
 (async () => {
     try {
         // Execute code in the context of the window object
+        // Wrap each file in IIFE to prevent function hoisting collisions
+        // (same-named function declarations like formatCoordinate would otherwise shadow each other)
+        const wrapInIIFE = (code) => `(function() {\n${code}\n})();`;
+
         const script = `
-            ${files.utils}
-            ${files.checksum}
-            ${files.state}
-            ${files.weatherAPI}
-            ${files.routeLexer}
-            ${files.routeParser}
-            ${files.routeResolver}
-            ${files.routeEngine}
-            ${files.windsAloft}
-            ${files.testFramework}
-            ${files.testUtils}
-            ${files.testState}
-            ${files.testRouteParser}
-            ${files.testChecksum}
-            ${files.testWinds}
-            ${files.testWeatherAPI}
+            // Libraries first (geodesy must be before route-calculator)
+            ${wrapInIIFE(files.geodesy)}
+
+            // Utils
+            ${wrapInIIFE(files.utils)}
+            ${wrapInIIFE(files.checksum)}
+            ${wrapInIIFE(files.compression)}
+
+            // State
+            ${wrapInIIFE(files.state)}
+            ${wrapInIIFE(files.flightTracker)}
+
+            // Compute (order matters for dependencies)
+            ${wrapInIIFE(files.weatherAPI)}
+            ${wrapInIIFE(files.routeLexer)}
+            ${wrapInIIFE(files.routeParser)}
+            ${wrapInIIFE(files.routeResolver)}
+            ${wrapInIIFE(files.routeEngine)}
+            ${wrapInIIFE(files.routeCalculator)}
+            ${wrapInIIFE(files.windsAloft)}
+            ${wrapInIIFE(files.terrainAnalyzer)}
+
+            // Test framework
+            ${wrapInIIFE(files.testFramework)}
+
+            // Test suites
+            ${wrapInIIFE(files.testUtils)}
+            ${wrapInIIFE(files.testState)}
+            ${wrapInIIFE(files.testRouteParser)}
+            ${wrapInIIFE(files.testChecksum)}
+            ${wrapInIIFE(files.testWinds)}
+            ${wrapInIIFE(files.testWeatherAPI)}
+            ${wrapInIIFE(files.testGeodesy)}
+            ${wrapInIIFE(files.testRouteCalculator)}
+            ${wrapInIIFE(files.testFlightTracker)}
+            ${wrapInIIFE(files.testCompression)}
+            ${wrapInIIFE(files.testTerrainAnalyzer)}
         `;
 
         // Evaluate in window context
