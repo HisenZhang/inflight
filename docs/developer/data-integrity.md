@@ -629,7 +629,7 @@ console.log('Match:', checksum === cachedData.checksums.airports);
 ## Related Documentation
 
 - [Architecture](./02-architecture.md) - Overall system design
-- [Data Management](./03-data-management.md) - IndexedDB and caching strategy
+- [Data Sources](./03-data.md) - IndexedDB and caching strategy
 - [Testing](./06-testing-deployment.md) - Test suite architecture
 
 ---

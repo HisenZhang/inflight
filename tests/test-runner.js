@@ -31,14 +31,40 @@ const files = {
     checksum: fs.readFileSync(path.join(projectRoot, 'utils/checksum.js'), 'utf8'),
     compression: fs.readFileSync(path.join(projectRoot, 'utils/compression.js'), 'utf8'),
 
-    // Source files - Data
+    // Source files - Data (Legacy)
     dataManager: fs.readFileSync(path.join(projectRoot, 'data/data-manager.js'), 'utf8'),
+
+    // Source files - Data v3 Architecture
+    dataSource: fs.readFileSync(path.join(projectRoot, 'data/core/data-source.js'), 'utf8'),
+    storageAdapter: fs.readFileSync(path.join(projectRoot, 'data/core/storage-adapter.js'), 'utf8'),
+    cacheStrategy: fs.readFileSync(path.join(projectRoot, 'data/core/cache-strategy.js'), 'utf8'),
+    memoryStorage: fs.readFileSync(path.join(projectRoot, 'data/storage/memory-storage.js'), 'utf8'),
+    repository: fs.readFileSync(path.join(projectRoot, 'data/repository.js'), 'utf8'),
+
+    // Source files - Query v3 Architecture
+    indexStrategy: fs.readFileSync(path.join(projectRoot, 'query/core/index-strategy.js'), 'utf8'),
+    mapIndex: fs.readFileSync(path.join(projectRoot, 'query/indexes/map-index.js'), 'utf8'),
+    trieIndex: fs.readFileSync(path.join(projectRoot, 'query/indexes/trie-index.js'), 'utf8'),
+    spatialGridIndex: fs.readFileSync(path.join(projectRoot, 'query/indexes/spatial-grid-index.js'), 'utf8'),
+    queryEngineV2: fs.readFileSync(path.join(projectRoot, 'query/query-engine-v2.js'), 'utf8'),
+
+    // Source files - Compute v3 Architecture (Pure Functions)
+    navigation: fs.readFileSync(path.join(projectRoot, 'compute/navigation.js'), 'utf8'),
+    terrain: fs.readFileSync(path.join(projectRoot, 'compute/terrain.js'), 'utf8'),
+    weather: fs.readFileSync(path.join(projectRoot, 'compute/weather.js'), 'utf8'),
+
+    // Source files - Services v3 Architecture
+    routeService: fs.readFileSync(path.join(projectRoot, 'services/route-service.js'), 'utf8'),
+    weatherService: fs.readFileSync(path.join(projectRoot, 'services/weather-service.js'), 'utf8'),
+
+    // Bootstrap
+    mainJs: fs.readFileSync(path.join(projectRoot, 'main.js'), 'utf8'),
 
     // Source files - State
     state: fs.readFileSync(path.join(projectRoot, 'state/flight-state.js'), 'utf8'),
     flightTracker: fs.readFileSync(path.join(projectRoot, 'state/flight-tracker.js'), 'utf8'),
 
-    // Source files - Compute
+    // Source files - Compute (Legacy)
     weatherAPI: fs.readFileSync(path.join(projectRoot, 'compute/weather-api.js'), 'utf8'),
     queryEngine: fs.readFileSync(path.join(projectRoot, 'compute/query-engine.js'), 'utf8'),
     routeLexer: fs.readFileSync(path.join(projectRoot, 'compute/route-lexer.js'), 'utf8'),
@@ -52,7 +78,7 @@ const files = {
     // Test framework
     testFramework: fs.readFileSync(path.join(__dirname, 'test-framework.js'), 'utf8'),
 
-    // Test suites
+    // Test suites - Legacy
     testUtils: fs.readFileSync(path.join(__dirname, 'test-utils.js'), 'utf8'),
     testState: fs.readFileSync(path.join(__dirname, 'test-state.js'), 'utf8'),
     testRouteParser: fs.readFileSync(path.join(__dirname, 'test-route-parser.js'), 'utf8'),
@@ -65,7 +91,16 @@ const files = {
     testCompression: fs.readFileSync(path.join(__dirname, 'test-compression.js'), 'utf8'),
     testTerrainAnalyzer: fs.readFileSync(path.join(__dirname, 'test-terrain-analyzer.js'), 'utf8'),
     testQueryEngine: fs.readFileSync(path.join(__dirname, 'test-query-engine.js'), 'utf8'),
-    testDataManager: fs.readFileSync(path.join(__dirname, 'test-data-manager.js'), 'utf8')
+    testDataManager: fs.readFileSync(path.join(__dirname, 'test-data-manager.js'), 'utf8'),
+
+    // Test suites - v3 Architecture
+    testDataCore: fs.readFileSync(path.join(__dirname, 'test-data-core.js'), 'utf8'),
+    testQueryIndexes: fs.readFileSync(path.join(__dirname, 'test-query-indexes.js'), 'utf8'),
+    testNavigation: fs.readFileSync(path.join(__dirname, 'test-navigation.js'), 'utf8'),
+    testTerrain: fs.readFileSync(path.join(__dirname, 'test-terrain.js'), 'utf8'),
+    testWeather: fs.readFileSync(path.join(__dirname, 'test-weather.js'), 'utf8'),
+    testServices: fs.readFileSync(path.join(__dirname, 'test-services.js'), 'utf8'),
+    testIntegration: fs.readFileSync(path.join(__dirname, 'test-integration.js'), 'utf8')
 };
 
 // Create a minimal DOM environment
@@ -163,14 +198,40 @@ let testResults = {
             ${wrapInIIFE(files.checksum)}
             ${wrapInIIFE(files.compression)}
 
-            // Data (must be before query-engine)
+            // Data v3 Architecture (abstract classes first)
+            ${wrapInIIFE(files.dataSource)}
+            ${wrapInIIFE(files.storageAdapter)}
+            ${wrapInIIFE(files.cacheStrategy)}
+            ${wrapInIIFE(files.memoryStorage)}
+            ${wrapInIIFE(files.repository)}
+
+            // Data Legacy (must be before query-engine)
             ${wrapInIIFE(files.dataManager)}
+
+            // Query v3 Architecture (abstract class first, then implementations)
+            ${wrapInIIFE(files.indexStrategy)}
+            ${wrapInIIFE(files.mapIndex)}
+            ${wrapInIIFE(files.trieIndex)}
+            ${wrapInIIFE(files.spatialGridIndex)}
+            ${wrapInIIFE(files.queryEngineV2)}
+
+            // Compute v3 Architecture (pure functions)
+            ${wrapInIIFE(files.navigation)}
+            ${wrapInIIFE(files.terrain)}
+            ${wrapInIIFE(files.weather)}
+
+            // Services v3 Architecture
+            ${wrapInIIFE(files.routeService)}
+            ${wrapInIIFE(files.weatherService)}
+
+            // Bootstrap v3
+            ${wrapInIIFE(files.mainJs)}
 
             // State
             ${wrapInIIFE(files.state)}
             ${wrapInIIFE(files.flightTracker)}
 
-            // Compute (order matters for dependencies)
+            // Compute Legacy (order matters for dependencies)
             ${wrapInIIFE(files.weatherAPI)}
             ${wrapInIIFE(files.queryEngine)}
             ${wrapInIIFE(files.routeLexer)}
@@ -184,7 +245,16 @@ let testResults = {
             // Test framework
             ${wrapInIIFE(files.testFramework)}
 
-            // Test suites
+            // Test suites - v3 Architecture (run first)
+            ${wrapInIIFE(files.testDataCore)}
+            ${wrapInIIFE(files.testQueryIndexes)}
+            ${wrapInIIFE(files.testNavigation)}
+            ${wrapInIIFE(files.testTerrain)}
+            ${wrapInIIFE(files.testWeather)}
+            ${wrapInIIFE(files.testServices)}
+            ${wrapInIIFE(files.testIntegration)}
+
+            // Test suites - Legacy
             ${wrapInIIFE(files.testUtils)}
             ${wrapInIIFE(files.testState)}
             ${wrapInIIFE(files.testRouteParser)}

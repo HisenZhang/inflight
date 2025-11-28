@@ -52,7 +52,7 @@
         <div class="tab-content active" id="tab-welcome">
             <div class="welcome-brief">
                 <h1>IN-FLIGHT</h1>
-                <p class="welcome-tagline">Open source terminal-style flight planner with offline database and moving map</p>
+                <p class="welcome-tagline">Open source EFB Webapp</p>
 
                 <div class="welcome-disclaimer">NOT FAA APPROVED — EDUCATIONAL USE ONLY</div>
 
@@ -1424,19 +1424,38 @@
     <script src="utils/checksum.js"></script>           <!-- Data integrity verification (SHA-256) -->
     <script src="utils/wake-lock.js"></script>          <!-- Screen wake lock manager -->
 
-    <!-- Data Engine -->
+    <!-- Data Layer - v3 Architecture (Core Abstractions) -->
+    <script src="data/core/data-source.js"></script>    <!-- Abstract data source with template method -->
+    <script src="data/core/storage-adapter.js"></script><!-- Abstract storage interface -->
+    <script src="data/core/cache-strategy.js"></script> <!-- Cache invalidation strategies -->
+    <script src="data/storage/memory-storage.js"></script><!-- In-memory storage adapter -->
+    <script src="data/repository.js"></script>          <!-- Central data repository facade -->
+
+    <!-- Data Layer - Legacy (coexists with v3) -->
     <script src="data/nasr-adapter.js"></script>        <!-- NASR data adapter (primary) -->
     <script src="data/ourairports-adapter.js"></script> <!-- OurAirports adapter (fallback) -->
     <script src="data/charts-adapter.js"></script>      <!-- Charts data adapter (FAA d-TPP) -->
     <script src="data/data-manager.js"></script>        <!-- Data loading & caching orchestrator -->
 
-    <!-- Compute Engine -->
+    <!-- Query Layer - v3 Architecture -->
+    <script src="query/core/index-strategy.js"></script><!-- Abstract index interface -->
+    <script src="query/indexes/map-index.js"></script>  <!-- O(1) key-value lookups -->
+    <script src="query/indexes/trie-index.js"></script> <!-- Prefix search for autocomplete -->
+    <script src="query/indexes/spatial-grid-index.js"></script><!-- Grid-based spatial queries -->
+    <script src="query/query-engine-v2.js"></script>    <!-- Central query coordinator -->
+
+    <!-- Compute Layer - v3 Pure Functions -->
+    <script src="compute/navigation.js"></script>       <!-- Distance, bearing, wind correction -->
+    <script src="compute/terrain.js"></script>          <!-- MORA analysis, clearance checking -->
+    <script src="compute/weather.js"></script>          <!-- METAR parsing, flight category -->
+
+    <!-- Compute Layer - Legacy (coexists with v3) -->
     <script src="compute/weather-api.js"></script>      <!-- Weather data fetching (METAR/TAF/PIREP/SIGMET) -->
     <script src="compute/winds-aloft.js"></script>      <!-- Wind data fetching & interpolation -->
-    <script src="compute/route-lexer.js"></script>      <!-- Route tokenization (NEW) -->
-    <script src="compute/route-parser.js"></script>     <!-- Route parsing (NEW) -->
-    <script src="compute/route-resolver.js"></script>   <!-- Semantic analysis (NEW) -->
-    <script src="compute/route-engine.js"></script>     <!-- Route parsing orchestrator (NEW) -->
+    <script src="compute/route-lexer.js"></script>      <!-- Route tokenization -->
+    <script src="compute/route-parser.js"></script>     <!-- Route parsing -->
+    <script src="compute/route-resolver.js"></script>   <!-- Semantic analysis -->
+    <script src="compute/route-engine.js"></script>     <!-- Route parsing orchestrator -->
     <script src="compute/route-expander.js"></script>   <!-- Airway/STAR/DP expansion module -->
     <script src="compute/route-calculator.js"></script> <!-- Navigation calculations module -->
     <script src="compute/query-engine.js"></script>     <!-- Spatial queries & search -->
@@ -1445,6 +1464,10 @@
     <!-- State Management -->
     <script src="state/flight-state.js"></script>       <!-- Flight plan & navigation state -->
     <script src="state/flight-tracker.js"></script>     <!-- Flight time & GPS tracking -->
+
+    <!-- Service Layer - v3 Architecture -->
+    <script src="services/route-service.js"></script>   <!-- Route planning orchestration -->
+    <script src="services/weather-service.js"></script> <!-- Weather data retrieval -->
 
     <!-- Display Layer -->
     <script src="display/ui-controller.js"></script>       <!-- UI interactions module -->
@@ -1455,6 +1478,7 @@
     <script src="display/weather-controller.js"></script>  <!-- WX tab controller -->
     <script src="display/map-display.js"></script>    <!-- Vector map & GPS tracking -->
     <script src="display/app.js"></script>                 <!-- Main application coordinator -->
+    <script src="main.js"></script>                        <!-- v3 Architecture bootstrap -->
     <script src="ui/tutorial.js"></script>                 <!-- Interactive tutorial system -->
 </body>
 </html>

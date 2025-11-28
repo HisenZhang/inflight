@@ -505,7 +505,6 @@ You can manually reindex from WELCOME tab → LOAD DATA
 - **Transparent**: Shows progress in UI
 
 **See Also:**
-- [Version Management Guide](../../CLAUDE.md#version-management) - How to bump versions
 - [Data Integrity](./data-integrity.md) - Checksum validation during reindex
 
 ### Cache Expiration
