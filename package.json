@@ -1,12 +1,18 @@
 {
   "name": "inflight",
   "version": "3.0.0",
-  "description": "Lightweight web-based flight planning application with comprehensive navlog and interactive map display",
+  "description": "Open source EFB Webapp - Electronic Flight Bag for route planning, navigation, and moving map",
   "main": "index.html",
   "scripts": {
     "test": "node tests/test-runner.js",
     "test:browser": "open tests/index.html",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:debug": "playwright test --debug",
+    "test:all": "npm test && npm run test:e2e",
     "start": "open index.html",
+    "serve": "http-server . -p 3000 -c-1",
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs",
@@ -24,6 +30,8 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
+    "@playwright/test": "^1.57.0",
+    "http-server": "^14.1.1",
     "jsdom": "^16.7.0",
     "vitepress": "^1.0.0"
   },

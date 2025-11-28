@@ -84,14 +84,26 @@ npm start                # Opens index.html in browser
 
 ### Testing
 ```bash
-npm test                 # Run all 536 tests (Node.js + JSDOM, ~2 sec)
+npm test                 # Run all 536 unit/integration tests (Node.js + JSDOM)
 npm run test:browser     # Interactive browser tests (/tests/index.html)
+npm run test:e2e         # Run Playwright E2E tests (requires browser install)
+npm run test:e2e:headed  # E2E tests with visible browser
+npm run test:e2e:ui      # Playwright UI mode for debugging
+npm run test:all         # Run both unit tests and E2E tests
+```
+
+**E2E Setup (first time):**
+```bash
+npx playwright install chromium   # Install browser for E2E tests
 ```
 
 **Test Structure:**
-- Framework: [/tests/test-framework.js](tests/test-framework.js)
-- Node runner: [/tests/test-runner.js](tests/test-runner.js)
-- Browser runner: [/tests/index.html](tests/index.html)
+- **Unit Tests:** [/tests/test-framework.js](tests/test-framework.js) - Custom framework + JSDOM
+- **Browser Tests:** [/tests/index.html](tests/index.html) - Interactive test runner
+- **E2E Tests:** [/e2e/](e2e/) - Playwright browser automation
+  - `app.spec.js` - App bootstrap, tabs, navigation
+  - `route.spec.js` - Route planning, pure functions
+  - `map.spec.js` - Map display, GPS tracking
 - v3 test suites: `test-data-core.js`, `test-query-indexes.js`, `test-navigation.js`, `test-terrain.js`, `test-weather.js`, `test-services.js`, `test-integration.js`
 
 ### Documentation
