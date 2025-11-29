@@ -705,11 +705,16 @@ async function loadNASRData(onStatusUpdate, onFileLoaded) {
         onStatusUpdate('[...] CHECKING NASR DATA VALIDITY', 'loading');
         const info = await getNASRInfo();
 
+        // Track if data is expired (but still allow loading)
+        let isExpired = false;
         if (!info.isValid) {
-            throw new Error(`NASR data expired ${Math.abs(info.daysRemaining)} days ago`);
+            isExpired = true;
+            const daysExpired = Math.abs(info.daysRemaining);
+            onStatusUpdate(`[!] NASR DATA EXPIRED ${daysExpired} DAY${daysExpired !== 1 ? 'S' : ''} AGO - LOADING ANYWAY`, 'warning');
+            console.warn(`[NASRAdapter] NASR data expired ${daysExpired} days ago. Proceeding with caution.`);
+        } else {
+            onStatusUpdate(`[...] NASR DATA VALID (${info.daysRemaining} DAYS REMAINING)`, 'loading');
         }
-
-        onStatusUpdate(`[...] NASR DATA VALID (${info.daysRemaining} DAYS REMAINING)`, 'loading');
 
         // Define files to download
         const filesToDownload = [
@@ -773,11 +778,16 @@ async function loadNASRData(onStatusUpdate, onFileLoaded) {
             onStatusUpdate(`[OK] NASR ${result.fileInfo.label} (${metadata.recordCount} RECORDS)`, 'success');
         }
 
-        onStatusUpdate('[OK] NASR DATA LOADED', 'success');
+        if (isExpired) {
+            onStatusUpdate('[!] NASR DATA LOADED (EXPIRED)', 'warning');
+        } else {
+            onStatusUpdate('[OK] NASR DATA LOADED', 'success');
+        }
 
         return {
             source: 'nasr',
             info,
+            isExpired,
             data: parsedData,
             rawCSV,
             fileMetadata

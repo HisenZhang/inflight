@@ -199,6 +199,108 @@
 
             return summary;
         }
+
+        // ============================================
+        // HAZARD FILTERING
+        // ============================================
+
+        /**
+         * Filter hazards to those relevant to a specific location
+         * @param {Array} hazards - Array of hazard objects with coords
+         * @param {number} lat - Location latitude
+         * @param {number} lon - Location longitude
+         * @param {number} radiusNm - Relevance radius in nautical miles
+         * @returns {Array} Filtered hazards
+         */
+        filterHazardsForLocation(hazards, lat, lon, radiusNm = 150) {
+            if (!hazards || !Array.isArray(hazards)) return [];
+            if (lat === undefined || lon === undefined) return hazards;
+
+            return hazards.filter(hazard =>
+                window.Weather.isHazardRelevantToPoint(hazard, lat, lon, radiusNm)
+            );
+        }
+
+        /**
+         * Filter hazards to those relevant to a route
+         * @param {Array} hazards - Array of hazard objects with coords
+         * @param {Array} waypoints - Route waypoints with lat/lon
+         * @param {number} corridorNm - Corridor width in nautical miles
+         * @returns {Array} Filtered hazards
+         */
+        filterHazardsForRoute(hazards, waypoints, corridorNm = 50) {
+            if (!hazards || !Array.isArray(hazards)) return [];
+            if (!waypoints || waypoints.length === 0) return hazards;
+
+            return hazards.filter(hazard =>
+                window.Weather.isHazardRelevantToRoute(hazard, waypoints, corridorNm)
+            );
+        }
+
+        /**
+         * Get route hazard analysis
+         * Analyzes SIGMETs and G-AIRMETs affecting the route
+         * @param {Array} sigmets - Array of SIGMET objects
+         * @param {Array} gairmets - Array of G-AIRMET objects
+         * @param {Array} waypoints - Route waypoints with lat/lon
+         * @param {number} corridorNm - Corridor width in nautical miles
+         * @returns {Object} Hazard analysis with affected waypoints
+         */
+        analyzeRouteHazards(sigmets, gairmets, waypoints, corridorNm = 50) {
+            const analysis = {
+                sigmets: [],
+                gairmets: [],
+                affectedWaypoints: new Set(),
+                hasIcing: false,
+                hasTurbulence: false,
+                hasIFR: false,
+                hasConvective: false,
+                timestamp: new Date().toISOString()
+            };
+
+            // Analyze SIGMETs
+            const relevantSigmets = this.filterHazardsForRoute(sigmets || [], waypoints, corridorNm);
+            for (const sigmet of relevantSigmets) {
+                const affected = window.Weather.findAffectedWaypoints(sigmet, waypoints, corridorNm);
+                affected.forEach(wp => analysis.affectedWaypoints.add(wp));
+
+                const hazard = (sigmet.hazard || '').toUpperCase();
+                if (hazard.includes('ICE')) analysis.hasIcing = true;
+                if (hazard.includes('TURB')) analysis.hasTurbulence = true;
+                if (hazard.includes('TS') || hazard.includes('CONVECTIVE')) analysis.hasConvective = true;
+
+                analysis.sigmets.push({
+                    ...sigmet,
+                    affectedWaypoints: affected,
+                    color: window.Weather.getHazardColor(hazard),
+                    label: window.Weather.getHazardLabel(hazard)
+                });
+            }
+
+            // Analyze G-AIRMETs
+            const relevantGairmets = this.filterHazardsForRoute(gairmets || [], waypoints, corridorNm);
+            for (const gairmet of relevantGairmets) {
+                const affected = window.Weather.findAffectedWaypoints(gairmet, waypoints, corridorNm);
+                affected.forEach(wp => analysis.affectedWaypoints.add(wp));
+
+                const hazard = (gairmet.hazard || '').toUpperCase();
+                if (hazard.includes('ICE') || hazard === 'FZLVL' || hazard === 'M_FZLVL') analysis.hasIcing = true;
+                if (hazard.includes('TURB') || hazard === 'LLWS') analysis.hasTurbulence = true;
+                if (hazard === 'IFR' || hazard === 'MT_OBSC') analysis.hasIFR = true;
+
+                analysis.gairmets.push({
+                    ...gairmet,
+                    affectedWaypoints: affected,
+                    color: window.Weather.getHazardColor(hazard),
+                    label: window.Weather.getHazardLabel(hazard)
+                });
+            }
+
+            // Convert Set to Array
+            analysis.affectedWaypoints = Array.from(analysis.affectedWaypoints);
+
+            return analysis;
+        }
     }
 
     // Export to window

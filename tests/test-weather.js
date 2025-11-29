@@ -308,3 +308,367 @@ TestFramework.describe('Weather - Pure Function Behavior', function({ it }) {
         assert.isTrue(allSame, 'Multiple calls should produce identical results');
     });
 });
+
+// ============================================
+// HAZARD GEOMETRY FUNCTIONS
+// ============================================
+
+TestFramework.describe('Weather - Haversine Distance', function({ it }) {
+
+    it('should have haversineDistance method', () => {
+        assert.isFunction(window.Weather.haversineDistance,
+            'Should have haversineDistance method');
+    });
+
+    it('should return 0 for same point', () => {
+        const dist = window.Weather.haversineDistance(40.0, -74.0, 40.0, -74.0);
+        assert.equals(dist, 0, 'Same point should have 0 distance');
+    });
+
+    it('should calculate approximate distance between NYC and LA', () => {
+        // NYC: 40.7128, -74.0060
+        // LA: 34.0522, -118.2437
+        // Expected distance: ~2140 nm
+        const dist = window.Weather.haversineDistance(40.7128, -74.0060, 34.0522, -118.2437);
+        assert.isTrue(dist > 2000 && dist < 2300,
+            `NYC to LA should be ~2140nm, got ${dist.toFixed(0)}`);
+    });
+
+    it('should calculate short distance accurately', () => {
+        // 1 degree of latitude ≈ 60 nm
+        const dist = window.Weather.haversineDistance(40.0, -74.0, 41.0, -74.0);
+        assert.isTrue(dist > 55 && dist < 65,
+            `1 degree lat should be ~60nm, got ${dist.toFixed(1)}`);
+    });
+
+    it('should be symmetric', () => {
+        const d1 = window.Weather.haversineDistance(40.0, -74.0, 35.0, -80.0);
+        const d2 = window.Weather.haversineDistance(35.0, -80.0, 40.0, -74.0);
+        assert.isTrue(Math.abs(d1 - d2) < 0.001,
+            'Distance should be same in both directions');
+    });
+});
+
+TestFramework.describe('Weather - Point in Polygon', function({ it }) {
+
+    it('should have pointInPolygon method', () => {
+        assert.isFunction(window.Weather.pointInPolygon,
+            'Should have pointInPolygon method');
+    });
+
+    // Define a simple square polygon
+    const squarePolygon = [
+        { lat: 40.0, lon: -75.0 },
+        { lat: 40.0, lon: -73.0 },
+        { lat: 38.0, lon: -73.0 },
+        { lat: 38.0, lon: -75.0 }
+    ];
+
+    it('should return true for point inside polygon', () => {
+        const inside = window.Weather.pointInPolygon(39.0, -74.0, squarePolygon);
+        assert.isTrue(inside, 'Center point should be inside');
+    });
+
+    it('should return false for point outside polygon', () => {
+        const outside = window.Weather.pointInPolygon(41.0, -74.0, squarePolygon);
+        assert.isFalse(outside, 'Point north of polygon should be outside');
+    });
+
+    it('should return false for point far outside', () => {
+        const farAway = window.Weather.pointInPolygon(50.0, -100.0, squarePolygon);
+        assert.isFalse(farAway, 'Far away point should be outside');
+    });
+
+    it('should return false for empty polygon', () => {
+        const result = window.Weather.pointInPolygon(39.0, -74.0, []);
+        assert.isFalse(result, 'Empty polygon should return false');
+    });
+
+    it('should return false for null polygon', () => {
+        const result = window.Weather.pointInPolygon(39.0, -74.0, null);
+        assert.isFalse(result, 'Null polygon should return false');
+    });
+
+    it('should return false for polygon with less than 3 points', () => {
+        const twoPoints = [
+            { lat: 40.0, lon: -75.0 },
+            { lat: 40.0, lon: -73.0 }
+        ];
+        const result = window.Weather.pointInPolygon(39.0, -74.0, twoPoints);
+        assert.isFalse(result, 'Polygon needs at least 3 points');
+    });
+});
+
+TestFramework.describe('Weather - Hazard Relevance to Point', function({ it }) {
+
+    it('should have isHazardRelevantToPoint method', () => {
+        assert.isFunction(window.Weather.isHazardRelevantToPoint,
+            'Should have isHazardRelevantToPoint method');
+    });
+
+    const testHazard = {
+        hazard: 'ICE',
+        coords: [
+            { lat: 42.0, lon: -76.0 },
+            { lat: 42.0, lon: -74.0 },
+            { lat: 40.0, lon: -74.0 },
+            { lat: 40.0, lon: -76.0 }
+        ]
+    };
+
+    it('should return true for point inside hazard polygon', () => {
+        const relevant = window.Weather.isHazardRelevantToPoint(testHazard, 41.0, -75.0, 50);
+        assert.isTrue(relevant, 'Point inside polygon should be relevant');
+    });
+
+    it('should return true for point near hazard polygon', () => {
+        // Point just outside but within 50nm (0.5 degrees ≈ 30nm)
+        const relevant = window.Weather.isHazardRelevantToPoint(testHazard, 42.3, -75.0, 50);
+        assert.isTrue(relevant, 'Point near polygon should be relevant');
+    });
+
+    it('should return false for point far from hazard', () => {
+        // Point far away
+        const relevant = window.Weather.isHazardRelevantToPoint(testHazard, 35.0, -80.0, 50);
+        assert.isFalse(relevant, 'Point far from polygon should not be relevant');
+    });
+
+    it('should return false for hazard with no coords', () => {
+        const badHazard = { hazard: 'ICE', coords: null };
+        const relevant = window.Weather.isHazardRelevantToPoint(badHazard, 41.0, -75.0, 50);
+        assert.isFalse(relevant, 'Hazard without coords should not be relevant');
+    });
+
+    it('should return false for null hazard', () => {
+        const relevant = window.Weather.isHazardRelevantToPoint(null, 41.0, -75.0, 50);
+        assert.isFalse(relevant, 'Null hazard should not be relevant');
+    });
+});
+
+TestFramework.describe('Weather - Hazard Relevance to Route', function({ it }) {
+
+    it('should have isHazardRelevantToRoute method', () => {
+        assert.isFunction(window.Weather.isHazardRelevantToRoute,
+            'Should have isHazardRelevantToRoute method');
+    });
+
+    const testHazard = {
+        hazard: 'TURB',
+        coords: [
+            { lat: 42.0, lon: -76.0 },
+            { lat: 42.0, lon: -74.0 },
+            { lat: 40.0, lon: -74.0 },
+            { lat: 40.0, lon: -76.0 }
+        ]
+    };
+
+    const routeInsideHazard = [
+        { lat: 41.0, lon: -75.0, ident: 'WPT1' },
+        { lat: 41.5, lon: -75.0, ident: 'WPT2' }
+    ];
+
+    const routeOutsideHazard = [
+        { lat: 35.0, lon: -80.0, ident: 'WPT1' },
+        { lat: 35.5, lon: -80.0, ident: 'WPT2' }
+    ];
+
+    it('should return true for route passing through hazard', () => {
+        const relevant = window.Weather.isHazardRelevantToRoute(testHazard, routeInsideHazard, 50);
+        assert.isTrue(relevant, 'Route through hazard should be relevant');
+    });
+
+    it('should return false for route far from hazard', () => {
+        const relevant = window.Weather.isHazardRelevantToRoute(testHazard, routeOutsideHazard, 50);
+        assert.isFalse(relevant, 'Route far from hazard should not be relevant');
+    });
+
+    it('should return false for empty waypoints', () => {
+        const relevant = window.Weather.isHazardRelevantToRoute(testHazard, [], 50);
+        assert.isFalse(relevant, 'Empty route should not match');
+    });
+
+    it('should return false for hazard without coords', () => {
+        const badHazard = { hazard: 'ICE' };
+        const relevant = window.Weather.isHazardRelevantToRoute(badHazard, routeInsideHazard, 50);
+        assert.isFalse(relevant, 'Hazard without coords should not match');
+    });
+});
+
+TestFramework.describe('Weather - Find Affected Waypoints', function({ it }) {
+
+    it('should have findAffectedWaypoints method', () => {
+        assert.isFunction(window.Weather.findAffectedWaypoints,
+            'Should have findAffectedWaypoints method');
+    });
+
+    const testHazard = {
+        hazard: 'IFR',
+        coords: [
+            { lat: 42.0, lon: -76.0 },
+            { lat: 42.0, lon: -74.0 },
+            { lat: 40.0, lon: -74.0 },
+            { lat: 40.0, lon: -76.0 }
+        ]
+    };
+
+    it('should find waypoints inside hazard polygon', () => {
+        const waypoints = [
+            { lat: 41.0, lon: -75.0, ident: 'INSIDE' },
+            { lat: 35.0, lon: -80.0, ident: 'OUTSIDE' }
+        ];
+        const affected = window.Weather.findAffectedWaypoints(testHazard, waypoints, 50);
+        assert.equals(affected.length, 1, 'Should find 1 affected waypoint');
+        assert.equals(affected[0], 'INSIDE', 'Should find the inside waypoint');
+    });
+
+    it('should find waypoints near hazard polygon', () => {
+        const waypoints = [
+            { lat: 42.3, lon: -75.0, ident: 'NEAR' } // Just north of polygon, within 50nm
+        ];
+        const affected = window.Weather.findAffectedWaypoints(testHazard, waypoints, 50);
+        assert.equals(affected.length, 1, 'Should find nearby waypoint');
+    });
+
+    it('should return empty array for route not affected', () => {
+        const farWaypoints = [
+            { lat: 30.0, lon: -90.0, ident: 'FAR1' },
+            { lat: 30.5, lon: -90.0, ident: 'FAR2' }
+        ];
+        const affected = window.Weather.findAffectedWaypoints(testHazard, farWaypoints, 50);
+        assert.equals(affected.length, 0, 'No waypoints should be affected');
+    });
+
+    it('should use icao if ident not available', () => {
+        const waypoints = [
+            { lat: 41.0, lon: -75.0, icao: 'KABC' }
+        ];
+        const affected = window.Weather.findAffectedWaypoints(testHazard, waypoints, 50);
+        assert.equals(affected[0], 'KABC', 'Should use icao code');
+    });
+});
+
+TestFramework.describe('Weather - Hazard Display Helpers', function({ it }) {
+
+    it('should have getHazardColor method', () => {
+        assert.isFunction(window.Weather.getHazardColor,
+            'Should have getHazardColor method');
+    });
+
+    it('should return cyan for ICE hazard', () => {
+        const color = window.Weather.getHazardColor('ICE');
+        assert.equals(color, '#00DDDD', 'ICE should be cyan');
+    });
+
+    it('should return orange for TURB hazard', () => {
+        const color = window.Weather.getHazardColor('TURB');
+        assert.equals(color, '#FFA500', 'TURB should be orange');
+    });
+
+    it('should return red for IFR hazard', () => {
+        const color = window.Weather.getHazardColor('IFR');
+        assert.equals(color, '#FF4444', 'IFR should be red');
+    });
+
+    it('should handle case insensitivity', () => {
+        const upper = window.Weather.getHazardColor('ICE');
+        const lower = window.Weather.getHazardColor('ice');
+        assert.equals(upper, lower, 'Should be case insensitive');
+    });
+
+    it('should have getHazardLabel method', () => {
+        assert.isFunction(window.Weather.getHazardLabel,
+            'Should have getHazardLabel method');
+    });
+
+    it('should return human-readable label for IFR', () => {
+        const label = window.Weather.getHazardLabel('IFR');
+        assert.equals(label, 'IFR Conditions', 'Should return readable label');
+    });
+
+    it('should return hazard code if no label defined', () => {
+        const label = window.Weather.getHazardLabel('CUSTOM_HAZARD');
+        assert.equals(label, 'CUSTOM_HAZARD', 'Should return code if no label');
+    });
+});
+
+TestFramework.describe('Weather - Polygon Bounds', function({ it }) {
+
+    it('should have getPolygonBounds method', () => {
+        assert.isFunction(window.Weather.getPolygonBounds,
+            'Should have getPolygonBounds method');
+    });
+
+    it('should calculate bounds for simple polygon', () => {
+        const coords = [
+            { lat: 42.0, lon: -76.0 },
+            { lat: 42.0, lon: -74.0 },
+            { lat: 40.0, lon: -74.0 },
+            { lat: 40.0, lon: -76.0 }
+        ];
+        const bounds = window.Weather.getPolygonBounds(coords);
+
+        assert.equals(bounds.minLat, 40.0, 'minLat should be 40');
+        assert.equals(bounds.maxLat, 42.0, 'maxLat should be 42');
+        assert.equals(bounds.minLon, -76.0, 'minLon should be -76');
+        assert.equals(bounds.maxLon, -74.0, 'maxLon should be -74');
+    });
+
+    it('should return null for empty coords', () => {
+        const bounds = window.Weather.getPolygonBounds([]);
+        assert.equals(bounds, null, 'Empty coords should return null');
+    });
+
+    it('should return null for null coords', () => {
+        const bounds = window.Weather.getPolygonBounds(null);
+        assert.equals(bounds, null, 'Null coords should return null');
+    });
+});
+
+TestFramework.describe('Weather - Cache Expiration Calculations', function({ it }) {
+
+    it('should have calculateMETARExpiration method', () => {
+        assert.isFunction(window.Weather.calculateMETARExpiration,
+            'Should have calculateMETARExpiration method');
+    });
+
+    it('should calculate METAR expiration to next hour + 5 min', () => {
+        // METAR observed at 1756Z should expire at 1805Z
+        const obsTime = Math.floor(Date.now() / 1000);
+        const expiration = window.Weather.calculateMETARExpiration(obsTime);
+
+        // Should be in the future
+        assert.isTrue(expiration > Date.now(),
+            'METAR expiration should be in the future');
+    });
+
+    it('should return fallback for null obsTime', () => {
+        const expiration = window.Weather.calculateMETARExpiration(null);
+
+        // Should be about 1 hour from now
+        const oneHourFromNow = Date.now() + 60 * 60 * 1000;
+        assert.isTrue(Math.abs(expiration - oneHourFromNow) < 1000,
+            'Fallback should be ~1 hour from now');
+    });
+
+    it('should have calculateTAFExpiration method', () => {
+        assert.isFunction(window.Weather.calculateTAFExpiration,
+            'Should have calculateTAFExpiration method');
+    });
+
+    it('should calculate TAF expiration from validTimeTo', () => {
+        const validTimeTo = Math.floor(Date.now() / 1000) + 6 * 3600; // 6 hours from now
+        const expiration = window.Weather.calculateTAFExpiration(validTimeTo);
+
+        assert.equals(expiration, validTimeTo * 1000,
+            'TAF expiration should match validTimeTo in ms');
+    });
+
+    it('should return fallback for null validTimeTo', () => {
+        const expiration = window.Weather.calculateTAFExpiration(null);
+
+        // Should be about 6 hours from now
+        const sixHoursFromNow = Date.now() + 6 * 60 * 60 * 1000;
+        assert.isTrue(Math.abs(expiration - sixHoursFromNow) < 1000,
+            'Fallback should be ~6 hours from now');
+    });
+});

@@ -296,6 +296,36 @@ function updateDatabaseStatus(status, message) {
     statusEl.className = `check-status status-${status}`;
 }
 
+/**
+ * Show data warning banner (e.g., for expired NASR data)
+ * @param {string} title - Warning title (e.g., "NASR DATA EXPIRED")
+ * @param {string} message - Warning message with details
+ */
+function showDataWarning(title, message) {
+    const banner = document.getElementById('data-warning');
+    const titleEl = document.getElementById('data-warning-title');
+    const messageEl = document.getElementById('data-warning-message');
+
+    if (!banner) return;
+
+    if (titleEl) titleEl.textContent = title;
+    if (messageEl) messageEl.textContent = message;
+
+    banner.classList.add('show');
+    console.log(`[UIController] Data warning shown: ${title} - ${message}`);
+}
+
+/**
+ * Hide data warning banner
+ */
+function hideDataWarning() {
+    const banner = document.getElementById('data-warning');
+    if (banner) {
+        banner.classList.remove('show');
+        console.log('[UIController] Data warning dismissed');
+    }
+}
+
 function initSystemChecks() {
     checkInternetConnection();
     checkGPSAvailability();
@@ -2349,6 +2379,8 @@ window.UIController = {
     showDataInfo,
     populateInspection,
     updateDatabaseStatus,
+    showDataWarning,
+    hideDataWarning,
 
     // Input controls
     enableRouteInput,

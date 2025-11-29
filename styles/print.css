@@ -30,6 +30,8 @@
     .help-text,
     #update-notification,
     .update-notification,
+    #data-warning,
+    .data-warning,
     #pwa-install-banner,
     .pwa-install-banner {
         display: none !important;

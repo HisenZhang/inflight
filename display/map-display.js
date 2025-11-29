@@ -6,7 +6,8 @@ let watchId = null;
 let routeData = null;
 let currentLegIndex = 0;
 let diversionWaypoint = null; // Stores the waypoint when in diversion mode (currentLegIndex = -1)
-let currentZoomMode = 'full'; // 'full', 'destination', 'surrounding-50', 'surrounding-25'
+let currentZoomMode = 'full'; // 'full', 'destination', 'surrounding-50', 'surrounding-25', 'custom'
+let customBounds = null; // Custom bounds for focused view (e.g., hazard polygon)
 let currentStatusItem = null; // Track currently visible status bar item
 let zoomLevel = 1; // Pinch zoom level (1.0 = default, max based on route bounds)
 let initialPinchDistance = null;
@@ -656,6 +657,9 @@ function generateMap(waypoints, legs) {
             minLon: minLon - effectiveLonRange * padding,
             maxLon: maxLon + effectiveLonRange * padding
         };
+    } else if (currentZoomMode === 'custom' && customBounds) {
+        // Custom bounds (e.g., hazard polygon focus)
+        bounds = { ...customBounds };
     } else {
         // Full route view (default) - show only route waypoints, not current position
         const lats = waypoints.map(w => w.lat);
@@ -2491,6 +2495,57 @@ function getTerrainAnalysis() {
 }
 
 // ============================================
+// FOCUS ON POLYGON
+// ============================================
+
+/**
+ * Focus map on a specific polygon (e.g., weather hazard area)
+ * Calculates bounds from polygon coordinates and centers the map
+ * Uses existing weather overlays for drawing - just centers the view
+ * @param {Array} coords - Array of {lat, lon} coordinates
+ */
+function focusOnPolygon(coords) {
+    if (!coords || !Array.isArray(coords) || coords.length < 3) {
+        console.warn('[VectorMap] focusOnPolygon: Invalid coordinates');
+        return;
+    }
+
+    // Calculate bounding box of the polygon using Weather module
+    const polygonBounds = window.Weather.getPolygonBounds(coords);
+    if (!polygonBounds) {
+        console.warn('[VectorMap] focusOnPolygon: Could not calculate bounds');
+        return;
+    }
+
+    // Add 20% padding to ensure full polygon is visible
+    const latPadding = (polygonBounds.maxLat - polygonBounds.minLat) * 0.2;
+    const lonPadding = (polygonBounds.maxLon - polygonBounds.minLon) * 0.2;
+
+    // Set custom bounds mode to center on the polygon
+    customBounds = {
+        minLat: polygonBounds.minLat - latPadding,
+        maxLat: polygonBounds.maxLat + latPadding,
+        minLon: polygonBounds.minLon - lonPadding,
+        maxLon: polygonBounds.maxLon + lonPadding
+    };
+    currentZoomMode = 'custom';
+    zoomLevel = 1;
+    panOffset = { x: 0, y: 0 };
+
+    // Regenerate map with new bounds (existing weather overlays will draw the polygon)
+    if (routeData) {
+        generateMap(routeData.waypoints, routeData.legs);
+    } else {
+        // No route data - create minimal waypoints from polygon center
+        const centerLat = (polygonBounds.minLat + polygonBounds.maxLat) / 2;
+        const centerLon = (polygonBounds.minLon + polygonBounds.maxLon) / 2;
+        generateMap([{ lat: centerLat, lon: centerLon, ident: 'CENTER' }], []);
+    }
+
+    console.log('[VectorMap] Focused on polygon area');
+}
+
+// ============================================
 // EXPORTS
 // ============================================
 
@@ -2512,5 +2567,8 @@ window.VectorMap = {
     // MORA grid overlay (terrain profile is now in navlog)
     toggleTerrainProfile,
     isTerrainEnabled,
-    getTerrainAnalysis
+    getTerrainAnalysis,
+
+    // Focus map on a polygon area
+    focusOnPolygon
 };

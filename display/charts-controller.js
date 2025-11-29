@@ -62,6 +62,35 @@ window.ChartsController = {
     },
 
     /**
+     * Update route airports quick select bar
+     * Called when a route is calculated or cleared
+     * @param {Array} airports - Array of airport objects with icao property
+     */
+    updateRouteAirports(airports) {
+        const container = document.getElementById('chartsRouteAirports');
+        const list = document.getElementById('chartsRouteAirportsList');
+        if (!container || !list) return;
+
+        if (!airports || airports.length === 0) {
+            container.style.display = 'none';
+            return;
+        }
+
+        // Build buttons for each airport
+        list.innerHTML = airports.map((apt, index) => {
+            const isFirst = index === 0;
+            const isLast = index === airports.length - 1;
+            let className = 'route-airport-btn';
+            if (isFirst) className += ' departure';
+            else if (isLast) className += ' destination';
+
+            return `<button class="${className}" onclick="ChartsController.showChartsForAirport('${apt.icao}')">${apt.icao}</button>`;
+        }).join('');
+
+        container.style.display = 'flex';
+    },
+
+    /**
      * Search for charts for entered airport
      */
     searchCharts() {

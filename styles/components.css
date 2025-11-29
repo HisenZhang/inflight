@@ -3,6 +3,74 @@
    COMPONENTS
    ============================================ */
 
+/* Route Airports Quick Select Bar */
+.route-airports-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    margin-bottom: var(--space-sm);
+}
+
+.route-airports-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    letter-spacing: 1px;
+}
+
+.route-airports-list {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.route-airport-btn {
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    font-family: 'Roboto Mono', monospace;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--color-airport);
+    color: var(--color-airport);
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.route-airport-btn:hover {
+    background: var(--color-airport);
+    color: var(--bg-primary);
+}
+
+.route-airport-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.route-airport-btn.departure {
+    border-color: var(--color-metric);
+    color: var(--color-metric);
+}
+
+.route-airport-btn.departure:hover {
+    background: var(--color-metric);
+    color: var(--bg-primary);
+}
+
+.route-airport-btn.destination {
+    border-color: var(--color-warning);
+    color: var(--color-warning);
+}
+
+.route-airport-btn.destination:hover {
+    background: var(--color-warning);
+    color: var(--bg-primary);
+}
+
 /* Header */
 header {
     padding: 0;
@@ -1188,6 +1256,97 @@ header {
 }
 
 /* ============================================
+   DATA WARNING BANNER
+   ============================================ */
+
+.data-warning {
+    position: fixed;
+    top: -200px;
+    left: 0;
+    right: 0;
+    background: var(--color-warning);
+    color: var(--bg-primary);
+    padding: var(--space-md);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    z-index: 9999;
+    transition: top 0.3s ease-in-out;
+}
+
+.data-warning.show {
+    top: 0;
+}
+
+.data-warning-content {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.data-warning-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.data-warning-text {
+    flex: 1;
+}
+
+.data-warning-text strong {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    margin-bottom: 2px;
+}
+
+.data-warning-text p {
+    margin: 0;
+    font-size: 0.75rem;
+    opacity: 0.9;
+}
+
+.data-warning-actions {
+    display: flex;
+    gap: var(--space-sm);
+}
+
+.data-warning .btn {
+    background: var(--bg-primary);
+    color: var(--color-warning);
+    border: 2px solid var(--bg-primary);
+    padding: 6px 12px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.data-warning .btn:hover {
+    background: transparent;
+    color: var(--bg-primary);
+    border-color: var(--bg-primary);
+}
+
+/* Mobile responsiveness */
+@media (max-width: 600px) {
+    .data-warning-content {
+        flex-direction: column;
+        text-align: center;
+        gap: var(--space-sm);
+    }
+
+    .data-warning-actions {
+        width: 100%;
+    }
+
+    .data-warning-actions .btn {
+        flex: 1;
+    }
+}
+
+/* ============================================
    PROGRESS BAR
    ============================================ */
 
@@ -1612,6 +1771,137 @@ select option:checked {
     .modal-overlay {
         display: none !important;
     }
+}
+
+/* ============================================
+   CHANGELOG MODAL
+   ============================================ */
+
+.changelog-h1 {
+    color: var(--color-primary);
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0 0 1rem 0;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--color-primary);
+}
+
+.changelog-version {
+    color: var(--color-metric);
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin: 1.5rem 0 0.75rem 0;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.changelog-date {
+    color: var(--text-secondary);
+    font-weight: 400;
+    font-size: 0.9rem;
+    margin-left: 0.5rem;
+}
+
+.changelog-h2 {
+    color: var(--color-metric);
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 1.25rem 0 0.5rem 0;
+}
+
+.changelog-h3 {
+    color: var(--color-primary);
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin: 1rem 0 0.5rem 0;
+}
+
+.changelog-h4 {
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin: 0.75rem 0 0.25rem 0;
+}
+
+.changelog-p {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    line-height: 1.6;
+    margin: 0.5rem 0;
+}
+
+.changelog-list {
+    list-style: none;
+    padding: 0;
+    margin: 0.5rem 0;
+}
+
+.changelog-list li {
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    line-height: 1.5;
+    padding: 0.25rem 0 0.25rem 1.25rem;
+    position: relative;
+}
+
+.changelog-list li::before {
+    content: '•';
+    color: var(--color-primary);
+    font-weight: bold;
+    position: absolute;
+    left: 0.25rem;
+}
+
+.changelog-list li.changelog-indent {
+    padding-left: 2.5rem;
+}
+
+.changelog-list li.changelog-indent::before {
+    left: 1.5rem;
+    color: var(--text-secondary);
+}
+
+.changelog-list code {
+    background: var(--bg-secondary);
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+    font-size: 0.8em;
+    font-family: monospace;
+}
+
+.changelog-list strong {
+    color: var(--color-primary);
+}
+
+.changelog-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0.75rem 0;
+    font-size: 0.8rem;
+}
+
+.changelog-table th,
+.changelog-table td {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border-color);
+    text-align: left;
+}
+
+.changelog-table th {
+    background: var(--bg-secondary);
+    color: var(--color-primary);
+    font-weight: 600;
+}
+
+.changelog-table td {
+    color: var(--text-primary);
+}
+
+.changelog-table code {
+    background: var(--bg-primary);
+    padding: 0.1rem 0.3rem;
+    border-radius: 2px;
+    font-size: 0.9em;
 }
 
 /* ============================================

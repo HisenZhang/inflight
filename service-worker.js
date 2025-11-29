@@ -61,7 +61,9 @@ const ASSETS_TO_CACHE = [
     './display/stats-controller.js',
     './display/checklist-controller.js',
     './display/map-display.js',
-    './display/app.js'
+    './display/app.js',
+    // Documentation
+    './CHANGELOG.md'
 ];
 
 // Install event - cache assets

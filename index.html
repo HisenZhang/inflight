@@ -31,6 +31,20 @@
         </div>
     </div>
 
+    <!-- Data Warning Banner (for expired NASR data, etc.) -->
+    <div id="data-warning" class="data-warning">
+        <div class="data-warning-content">
+            <span class="data-warning-icon">&#9888;</span>
+            <div class="data-warning-text">
+                <strong id="data-warning-title">DATA WARNING</strong>
+                <p id="data-warning-message">Aviation data may be outdated.</p>
+            </div>
+            <div class="data-warning-actions">
+                <button class="btn btn-secondary btn-sm" onclick="UIController.hideDataWarning()">DISMISS</button>
+            </div>
+        </div>
+    </div>
+
     <div class="container">
         <header>
             <!-- Tab Navigation -->
@@ -90,18 +104,21 @@
 
             <!-- App Updates -->
             <div class="data-section">
-                <h3 class="section-header">APP VERSION</h3>
+                <h3 class="section-header">CURRENTLY RUNNING</h3>
                 <div class="data-info">
                     <p><strong>Version:</strong> <span id="app-version">Loading...</span></p>
                     <p><strong>Cache:</strong> <span id="cache-version">Loading...</span></p>
                     <p style="margin-bottom: 0;"><strong>Build:</strong> <span id="build-date">Loading...</span></p>
                 </div>
-                <div style="text-align: center;">
+                <div style="text-align: center; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
                     <button class="btn btn-secondary" onclick="checkForUpdates()">
                         CHECK FOR UPDATES
                     </button>
-                    <p id="update-check-status" style="margin-top: 8px; font-size: 0.75rem; color: var(--text-secondary);"></p>
+                    <button class="btn btn-secondary" onclick="viewChangelog()">
+                        VIEW CHANGELOG
+                    </button>
                 </div>
+                <p id="update-check-status" style="margin-top: 8px; font-size: 0.75rem; color: var(--text-secondary); text-align: center;"></p>
             </div>
 
             <script>
@@ -450,6 +467,12 @@
                 </p>
             </div>
 
+            <!-- Route Airports Quick Select (shown when route is planned) -->
+            <div id="wxRouteAirports" class="route-airports-bar" style="display: none;">
+                <span class="route-airports-label">ROUTE:</span>
+                <div id="wxRouteAirportsList" class="route-airports-list"></div>
+            </div>
+
             <!-- Weather Sub-tabs -->
             <div id="wxSubtabs" class="data-section" style="display: none;">
                 <div style="display: flex; gap: 8px; margin-bottom: 12px;">
@@ -530,6 +553,12 @@
                 <p class="help-text">
                     <span class="text-secondary">FAA d-TPP (Terminal Procedures Publication) • Internet required</span>
                 </p>
+            </div>
+
+            <!-- Route Airports Quick Select (shown when route is planned) -->
+            <div id="chartsRouteAirports" class="route-airports-bar" style="display: none;">
+                <span class="route-airports-label">ROUTE:</span>
+                <div id="chartsRouteAirportsList" class="route-airports-list"></div>
             </div>
 
             <!-- Recent Charts History -->

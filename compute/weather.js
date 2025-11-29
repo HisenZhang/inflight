@@ -288,6 +288,269 @@
          */
         fahrenheitToCelsius(fahrenheit) {
             return Math.round((fahrenheit - 32) * 5 / 9);
+        },
+
+        // ============================================
+        // HAZARD GEOMETRY FUNCTIONS (Pure)
+        // ============================================
+
+        /**
+         * Calculate great circle distance between two points in nautical miles
+         * Uses Haversine formula
+         * @param {number} lat1 - First point latitude
+         * @param {number} lon1 - First point longitude
+         * @param {number} lat2 - Second point latitude
+         * @param {number} lon2 - Second point longitude
+         * @returns {number} Distance in nautical miles
+         */
+        haversineDistance(lat1, lon1, lat2, lon2) {
+            const R = 3440.065; // Earth radius in nautical miles
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c;
+        },
+
+        /**
+         * Check if a point is inside a polygon using ray casting algorithm
+         * @param {number} lat - Point latitude
+         * @param {number} lon - Point longitude
+         * @param {Array} polygon - Array of {lat, lon} coordinates
+         * @returns {boolean} True if point is inside polygon
+         */
+        pointInPolygon(lat, lon, polygon) {
+            if (!polygon || polygon.length < 3) return false;
+
+            let inside = false;
+            const n = polygon.length;
+
+            for (let i = 0, j = n - 1; i < n; j = i++) {
+                const yi = polygon[i].lat;
+                const xi = polygon[i].lon;
+                const yj = polygon[j].lat;
+                const xj = polygon[j].lon;
+
+                if (((yi > lat) !== (yj > lat)) &&
+                    (lon < (xj - xi) * (lat - yi) / (yj - yi) + xi)) {
+                    inside = !inside;
+                }
+            }
+
+            return inside;
+        },
+
+        /**
+         * Check if a hazard polygon is relevant to a location
+         * Point is inside polygon OR any polygon vertex is within radius
+         * @param {Object} hazard - Hazard object with coords array
+         * @param {number} lat - Location latitude
+         * @param {number} lon - Location longitude
+         * @param {number} radiusNm - Relevance radius in nautical miles
+         * @returns {boolean} True if hazard affects location
+         */
+        isHazardRelevantToPoint(hazard, lat, lon, radiusNm = 150) {
+            if (!hazard || !hazard.coords || hazard.coords.length < 3) {
+                return false;
+            }
+
+            // Check if point is inside polygon
+            if (this.pointInPolygon(lat, lon, hazard.coords)) {
+                return true;
+            }
+
+            // Check if any polygon vertex is within radius
+            for (const coord of hazard.coords) {
+                const dist = this.haversineDistance(lat, lon, coord.lat, coord.lon);
+                if (dist <= radiusNm) {
+                    return true;
+                }
+            }
+
+            return false;
+        },
+
+        /**
+         * Check if a hazard polygon intersects with a route corridor
+         * @param {Object} hazard - Hazard object with coords array
+         * @param {Array} waypoints - Route waypoints with lat/lon
+         * @param {number} corridorNm - Corridor width in nautical miles
+         * @returns {boolean} True if hazard intersects route corridor
+         */
+        isHazardRelevantToRoute(hazard, waypoints, corridorNm = 50) {
+            if (!hazard || !hazard.coords || hazard.coords.length < 3) {
+                return false;
+            }
+            if (!waypoints || waypoints.length === 0) {
+                return false;
+            }
+
+            // Check if any waypoint is inside the polygon
+            for (const wp of waypoints) {
+                if (wp.lat !== undefined && wp.lon !== undefined) {
+                    if (this.pointInPolygon(wp.lat, wp.lon, hazard.coords)) {
+                        return true;
+                    }
+                }
+            }
+
+            // Check if any polygon vertex is within corridor of any waypoint
+            for (const coord of hazard.coords) {
+                for (const wp of waypoints) {
+                    if (wp.lat !== undefined && wp.lon !== undefined) {
+                        const dist = this.haversineDistance(coord.lat, coord.lon, wp.lat, wp.lon);
+                        if (dist <= corridorNm) {
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            return false;
+        },
+
+        /**
+         * Find waypoints affected by a hazard polygon
+         * @param {Object} hazard - Hazard object with coords array
+         * @param {Array} waypoints - Route waypoints with lat/lon and ident
+         * @param {number} corridorNm - Corridor width in nautical miles
+         * @returns {Array} Array of affected waypoint identifiers
+         */
+        findAffectedWaypoints(hazard, waypoints, corridorNm = 50) {
+            if (!hazard || !hazard.coords || hazard.coords.length < 3) {
+                return [];
+            }
+            if (!waypoints || waypoints.length === 0) {
+                return [];
+            }
+
+            const affected = [];
+
+            for (const wp of waypoints) {
+                if (wp.lat === undefined || wp.lon === undefined) continue;
+
+                const ident = wp.icao || wp.ident || wp.name || 'WPT';
+                let isAffected = false;
+
+                // Check if inside polygon
+                if (this.pointInPolygon(wp.lat, wp.lon, hazard.coords)) {
+                    isAffected = true;
+                } else {
+                    // Check distance to polygon vertices
+                    for (const coord of hazard.coords) {
+                        const dist = this.haversineDistance(wp.lat, wp.lon, coord.lat, coord.lon);
+                        if (dist <= corridorNm) {
+                            isAffected = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (isAffected) {
+                    affected.push(ident);
+                }
+            }
+
+            return affected;
+        },
+
+        /**
+         * Get color for hazard type
+         * @param {string} hazard - Hazard code (e.g., 'ICE', 'TURB', 'IFR')
+         * @returns {string} CSS color string
+         */
+        getHazardColor(hazard) {
+            const h = (hazard || '').toUpperCase();
+            // IFR/visibility - Red
+            if (h === 'IFR' || h.includes('VIS')) return '#FF4444';
+            // Mountain obscuration - Red
+            if (h === 'MT_OBSC' || h.includes('MTN') || h.includes('OBSC')) return '#FF6666';
+            // Icing - Cyan
+            if (h === 'ICE' || h.includes('ICE') || h === 'FZLVL' || h === 'M_FZLVL') return '#00DDDD';
+            // Turbulence - Orange
+            if (h.includes('TURB')) return '#FFA500';
+            // Low-level wind shear - Yellow
+            if (h === 'LLWS' || h.includes('WIND') || h === 'SFC_WND') return '#FFDD00';
+            // Thunderstorm - Yellow
+            if (h.includes('TS') || h.includes('CONVECTIVE')) return '#FFFF00';
+            // Default - Yellow
+            return '#FFFF00';
+        },
+
+        /**
+         * Get human-readable hazard label
+         * @param {string} hazard - Hazard code
+         * @returns {string} Human-readable label
+         */
+        getHazardLabel(hazard) {
+            const labels = {
+                'IFR': 'IFR Conditions',
+                'MT_OBSC': 'Mountain Obscuration',
+                'ICE': 'Icing',
+                'FZLVL': 'Freezing Level',
+                'M_FZLVL': 'Multiple Freezing Levels',
+                'TURB-HI': 'Turbulence (High)',
+                'TURB-LO': 'Turbulence (Low)',
+                'LLWS': 'Low-Level Wind Shear',
+                'SFC_WND': 'Surface Winds',
+                'CONVECTIVE': 'Convective Activity'
+            };
+            return labels[hazard] || hazard || 'Unknown';
+        },
+
+        /**
+         * Calculate bounding box of a polygon
+         * @param {Array} coords - Array of {lat, lon} coordinates
+         * @returns {Object|null} {minLat, maxLat, minLon, maxLon} or null
+         */
+        getPolygonBounds(coords) {
+            if (!coords || coords.length === 0) return null;
+
+            let minLat = Infinity, maxLat = -Infinity;
+            let minLon = Infinity, maxLon = -Infinity;
+
+            for (const coord of coords) {
+                if (coord.lat < minLat) minLat = coord.lat;
+                if (coord.lat > maxLat) maxLat = coord.lat;
+                if (coord.lon < minLon) minLon = coord.lon;
+                if (coord.lon > maxLon) maxLon = coord.lon;
+            }
+
+            return { minLat, maxLat, minLon, maxLon };
+        },
+
+        // ============================================
+        // VALIDITY-BASED CACHE EXPIRATION (Pure)
+        // ============================================
+
+        /**
+         * Calculate METAR cache expiration time
+         * METARs are valid until 5 minutes past the next hour after observation
+         * @param {number} obsTime - Observation time (Unix timestamp in seconds)
+         * @returns {number} Expiration time (Unix timestamp in milliseconds)
+         */
+        calculateMETARExpiration(obsTime) {
+            if (!obsTime) return Date.now() + 60 * 60 * 1000; // 1 hour fallback
+
+            const obsTimeMs = obsTime * 1000;
+            const obsDate = new Date(obsTimeMs);
+            const nextHour = new Date(obsDate);
+            nextHour.setHours(nextHour.getHours() + 1);
+            nextHour.setMinutes(5, 0, 0); // 5 minutes past next hour
+            return nextHour.getTime();
+        },
+
+        /**
+         * Calculate TAF cache expiration time
+         * TAFs are valid until their validTimeTo
+         * @param {number} validTimeTo - Valid time to (Unix timestamp in seconds)
+         * @returns {number} Expiration time (Unix timestamp in milliseconds)
+         */
+        calculateTAFExpiration(validTimeTo) {
+            if (!validTimeTo) return Date.now() + 6 * 60 * 60 * 1000; // 6 hour fallback
+            return validTimeTo * 1000;
         }
     };
 

@@ -365,7 +365,23 @@ async function loadData(onStatusUpdate) {
         );
 
         dataTimestamp = Date.now();
-        return { success: true };
+
+        // Build result with any warnings
+        const result = { success: true };
+
+        // Check if NASR data is expired
+        if (nasrData && nasrData.isExpired && nasrData.info) {
+            const daysExpired = Math.abs(nasrData.info.daysRemaining);
+            result.warnings = [{
+                type: 'nasr_expired',
+                title: 'NASR DATA EXPIRED',
+                message: `Expired ${daysExpired} day${daysExpired !== 1 ? 's' : ''} ago (${nasrData.info.expiryDate}). Data may be outdated - verify critical information.`,
+                daysExpired,
+                expiryDate: nasrData.info.expiryDate
+            }];
+        }
+
+        return result;
 
     } catch (error) {
         onStatusUpdate(`[ERR] ${error.message}`, 'error');

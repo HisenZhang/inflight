@@ -7,6 +7,7 @@ window.WeatherController = {
     currentIcao: null,
     currentSubtab: 'metar',
     weatherData: null,
+    routeWaypoints: [], // Stores current route waypoints for hazard analysis
 
     /**
      * Initialize weather controller
@@ -75,9 +76,83 @@ window.WeatherController = {
     },
 
     /**
+     * Update route airports quick select bar
+     * Called when a route is calculated or cleared
+     * @param {Array} airports - Array of airport objects with icao property
+     */
+    updateRouteAirports(airports) {
+        const container = document.getElementById('wxRouteAirports');
+        const list = document.getElementById('wxRouteAirportsList');
+        if (!container || !list) return;
+
+        if (!airports || airports.length === 0) {
+            container.style.display = 'none';
+            return;
+        }
+
+        // Build buttons for each airport
+        list.innerHTML = airports.map((apt, index) => {
+            const isFirst = index === 0;
+            const isLast = index === airports.length - 1;
+            let className = 'route-airport-btn';
+            if (isFirst) className += ' departure';
+            else if (isLast) className += ' destination';
+
+            return `<button class="${className}" onclick="WeatherController.showWeatherForAirport('${apt.icao}')">${apt.icao}</button>`;
+        }).join('');
+
+        container.style.display = 'flex';
+    },
+
+    /**
+     * Update route waypoints for hazard analysis
+     * Called when a route is calculated or cleared
+     * @param {Array} waypoints - Array of waypoint objects with lat, lon, ident/icao
+     */
+    updateRouteWaypoints(waypoints) {
+        this.routeWaypoints = waypoints || [];
+    },
+
+    /**
+     * Shows weather for an airport (called from navlog or route quick-select)
+     * @param {string} icao - Airport ICAO code
+     */
+    showWeatherForAirport(icao) {
+        // Check online status first
+        if (!window.UIController?.isOnline?.()) {
+            // Switch to WX tab first so user sees the error there
+            const wxTab = document.querySelector('[data-tab="wx"]');
+            if (wxTab) {
+                wxTab.click();
+            }
+            this.showError('Internet connection required for weather data');
+            return;
+        }
+
+        // Switch to WX tab
+        const wxTab = document.querySelector('[data-tab="wx"]');
+        if (wxTab) {
+            wxTab.click();
+        }
+
+        // Set input value and fetch
+        const input = document.getElementById('wxAirportInput');
+        if (input) {
+            input.value = icao.toUpperCase();
+        }
+
+        this.fetchWeather();
+    },
+
+    /**
      * Fetch weather data for an airport
      */
     async fetchWeather() {
+        // Check online status first
+        if (!window.UIController?.isOnline?.()) {
+            this.showError('Internet connection required for weather data');
+            return;
+        }
         const input = document.getElementById('wxAirportInput');
         const icao = input?.value?.trim().toUpperCase();
 
@@ -97,6 +172,11 @@ window.WeatherController = {
         try {
             console.log(`[WeatherController] Fetching weather for ${icao}`);
 
+            // Get airport location for filtering area hazards
+            const airport = window.DataManager?.getAirport(icao);
+            const airportLat = airport?.lat;
+            const airportLon = airport?.lon;
+
             // Fetch all weather data in parallel
             const [metar, taf, pireps, sigmets, gairmets] = await Promise.allSettled([
                 WeatherAPI.fetchMETAR(icao),
@@ -106,13 +186,28 @@ window.WeatherController = {
                 WeatherAPI.fetchGAIRMETs()
             ]);
 
+            // Filter SIGMETs and G-AIRMETs to those affecting the airport area
+            let filteredSigmets = sigmets.status === 'fulfilled' ? sigmets.value : [];
+            let filteredGairmets = gairmets.status === 'fulfilled' ? gairmets.value : [];
+
+            if (airportLat !== undefined && airportLon !== undefined) {
+                // Filter to hazards within ~150nm or whose polygon contains the airport
+                filteredSigmets = filteredSigmets.filter(s =>
+                    window.Weather.isHazardRelevantToPoint(s, airportLat, airportLon, 150)
+                );
+                filteredGairmets = filteredGairmets.filter(g =>
+                    window.Weather.isHazardRelevantToPoint(g, airportLat, airportLon, 150)
+                );
+                console.log(`[WeatherController] Filtered to ${filteredSigmets.length} SIGMETs, ${filteredGairmets.length} G-AIRMETs near ${icao}`);
+            }
+
             this.weatherData = {
                 icao,
                 metar: metar.status === 'fulfilled' ? metar.value : null,
                 taf: taf.status === 'fulfilled' ? taf.value : null,
                 pireps: pireps.status === 'fulfilled' ? pireps.value : [],
-                sigmets: sigmets.status === 'fulfilled' ? sigmets.value : [],
-                gairmets: gairmets.status === 'fulfilled' ? gairmets.value : []
+                sigmets: filteredSigmets,
+                gairmets: filteredGairmets
             };
 
             // Hide loading, show subtabs
@@ -127,6 +222,81 @@ window.WeatherController = {
             this.hideElement('wxLoading');
             this.showError(`Failed to fetch weather: ${error.message}`);
         }
+    },
+
+    /**
+     * Show a hazard area on the map
+     * Enables the appropriate weather overlay and centers the map on the polygon
+     * @param {string} type - 'sigmet' or 'gairmet'
+     * @param {number} index - Index in the stored array
+     */
+    showHazardOnMap(type, index) {
+        let hazard;
+        if (type === 'sigmet' && window._wxSigmets) {
+            hazard = window._wxSigmets[index];
+        } else if (type === 'gairmet' && window._wxGairmets) {
+            hazard = window._wxGairmets[index];
+        }
+
+        if (!hazard || !hazard.coords || hazard.coords.length < 3) {
+            console.warn('[WeatherController] No valid coordinates for hazard');
+            return;
+        }
+
+        // Switch to MAP tab first
+        const mapTab = document.querySelector('[data-tab="map"]');
+        if (mapTab) {
+            mapTab.click();
+        }
+
+        // Enable the appropriate weather overlay based on hazard type
+        if (type === 'sigmet') {
+            // Enable SIGMETs overlay
+            if (!window.VectorMap.isWeatherEnabled('sigmets')) {
+                window.VectorMap.toggleWeatherOverlays('sigmets', true);
+                const sigmetBtn = document.getElementById('sigmetBtn');
+                if (sigmetBtn) sigmetBtn.classList.add('active');
+            }
+        } else if (type === 'gairmet') {
+            // Determine which G-AIRMET type to enable
+            const hazardCode = (hazard.hazard || '').toUpperCase();
+            let targetType = null;
+
+            // Map hazard codes to overlay types
+            if (hazardCode === 'ICE') {
+                targetType = 'ice';
+            } else if (hazardCode.includes('TURB') || hazardCode === 'LLWS') {
+                targetType = 'turb';
+            } else if (hazardCode === 'IFR') {
+                targetType = 'ifr';
+            } else if (hazardCode === 'MT_OBSC') {
+                targetType = 'mtn';
+            } else if (hazardCode === 'FZLVL' || hazardCode === 'M_FZLVL') {
+                targetType = 'fzlvl';
+            }
+
+            // Enable target G-AIRMET type if identified
+            if (targetType && !window.VectorMap.isWeatherEnabled(`gairmet-${targetType}`)) {
+                window.VectorMap.toggleWeatherOverlays(`gairmet-${targetType}`, true);
+                const gairmetBtnIds = {
+                    'ice': 'gairmetIceBtn',
+                    'turb': 'gairmetTurbBtn',
+                    'ifr': 'gairmetIfrBtn',
+                    'mtn': 'gairmetMtnBtn',
+                    'fzlvl': 'gairmetFzlvlBtn'
+                };
+                const btn = document.getElementById(gairmetBtnIds[targetType]);
+                if (btn) btn.classList.add('active');
+            }
+        }
+
+        // Center the map on the hazard polygon
+        if (window.VectorMap && window.VectorMap.focusOnPolygon) {
+            window.VectorMap.focusOnPolygon(hazard.coords);
+        }
+
+        const hazardName = window.Weather.getHazardLabel(hazard.hazard || 'UNKNOWN');
+        console.log(`[WeatherController] Showing ${type} on map: ${hazardName}`);
     },
 
     /**
@@ -617,7 +787,7 @@ window.WeatherController = {
     },
 
     /**
-     * Render SIGMETs display
+     * Render SIGMETs display - each area shown as clickable row
      */
     renderSIGMETs() {
         const container = document.getElementById('wxSigmetDisplay');
@@ -635,82 +805,105 @@ window.WeatherController = {
             return;
         }
 
-        const sigmetHTML = sigmets.map(sigmet => {
-            const validFrom = sigmet.validTimeFrom ? new Date(sigmet.validTimeFrom * 1000).toUTCString() : 'Unknown';
-            const validTo = sigmet.validTimeTo ? new Date(sigmet.validTimeTo * 1000).toUTCString() : 'Unknown';
+        // Format time display
+        const formatValidTime = (timestamp) => {
+            if (!timestamp) return 'N/A';
+            const d = new Date(timestamp * 1000);
+            const day = d.getUTCDate();
+            const hours = d.getUTCHours().toString().padStart(2, '0');
+            const mins = d.getUTCMinutes().toString().padStart(2, '0');
+            return `${day}/${hours}:${mins}Z`;
+        };
 
-            // Hazard type badge
-            const hazardType = sigmet.hazard || 'UNKNOWN';
-            let hazardColor = '#888888';
-            if (hazardType.includes('TURB')) hazardColor = 'orange';
-            else if (hazardType.includes('ICE')) hazardColor = 'cyan';
-            else if (hazardType.includes('IFR')) hazardColor = 'red';
-            else if (hazardType.includes('TS')) hazardColor = 'yellow';
+        // Store sigmets in window for click handler access
+        window._wxSigmets = sigmets;
 
-            // Decode area coordinates
-            let areaText = sigmet.firId || '--';
-            if (sigmet.coords && Array.isArray(sigmet.coords) && sigmet.coords.length > 0) {
-                const coordsStr = sigmet.coords.map(coord => {
-                    if (coord.lat !== undefined && coord.lon !== undefined) {
-                        const latStr = Math.abs(coord.lat).toFixed(2) + (coord.lat >= 0 ? 'N' : 'S');
-                        const lonStr = Math.abs(coord.lon).toFixed(2) + (coord.lon >= 0 ? 'E' : 'W');
-                        return `${latStr} ${lonStr}`;
-                    }
-                    return '';
-                }).filter(s => s).join(', ');
-                if (coordsStr) {
-                    areaText = `${sigmet.coords.length} points: ${coordsStr.substring(0, 100)}${coordsStr.length > 100 ? '...' : ''}`;
+        // Check if we have route waypoints for affected analysis
+        const hasRouteWaypoints = this.routeWaypoints && this.routeWaypoints.length > 0;
+
+        // Render each SIGMET area as a clickable row
+        const sigmetHTML = sigmets.map((sigmet, index) => {
+            const hazardColor = window.Weather.getHazardColor(sigmet.hazard);
+            const type = sigmet.airSigmetType || 'SIGMET';
+            const hazard = sigmet.hazard || 'UNKNOWN';
+            const validFrom = formatValidTime(sigmet.validTimeFrom);
+            const validTo = formatValidTime(sigmet.validTimeTo);
+
+            // Altitude
+            const altLow = sigmet.altitudeLow1 || sigmet.altitudeLow || null;
+            const altHi = sigmet.altitudeHi1 || sigmet.altitudeHi || null;
+            const altStr = (altLow && altHi) ? `${altLow}-${altHi}` : '--';
+
+            // Check if has valid coords for clicking
+            const hasCoords = sigmet.coords && Array.isArray(sigmet.coords) && sigmet.coords.length >= 3;
+            const clickStyle = hasCoords ? 'cursor: pointer;' : '';
+            const clickHandler = hasCoords ? `onclick="WeatherController.showHazardOnMap('sigmet', ${index})"` : '';
+            const hoverClass = hasCoords ? 'hazard-row-clickable' : '';
+
+            // Calculate affected waypoints if route exists
+            let affectedStr = '--';
+            if (hasRouteWaypoints && hasCoords && window.Weather?.findAffectedWaypoints) {
+                const affected = window.Weather.findAffectedWaypoints(sigmet, this.routeWaypoints, 30);
+                if (affected.length > 0) {
+                    affectedStr = affected.slice(0, 3).join(', ') + (affected.length > 3 ? '...' : '');
                 }
             }
 
+            const affectedCell = hasRouteWaypoints ? `
+                <td style="text-align: left; color: ${affectedStr !== '--' ? 'var(--color-warning)' : '#666'}; font-size: 0.65rem; padding: 8px; border-bottom: 1px solid var(--border-color);">${affectedStr}</td>
+            ` : '';
+
             return `
-                <div class="stats-card" style="margin-bottom: 8px;">
-                    <h3 class="stats-card-title">
-                        ${sigmet.airSigmetType || 'SIGMET'}
-                        <span class="flight-category-badge" style="background: ${hazardColor}; color: black; margin-left: 8px;">${hazardType}</span>
-                    </h3>
-                    <div class="stats-grid-compact">
-                        <div class="stat-item">
-                            <span class="stat-label">AREA</span>
-                            <span class="stat-value text-secondary" style="font-size: 0.7rem; word-break: break-word;">${areaText}</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-label">ALT</span>
-                            <span class="stat-value text-metric">${sigmet.altitudeLow1 || sigmet.altitudeLow || '--'} - ${sigmet.altitudeHi1 || sigmet.altitudeHi || '--'} FT</span>
-                        </div>
-                    </div>
-                    <div class="stats-grid-compact" style="margin-top: 8px;">
-                        <div class="stat-item">
-                            <span class="stat-label">VALID FROM</span>
-                            <span class="stat-value text-secondary" style="font-size: 0.65rem;">${validFrom}</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-label">VALID TO</span>
-                            <span class="stat-value text-secondary" style="font-size: 0.65rem;">${validTo}</span>
-                        </div>
-                    </div>
-                    <div style="padding: 12px; margin-top: 8px; background: #0a0a0a; border-radius: 4px;">
-                        <div style="font-family: 'Roboto Mono', monospace; color: #FFFF00; font-size: 0.75rem; line-height: 1.4; word-break: break-all;">
-                            ${sigmet.rawAirSigmet || sigmet.hazard || 'N/A'}
-                        </div>
-                    </div>
-                </div>
+                <tr class="${hoverClass}" style="${clickStyle}" ${clickHandler}>
+                    <td style="color: #888; font-size: 0.7rem; padding: 8px; border-bottom: 1px solid var(--border-color);">${type}</td>
+                    <td style="padding: 8px; border-bottom: 1px solid var(--border-color); border-left: 3px solid ${hazardColor};">
+                        <span style="color: ${hazardColor}; font-weight: 600;">${hazard}</span>
+                    </td>
+                    <td style="text-align: center; color: var(--color-metric); font-size: 0.7rem; padding: 8px; border-bottom: 1px solid var(--border-color);">${altStr}</td>
+                    ${affectedCell}
+                    <td style="text-align: right; color: var(--text-secondary); font-size: 0.7rem; padding: 8px; border-bottom: 1px solid var(--border-color);">${validFrom} - ${validTo}</td>
+                    <td style="text-align: center; padding: 8px; border-bottom: 1px solid var(--border-color);">
+                        ${hasCoords ? '<span style="color: var(--color-metric); font-size: 0.65rem;">MAP →</span>' : '<span style="color: #666; font-size: 0.65rem;">--</span>'}
+                    </td>
+                </tr>
             `;
         }).join('');
 
+        const affectedHeader = hasRouteWaypoints ?
+            '<th style="text-align: left; padding: 6px 8px; font-size: 0.65rem; color: var(--text-secondary); font-weight: 600;">AFFECTS</th>' : '';
+
         container.innerHTML = `
             <div class="stats-card">
-                <h3 class="stats-card-title">ACTIVE SIGMETS (${sigmets.length})</h3>
-                <div style="padding: 12px; color: var(--text-secondary); font-size: 0.75rem;">
-                    Significant meteorological information
+                <h3 class="stats-card-title">ACTIVE SIGMETs (${sigmets.length})</h3>
+                <div style="padding: 8px 12px; color: var(--text-secondary); font-size: 0.7rem; border-bottom: 1px solid var(--border-color);">
+                    Click any row to view area on map
                 </div>
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem;">
+                    <thead>
+                        <tr style="background: var(--bg-tertiary);">
+                            <th style="text-align: left; padding: 6px 8px; font-size: 0.65rem; color: var(--text-secondary); font-weight: 600;">TYPE</th>
+                            <th style="text-align: left; padding: 6px 8px; font-size: 0.65rem; color: var(--text-secondary); font-weight: 600;">HAZARD</th>
+                            <th style="text-align: center; padding: 6px 8px; font-size: 0.65rem; color: var(--text-secondary); font-weight: 600;">ALT (FT)</th>
+                            ${affectedHeader}
+                            <th style="text-align: right; padding: 6px 8px; font-size: 0.65rem; color: var(--text-secondary); font-weight: 600;">VALID (Z)</th>
+                            <th style="text-align: center; padding: 6px 8px; font-size: 0.65rem; color: var(--text-secondary); font-weight: 600;">VIEW</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${sigmetHTML}
+                    </tbody>
+                </table>
             </div>
-            ${sigmetHTML}
+            <style>
+                .hazard-row-clickable:hover {
+                    background: rgba(255, 102, 0, 0.1) !important;
+                }
+            </style>
         `;
     },
 
     /**
-     * Render G-AIRMETs display
+     * Render G-AIRMETs display - each area shown as clickable row
      */
     renderGAIRMETs() {
         const container = document.getElementById('wxGairmetDisplay');
@@ -728,91 +921,122 @@ window.WeatherController = {
             return;
         }
 
-        const gairmetHTML = gairmets.map(gairmet => {
-            const hazard = gairmet.hazard || 'UNKNOWN';
-            const validFrom = gairmet.validTime
-                ? new Date(gairmet.validTime).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-                : 'N/A';
-            const issueTime = gairmet.issueTime
-                ? new Date(gairmet.issueTime * 1000).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-                : 'N/A';
+        // Sort G-AIRMETs by product order (SIERRA, TANGO, ZULU) then by hazard
+        const productOrder = { 'SIERRA': 1, 'TANGO': 2, 'ZULU': 3, 'OTHER': 4 };
+        const sortedGairmets = [...gairmets].sort((a, b) => {
+            const orderA = productOrder[a.product] || 4;
+            const orderB = productOrder[b.product] || 4;
+            if (orderA !== orderB) return orderA - orderB;
+            return (a.hazard || '').localeCompare(b.hazard || '');
+        });
 
-            // Determine hazard color based on type
-            let hazardColor = '#FFFF00'; // Default yellow
-            if (hazard.includes('TURB') || hazard.includes('TURBULENCE')) {
-                hazardColor = '#FFA500'; // Orange for turbulence
-            } else if (hazard.includes('ICE') || hazard.includes('ICING')) {
-                hazardColor = '#00FFFF'; // Cyan for icing
-            } else if (hazard.includes('IFR') || hazard.includes('MTN') || hazard.includes('MNT')) {
-                hazardColor = '#FF0000'; // Red for IFR/mountain obscuration
+        // Store gairmets in window for click handler access
+        window._wxGairmets = sortedGairmets;
+
+        // Format relative time from now
+        const formatRelativeTime = (isoTime) => {
+            if (!isoTime) return '';
+            const validDate = new Date(isoTime);
+            const now = new Date();
+            const diffMs = validDate - now;
+            const diffHours = Math.round(diffMs / (1000 * 60 * 60));
+
+            if (diffHours > 0) {
+                return `F+${diffHours}h`;
+            } else if (diffHours < 0) {
+                return `${Math.abs(diffHours)}h ago`;
             }
+            return 'Now';
+        };
 
-            // Decode area coordinates
-            let areaText = '';
-            if (gairmet.coords && Array.isArray(gairmet.coords) && gairmet.coords.length > 0) {
-                const coordsStr = gairmet.coords.slice(0, 3).map(coord => {
-                    if (coord.lat !== undefined && coord.lon !== undefined) {
-                        const latStr = Math.abs(coord.lat).toFixed(2) + (coord.lat >= 0 ? 'N' : 'S');
-                        const lonStr = Math.abs(coord.lon).toFixed(2) + (coord.lon >= 0 ? 'E' : 'W');
-                        return `${latStr} ${lonStr}`;
-                    }
-                    return '';
-                }).filter(s => s).join(', ');
-                if (coordsStr) {
-                    areaText = `${gairmet.coords.length} points: ${coordsStr}${gairmet.coords.length > 3 ? '...' : ''}`;
+        // Format valid time display
+        const formatValidTime = (isoTime) => {
+            if (!isoTime) return 'N/A';
+            const d = new Date(isoTime);
+            const day = d.getDate();
+            const hours = d.getHours().toString().padStart(2, '0');
+            const mins = d.getMinutes().toString().padStart(2, '0');
+            return `${day}/${hours}:${mins}`;
+        };
+
+        // Check if we have route waypoints for affected analysis
+        const hasRouteWaypoints = this.routeWaypoints && this.routeWaypoints.length > 0;
+
+        // Render each G-AIRMET area as a clickable row
+        const gairmetHTML = sortedGairmets.map((gairmet, index) => {
+            const hazardColor = window.Weather.getHazardColor(gairmet.hazard);
+            const hazardLabel = window.Weather.getHazardLabel(gairmet.hazard);
+            const product = gairmet.product || 'OTHER';
+            const validStr = formatValidTime(gairmet.validTime);
+            const relativeStr = formatRelativeTime(gairmet.validTime);
+
+            // Check if has valid coords for clicking
+            const hasCoords = gairmet.coords && Array.isArray(gairmet.coords) && gairmet.coords.length >= 3;
+            const clickStyle = hasCoords ? 'cursor: pointer;' : '';
+            const clickHandler = hasCoords ? `onclick="WeatherController.showHazardOnMap('gairmet', ${index})"` : '';
+            const hoverClass = hasCoords ? 'hazard-row-clickable' : '';
+
+            // Calculate affected waypoints if route exists
+            let affectedStr = '--';
+            if (hasRouteWaypoints && hasCoords && window.Weather?.findAffectedWaypoints) {
+                const affected = window.Weather.findAffectedWaypoints(gairmet, this.routeWaypoints, 30);
+                if (affected.length > 0) {
+                    affectedStr = affected.slice(0, 3).join(', ') + (affected.length > 3 ? '...' : '');
                 }
             }
 
-            const product = gairmet.product || '';
-            const dueToText = gairmet.due_to ? `Due to: ${gairmet.due_to}` : '';
+            const affectedCell = hasRouteWaypoints ? `
+                <td style="text-align: left; color: ${affectedStr !== '--' ? 'var(--color-warning)' : '#666'}; font-size: 0.65rem; padding: 8px; border-bottom: 1px solid var(--border-color);">${affectedStr}</td>
+            ` : '';
 
             return `
-                <div class="stats-card" style="margin-top: 8px; border-left: 3px solid ${hazardColor};">
-                    <div style="padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color);">
-                        <span style="font-weight: 700; color: ${hazardColor};">${hazard}</span>
-                        ${product ? `<span style="color: #888; font-size: 0.7rem;">${product}</span>` : ''}
-                    </div>
-                    <div style="padding: 8px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
-                        <div class="stat-item">
-                            <span class="stat-label">VALID TIME</span>
-                            <span class="stat-value text-secondary" style="font-size: 0.65rem;">${validFrom}</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-label">ISSUED</span>
-                            <span class="stat-value text-secondary" style="font-size: 0.65rem;">${issueTime}</span>
-                        </div>
-                        ${areaText ? `
-                        <div class="stat-item" style="grid-column: 1 / -1;">
-                            <span class="stat-label">AREA</span>
-                            <span class="stat-value text-secondary" style="font-size: 0.65rem; word-break: break-word;">${areaText}</span>
-                        </div>
-                        ` : ''}
-                        ${dueToText ? `
-                        <div class="stat-item" style="grid-column: 1 / -1;">
-                            <span class="stat-label">DETAILS</span>
-                            <span class="stat-value text-warning" style="font-size: 0.7rem;">${dueToText}</span>
-                        </div>
-                        ` : ''}
-                    </div>
-                    ${gairmet.rawGAirmet ? `
-                    <div style="padding: 12px; margin-top: 8px; background: #0a0a0a; border-radius: 4px;">
-                        <div style="font-family: 'Roboto Mono', monospace; color: #FFFF00; font-size: 0.75rem; line-height: 1.4; word-break: break-all;">
-                            ${gairmet.rawGAirmet}
-                        </div>
-                    </div>
-                    ` : ''}
-                </div>
+                <tr class="${hoverClass}" style="${clickStyle}" ${clickHandler}>
+                    <td style="color: #888; font-size: 0.7rem; padding: 8px; border-bottom: 1px solid var(--border-color);">${product}</td>
+                    <td style="padding: 8px; border-bottom: 1px solid var(--border-color); border-left: 3px solid ${hazardColor};">
+                        <span style="color: ${hazardColor}; font-weight: 600;">${hazardLabel}</span>
+                        ${gairmet.dueTo ? `<span style="color: var(--text-secondary); font-size: 0.65rem; margin-left: 6px;">${gairmet.dueTo}</span>` : ''}
+                    </td>
+                    ${affectedCell}
+                    <td style="text-align: right; padding: 8px; border-bottom: 1px solid var(--border-color);">
+                        <span style="color: var(--text-secondary); font-size: 0.7rem;">${validStr}</span>
+                        <span style="color: var(--color-metric); font-size: 0.65rem; margin-left: 4px;">${relativeStr}</span>
+                    </td>
+                    <td style="text-align: center; padding: 8px; border-bottom: 1px solid var(--border-color);">
+                        ${hasCoords ? '<span style="color: var(--color-metric); font-size: 0.65rem;">MAP →</span>' : '<span style="color: #666; font-size: 0.65rem;">--</span>'}
+                    </td>
+                </tr>
             `;
         }).join('');
+
+        const affectedHeader = hasRouteWaypoints ?
+            '<th style="text-align: left; padding: 6px 8px; font-size: 0.65rem; color: var(--text-secondary); font-weight: 600;">AFFECTS</th>' : '';
 
         container.innerHTML = `
             <div class="stats-card">
                 <h3 class="stats-card-title">ACTIVE G-AIRMETs (${gairmets.length})</h3>
-                <div style="padding: 12px; color: var(--text-secondary); font-size: 0.75rem;">
-                    Graphical Airmen's Meteorological Information
+                <div style="padding: 8px 12px; color: var(--text-secondary); font-size: 0.7rem; border-bottom: 1px solid var(--border-color);">
+                    Click any row to view area on map
                 </div>
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem;">
+                    <thead>
+                        <tr style="background: var(--bg-tertiary);">
+                            <th style="text-align: left; padding: 6px 8px; font-size: 0.65rem; color: var(--text-secondary); font-weight: 600;">TYPE</th>
+                            <th style="text-align: left; padding: 6px 8px; font-size: 0.65rem; color: var(--text-secondary); font-weight: 600;">HAZARD</th>
+                            ${affectedHeader}
+                            <th style="text-align: right; padding: 6px 8px; font-size: 0.65rem; color: var(--text-secondary); font-weight: 600;">VALID</th>
+                            <th style="text-align: center; padding: 6px 8px; font-size: 0.65rem; color: var(--text-secondary); font-weight: 600;">VIEW</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${gairmetHTML}
+                    </tbody>
+                </table>
             </div>
-            ${gairmetHTML}
+            <style>
+                .hazard-row-clickable:hover {
+                    background: rgba(255, 102, 0, 0.1) !important;
+                }
+            </style>
         `;
     },
 

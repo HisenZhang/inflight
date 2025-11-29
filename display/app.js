@@ -494,12 +494,12 @@ async function handleLoadData() {
         UIController.updateDatabaseStatus('checking', 'LOADING...');
         if (progressText) progressText.textContent = 'Starting download...';
 
-        await DataManager.loadData((message, type) => {
+        const loadResult = await DataManager.loadData((message, type) => {
             console.log(`[DataManager] ${message}`);
 
             // Update progress text - show what's being done
             if (progressText) {
-                const cleanMessage = message.replace(/^\[...\]\s*/, '').replace(/^\[OK\]\s*/, '');
+                const cleanMessage = message.replace(/^\[...\]\s*/, '').replace(/^\[OK\]\s*/, '').replace(/^\[!\]\s*/, '');
                 progressText.textContent = cleanMessage;
             }
         });
@@ -509,6 +509,14 @@ async function handleLoadData() {
 
         UIController.showDataInfo();
         UIController.enableRouteInput();
+
+        // Show any data warnings (e.g., expired NASR data)
+        if (loadResult.warnings && loadResult.warnings.length > 0) {
+            for (const warning of loadResult.warnings) {
+                UIController.showDataWarning(warning.title, warning.message);
+                console.warn(`[App] Data warning: ${warning.title} - ${warning.message}`);
+            }
+        }
 
         // Hide progress text after a delay
         setTimeout(() => {
@@ -910,6 +918,20 @@ async function handleCalculateRoute() {
         // Display results
         UIController.displayResults(waypoints, legs, totalDistance, totalTime, fuelStatus, { ...options, windMetadata });
 
+        // Update WX and Charts tabs with route airports
+        const routeAirports = waypoints.filter(w => w.waypointType === 'airport').map(w => ({ icao: w.icao || w.ident }));
+        if (window.WeatherController?.updateRouteAirports) {
+            window.WeatherController.updateRouteAirports(routeAirports);
+        }
+        if (window.ChartsController?.updateRouteAirports) {
+            window.ChartsController.updateRouteAirports(routeAirports);
+        }
+
+        // Update WX tab with all waypoints for hazard analysis
+        if (window.WeatherController?.updateRouteWaypoints) {
+            window.WeatherController.updateRouteWaypoints(waypoints);
+        }
+
         // Display vector map
         window.VectorMap.displayMap(waypoints, legs, options);
 
@@ -964,6 +986,19 @@ function handleClearRoute() {
         window.FlightState.clearStorage();
     }
     currentNavlogData = null;
+
+    // Clear route airports from WX and Charts tabs
+    if (window.WeatherController?.updateRouteAirports) {
+        window.WeatherController.updateRouteAirports([]);
+    }
+    if (window.ChartsController?.updateRouteAirports) {
+        window.ChartsController.updateRouteAirports([]);
+    }
+
+    // Clear route waypoints for hazard analysis
+    if (window.WeatherController?.updateRouteWaypoints) {
+        window.WeatherController.updateRouteWaypoints([]);
+    }
 }
 
 // ============================================
@@ -1436,3 +1471,180 @@ window.checkForUpdates = async function(event) {
         }
     }
 };
+
+/**
+ * Opens a modal to view the changelog
+ * Feature added in v3.0.0
+ */
+window.viewChangelog = async function() {
+    console.log('[App] viewChangelog called');
+
+    // Check if modal already exists
+    let modal = document.getElementById('changelog-modal');
+    if (modal) {
+        modal.style.display = 'flex';
+        return;
+    }
+
+    // Create modal structure
+    modal = document.createElement('div');
+    modal.id = 'changelog-modal';
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h2>CHANGELOG</h2>
+                <button class="modal-close" onclick="closeChangelog()">&times;</button>
+            </div>
+            <div class="modal-body" id="changelog-content">
+                <p style="color: var(--text-secondary);">Loading changelog...</p>
+            </div>
+        </div>
+    `;
+
+    // Close on overlay click
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            closeChangelog();
+        }
+    });
+
+    // Close on escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeChangelog();
+        }
+    });
+
+    document.body.appendChild(modal);
+
+    // Fetch and render changelog
+    try {
+        const response = await fetch('./CHANGELOG.md');
+        if (!response.ok) {
+            throw new Error('Failed to fetch changelog');
+        }
+        const markdown = await response.text();
+        const contentEl = document.getElementById('changelog-content');
+        if (contentEl) {
+            contentEl.innerHTML = renderMarkdown(markdown);
+        }
+    } catch (error) {
+        console.error('[App] Failed to load changelog:', error);
+        const contentEl = document.getElementById('changelog-content');
+        if (contentEl) {
+            contentEl.innerHTML = '<p style="color: var(--color-error);">Failed to load changelog. Please try again later.</p>';
+        }
+    }
+};
+
+/**
+ * Closes the changelog modal
+ */
+window.closeChangelog = function() {
+    const modal = document.getElementById('changelog-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+};
+
+/**
+ * Simple markdown to HTML renderer for changelog
+ * @param {string} markdown - Markdown text
+ * @returns {string} HTML string
+ */
+function renderMarkdown(markdown) {
+    const lines = markdown.split('\n');
+    let html = '';
+    let inList = false;
+    let inTable = false;
+    let isTableHeader = true;
+
+    for (let i = 0; i < lines.length; i++) {
+        let line = lines[i];
+
+        // Skip empty lines but close lists/tables
+        if (!line.trim()) {
+            if (inList) {
+                html += '</ul>';
+                inList = false;
+            }
+            if (inTable) {
+                html += '</tbody></table>';
+                inTable = false;
+                isTableHeader = true;
+            }
+            continue;
+        }
+
+        // Escape HTML in content
+        const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+        // Inline formatting
+        const fmt = (s) => s
+            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+            .replace(/`([^`]+)`/g, '<code>$1</code>')
+            .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+
+        // Headers
+        if (line.startsWith('# ')) {
+            html += `<h2 class="changelog-h1">${fmt(esc(line.slice(2)))}</h2>`;
+        } else if (line.match(/^## \[(.+?)\] - (.+)$/)) {
+            const match = line.match(/^## \[(.+?)\] - (.+)$/);
+            html += `<h3 class="changelog-version">v${esc(match[1])} <span class="changelog-date">${esc(match[2])}</span></h3>`;
+        } else if (line.startsWith('## ')) {
+            html += `<h3 class="changelog-h2">${fmt(esc(line.slice(3)))}</h3>`;
+        } else if (line.startsWith('### ')) {
+            html += `<h4 class="changelog-h3">${fmt(esc(line.slice(4)))}</h4>`;
+        } else if (line.startsWith('#### ')) {
+            html += `<h5 class="changelog-h4">${fmt(esc(line.slice(5)))}</h5>`;
+        }
+        // List items
+        else if (line.match(/^[-*] /)) {
+            if (!inList) {
+                html += '<ul class="changelog-list">';
+                inList = true;
+            }
+            html += `<li>${fmt(esc(line.slice(2)))}</li>`;
+        }
+        // Indented list items (4 spaces or 2 spaces)
+        else if (line.match(/^(\s{2,4})[-*] /)) {
+            const content = line.replace(/^\s+[-*] /, '');
+            if (!inList) {
+                html += '<ul class="changelog-list">';
+                inList = true;
+            }
+            html += `<li class="changelog-indent">${fmt(esc(content))}</li>`;
+        }
+        // Table separator - skip
+        else if (line.match(/^\|[-:\s|]+\|$/)) {
+            continue;
+        }
+        // Table rows
+        else if (line.startsWith('|') && line.endsWith('|')) {
+            const cells = line.slice(1, -1).split('|').map(c => c.trim());
+            if (!inTable) {
+                html += '<table class="changelog-table"><tbody>';
+                inTable = true;
+                isTableHeader = true;
+            }
+            const tag = isTableHeader ? 'th' : 'td';
+            html += '<tr>' + cells.map(c => `<${tag}>${fmt(esc(c))}</${tag}>`).join('') + '</tr>';
+            isTableHeader = false;
+        }
+        // Regular paragraph
+        else {
+            if (inList) {
+                html += '</ul>';
+                inList = false;
+            }
+            html += `<p class="changelog-p">${fmt(esc(line))}</p>`;
+        }
+    }
+
+    // Close any open tags
+    if (inList) html += '</ul>';
+    if (inTable) html += '</tbody></table>';
+
+    return html;
+}
