@@ -4,7 +4,5 @@
 name = "inflight"
 compatibility_date = "2025-11-01"
 
-# Main app: Deploy static files from repository root
-# This is a Workers Assets project (static files only)
-[assets]
-directory = "."
+# Pages: Deploy static files from repository root
+pages_build_output_dir = "."
