@@ -2374,6 +2374,9 @@ window.UIController = {
     // Elements access
     getElements: () => elements,
 
+    // Network status
+    isOnline: () => navigator.onLine,
+
     // Status
     updateStatus,
     showDataInfo,

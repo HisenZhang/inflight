@@ -444,6 +444,155 @@ mapElement.addEventListener('touchmove', (e) => {
 });
 ```
 
+## Weather Controller
+
+**Module:** [display/weather-controller.js](../../display/weather-controller.js)
+
+### Overview
+
+The WeatherController fetches and displays aviation weather data from NOAA's Aviation Weather Center. It provides METAR, TAF, SIGMET, and G-AIRMET information for airports.
+
+### Key Methods
+
+```javascript
+window.WeatherController = {
+    // Search for weather by airport code
+    searchWeather(code),
+
+    // Called from navlog WX button
+    showWeatherForAirport(icao),
+
+    // Update route airports quick-select bar
+    updateRouteAirports(airports),
+
+    // Internal: fetch and display weather products
+    _fetchWeather(code),
+    _renderMETAR(metar),
+    _renderTAF(taf),
+    _renderSIGMETs(sigmets, lat, lon),
+    _renderGAIRMETs(gairmets, lat, lon)
+};
+```
+
+### Route Integration
+
+When a route is calculated, `app.js` calls `WeatherController.updateRouteAirports()` with the route's airport waypoints. This populates the quick-select bar in the WX tab:
+
+```javascript
+// In app.js after route calculation
+const routeAirports = waypoints
+    .filter(w => w.waypointType === 'airport')
+    .map(w => ({ icao: w.icao || w.ident }));
+
+WeatherController.updateRouteAirports(routeAirports);
+```
+
+### Location-Based Filtering
+
+SIGMETs and G-AIRMETs are filtered to show only hazards relevant to the queried airport using pure functions from `compute/weather.js`:
+
+```javascript
+// In compute/weather.js - Pure functions
+Weather.pointInPolygon(lat, lon, polygon);    // Ray casting algorithm
+Weather.haversineDistance(lat1, lon1, lat2, lon2); // Distance in NM
+Weather.isHazardRelevantToPoint(hazard, lat, lon, radiusNm);
+Weather.isHazardRelevantToRoute(hazard, waypoints, corridorNm);
+Weather.findAffectedWaypointsWithIndex(hazard, waypoints, corridorNm);
+Weather.formatAffectedWaypointsRange(affectedWaypoints);
+```
+
+### Time-Based Filtering
+
+Hazards are filtered based on ETA at each waypoint (v3.1.0+):
+
+```javascript
+// Calculate ETA for each waypoint
+const waypointETAs = Weather.calculateWaypointETAs(legs, departureTime);
+
+// Check if hazard valid when aircraft arrives
+Weather.isWeatherValidAtTime(hazard, waypointETA, 'sigmet'); // or 'gairmet'
+
+// Get time range for affected waypoints
+Weather.calculateAffectedTimeRange(affectedWaypoints, waypointETAs, departureTime);
+```
+
+### Validity-Based Caching
+
+Weather data uses validity-based caching (v3.1.0+):
+
+- **METAR**: Cached until 5 minutes past the next hour after observation
+- **TAF**: Cached until `validTimeTo` timestamp
+- **PIREP**: Cached for 10 minutes (bulk fetch interval)
+
+### Offline Behavior
+
+Weather features require internet. The controller checks `UIController.isOnline()` before fetching:
+
+```javascript
+if (!window.UIController?.isOnline?.()) {
+    this._showError('Internet connection required for weather data');
+    return;
+}
+```
+
+## Charts Controller
+
+**Module:** [display/charts-controller.js](../../display/charts-controller.js)
+
+### Overview
+
+The ChartsController provides links to FAA airport charts and procedures via the FAA's digital Terminal Procedures Publication (d-TPP).
+
+### Key Methods
+
+```javascript
+window.ChartsController = {
+    // Search for charts by airport code
+    searchCharts(code),
+
+    // Called from navlog CHARTS button
+    showChartsForAirport(icao, name),
+
+    // Update route airports quick-select bar
+    updateRouteAirports(airports),
+
+    // Check if airport has charts
+    hasChartsForAirport(icao)
+};
+```
+
+### Route Integration
+
+Similar to WeatherController, the ChartsController updates its quick-select bar when a route is calculated:
+
+```javascript
+// In app.js after route calculation
+ChartsController.updateRouteAirports(routeAirports);
+```
+
+The charts bar only shows airports that have available charts (verified via `hasChartsForAirport()`).
+
+### Navlog Integration
+
+The navlog displays a CHARTS button only for airports with available charts:
+
+```javascript
+// In ui-controller.js navlog rendering
+if (waypoint.waypointType === 'airport') {
+    const hasCharts = ChartsController.hasChartsForAirport(icao);
+    if (hasCharts) {
+        airportActionsHTML += `<button class="btn btn-secondary btn-sm"
+            onclick="ChartsController.showChartsForAirport('${icao}', '${name}')">
+            CHARTS
+        </button>`;
+    }
+}
+```
+
+### Offline Behavior
+
+Charts require internet for both searching and viewing PDF links. The controller disables search when offline.
+
 ---
 
-**Last Updated:** January 2025
+**Last Updated:** November 2025

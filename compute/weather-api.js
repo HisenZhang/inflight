@@ -12,9 +12,11 @@
  */
 
 // Cache configuration
+// METAR and TAF now use validity-based caching (cache until observation/forecast expires)
+// These are fallback durations if validity cannot be determined
 const WEATHER_CACHE_DURATION = {
-    metar: 5 * 60 * 1000,        // 5 minutes (METARs issued hourly)
-    taf: 30 * 60 * 1000,         // 30 minutes (TAFs issued every 6 hours)
+    metar: 60 * 60 * 1000,       // 1 hour fallback (METARs issued hourly)
+    taf: 6 * 60 * 60 * 1000,     // 6 hours fallback (TAFs issued every 6 hours)
     pirep: 10 * 60 * 1000,       // 10 minutes (AWC updates every minute, but we check every 10min)
     airport: 24 * 60 * 60 * 1000 // 24 hours (static data)
 };
@@ -62,14 +64,15 @@ const weatherCache = {
  * @returns {Promise<Object>} METAR data
  */
 async function fetchMETAR(icao) {
-    console.log(`[WeatherAPI] Fetching METAR for ${icao}`);
-
     // Check cache first
     const cached = getCachedWeather('metar', icao);
     if (cached) {
-        console.log(`[WeatherAPI] Using cached METAR for ${icao}`);
-        return cached;
+        const expiresIn = Math.round((cached.expiresAt - Date.now()) / 60000);
+        console.log(`[WeatherAPI] METAR ${icao}: using cache (valid for ${expiresIn} min)`);
+        return cached.data;
     }
+
+    console.log(`[WeatherAPI] METAR ${icao}: fetching from AWC...`);
 
     try {
         const apiUrl = `${AWC_BASE_URL}/metar?ids=${icao}&format=json`;
@@ -90,7 +93,7 @@ async function fetchMETAR(icao) {
         // Cache the result
         cacheWeather('metar', icao, metarData);
 
-        console.log(`[WeatherAPI] METAR fetched for ${icao}:`, metarData);
+        console.log(`[WeatherAPI] METAR ${icao}: fetched and cached`);
         return metarData;
 
     } catch (error) {
@@ -106,14 +109,18 @@ async function fetchMETAR(icao) {
  * @returns {Promise<Object>} TAF data
  */
 async function fetchTAF(icao) {
-    console.log(`[WeatherAPI] Fetching TAF for ${icao}`);
-
     // Check cache first
     const cached = getCachedWeather('taf', icao);
     if (cached) {
-        console.log(`[WeatherAPI] Using cached TAF for ${icao}`);
-        return cached;
+        const expiresIn = Math.round((cached.expiresAt - Date.now()) / 60000);
+        const hoursRemaining = Math.floor(expiresIn / 60);
+        const minsRemaining = expiresIn % 60;
+        const timeStr = hoursRemaining > 0 ? `${hoursRemaining}h ${minsRemaining}m` : `${minsRemaining} min`;
+        console.log(`[WeatherAPI] TAF ${icao}: using cache (valid for ${timeStr})`);
+        return cached.data;
     }
+
+    console.log(`[WeatherAPI] TAF ${icao}: fetching from AWC...`);
 
     try {
         const apiUrl = `${AWC_BASE_URL}/taf?ids=${icao}&format=json`;
@@ -134,7 +141,7 @@ async function fetchTAF(icao) {
         // Cache the result
         cacheWeather('taf', icao, tafData);
 
-        console.log(`[WeatherAPI] TAF fetched for ${icao}:`, tafData);
+        console.log(`[WeatherAPI] TAF ${icao}: fetched and cached`);
         return tafData;
 
     } catch (error) {
@@ -165,7 +172,7 @@ async function fetchPIREPs(icao, radiusNM = 100, ageHours = 6) {
     const cached = getCachedWeather('pirep', cacheKey);
     if (cached) {
         console.log(`[WeatherAPI] Using cached PIREPs for ${icao}`);
-        return cached;
+        return cached.data;
     }
 
     try {
@@ -564,14 +571,14 @@ async function fetchGAIRMETs() {
  * @returns {Promise<Object|null>} Airport data or null
  */
 async function fetchAirportInfo(icao) {
-    console.log(`[WeatherAPI] Fetching airport info for ${icao}`);
-
     // Check cache first
     const cached = getCachedWeather('airport', icao);
     if (cached) {
         console.log(`[WeatherAPI] Using cached airport info for ${icao}`);
-        return cached;
+        return cached.data;
     }
+
+    console.log(`[WeatherAPI] Fetching airport info for ${icao}`);
 
     try {
         const apiUrl = `${AWC_BASE_URL}/airport?ids=${icao}&format=json`;
@@ -726,40 +733,80 @@ function calculateRunwayWindComponents(runwayHeading, windDirection, windSpeed) 
 }
 
 /**
- * Cache weather data
+ * Cache weather data with validity-based expiration
+ * For METAR: valid until next hour (obsTime + 1 hour)
+ * For TAF: valid until validTimeTo
  * @param {string} type - Weather type (metar, taf, pirep, airport)
  * @param {string} key - Cache key (usually ICAO)
  * @param {*} data - Data to cache
  */
 function cacheWeather(type, key, data) {
+    const now = Date.now();
+    let expiresAt = now + WEATHER_CACHE_DURATION[type]; // Default fallback
+
+    if (type === 'metar' && data) {
+        // METAR: expires at next hour after observation time
+        // obsTime is Unix timestamp in seconds
+        if (data.obsTime) {
+            const obsTimeMs = data.obsTime * 1000;
+            // METARs are typically valid until the next hourly observation (56 minutes past the hour)
+            // Cache until 5 minutes past the next hour to allow for new METAR to be available
+            const obsDate = new Date(obsTimeMs);
+            const nextHour = new Date(obsDate);
+            nextHour.setHours(nextHour.getHours() + 1);
+            nextHour.setMinutes(5, 0, 0); // 5 minutes past next hour
+            expiresAt = nextHour.getTime();
+            console.log(`[WeatherAPI] METAR ${key} cached until ${nextHour.toISOString()}`);
+        }
+    } else if (type === 'taf' && data) {
+        // TAF: expires at validTimeTo
+        // validTimeTo is Unix timestamp in seconds
+        if (data.validTimeTo) {
+            expiresAt = data.validTimeTo * 1000;
+            console.log(`[WeatherAPI] TAF ${key} cached until ${new Date(expiresAt).toISOString()}`);
+        }
+    }
+
     weatherCache[type].set(key, {
         data: data,
-        timestamp: Date.now()
+        timestamp: now,
+        expiresAt: expiresAt
     });
 }
 
 /**
  * Get cached weather data if still valid
+ * Uses validity-based expiration for METAR and TAF
  * @param {string} type - Weather type
  * @param {string} key - Cache key
- * @returns {*|null} Cached data or null if expired
+ * @returns {{data: *, expiresAt: number}|null} Cached data with expiration info, or null if expired
  */
 function getCachedWeather(type, key) {
     const cached = weatherCache[type].get(key);
 
     if (!cached) return null;
 
-    // Check if cache is still valid
-    const age = Date.now() - cached.timestamp;
-    const maxAge = WEATHER_CACHE_DURATION[type];
+    const now = Date.now();
 
-    if (age > maxAge) {
-        // Cache expired
+    // Check validity-based expiration (for METAR and TAF)
+    if (cached.expiresAt && now >= cached.expiresAt) {
+        console.log(`[WeatherAPI] ${type.toUpperCase()} cache for ${key} expired (validity-based)`);
         weatherCache[type].delete(key);
         return null;
     }
 
-    return cached.data;
+    // Fallback: check time-based expiration
+    const age = now - cached.timestamp;
+    const maxAge = WEATHER_CACHE_DURATION[type];
+
+    if (age > maxAge) {
+        console.log(`[WeatherAPI] ${type.toUpperCase()} cache for ${key} expired (time-based fallback)`);
+        weatherCache[type].delete(key);
+        return null;
+    }
+
+    // Return data with expiration info for logging
+    return { data: cached.data, expiresAt: cached.expiresAt };
 }
 
 /**

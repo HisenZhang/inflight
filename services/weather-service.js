@@ -301,6 +301,227 @@
 
             return analysis;
         }
+
+        /**
+         * Comprehensive weather hazard analysis with time-based filtering
+         * Checks SIGMETs, G-AIRMETs, METARs, TAFs, and PIREPs
+         * @param {Array} waypoints - Route waypoints
+         * @param {Array} legs - Route legs (with legTime in minutes)
+         * @param {number} filedAltitude - Filed altitude in feet
+         * @param {Date} departureTime - Planned departure time (defaults to now)
+         * @returns {Promise<Object>} Weather hazards analysis
+         */
+        async analyzeWeatherHazards(waypoints, legs, filedAltitude, departureTime = null) {
+            const hazards = {
+                sigmets: [],      // SIGMETs affecting route
+                gairmets: [],     // G-AIRMETs affecting route
+                airportWx: [],    // Airport weather hazards (IFR, LIFR, etc.)
+                densityAlt: null, // Density altitude concern
+                icing: [],        // Icing reports/forecasts
+                turbulence: [],   // Turbulence reports
+                pireps: []        // Relevant PIREPs
+            };
+
+            if (!waypoints || waypoints.length < 2) {
+                return hazards;
+            }
+
+            // Calculate ETA for each waypoint
+            const depTime = departureTime ? new Date(departureTime) : new Date();
+            const waypointETAs = window.Weather.calculateWaypointETAs(legs || [], depTime);
+
+            try {
+                // Get departure and destination ICAO codes
+                const departure = waypoints[0];
+                const destination = waypoints[waypoints.length - 1];
+                const depIcao = departure.icao || departure.ident;
+                const destIcao = destination.icao || destination.ident;
+
+                // Fetch weather data in parallel via WeatherAPI
+                const [sigmets, gairmets, allPireps, depMetar, destMetar] = await Promise.allSettled([
+                    window.WeatherAPI ? window.WeatherAPI.fetchSIGMETs() : Promise.resolve([]),
+                    window.WeatherAPI ? window.WeatherAPI.fetchGAIRMETs() : Promise.resolve([]),
+                    window.WeatherAPI ? window.WeatherAPI.fetchAllPIREPs() : Promise.resolve([]),
+                    window.WeatherAPI && depIcao ? window.WeatherAPI.fetchMETAR(depIcao) : Promise.resolve(null),
+                    window.WeatherAPI && destIcao ? window.WeatherAPI.fetchMETAR(destIcao) : Promise.resolve(null)
+                ]);
+
+                // Analyze SIGMETs affecting route corridor
+                const allSigmets = sigmets.status === 'fulfilled' ? (sigmets.value || []) : [];
+                for (const sigmet of allSigmets) {
+                    if (!window.Weather.isHazardRelevantToRoute(sigmet, waypoints, 50)) continue;
+
+                    // Check altitude overlap if we have filed altitude
+                    const overlapsAlt = !filedAltitude ||
+                        ((!sigmet.altitudeLow1 || filedAltitude >= sigmet.altitudeLow1) &&
+                         (!sigmet.altitudeHi1 || filedAltitude <= sigmet.altitudeHi1));
+
+                    if (overlapsAlt) {
+                        // Find affected waypoints and filter by time
+                        const allAffectedWpts = window.Weather.findAffectedWaypointsWithIndex(sigmet, waypoints, 50);
+                        const timeFilteredWpts = allAffectedWpts.filter(wp => {
+                            const eta = waypointETAs[wp.index - 1];
+                            return window.Weather.isWeatherValidAtTime(sigmet, eta, 'sigmet');
+                        });
+
+                        if (timeFilteredWpts.length > 0) {
+                            const timeRange = window.Weather.calculateAffectedTimeRange(timeFilteredWpts, waypointETAs, depTime);
+                            hazards.sigmets.push({
+                                type: sigmet.airSigmetType || 'SIGMET',
+                                hazard: sigmet.hazard || 'UNKNOWN',
+                                severity: sigmet.severity,
+                                affectedWaypoints: timeFilteredWpts,
+                                validTimeFrom: sigmet.validTimeFrom,
+                                validTimeTo: sigmet.validTimeTo,
+                                timeRange: timeRange,
+                                color: window.Weather.getHazardColor(sigmet.hazard),
+                                label: window.Weather.getHazardLabel(sigmet.hazard)
+                            });
+                        }
+                    }
+                }
+
+                // Analyze G-AIRMETs affecting route corridor
+                const allGairmets = gairmets.status === 'fulfilled' ? (gairmets.value || []) : [];
+                for (const gairmet of allGairmets) {
+                    if (!window.Weather.isHazardRelevantToRoute(gairmet, waypoints, 50)) continue;
+
+                    // Find affected waypoints and filter by time
+                    const allAffectedWpts = window.Weather.findAffectedWaypointsWithIndex(gairmet, waypoints, 50);
+                    const timeFilteredWpts = allAffectedWpts.filter(wp => {
+                        const eta = waypointETAs[wp.index - 1];
+                        return window.Weather.isWeatherValidAtTime(gairmet, eta, 'gairmet');
+                    });
+
+                    if (timeFilteredWpts.length > 0) {
+                        const timeRange = window.Weather.calculateAffectedTimeRange(timeFilteredWpts, waypointETAs, depTime);
+                        const hazardType = (gairmet.hazard || '').toUpperCase();
+
+                        hazards.gairmets.push({
+                            hazard: gairmet.hazard || 'UNKNOWN',
+                            dueTo: gairmet.dueTo,
+                            validTime: gairmet.validTime,
+                            expireTime: gairmet.expireTime,
+                            affectedWaypoints: timeFilteredWpts,
+                            timeRange: timeRange,
+                            color: window.Weather.getHazardColor(gairmet.hazard),
+                            label: window.Weather.getHazardLabel(gairmet.hazard)
+                        });
+
+                        // Categorize specific hazard types
+                        if (hazardType.includes('ICE') || hazardType.includes('ICING')) {
+                            hazards.icing.push({
+                                source: 'G-AIRMET',
+                                type: gairmet.hazard,
+                                affectedWaypoints: timeFilteredWpts,
+                                timeRange: timeRange
+                            });
+                        }
+                        if (hazardType.includes('TURB') || hazardType === 'LLWS') {
+                            hazards.turbulence.push({
+                                source: 'G-AIRMET',
+                                type: gairmet.hazard,
+                                affectedWaypoints: timeFilteredWpts,
+                                timeRange: timeRange
+                            });
+                        }
+                    }
+                }
+
+                // Analyze departure airport weather
+                const depMetarData = depMetar.status === 'fulfilled' ? depMetar.value : null;
+                if (depMetarData && depIcao) {
+                    const flightCat = window.WeatherAPI.getFlightCategoryFromMETAR(depMetarData);
+                    if (flightCat === 'IFR' || flightCat === 'LIFR') {
+                        hazards.airportWx.push({
+                            icao: depIcao,
+                            type: 'DEPARTURE',
+                            flightCategory: flightCat,
+                            visibility: depMetarData.visib,
+                            ceiling: window.Weather.getCeilingFromMETAR(depMetarData)
+                        });
+                    }
+
+                    // Calculate density altitude at departure
+                    if (departure.elevation !== undefined && depMetarData.temp !== undefined) {
+                        const pressureAlt = departure.elevation;
+                        const altimeter = depMetarData.altim || 29.92;
+                        const densityAlt = window.Weather.calculateDensityAltitude(departure.elevation, depMetarData.temp, altimeter);
+                        const daDiff = densityAlt - departure.elevation;
+
+                        if (daDiff > 1000) {
+                            hazards.densityAlt = {
+                                airport: depIcao,
+                                fieldElev: departure.elevation,
+                                densityAlt: densityAlt,
+                                difference: daDiff,
+                                temp: depMetarData.temp
+                            };
+                        }
+                    }
+                }
+
+                // Analyze destination airport weather
+                const destMetarData = destMetar.status === 'fulfilled' ? destMetar.value : null;
+                if (destMetarData && destIcao) {
+                    const flightCat = window.WeatherAPI.getFlightCategoryFromMETAR(destMetarData);
+                    if (flightCat === 'IFR' || flightCat === 'LIFR') {
+                        hazards.airportWx.push({
+                            icao: destIcao,
+                            type: 'DESTINATION',
+                            flightCategory: flightCat,
+                            visibility: destMetarData.visib,
+                            ceiling: window.Weather.getCeilingFromMETAR(destMetarData)
+                        });
+                    }
+                }
+
+                // Analyze PIREPs along route corridor
+                const allPirepData = allPireps.status === 'fulfilled' ? (allPireps.value || []) : [];
+                const corridorPireps = window.Weather.filterPirepsWithinCorridor(allPirepData, waypoints, 50);
+                for (const pirep of corridorPireps) {
+                    const hazardInfo = window.WeatherAPI.parsePIREPHazards(pirep);
+                    if (hazardInfo.hasIcing || hazardInfo.hasTurbulence) {
+                        hazards.pireps.push({
+                            raw: pirep.rawOb,
+                            hasIcing: hazardInfo.hasIcing,
+                            hasTurbulence: hazardInfo.hasTurbulence,
+                            severity: hazardInfo.severity,
+                            altitude: pirep.fltLvl
+                        });
+
+                        if (hazardInfo.hasIcing) {
+                            hazards.icing.push({
+                                source: 'PIREP',
+                                severity: hazardInfo.severity,
+                                altitude: pirep.fltLvl
+                            });
+                        }
+                        if (hazardInfo.hasTurbulence) {
+                            hazards.turbulence.push({
+                                source: 'PIREP',
+                                severity: hazardInfo.severity,
+                                altitude: pirep.fltLvl
+                            });
+                        }
+                    }
+                }
+
+                console.log('[WeatherService] Weather hazards analyzed:', {
+                    sigmets: hazards.sigmets.length,
+                    gairmets: hazards.gairmets.length,
+                    airportWx: hazards.airportWx.length,
+                    icing: hazards.icing.length,
+                    turbulence: hazards.turbulence.length,
+                    pireps: hazards.pireps.length
+                });
+
+            } catch (error) {
+                console.error('[WeatherService] Weather hazard analysis error:', error);
+            }
+
+            return hazards;
+        }
     }
 
     // Export to window

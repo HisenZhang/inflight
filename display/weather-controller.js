@@ -840,12 +840,17 @@ window.WeatherController = {
             const clickHandler = hasCoords ? `onclick="WeatherController.showHazardOnMap('sigmet', ${index})"` : '';
             const hoverClass = hasCoords ? 'hazard-row-clickable' : '';
 
-            // Calculate affected waypoints if route exists
+            // Calculate affected waypoints if route exists (with index for range formatting)
             let affectedStr = '--';
-            if (hasRouteWaypoints && hasCoords && window.Weather?.findAffectedWaypoints) {
-                const affected = window.Weather.findAffectedWaypoints(sigmet, this.routeWaypoints, 30);
+            if (hasRouteWaypoints && hasCoords && window.Weather?.findAffectedWaypointsWithIndex) {
+                const affected = window.Weather.findAffectedWaypointsWithIndex(sigmet, this.routeWaypoints, 30);
                 if (affected.length > 0) {
-                    affectedStr = affected.slice(0, 3).join(', ') + (affected.length > 3 ? '...' : '');
+                    // Format as range notation: "KALB(1)-SYR(3)"
+                    affectedStr = window.Weather.formatAffectedWaypointsRange(affected);
+                    // Truncate if too long
+                    if (affectedStr.length > 25) {
+                        affectedStr = affectedStr.substring(0, 22) + '...';
+                    }
                 }
             }
 
@@ -976,12 +981,17 @@ window.WeatherController = {
             const clickHandler = hasCoords ? `onclick="WeatherController.showHazardOnMap('gairmet', ${index})"` : '';
             const hoverClass = hasCoords ? 'hazard-row-clickable' : '';
 
-            // Calculate affected waypoints if route exists
+            // Calculate affected waypoints if route exists (with index for range formatting)
             let affectedStr = '--';
-            if (hasRouteWaypoints && hasCoords && window.Weather?.findAffectedWaypoints) {
-                const affected = window.Weather.findAffectedWaypoints(gairmet, this.routeWaypoints, 30);
+            if (hasRouteWaypoints && hasCoords && window.Weather?.findAffectedWaypointsWithIndex) {
+                const affected = window.Weather.findAffectedWaypointsWithIndex(gairmet, this.routeWaypoints, 30);
                 if (affected.length > 0) {
-                    affectedStr = affected.slice(0, 3).join(', ') + (affected.length > 3 ? '...' : '');
+                    // Format as range notation: "KALB(1)-SYR(3)"
+                    affectedStr = window.Weather.formatAffectedWaypointsRange(affected);
+                    // Truncate if too long
+                    if (affectedStr.length > 25) {
+                        affectedStr = affectedStr.substring(0, 22) + '...';
+                    }
                 }
             }
 
@@ -1072,6 +1082,12 @@ window.WeatherController = {
     async displayRouteWeather(icao, elementId) {
         const container = document.getElementById(elementId);
         if (!container) return;
+
+        // Check online status first
+        if (!window.UIController?.isOnline?.()) {
+            container.style.display = 'none';
+            return;
+        }
 
         // Validate ICAO
         if (!icao || icao.length !== 4) {

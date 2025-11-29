@@ -551,6 +551,259 @@
         calculateTAFExpiration(validTimeTo) {
             if (!validTimeTo) return Date.now() + 6 * 60 * 60 * 1000; // 6 hour fallback
             return validTimeTo * 1000;
+        },
+
+        // ============================================
+        // TIME-BASED WEATHER ANALYSIS (Pure)
+        // ============================================
+
+        /**
+         * Calculate ETA for each waypoint based on leg times
+         * @param {Array} legs - Route legs with legTime in minutes
+         * @param {Date} departureTime - Departure time
+         * @returns {Array} Array of ETA Date objects indexed by waypoint index
+         */
+        calculateWaypointETAs(legs, departureTime) {
+            const etas = [];
+            let cumulativeMinutes = 0;
+
+            // First waypoint (departure) - ETA is departure time
+            etas.push(new Date(departureTime));
+
+            // Calculate ETA for each subsequent waypoint
+            for (let i = 0; i < legs.length; i++) {
+                const leg = legs[i];
+                cumulativeMinutes += leg.legTime || 0;
+                etas.push(new Date(departureTime.getTime() + cumulativeMinutes * 60 * 1000));
+            }
+
+            return etas;
+        },
+
+        /**
+         * Check if a weather hazard is valid for a given waypoint based on ETA
+         * @param {Object} weather - Weather object with time fields
+         * @param {Date} waypointETA - ETA at the waypoint
+         * @param {string} type - 'sigmet' or 'gairmet'
+         * @returns {boolean} True if hazard will be active when aircraft reaches waypoint
+         */
+        isWeatherValidAtTime(weather, waypointETA, type) {
+            if (!waypointETA) return true; // If no ETA, assume valid
+
+            const etaMs = waypointETA.getTime();
+
+            if (type === 'sigmet') {
+                // SIGMET times are Unix timestamps in seconds
+                const validFrom = weather.validTimeFrom ? weather.validTimeFrom * 1000 : 0;
+                const validTo = weather.validTimeTo ? weather.validTimeTo * 1000 : Infinity;
+
+                // Check if ETA falls within valid window
+                return etaMs >= validFrom && etaMs <= validTo;
+            } else if (type === 'gairmet') {
+                // G-AIRMET times are ISO strings
+                const validFrom = weather.validTime ? new Date(weather.validTime).getTime() : 0;
+                const expireTime = weather.expireTime ? new Date(weather.expireTime).getTime() : Infinity;
+
+                // Check if ETA falls within valid window
+                return etaMs >= validFrom && etaMs <= expireTime;
+            }
+
+            return true; // Default to valid if unknown type
+        },
+
+        /**
+         * Format relative time from departure as "T+xxH yyM"
+         * @param {Date} targetTime - The time to format
+         * @param {Date} departureTime - Departure time as reference
+         * @returns {string} Formatted relative time like "T+1H 30M" or "T+0H 15M"
+         */
+        formatRelativeTime(targetTime, departureTime) {
+            if (!targetTime || !departureTime) return '';
+            const diffMs = targetTime.getTime() - departureTime.getTime();
+            if (diffMs < 0) return 'T+0H 0M'; // Before departure
+            const totalMinutes = Math.round(diffMs / (60 * 1000));
+            const hours = Math.floor(totalMinutes / 60);
+            const minutes = totalMinutes % 60;
+            return `T+${hours}H ${minutes}M`;
+        },
+
+        /**
+         * Find waypoints affected by a hazard with index information
+         * Returns waypoints with their index in route order for time-based filtering
+         * @param {Object} hazard - Hazard object with coords array
+         * @param {Array} waypoints - Route waypoints with lat/lon and ident
+         * @param {number} corridorNm - Corridor width in nautical miles
+         * @returns {Array} Array of {ident, index} objects in route order
+         */
+        findAffectedWaypointsWithIndex(hazard, waypoints, corridorNm = 50) {
+            if (!hazard || !hazard.coords || hazard.coords.length < 3) {
+                return [];
+            }
+            if (!waypoints || waypoints.length === 0) {
+                return [];
+            }
+
+            const affected = [];
+
+            for (let i = 0; i < waypoints.length; i++) {
+                const wp = waypoints[i];
+                if (wp.lat === undefined || wp.lon === undefined) continue;
+
+                const ident = wp.icao || wp.ident || wp.name || 'WPT';
+                let isAffected = false;
+
+                // Check if inside polygon
+                if (this.pointInPolygon(wp.lat, wp.lon, hazard.coords)) {
+                    isAffected = true;
+                } else {
+                    // Check distance to polygon vertices
+                    for (const coord of hazard.coords) {
+                        const dist = this.haversineDistance(wp.lat, wp.lon, coord.lat, coord.lon);
+                        if (dist <= corridorNm) {
+                            isAffected = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (isAffected) {
+                    affected.push({ ident, index: i + 1 }); // 1-based index
+                }
+            }
+
+            return affected;
+        },
+
+        /**
+         * Format affected waypoints as range notation
+         * e.g., "KALB(1)-SYR(3), ROC(5)-BUF(7)" for consecutive ranges
+         * @param {Array} affectedWaypoints - Array of {ident, index} objects
+         * @returns {string} Formatted range string
+         */
+        formatAffectedWaypointsRange(affectedWaypoints) {
+            if (!affectedWaypoints || affectedWaypoints.length === 0) {
+                return '';
+            }
+
+            // Sort by index (should already be sorted, but ensure)
+            const sorted = [...affectedWaypoints].sort((a, b) => a.index - b.index);
+
+            // Group into consecutive ranges
+            const ranges = [];
+            let rangeStart = sorted[0];
+            let rangeEnd = sorted[0];
+
+            for (let i = 1; i < sorted.length; i++) {
+                const current = sorted[i];
+                // Check if consecutive (index differs by 1)
+                if (current.index === rangeEnd.index + 1) {
+                    rangeEnd = current;
+                } else {
+                    // End current range, start new one
+                    ranges.push({ start: rangeStart, end: rangeEnd });
+                    rangeStart = current;
+                    rangeEnd = current;
+                }
+            }
+            // Don't forget the last range
+            ranges.push({ start: rangeStart, end: rangeEnd });
+
+            // Format ranges
+            const formatted = ranges.map(range => {
+                if (range.start.index === range.end.index) {
+                    return `${range.start.ident}(${range.start.index})`;
+                } else {
+                    return `${range.start.ident}(${range.start.index})-${range.end.ident}(${range.end.index})`;
+                }
+            });
+
+            return formatted.join(', ');
+        },
+
+        /**
+         * Calculate the affected time range for waypoints
+         * @param {Array} affectedWaypoints - Array of {ident, index} objects
+         * @param {Array} waypointETAs - Array of Date objects for each waypoint
+         * @param {Date} departureTime - Departure time as reference
+         * @returns {Object|null} {startTime, endTime, formattedRange} or null
+         */
+        calculateAffectedTimeRange(affectedWaypoints, waypointETAs, departureTime) {
+            if (!affectedWaypoints || affectedWaypoints.length === 0 || !waypointETAs || !departureTime) {
+                return null;
+            }
+
+            // Get ETAs for affected waypoints (index is 1-based)
+            const affectedETAs = affectedWaypoints
+                .map(wp => waypointETAs[wp.index - 1])
+                .filter(eta => eta instanceof Date);
+
+            if (affectedETAs.length === 0) return null;
+
+            const startTime = new Date(Math.min(...affectedETAs.map(d => d.getTime())));
+            const endTime = new Date(Math.max(...affectedETAs.map(d => d.getTime())));
+
+            const startFormatted = this.formatRelativeTime(startTime, departureTime);
+            const endFormatted = this.formatRelativeTime(endTime, departureTime);
+
+            // If same time, just show single time
+            if (startFormatted === endFormatted) {
+                return {
+                    startTime,
+                    endTime,
+                    formattedRange: startFormatted
+                };
+            }
+
+            return {
+                startTime,
+                endTime,
+                formattedRange: `${startFormatted} - ${endFormatted}`
+            };
+        },
+
+        /**
+         * Get ceiling from METAR cloud data
+         * @param {Object} metarData - METAR data object from API
+         * @returns {number|null} Ceiling in feet or null if clear
+         */
+        getCeilingFromMETAR(metarData) {
+            if (!metarData || !metarData.clouds) return null;
+
+            for (const cloud of metarData.clouds) {
+                if (cloud.cover === 'BKN' || cloud.cover === 'OVC' || cloud.cover === 'VV') {
+                    return cloud.base || null;
+                }
+            }
+
+            return null;
+        },
+
+        /**
+         * Filter PIREPs to those within a route corridor
+         * @param {Array} pireps - Array of PIREP objects with lat/lon
+         * @param {Array} waypoints - Route waypoints
+         * @param {number} corridorNm - Corridor width in nautical miles
+         * @returns {Array} Filtered PIREPs within corridor
+         */
+        filterPirepsWithinCorridor(pireps, waypoints, corridorNm = 50) {
+            if (!pireps || pireps.length === 0 || !waypoints || waypoints.length === 0) {
+                return [];
+            }
+
+            return pireps.filter(pirep => {
+                if (pirep.lat === undefined || pirep.lon === undefined) return false;
+
+                // Check if PIREP is within corridor of any waypoint
+                for (const wp of waypoints) {
+                    if (wp.lat !== undefined && wp.lon !== undefined) {
+                        const dist = this.haversineDistance(pirep.lat, pirep.lon, wp.lat, wp.lon);
+                        if (dist <= corridorNm) {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            });
         }
     };
 
