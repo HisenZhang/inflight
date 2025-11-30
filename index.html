@@ -286,6 +286,28 @@
                             disabled
                         >
                     </div>
+
+                    <div class="input-row">
+                        <label class="text-sm font-medium">DEPARTURE TIME:</label>
+                        <div class="departure-time-selector">
+                            <select id="departureTimeSelect" class="font-medium" disabled>
+                                <option value="now" selected>NOW</option>
+                                <option value="+1">+1H</option>
+                                <option value="+2">+2H</option>
+                                <option value="+6">+6H</option>
+                                <option value="+12">+12H</option>
+                                <option value="+24">+24H</option>
+                                <option value="custom">CUSTOM...</option>
+                            </select>
+                            <input
+                                type="datetime-local"
+                                id="departureTimeCustom"
+                                class="font-medium hidden"
+                                disabled
+                            >
+                            <span id="departureTimeDisplay" class="text-secondary text-sm" style="margin-left: 8px;"></span>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Action Buttons -->

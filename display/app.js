@@ -389,6 +389,22 @@ function setupEventListeners() {
         }
     });
 
+    // Departure time selection
+    const departureTimeSelect = document.getElementById('departureTimeSelect');
+    const departureTimeCustom = document.getElementById('departureTimeCustom');
+
+    if (departureTimeSelect) {
+        departureTimeSelect.addEventListener('change', () => {
+            UIController.handleDepartureTimeChange();
+        });
+    }
+
+    if (departureTimeCustom) {
+        departureTimeCustom.addEventListener('change', () => {
+            UIController.updateDepartureTimeDisplay();
+        });
+    }
+
     // Click outside to close autocomplete
     document.addEventListener('click', (e) => {
         if (!elements.routeInput.contains(e.target) && !elements.autocompleteDropdown.contains(e.target)) {
@@ -927,9 +943,14 @@ async function handleCalculateRoute() {
             window.ChartsController.updateRouteAirports(routeAirports);
         }
 
-        // Update WX tab with all waypoints for hazard analysis
+        // Update WX tab with all waypoints and legs for hazard analysis
+        // Use user-selected departure time for time-based weather filtering
+        const departureTime = UIController.getDepartureTime();
         if (window.WeatherController?.updateRouteWaypoints) {
             window.WeatherController.updateRouteWaypoints(waypoints);
+        }
+        if (window.WeatherController?.updateRouteLegs) {
+            window.WeatherController.updateRouteLegs(legs, departureTime);
         }
 
         // Display vector map
@@ -995,9 +1016,12 @@ function handleClearRoute() {
         window.ChartsController.updateRouteAirports([]);
     }
 
-    // Clear route waypoints for hazard analysis
+    // Clear route waypoints and legs for hazard analysis
     if (window.WeatherController?.updateRouteWaypoints) {
         window.WeatherController.updateRouteWaypoints([]);
+    }
+    if (window.WeatherController?.updateRouteLegs) {
+        window.WeatherController.updateRouteLegs([], null);
     }
 }
 

@@ -360,8 +360,12 @@
                         // Find affected waypoints and filter by time
                         const allAffectedWpts = window.Weather.findAffectedWaypointsWithIndex(sigmet, waypoints, 50);
                         const timeFilteredWpts = allAffectedWpts.filter(wp => {
-                            const eta = waypointETAs[wp.index - 1];
-                            return window.Weather.isWeatherValidAtTime(sigmet, eta, 'sigmet');
+                            // Check if hazard is active when we START the leg TO this waypoint
+                            // For waypoint N (1-based), the leg TO it starts at waypoint N-1 (1-based)
+                            // waypointETAs[N-2] = ETA at waypoint N-1 (since etas[0] = wp1, etas[1] = wp2, etc.)
+                            const legStartIndex = Math.max(0, wp.index - 2);
+                            const legStartETA = waypointETAs[legStartIndex];
+                            return window.Weather.isWeatherValidAtTime(sigmet, legStartETA, 'sigmet');
                         });
 
                         if (timeFilteredWpts.length > 0) {
@@ -389,8 +393,12 @@
                     // Find affected waypoints and filter by time
                     const allAffectedWpts = window.Weather.findAffectedWaypointsWithIndex(gairmet, waypoints, 50);
                     const timeFilteredWpts = allAffectedWpts.filter(wp => {
-                        const eta = waypointETAs[wp.index - 1];
-                        return window.Weather.isWeatherValidAtTime(gairmet, eta, 'gairmet');
+                        // Check if hazard is active when we START the leg TO this waypoint
+                        // For waypoint N (1-based), the leg TO it starts at waypoint N-1 (1-based)
+                        // waypointETAs[N-2] = ETA at waypoint N-1 (since etas[0] = wp1, etas[1] = wp2, etc.)
+                        const legStartIndex = Math.max(0, wp.index - 2);
+                        const legStartETA = waypointETAs[legStartIndex];
+                        return window.Weather.isWeatherValidAtTime(gairmet, legStartETA, 'gairmet');
                     });
 
                     if (timeFilteredWpts.length > 0) {
@@ -476,35 +484,39 @@
                     }
                 }
 
-                // Analyze PIREPs along route corridor
+                // Analyze PIREPs along route corridor using enhanced parsing
                 const allPirepData = allPireps.status === 'fulfilled' ? (allPireps.value || []) : [];
-                const corridorPireps = window.Weather.filterPirepsWithinCorridor(allPirepData, waypoints, 50);
-                for (const pirep of corridorPireps) {
-                    const hazardInfo = window.WeatherAPI.parsePIREPHazards(pirep);
-                    if (hazardInfo.hasIcing || hazardInfo.hasTurbulence) {
-                        hazards.pireps.push({
-                            raw: pirep.rawOb,
-                            hasIcing: hazardInfo.hasIcing,
-                            hasTurbulence: hazardInfo.hasTurbulence,
-                            severity: hazardInfo.severity,
-                            altitude: pirep.fltLvl
-                        });
+                const pirepAnalysis = window.Weather.analyzePirepsForRoute(allPirepData, waypoints, 50, filedAltitude);
 
-                        if (hazardInfo.hasIcing) {
-                            hazards.icing.push({
-                                source: 'PIREP',
-                                severity: hazardInfo.severity,
-                                altitude: pirep.fltLvl
-                            });
-                        }
-                        if (hazardInfo.hasTurbulence) {
-                            hazards.turbulence.push({
-                                source: 'PIREP',
-                                severity: hazardInfo.severity,
-                                altitude: pirep.fltLvl
-                            });
-                        }
-                    }
+                // Add turbulence PIREPs with intensity and waypoint info
+                for (const turb of pirepAnalysis.turbulence) {
+                    hazards.pireps.push({
+                        type: 'TURB',
+                        intensity: turb.intensity,
+                        altitude: turb.fltLvl,
+                        nearestWpIndex: turb.nearestWpIndex,
+                        nearestWpIdent: turb.nearestWpIdent,
+                        distanceNm: turb.distanceNm,
+                        direction: turb.direction,
+                        obsTime: turb.obsTime,
+                        raw: turb.rawOb
+                    });
+                }
+
+                // Add icing PIREPs with intensity, type, and waypoint info
+                for (const ice of pirepAnalysis.icing) {
+                    hazards.pireps.push({
+                        type: 'ICE',
+                        intensity: ice.intensity,
+                        iceType: ice.type,
+                        altitude: ice.fltLvl,
+                        nearestWpIndex: ice.nearestWpIndex,
+                        nearestWpIdent: ice.nearestWpIdent,
+                        distanceNm: ice.distanceNm,
+                        direction: ice.direction,
+                        obsTime: ice.obsTime,
+                        raw: ice.rawOb
+                    });
                 }
 
                 console.log('[WeatherService] Weather hazards analyzed:', {

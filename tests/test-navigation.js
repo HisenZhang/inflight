@@ -462,3 +462,95 @@ TestFramework.describe('Navigation - Pure Function Behavior', function({ it }) {
         assert.equals(JSON.stringify(waypoints), copy, 'Should not modify input array');
     });
 });
+
+// ============================================
+// RETURN FUEL CALCULATIONS
+// ============================================
+
+TestFramework.describe('Navigation - Return Fuel Calculations', function({ it }) {
+
+    it('should have calculateReturnFuel method', () => {
+        assert.isFunction(window.Navigation.calculateReturnFuel,
+            'Should have calculateReturnFuel method');
+    });
+
+    it('should return null for invalid inputs', () => {
+        assert.isNull(window.Navigation.calculateReturnFuel(null, 10, 100));
+        assert.isNull(window.Navigation.calculateReturnFuel([], 10, 100));
+        assert.isNull(window.Navigation.calculateReturnFuel([{}], null, 100));
+        assert.isNull(window.Navigation.calculateReturnFuel([{}], 10, null));
+    });
+
+    it('should calculate return with no wind correctly', () => {
+        // No wind: outbound and return should be the same
+        const legs = [
+            { distance: 100, headwind: 0, legTime: 60 },
+            { distance: 100, headwind: 0, legTime: 60 }
+        ];
+        const burnRate = 10; // gal/hr
+        const tas = 100; // kts
+
+        const result = window.Navigation.calculateReturnFuel(legs, burnRate, tas);
+
+        assert.isDefined(result, 'Should return result');
+        assert.equals(result.returnTime, 120, 'Return time should equal outbound (120 min)');
+        assert.equals(result.timeDifference, 0, 'Time difference should be 0');
+        assert.isTrue(Math.abs(result.fuelDifference) < 0.1, 'Fuel difference should be ~0');
+    });
+
+    it('should calculate faster return with headwind outbound', () => {
+        // Outbound had 20kt headwind, return will have 20kt tailwind
+        // TAS 100kt: outbound GS = 80kt, return GS = 120kt
+        // Distance 100nm: outbound = 75min, return = 50min
+        const legs = [
+            { distance: 100, headwind: 20, legTime: 75 }
+        ];
+        const burnRate = 10; // gal/hr
+        const tas = 100; // kts
+
+        const result = window.Navigation.calculateReturnFuel(legs, burnRate, tas);
+
+        assert.isDefined(result, 'Should return result');
+        // Return GS = 100 + 20 = 120kt, time = 100/120 * 60 = 50 min
+        assert.equals(result.returnTime, 50, 'Return time should be 50 min');
+        assert.isTrue(result.timeDifference < 0, 'Return should be faster (negative difference)');
+        assert.isTrue(result.fuelDifference < 0, 'Return should use less fuel');
+    });
+
+    it('should calculate slower return with tailwind outbound', () => {
+        // Outbound had 20kt tailwind (negative headwind), return will have headwind
+        // TAS 100kt: outbound GS = 120kt, return GS = 80kt
+        const legs = [
+            { distance: 100, headwind: -20, legTime: 50 }
+        ];
+        const burnRate = 10; // gal/hr
+        const tas = 100; // kts
+
+        const result = window.Navigation.calculateReturnFuel(legs, burnRate, tas);
+
+        assert.isDefined(result, 'Should return result');
+        // Return GS = 100 + (-20) = 80kt, time = 100/80 * 60 = 75 min
+        assert.equals(result.returnTime, 75, 'Return time should be 75 min');
+        assert.isTrue(result.timeDifference > 0, 'Return should be slower (positive difference)');
+        assert.isTrue(result.fuelDifference > 0, 'Return should use more fuel');
+    });
+
+    it('should handle multiple legs with different winds', () => {
+        // Leg 1: 40kt headwind, Leg 2: 10kt headwind
+        const legs = [
+            { distance: 100, headwind: 40, legTime: 100 },  // GS = 60kt
+            { distance: 100, headwind: 10, legTime: 55 }    // GS = 90kt
+        ];
+        const burnRate = 10;
+        const tas = 100;
+
+        const result = window.Navigation.calculateReturnFuel(legs, burnRate, tas);
+
+        assert.isDefined(result, 'Should return result');
+        // Return: Leg 1 GS = 140kt (28.6min), Leg 2 GS = 110kt (54.5min)
+        // Total return ~83 min vs outbound 155 min
+        assert.isTrue(result.returnTime < result.outboundTime,
+            'Return should be faster with headwinds outbound');
+        assert.isTrue(result.fuelDifference < 0, 'Return should use less fuel');
+    });
+});

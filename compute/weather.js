@@ -485,19 +485,20 @@
          * @returns {string} Human-readable label
          */
         getHazardLabel(hazard) {
+            // Use uppercase abbreviations for compact display
             const labels = {
-                'IFR': 'IFR Conditions',
-                'MT_OBSC': 'Mountain Obscuration',
-                'ICE': 'Icing',
-                'FZLVL': 'Freezing Level',
-                'M_FZLVL': 'Multiple Freezing Levels',
-                'TURB-HI': 'Turbulence (High)',
-                'TURB-LO': 'Turbulence (Low)',
-                'LLWS': 'Low-Level Wind Shear',
-                'SFC_WND': 'Surface Winds',
-                'CONVECTIVE': 'Convective Activity'
+                'IFR': 'IFR',
+                'MT_OBSC': 'MT OBSCN',
+                'ICE': 'ICE',
+                'FZLVL': 'FZLVL',
+                'M_FZLVL': 'M-FZLVL',
+                'TURB-HI': 'TURB-HI',
+                'TURB-LO': 'TURB-LO',
+                'LLWS': 'LLWS',
+                'SFC_WND': 'SFC WND',
+                'CONVECTIVE': 'CONVECT'
             };
-            return labels[hazard] || hazard || 'Unknown';
+            return labels[hazard] || (hazard || 'UNKNOWN').toUpperCase();
         },
 
         /**
@@ -571,9 +572,10 @@
             etas.push(new Date(departureTime));
 
             // Calculate ETA for each subsequent waypoint
+            // Note: legs may use 'ete' (from navigation.js) or 'legTime' (from route-calculator.js)
             for (let i = 0; i < legs.length; i++) {
                 const leg = legs[i];
-                cumulativeMinutes += leg.legTime || 0;
+                cumulativeMinutes += leg.ete || leg.legTime || 0;
                 etas.push(new Date(departureTime.getTime() + cumulativeMinutes * 60 * 1000));
             }
 
@@ -597,15 +599,27 @@
                 const validFrom = weather.validTimeFrom ? weather.validTimeFrom * 1000 : 0;
                 const validTo = weather.validTimeTo ? weather.validTimeTo * 1000 : Infinity;
 
-                // Check if ETA falls within valid window
+                // Check if ETA falls within the SIGMET's valid window
+                // Use <= for expiry since hazard may still affect you at boundary
                 return etaMs >= validFrom && etaMs <= validTo;
             } else if (type === 'gairmet') {
                 // G-AIRMET times are ISO strings
-                const validFrom = weather.validTime ? new Date(weather.validTime).getTime() : 0;
+                const validTime = weather.validTime ? new Date(weather.validTime).getTime() : 0;
                 const expireTime = weather.expireTime ? new Date(weather.expireTime).getTime() : Infinity;
 
-                // Check if ETA falls within valid window
-                return etaMs >= validFrom && etaMs <= expireTime;
+                // DEBUG: Log time comparison for troubleshooting
+                // console.log('[Weather] G-AIRMET time check:', {
+                //     eta: new Date(etaMs).toISOString(),
+                //     validTime: weather.validTime,
+                //     expireTime: weather.expireTime,
+                //     validTimeMs: validTime,
+                //     expireTimeMs: expireTime,
+                //     result: etaMs >= validTime && etaMs <= expireTime
+                // });
+
+                // Check if ETA falls within the G-AIRMET's valid window
+                // Use <= for expiry since hazard may still affect you at boundary
+                return etaMs >= validTime && etaMs <= expireTime;
             }
 
             return true; // Default to valid if unknown type
@@ -779,6 +793,33 @@
         },
 
         /**
+         * Calculate bearing from point 1 to point 2
+         * @returns {number} Bearing in degrees (0-360)
+         */
+        calculateBearing(lat1, lon1, lat2, lon2) {
+            const toRad = deg => deg * Math.PI / 180;
+            const toDeg = rad => rad * 180 / Math.PI;
+
+            const dLon = toRad(lon2 - lon1);
+            const y = Math.sin(dLon) * Math.cos(toRad(lat2));
+            const x = Math.cos(toRad(lat1)) * Math.sin(toRad(lat2)) -
+                      Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(dLon);
+            let bearing = toDeg(Math.atan2(y, x));
+            return (bearing + 360) % 360;
+        },
+
+        /**
+         * Convert bearing to cardinal direction (N, NE, E, SE, S, SW, W, NW)
+         * @param {number} bearing - Bearing in degrees
+         * @returns {string} Cardinal direction
+         */
+        bearingToCardinal(bearing) {
+            const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+            const index = Math.round(bearing / 45) % 8;
+            return directions[index];
+        },
+
+        /**
          * Filter PIREPs to those within a route corridor
          * @param {Array} pireps - Array of PIREP objects with lat/lon
          * @param {Array} waypoints - Route waypoints
@@ -804,6 +845,158 @@
                 }
                 return false;
             });
+        },
+
+        /**
+         * Parse turbulence info from PIREP raw text
+         * @param {string} rawOb - Raw PIREP text
+         * @returns {Object|null} {intensity, altLo, altHi} or null
+         */
+        parsePirepTurbulence(rawOb) {
+            if (!rawOb) return null;
+            // Match /TB followed by intensity and optional altitude
+            // Examples: /TB MOD, /TB LGT-MOD, /TB SEV 180-220, /TB NEG
+            const match = rawOb.match(/\/TB\s+(NEG|SMTH|LGT|MOD|SEV|EXTRM)(?:[-\/](LGT|MOD|SEV|EXTRM))?(?:\s+(\d{3})(?:-(\d{3}))?)?/i);
+            if (!match) return null;
+
+            const intensity1 = (match[1] || '').toUpperCase();
+            const intensity2 = (match[2] || '').toUpperCase();
+            // Use worst intensity
+            const intensityOrder = { 'NEG': 0, 'SMTH': 0, 'LGT': 1, 'MOD': 2, 'SEV': 3, 'EXTRM': 4 };
+            const intensity = (intensityOrder[intensity2] || 0) > (intensityOrder[intensity1] || 0) ? intensity2 : intensity1;
+
+            if (intensity === 'NEG' || intensity === 'SMTH') return null; // No turbulence
+
+            return {
+                intensity,
+                altLo: match[3] ? parseInt(match[3]) * 100 : null,
+                altHi: match[4] ? parseInt(match[4]) * 100 : null
+            };
+        },
+
+        /**
+         * Parse icing info from PIREP raw text
+         * @param {string} rawOb - Raw PIREP text
+         * @returns {Object|null} {intensity, type, altLo, altHi} or null
+         */
+        parsePirepIcing(rawOb) {
+            if (!rawOb) return null;
+            // Match /IC followed by intensity, optional type, and optional altitude
+            // Examples: /IC LGT RIME, /IC MOD CLR 080-100, /IC NEG
+            const match = rawOb.match(/\/IC\s+(NEG|TRC|LGT|MOD|SEV)(?:\s+(RIME|CLR|MXD|MIX))?(?:\s+(\d{3})(?:-(\d{3}))?)?/i);
+            if (!match) return null;
+
+            const intensity = (match[1] || '').toUpperCase();
+            if (intensity === 'NEG') return null; // No icing
+
+            return {
+                intensity,
+                type: (match[2] || '').toUpperCase() || null,
+                altLo: match[3] ? parseInt(match[3]) * 100 : null,
+                altHi: match[4] ? parseInt(match[4]) * 100 : null
+            };
+        },
+
+        /**
+         * Filter PIREPs by route and extract hazard info
+         * @param {Array} pireps - Array of PIREP objects
+         * @param {Array} waypoints - Array of waypoint objects
+         * @param {number} corridorNm - Corridor width in nautical miles
+         * @param {number} filedAltitude - Filed altitude in feet
+         * @returns {Object} {turbulence: [], icing: []} arrays of hazard PIREPs
+         */
+        analyzePirepsForRoute(pireps, waypoints, corridorNm = 30, filedAltitude = null) {
+            const result = { turbulence: [], icing: [] };
+            if (!pireps || !waypoints || waypoints.length === 0) return result;
+
+            const now = Date.now() / 1000;
+            const maxAge = 2 * 60 * 60; // 2 hours in seconds
+
+            for (const pirep of pireps) {
+                // Skip old PIREPs
+                if (pirep.obsTime && (now - pirep.obsTime) > maxAge) continue;
+
+                // Check if PIREP is near route and find nearest waypoint with details
+                let nearRoute = false;
+                let nearestWpIndex = null;
+                let nearestWpIdent = null;
+                let minDist = Infinity;
+                let nearestWpLat = null;
+                let nearestWpLon = null;
+
+                for (let i = 0; i < waypoints.length; i++) {
+                    const wp = waypoints[i];
+                    if (wp.lat !== undefined && wp.lon !== undefined) {
+                        const dist = this.haversineDistance(pirep.lat, pirep.lon, wp.lat, wp.lon);
+                        if (dist <= corridorNm && dist < minDist) {
+                            nearRoute = true;
+                            minDist = dist;
+                            nearestWpIndex = i + 1; // 1-based index
+                            nearestWpIdent = wp.ident || wp.icao || wp.code || `WP${i + 1}`;
+                            nearestWpLat = wp.lat;
+                            nearestWpLon = wp.lon;
+                        }
+                    }
+                }
+
+                if (!nearRoute) continue;
+
+                // Calculate bearing from waypoint to PIREP for direction display
+                let directionFromWp = '';
+                if (nearestWpLat !== null && minDist > 1) {
+                    const bearing = this.calculateBearing(nearestWpLat, nearestWpLon, pirep.lat, pirep.lon);
+                    directionFromWp = this.bearingToCardinal(bearing);
+                }
+
+                // Check altitude if filed altitude specified
+                const altCheck = (lo, hi) => {
+                    if (!filedAltitude) return true;
+                    if (!lo && !hi) return true; // No altitude info, include
+                    const alt = filedAltitude;
+                    if (lo && hi) return alt >= lo - 2000 && alt <= hi + 2000;
+                    if (lo) return alt >= lo - 2000;
+                    if (hi) return alt <= hi + 2000;
+                    return true;
+                };
+
+                // Parse turbulence
+                const turb = this.parsePirepTurbulence(pirep.rawOb);
+                if (turb && altCheck(turb.altLo, turb.altHi)) {
+                    result.turbulence.push({
+                        ...turb,
+                        lat: pirep.lat,
+                        lon: pirep.lon,
+                        fltLvl: pirep.fltLvl,
+                        obsTime: pirep.obsTime,
+                        reportType: pirep.reportType,
+                        nearestWpIndex,
+                        nearestWpIdent,
+                        distanceNm: Math.round(minDist),
+                        direction: directionFromWp,
+                        rawOb: pirep.rawOb
+                    });
+                }
+
+                // Parse icing
+                const ice = this.parsePirepIcing(pirep.rawOb);
+                if (ice && altCheck(ice.altLo, ice.altHi)) {
+                    result.icing.push({
+                        ...ice,
+                        lat: pirep.lat,
+                        lon: pirep.lon,
+                        fltLvl: pirep.fltLvl,
+                        obsTime: pirep.obsTime,
+                        reportType: pirep.reportType,
+                        nearestWpIndex,
+                        nearestWpIdent,
+                        distanceNm: Math.round(minDist),
+                        direction: directionFromWp,
+                        rawOb: pirep.rawOb
+                    });
+                }
+            }
+
+            return result;
         }
     };
 

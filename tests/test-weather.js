@@ -580,14 +580,14 @@ TestFramework.describe('Weather - Hazard Display Helpers', function({ it }) {
             'Should have getHazardLabel method');
     });
 
-    it('should return human-readable label for IFR', () => {
+    it('should return uppercase abbreviation for IFR', () => {
         const label = window.Weather.getHazardLabel('IFR');
-        assert.equals(label, 'IFR Conditions', 'Should return readable label');
+        assert.equals(label, 'IFR', 'Should return uppercase abbreviation');
     });
 
-    it('should return hazard code if no label defined', () => {
-        const label = window.Weather.getHazardLabel('CUSTOM_HAZARD');
-        assert.equals(label, 'CUSTOM_HAZARD', 'Should return code if no label');
+    it('should return hazard code uppercase if no label defined', () => {
+        const label = window.Weather.getHazardLabel('custom_hazard');
+        assert.equals(label, 'CUSTOM_HAZARD', 'Should return code uppercase if no label');
     });
 });
 

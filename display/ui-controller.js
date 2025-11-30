@@ -124,6 +124,11 @@ function init() {
         calculateBtn: document.getElementById('calculateBtn'),
         clearRouteBtn: document.getElementById('clearRouteBtn'),
 
+        // Departure time elements
+        departureTimeSelect: document.getElementById('departureTimeSelect'),
+        departureTimeCustom: document.getElementById('departureTimeCustom'),
+        departureTimeDisplay: document.getElementById('departureTimeDisplay'),
+
         // Optional feature elements
         enableWindsToggle: document.getElementById('enableWindsToggle'),
         windInputs: document.getElementById('windInputs'),
@@ -543,9 +548,18 @@ function enableRouteInput() {
         inputSection.style.display = 'block';
     }
 
-    // Always enable altitude and TAS (mandatory fields)
+    // Always enable altitude, TAS, and departure time (mandatory fields)
     elements.altitudeInput.disabled = false;
     elements.tasInput.disabled = false;
+    if (elements.departureTimeSelect) {
+        elements.departureTimeSelect.disabled = false;
+    }
+    if (elements.departureTimeCustom) {
+        elements.departureTimeCustom.disabled = false;
+    }
+
+    // Initialize departure time display
+    updateDepartureTimeDisplay();
 
     // Enable fuel inputs based on feature toggle (if enabled)
     if (elements.isFuelEnabled && elements.isFuelEnabled()) {
@@ -562,6 +576,81 @@ function disableRouteInput() {
     elements.altitudeInput.disabled = true;
     elements.tasInput.disabled = true;
     elements.calculateBtn.disabled = true;
+    if (elements.departureTimeSelect) {
+        elements.departureTimeSelect.disabled = true;
+    }
+    if (elements.departureTimeCustom) {
+        elements.departureTimeCustom.disabled = true;
+    }
+}
+
+/**
+ * Get the selected departure time as a Date object
+ * @returns {Date} The departure time
+ */
+function getDepartureTime() {
+    if (!elements.departureTimeSelect) {
+        return new Date();
+    }
+
+    const selection = elements.departureTimeSelect.value;
+
+    if (selection === 'custom' && elements.departureTimeCustom?.value) {
+        return new Date(elements.departureTimeCustom.value);
+    }
+
+    const now = new Date();
+
+    switch (selection) {
+        case '+1':
+            return new Date(now.getTime() + 1 * 60 * 60 * 1000);
+        case '+2':
+            return new Date(now.getTime() + 2 * 60 * 60 * 1000);
+        case '+6':
+            return new Date(now.getTime() + 6 * 60 * 60 * 1000);
+        case '+12':
+            return new Date(now.getTime() + 12 * 60 * 60 * 1000);
+        case '+24':
+            return new Date(now.getTime() + 24 * 60 * 60 * 1000);
+        case 'now':
+        default:
+            return now;
+    }
+}
+
+/**
+ * Update the departure time display to show Zulu time
+ */
+function updateDepartureTimeDisplay() {
+    if (!elements.departureTimeDisplay) return;
+
+    const depTime = getDepartureTime();
+    const zuluStr = depTime.toISOString().slice(11, 16) + 'Z';
+    const dateStr = depTime.toISOString().slice(5, 10).replace('-', '/');
+
+    elements.departureTimeDisplay.textContent = `${dateStr} ${zuluStr}`;
+}
+
+/**
+ * Handle departure time selection change
+ */
+function handleDepartureTimeChange() {
+    const selection = elements.departureTimeSelect?.value;
+
+    // Show/hide custom input
+    if (elements.departureTimeCustom) {
+        if (selection === 'custom') {
+            elements.departureTimeCustom.classList.remove('hidden');
+            // Set default to current time in local format
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            elements.departureTimeCustom.value = now.toISOString().slice(0, 16);
+        } else {
+            elements.departureTimeCustom.classList.add('hidden');
+        }
+    }
+
+    updateDepartureTimeDisplay();
 }
 
 function clearRoute() {
@@ -1220,119 +1309,432 @@ function selectDestinationItem(index) {
 // RESULTS DISPLAY
 // ============================================
 
-// Store current hazard data for terrain analysis updates
+// Store current hazard data for terrain/weather analysis updates
 let _currentHazardData = {
     fuelStatus: null,
     windMetadata: null,
     options: {},
-    terrainStatus: null
+    terrainStatus: null,
+    weatherStatus: null,  // Weather hazards (async)
+    windAnalysis: null,   // Wind hazards analysis
+    returnFuel: null,     // Return fuel analysis
+    legs: null,           // Route legs for wind/fuel analysis
+    waypoints: null       // Route waypoints for weather analysis
 };
 
 /**
  * Build hazard summary HTML for insertion into route summary
+ * Hazards are grouped by type with multiple detail lines per type
  * @param {Object} fuelStatus - Fuel calculation results
  * @param {Object} windMetadata - Wind data metadata
  * @param {Object} options - Route calculation options
  * @param {Object} terrainStatus - Terrain clearance status (updated async)
+ * @param {Object} weatherStatus - Weather hazards (updated async)
+ * @param {Object} windAnalysis - Wind analysis results
+ * @param {Object} returnFuel - Return fuel calculation results
  * @returns {string} HTML string for hazard summary
  */
-function buildHazardSummaryHTML(fuelStatus, windMetadata, options, terrainStatus = null) {
-    const hazards = [];
+function buildHazardSummaryHTML(fuelStatus, windMetadata, options, terrainStatus = null, weatherStatus = null, windAnalysis = null, returnFuel = null) {
+    // Hazards grouped by type, each type has array of details sorted by waypoint order
+    const hazardGroups = {};
 
-    // Check fuel hazards
+    // Helper to add simple hazard (non-weather)
+    function addHazard(type, severity, icon, detail) {
+        if (!hazardGroups[type]) {
+            hazardGroups[type] = { severity, icon, details: [] };
+        }
+        if (severity === 'critical') {
+            hazardGroups[type].severity = 'critical';
+            hazardGroups[type].icon = '✗';
+        } else if (severity === 'warning' && hazardGroups[type].severity !== 'critical') {
+            hazardGroups[type].severity = 'warning';
+        }
+        // Simple detail object
+        if (!hazardGroups[type].details.some(d => d.text === detail)) {
+            hazardGroups[type].details.push({ text: detail, firstWaypointIndex: 999, isWeather: false });
+        }
+    }
+
+    // Helper to add weather hazard with separate time/waypoint parts for coloring
+    // Stores raw affectedWaypoints array for later merging of overlapping entries
+    // For wind hazards, pass preformattedStr to bypass merging
+    function addWeatherHazard(type, severity, icon, description, timeStr, affectedWaypoints, preformattedStr = null, firstIdx = 999) {
+        if (!hazardGroups[type]) {
+            hazardGroups[type] = { severity, icon, details: [] };
+        }
+        if (severity === 'critical') {
+            hazardGroups[type].severity = 'critical';
+            hazardGroups[type].icon = '✗';
+        } else if (severity === 'warning' && hazardGroups[type].severity !== 'critical') {
+            hazardGroups[type].severity = 'warning';
+        }
+        // Store raw waypoint data for merging later
+        // preformattedStr bypasses merging (used for wind hazards with leg ranges)
+        hazardGroups[type].details.push({
+            description,
+            timeStr,
+            affectedWaypoints: Array.isArray(affectedWaypoints) ? affectedWaypoints : [],
+            waypointsStr: preformattedStr,
+            firstWaypointIndex: firstIdx,
+            isWeather: true
+        });
+    }
+
+    // Merge overlapping weather hazard details within a group
+    // Entries covering overlapping waypoint ranges are combined
+    // Entries with pre-formatted waypointsStr (e.g., wind hazards) are not merged
+    function mergeOverlappingWeatherHazards(details) {
+        // Separate: mergeable (weather with waypoint arrays), non-mergeable (preformatted or non-weather)
+        const mergeableDetails = details.filter(d => d.isWeather && d.affectedWaypoints?.length > 0 && !d.waypointsStr);
+        const nonMergeableDetails = details.filter(d => !d.isWeather || !d.affectedWaypoints?.length || d.waypointsStr);
+
+        if (mergeableDetails.length <= 1) {
+            return details;
+        }
+
+        // Sort by first waypoint index
+        mergeableDetails.sort((a, b) =>
+            (a.affectedWaypoints[0]?.index || 999) - (b.affectedWaypoints[0]?.index || 999)
+        );
+
+        // Merge only truly overlapping entries (must share at least one waypoint)
+        // This prevents cascade merging of adjacent but non-overlapping segments
+        const merged = [];
+        let current = { ...mergeableDetails[0] };
+
+        for (let i = 1; i < mergeableDetails.length; i++) {
+            const next = mergeableDetails[i];
+
+            const currLast = current.affectedWaypoints[current.affectedWaypoints.length - 1]?.index || 0;
+            const nextFirst = next.affectedWaypoints[0]?.index || 0;
+
+            // Only merge if actually overlapping (nextFirst <= currLast means they share waypoint(s))
+            // NOT merging adjacent entries (e.g., [1,2,3] and [4,5,6] stay separate)
+            if (nextFirst <= currLast) {
+                // Merge waypoints
+                const allWaypoints = [...current.affectedWaypoints];
+                for (const wp of next.affectedWaypoints) {
+                    if (!allWaypoints.some(w => w.index === wp.index)) {
+                        allWaypoints.push(wp);
+                    }
+                }
+                allWaypoints.sort((a, b) => a.index - b.index);
+
+                // Combine unique descriptions
+                const descSet = new Set([current.description, next.description].filter(Boolean));
+                const combinedDesc = descSet.size > 1 ? [...descSet].join('; ') : (current.description || next.description);
+
+                current = {
+                    description: combinedDesc,
+                    timeStr: current.timeStr || next.timeStr,
+                    affectedWaypoints: allWaypoints,
+                    isWeather: true
+                };
+            } else {
+                merged.push(current);
+                current = { ...next };
+            }
+        }
+        merged.push(current);
+
+        return [...nonMergeableDetails, ...merged];
+    }
+
+    // Helper to format leg ranges with FROM-TO notation
+    // e.g., "KALB(1)-PAYGE(2)" means leg from wp#1 (KALB) to wp#2 (PAYGE)
+    // Consecutive legs merge: "KALB(1)-KITH(3)" spans legs 1→2 and 2→3
+    function formatLegRangeWithIdents(legs) {
+        if (!legs || legs.length === 0) return '';
+
+        // Sort by fromIndex
+        const sorted = [...legs].sort((a, b) => a.fromIndex - b.fromIndex);
+
+        // Group into consecutive ranges (consecutive means toIndex of one = fromIndex of next)
+        const ranges = [];
+        let rangeStart = sorted[0];
+        let rangeEnd = sorted[0];
+
+        for (let i = 1; i < sorted.length; i++) {
+            const current = sorted[i];
+            // Consecutive if this leg starts where previous leg ends
+            if (current.fromIndex === rangeEnd.toIndex) {
+                rangeEnd = current;
+            } else {
+                ranges.push({ start: rangeStart, end: rangeEnd });
+                rangeStart = current;
+                rangeEnd = current;
+            }
+        }
+        ranges.push({ start: rangeStart, end: rangeEnd });
+
+        // Format ranges: FROM(fromIndex)-TO(toIndex)
+        const formatted = ranges.map(range => {
+            return `${range.start.from}(${range.start.fromIndex})-${range.end.to}(${range.end.toIndex})`;
+        });
+
+        return formatted.join(', ');
+    }
+
+    // Check fuel hazards - insufficient for outbound
     if (fuelStatus && !fuelStatus.isSufficient) {
         const deficit = (fuelStatus.requiredReserve - fuelStatus.finalFob).toFixed(1);
-        hazards.push({
-            type: 'FUEL',
-            severity: 'critical',
-            icon: '✗',
-            message: `Insufficient - ${deficit} GAL below reserve`
-        });
+        addHazard('FUEL', 'critical', '✗', `Insufficient - ${deficit} GAL below reserve`);
     }
 
-    // Check terrain hazards (updated asynchronously)
-    // Terrain data is MORA - planned altitude must be >= MORA to be safe
+    // Check return fuel hazard - can we make it back without refueling?
+    if (returnFuel && fuelStatus && fuelStatus.isSufficient) {
+        const fuelForReturn = returnFuel.returnFuel + fuelStatus.requiredReserve;
+        if (fuelStatus.finalFob < fuelForReturn) {
+            const deficit = (fuelForReturn - fuelStatus.finalFob).toFixed(1);
+            addHazard('RETURN', 'warning', '⚠', `Cannot return without refuel (${deficit} GAL short)`);
+        }
+    }
+
+    // Check terrain hazards
     if (terrainStatus) {
         if (terrainStatus.status === 'UNSAFE') {
-            hazards.push({
-                type: 'TERRAIN',
-                severity: 'critical',
-                icon: '✗',
-                message: `${terrainStatus.deficit?.toLocaleString()}' below MORA (${terrainStatus.maxMORA?.toLocaleString()}')`
-            });
+            addHazard('TERRAIN', 'critical', '✗', `${terrainStatus.deficit?.toLocaleString()}' below MORA (${terrainStatus.maxMORA?.toLocaleString()}')`);
         }
-        // status === 'OK' means no hazard
     } else if (options.altitude) {
-        // Terrain analysis pending indicator
-        hazards.push({
-            type: 'TERRAIN',
-            severity: 'warning',
-            icon: '...',
-            message: 'Analyzing...'
-        });
+        addHazard('TERRAIN', 'info', '...', 'Analyzing...');
     }
 
-    // Check wind data hazards
+    // Check wind data freshness
     if (options.enableWinds && windMetadata) {
         const isWithinWindow = Utils.isWithinUseWindow(windMetadata.useWindow);
         const dataAge = Date.now() - windMetadata.parsedAt;
-
-        // Determine max age based on forecast period
         const forecastPeriod = options.forecastPeriod || '06';
-        let maxAge;
-        if (forecastPeriod === '24' || forecastPeriod === '12') {
-            maxAge = 12 * 60 * 60 * 1000;
-        } else {
-            maxAge = 6 * 60 * 60 * 1000;
-        }
-        const isStale = dataAge > maxAge;
+        const maxAge = (forecastPeriod === '24' || forecastPeriod === '12') ? 12 * 60 * 60 * 1000 : 6 * 60 * 60 * 1000;
 
         if (!isWithinWindow) {
-            hazards.push({
-                type: 'WINDS',
-                severity: 'warning',
-                icon: '⚠',
-                message: `Outside valid window`
-            });
-        } else if (isStale) {
-            const ageHours = Math.floor(dataAge / (60 * 60 * 1000));
-            hazards.push({
-                type: 'WINDS',
-                severity: 'warning',
-                icon: '⚠',
-                message: `Data is ${ageHours}h old`
-            });
+            addHazard('WINDS', 'warning', '⚠', 'Outside valid window');
+        } else if (dataAge > maxAge) {
+            addHazard('WINDS', 'warning', '⚠', `Data is ${Math.floor(dataAge / (60 * 60 * 1000))}h old`);
         }
     }
 
-    // Build HTML - use summary-item style consistent with route summary
+    // Check high wind hazards - consolidated by type with leg range notation
+    // Wind components (headwind/crosswind) apply to LEGS, not waypoints, because only legs have headings
+    // Pass preformatted leg string (no waypoint merging needed for wind hazards)
+    if (windAnalysis && windAnalysis.hasHazard) {
+        if (windAnalysis.headwindWarning && windAnalysis.headwindWarning.affectedLegs) {
+            const legRangeStr = formatLegRangeWithIdents(windAnalysis.headwindWarning.affectedLegs);
+            const maxVal = windAnalysis.headwindWarning.maxValue;
+            const firstIdx = windAnalysis.headwindWarning.affectedLegs[0]?.fromIndex || 999;
+            addWeatherHazard('HEADWIND', 'warning', '⚠', `max ${maxVal}KT`, null, [], legRangeStr, firstIdx);
+        }
+        if (windAnalysis.crosswindWarning && windAnalysis.crosswindWarning.affectedLegs) {
+            const legRangeStr = formatLegRangeWithIdents(windAnalysis.crosswindWarning.affectedLegs);
+            const maxVal = windAnalysis.crosswindWarning.maxValue;
+            const firstIdx = windAnalysis.crosswindWarning.affectedLegs[0]?.fromIndex || 999;
+            // Don't show direction in summary - it varies by leg. Just show max value.
+            // Pilot can check navlog detail for per-leg crosswind direction.
+            addWeatherHazard('XWIND', 'warning', '⚠', `max ${maxVal}KT`, null, [], legRangeStr, firstIdx);
+        }
+    }
+
+    // Check weather hazards
+    if (weatherStatus) {
+        // Airport weather (IFR/LIFR at DEP/DEST)
+        for (const apt of (weatherStatus.airportWx || [])) {
+            const severity = apt.flightCategory === 'LIFR' ? 'critical' : 'warning';
+            const icon = apt.flightCategory === 'LIFR' ? '✗' : '⚠';
+            const loc = apt.type === 'DEPARTURE' ? 'DEP' : 'DEST';
+            addHazard(apt.flightCategory, severity, icon, `${apt.icao} (${loc})`);
+        }
+
+        // SIGMET hazards - pass raw waypoints for merging
+        for (const sigmet of (weatherStatus.sigmets || [])) {
+            const hazardType = sigmet.label || sigmet.hazard || 'SIGMET';
+            const timeStr = sigmet.timeRange?.formattedRange || '';
+            addWeatherHazard(hazardType, 'critical', '✗', null, timeStr, sigmet.affectedWaypoints || []);
+        }
+
+        // G-AIRMET hazards - pass raw waypoints for merging
+        for (const gairmet of (weatherStatus.gairmets || [])) {
+            const hazardType = gairmet.label || gairmet.hazard || 'G-AIRMET';
+            const timeStr = gairmet.timeRange?.formattedRange || '';
+            addWeatherHazard(hazardType, 'warning', '⚠', gairmet.dueTo || null, timeStr, gairmet.affectedWaypoints || []);
+        }
+
+        // PIREP hazards - group by type and waypoint for cleaner display
+        // First, group PIREPs by type (TURB/ICE) and waypoint
+        const pirepGroups = {};
+        for (const pirep of (weatherStatus.pireps || [])) {
+            const typeLabel = pirep.type === 'TURB' ? 'PIREP TB' : 'PIREP IC';
+            const wpKey = `${typeLabel}:${pirep.nearestWpIndex || 0}`;
+
+            if (!pirepGroups[wpKey]) {
+                pirepGroups[wpKey] = {
+                    type: typeLabel,
+                    wpIndex: pirep.nearestWpIndex || 999,
+                    wpIdent: pirep.nearestWpIdent || `WP${pirep.nearestWpIndex}`,
+                    pireps: []
+                };
+            }
+            pirepGroups[wpKey].pireps.push(pirep);
+        }
+
+        // Add grouped PIREPs to hazards
+        // Structure: waypoint header, then detail rows below
+        for (const group of Object.values(pirepGroups)) {
+            // Find worst severity in group
+            const hasSevere = group.pireps.some(p => p.intensity === 'SEV' || p.intensity === 'EXTRM');
+            const severity = hasSevere ? 'critical' : 'warning';
+            const icon = hasSevere ? '✗' : '⚠';
+
+            // Check if any PIREP has ice type (for column alignment)
+            const hasIceType = group.pireps.some(p => p.iceType);
+
+            // Format PIREPs as table rows for alignment
+            const pirepRows = group.pireps.map(pirep => {
+                const intColor = (pirep.intensity === 'SEV' || pirep.intensity === 'EXTRM') ? 'text-error' : 'text-warning';
+                const intensityCell = `<td class="${intColor} font-bold" style="width:36px;white-space:nowrap">${pirep.intensity || ''}</td>`;
+
+                // Ice type column (only if group has any ice types)
+                const typeCell = hasIceType
+                    ? `<td class="text-secondary" style="width:36px;white-space:nowrap">${pirep.iceType || ''}</td>`
+                    : '';
+
+                // Altitude - monospace for numbers
+                const altStr = pirep.altitude ? `FL${Math.round(pirep.altitude / 100).toString().padStart(3, '0')}` : '';
+                const altCell = `<td class="text-airport" style="width:48px;white-space:nowrap;font-family:monospace">${altStr}</td>`;
+
+                // Age - right-aligned
+                let ageStr = '';
+                if (pirep.obsTime) {
+                    const ageMin = Math.round((Date.now() / 1000 - pirep.obsTime) / 60);
+                    ageStr = ageMin < 60 ? `${ageMin}m` : `${Math.round(ageMin / 60)}h`;
+                }
+                const ageCell = `<td class="text-secondary" style="width:28px;white-space:nowrap;text-align:right;opacity:0.7">${ageStr}</td>`;
+
+                // Location
+                const locStr = pirep.distanceNm > 0 ? `${pirep.distanceNm}NM ${pirep.direction || ''}` : '';
+                const locCell = `<td class="text-secondary" style="padding-left:6px;white-space:nowrap">${locStr}</td>`;
+
+                return `<tr>${intensityCell}${typeCell}${altCell}${ageCell}${locCell}</tr>`;
+            });
+
+            // Two-column layout: details left, waypoint right (top-aligned)
+            const wpStr = `${group.wpIdent}(${group.wpIndex})`;
+            const tableHtml = `<table style="border-collapse:collapse;line-height:1.3">${pirepRows.join('')}</table>`;
+            const description = `<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">` +
+                `<div>${tableHtml}</div>` +
+                `<div class="text-primary font-bold" style="white-space:nowrap">${wpStr}</div>` +
+                `</div>`;
+
+            // Pass null for waypointsStr since waypoint is in description
+            addWeatherHazard(group.type, severity, icon, description, null, [], null, group.wpIndex);
+        }
+
+        // Density altitude
+        if (weatherStatus.densityAlt && weatherStatus.densityAlt.difference > 1000) {
+            addHazard('DA', 'warning', '⚠', `+${Math.round(weatherStatus.densityAlt.difference)}' at ${weatherStatus.densityAlt.airport}`);
+        }
+    } else if (options.enableWinds && !weatherStatus) {
+        addHazard('WX', 'info', '...', 'Checking...');
+    }
+
+    // Merge overlapping weather hazards within each type, then format and sort
+    for (const type of Object.keys(hazardGroups)) {
+        // Merge overlapping entries
+        hazardGroups[type].details = mergeOverlappingWeatherHazards(hazardGroups[type].details);
+
+        // Format waypoint strings after merging (skip if pre-formatted string exists)
+        for (const d of hazardGroups[type].details) {
+            if (d.isWeather && !d.waypointsStr && d.affectedWaypoints?.length > 0) {
+                d.waypointsStr = window.Weather?.formatAffectedWaypointsRange(d.affectedWaypoints) || '';
+                d.firstWaypointIndex = d.affectedWaypoints[0]?.index || 999;
+            } else if (d.isWeather && !d.waypointsStr) {
+                d.waypointsStr = '';
+            }
+        }
+
+        // Sort by waypoint order
+        hazardGroups[type].details.sort((a, b) =>
+            (a.firstWaypointIndex || 999) - (b.firstWaypointIndex || 999)
+        );
+    }
+
+    // Build HTML
+    const types = Object.keys(hazardGroups);
+
+    // Helper to get color class based on hazard type and severity
+    function getHazardColor(type, severity) {
+        if (severity === 'critical') return 'text-error';
+        // All non-critical hazards use yellow for consistency
+        return 'text-warning';
+    }
+
     let html = `
         <div class="summary-item" style="border-top: 1px solid var(--border-color); padding-top: 8px; margin-top: 8px;">
             <span class="summary-label text-secondary text-sm">HAZARDS</span>
             <span class="summary-value">`;
 
-    if (hazards.length === 0) {
+    if (types.length === 0) {
         html += `<span class="text-metric font-bold">✓ NONE DETECTED</span>`;
     } else {
-        const items = hazards.map(h => {
-            const color = h.severity === 'critical' ? 'text-error' : 'text-warning';
-            return `<span class="${color}">${h.icon} ${h.type}</span>`;
+        // Summary line: list each type with count if >1
+        const items = types.map(type => {
+            const g = hazardGroups[type];
+            const color = getHazardColor(type, g.severity);
+            const countStr = g.details.length > 1 ? ` (${g.details.length})` : '';
+            return `<span class="${color}">${g.icon} ${type}${countStr}</span>`;
         });
         html += items.join(' ');
     }
 
     html += `</span></div>`;
 
-    // Add detail rows for each hazard
-    hazards.forEach(hazard => {
-        const color = hazard.severity === 'critical' ? 'text-error' : 'text-warning';
-        html += `
-        <div class="summary-item">
-            <span class="summary-label ${color} text-sm">${hazard.icon} ${hazard.type}</span>
-            <span class="summary-value ${color}">${hazard.message}</span>
-        </div>
-        `;
-    });
+    // Detail rows: grouped by type, sorted by waypoint order within each type
+    for (const type of types) {
+        const g = hazardGroups[type];
+        const color = getHazardColor(type, g.severity);
+        const bgStyle = g.severity === 'critical' ? 'background: rgba(255,0,0,0.1);' : '';
+
+        // Each detail line for this type (sorted by waypoint order)
+        for (let i = 0; i < g.details.length; i++) {
+            const d = g.details[i];
+            const showLabel = i === 0; // Only show type label on first row
+
+            if (d.isWeather) {
+                // Weather hazard with separate coloring for description, time, and waypoints
+                let valueHtml = '';
+
+                // Description in muted color
+                if (d.description) {
+                    valueHtml += `<span class="text-secondary">${d.description}</span> `;
+                }
+
+                // Time in dim color
+                if (d.timeStr) {
+                    valueHtml += `<span class="text-secondary" style="opacity: 0.7;">(${d.timeStr})</span> `;
+                }
+
+                // Waypoints (text-primary for screen/print compatibility)
+                if (d.waypointsStr) {
+                    valueHtml += `<span class="text-primary font-bold">${d.waypointsStr}</span>`;
+                }
+
+                if (!valueHtml) {
+                    valueHtml = `<span class="${color}">Route affected</span>`;
+                }
+
+                html += `
+        <div class="summary-item" style="${bgStyle}">
+            <span class="summary-label ${color} text-sm">${showLabel ? `${g.icon} ${type}` : ''}</span>
+            <span class="summary-value">${valueHtml}</span>
+        </div>`;
+            } else {
+                // Simple hazard with text detail
+                html += `
+        <div class="summary-item" style="${bgStyle}">
+            <span class="summary-label ${color} text-sm">${showLabel ? `${g.icon} ${type}` : ''}</span>
+            <span class="summary-value ${color}">${d.text}</span>
+        </div>`;
+            }
+        }
+    }
 
     return html;
 }
@@ -1349,6 +1751,108 @@ function updateHazardSummaryTerrain(terrainStatus) {
 }
 
 /**
+ * Update hazard summary with weather status
+ * Called after async weather analysis completes
+ * @param {Object} weatherStatus - Weather hazard analysis result
+ */
+function updateHazardSummaryWeather(weatherStatus) {
+    _currentHazardData.weatherStatus = weatherStatus;
+    // Re-render the full route summary with updated weather status
+    refreshHazardDisplay();
+}
+
+/**
+ * Trigger async weather hazard analysis
+ * Called after route is calculated if weather checking is enabled
+ */
+async function analyzeWeatherHazards() {
+    const { waypoints, legs, options } = _currentHazardData;
+
+    if (!waypoints || waypoints.length < 2) {
+        return;
+    }
+
+    // Only analyze if we have an altitude (for SIGMET filtering)
+    const filedAltitude = options.altitude || null;
+
+    try {
+        // Use WeatherService if available (v3 architecture)
+        if (window.App?.weatherService?.analyzeWeatherHazards) {
+            const hazards = await window.App.weatherService.analyzeWeatherHazards(
+                waypoints,
+                legs,
+                filedAltitude,
+                getDepartureTime()  // Use user-selected departure time
+            );
+            updateHazardSummaryWeather(hazards);
+        } else if (window.WeatherAPI) {
+            // Fallback: Direct API call for basic weather checks
+            const departure = waypoints[0];
+            const destination = waypoints[waypoints.length - 1];
+            const depIcao = departure.icao || departure.ident;
+            const destIcao = destination.icao || destination.ident;
+
+            const hazards = {
+                sigmets: [],
+                gairmets: [],
+                airportWx: [],
+                densityAlt: null
+            };
+
+            // Fetch departure and destination METARs
+            const [depMetar, destMetar] = await Promise.allSettled([
+                depIcao ? window.WeatherAPI.fetchMETAR(depIcao) : Promise.resolve(null),
+                destIcao ? window.WeatherAPI.fetchMETAR(destIcao) : Promise.resolve(null)
+            ]);
+
+            // Check departure weather
+            if (depMetar.status === 'fulfilled' && depMetar.value) {
+                const flightCat = window.WeatherAPI.getFlightCategoryFromMETAR(depMetar.value);
+                if (flightCat === 'IFR' || flightCat === 'LIFR') {
+                    hazards.airportWx.push({
+                        icao: depIcao,
+                        type: 'DEPARTURE',
+                        flightCategory: flightCat
+                    });
+                }
+
+                // Check density altitude at departure
+                if (departure.elevation !== undefined && depMetar.value.temp !== undefined) {
+                    const altimeter = depMetar.value.altim || 29.92;
+                    const densityAlt = window.Weather?.calculateDensityAltitude(departure.elevation, depMetar.value.temp, altimeter);
+                    if (densityAlt && (densityAlt - departure.elevation) > 1000) {
+                        hazards.densityAlt = {
+                            airport: depIcao,
+                            fieldElev: departure.elevation,
+                            densityAlt: densityAlt,
+                            difference: densityAlt - departure.elevation
+                        };
+                    }
+                }
+            }
+
+            // Check destination weather
+            if (destMetar.status === 'fulfilled' && destMetar.value) {
+                const flightCat = window.WeatherAPI.getFlightCategoryFromMETAR(destMetar.value);
+                if (flightCat === 'IFR' || flightCat === 'LIFR') {
+                    hazards.airportWx.push({
+                        icao: destIcao,
+                        type: 'DESTINATION',
+                        flightCategory: flightCat
+                    });
+                }
+            }
+
+            updateHazardSummaryWeather(hazards);
+        }
+    } catch (error) {
+        console.error('[UIController] Weather hazard analysis error:', error);
+        // Still update to remove "Checking..." indicator
+        updateHazardSummaryWeather({ error: true });
+    }
+}
+
+/**
  * Refresh the hazard display portion of route summary
  */
 function refreshHazardDisplay() {
@@ -1358,7 +1862,10 @@ function refreshHazardDisplay() {
             _currentHazardData.fuelStatus,
             _currentHazardData.windMetadata,
             _currentHazardData.options,
-            _currentHazardData.terrainStatus
+            _currentHazardData.terrainStatus,
+            _currentHazardData.weatherStatus,
+            _currentHazardData.windAnalysis,
+            _currentHazardData.returnFuel
         );
     }
 }
@@ -1430,8 +1937,20 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelSt
         `;
     }
 
-    // Add hazard summary (inline, updatable container for async terrain updates)
-    summaryHTML += `<div id="hazardSummaryInline">${buildHazardSummaryHTML(fuelStatus, options.windMetadata, options, null)}</div>`;
+    // Calculate wind hazards if wind data is available
+    let windAnalysis = null;
+    if (options.enableWinds && legs && legs.length > 0) {
+        windAnalysis = window.Navigation?.analyzeWindHazards(legs, { headwind: 25, crosswind: 15 });
+    }
+
+    // Calculate return fuel if fuel planning is enabled
+    let returnFuel = null;
+    if (options.enableFuel && options.tas && fuelStatus?.burnRate && legs && legs.length > 0) {
+        returnFuel = window.Navigation?.calculateReturnFuel(legs, fuelStatus.burnRate, options.tas);
+    }
+
+    // Add hazard summary (inline, updatable container for async terrain/weather updates)
+    summaryHTML += `<div id="hazardSummaryInline">${buildHazardSummaryHTML(fuelStatus, options.windMetadata, options, null, null, windAnalysis, returnFuel)}</div>`;
 
     // Add wind data validity if available
     if (options.windMetadata && options.enableWinds) {
@@ -1499,17 +2018,69 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelSt
             <span class="summary-value text-secondary">${fuelStatus.requiredReserve.toFixed(1)} GAL (${fuelStatus.vfrReserve} MIN)</span>
         </div>
         `;
+
+        // Add return fuel info if available
+        if (returnFuel) {
+            const returnTimeHrs = Math.floor(returnFuel.returnTime / 60);
+            const returnTimeMins = returnFuel.returnTime % 60;
+
+            // Check if can return without refueling
+            const fuelForReturn = returnFuel.returnFuel + fuelStatus.requiredReserve;
+            const canReturn = fuelStatus.finalFob >= fuelForReturn;
+            const returnColor = canReturn ? 'text-secondary' : 'text-warning';
+
+            // Format fuel difference string
+            let fuelDiffStr;
+            if (Math.abs(returnFuel.fuelDifference) < 0.1) {
+                fuelDiffStr = 'same as out';
+            } else if (returnFuel.fuelDifference > 0) {
+                fuelDiffStr = `+${returnFuel.fuelDifference.toFixed(1)} GAL more`;
+            } else {
+                fuelDiffStr = `${Math.abs(returnFuel.fuelDifference).toFixed(1)} GAL less`;
+            }
+
+            // Format time difference string
+            let timeDiffStr;
+            if (Math.abs(returnFuel.timeDifference) < 1) {
+                timeDiffStr = 'same as out';
+            } else if (returnFuel.timeDifference > 0) {
+                timeDiffStr = `+${returnFuel.timeDifference}M longer`;
+            } else {
+                timeDiffStr = `${Math.abs(returnFuel.timeDifference)}M shorter`;
+            }
+
+            summaryHTML += `
+        <div class="summary-item">
+            <span class="summary-label text-secondary text-sm">RETURN FUEL</span>
+            <span class="summary-value ${returnColor}">${returnFuel.returnFuel.toFixed(1)} GAL (${fuelDiffStr})</span>
+        </div>
+        <div class="summary-item">
+            <span class="summary-label text-secondary text-sm">RETURN TIME</span>
+            <span class="summary-value text-secondary">${returnTimeHrs}H ${returnTimeMins}M (${timeDiffStr})</span>
+        </div>
+            `;
+        }
     }
 
     elements.routeSummary.innerHTML = summaryHTML;
 
-    // Store hazard data for async terrain updates
+    // Store hazard data for async terrain/weather updates
     _currentHazardData = {
         fuelStatus,
         windMetadata: options.windMetadata,
         options,
-        terrainStatus: null
+        terrainStatus: null,
+        weatherStatus: null,
+        windAnalysis,
+        returnFuel,
+        legs,
+        waypoints
     };
+
+    // Trigger async weather hazard analysis (if online)
+    if (navigator.onLine) {
+        analyzeWeatherHazards();
+    }
 
     // Display wind altitude table if wind correction enabled
     if (options.enableWinds && legs.some(leg => leg.windsAtAltitudes)) {
@@ -2390,6 +2961,11 @@ window.UIController = {
     disableRouteInput,
     clearRoute,
 
+    // Departure time
+    getDepartureTime,
+    updateDepartureTimeDisplay,
+    handleDepartureTimeChange,
+
     // Autocomplete
     handleAutocompleteInput,
     handleAutocompleteKeydown,
@@ -2406,6 +2982,11 @@ window.UIController = {
     // Results
     displayResults,
     restoreNavlog,
+
+    // Hazard updates (async)
+    updateHazardSummaryTerrain,
+    updateHazardSummaryWeather,
+    analyzeWeatherHazards,
 
     // History
     displayQueryHistory

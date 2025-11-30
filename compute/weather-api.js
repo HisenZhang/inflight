@@ -261,7 +261,7 @@ async function fetchAllPIREPs() {
     try {
         // Fetch from AWC bulk cache (CSV is smaller than XML)
         const cacheUrl = 'https://aviationweather.gov/data/cache/aircraftreports.cache.csv.gz';
-        const response = await fetch(`${CORS_PROXY}${encodeURIComponent(cacheUrl)}`);
+        const response = await fetch(`${CORS_PROXY}${encodeURIComponent(cacheUrl)}`, { cache: 'no-store' });
 
         if (!response.ok) {
             console.error(`[WeatherAPI] PIREP fetch failed: HTTP ${response.status}`);
@@ -361,7 +361,7 @@ async function fetchSIGMETs() {
     try {
         // Fetch from AWC bulk cache (CSV is smaller and faster)
         const cacheUrl = 'https://aviationweather.gov/data/cache/airsigmets.cache.csv.gz';
-        const response = await fetch(`${CORS_PROXY}${encodeURIComponent(cacheUrl)}`);
+        const response = await fetch(`${CORS_PROXY}${encodeURIComponent(cacheUrl)}`, { cache: 'no-store' });
 
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
@@ -465,7 +465,7 @@ async function fetchGAIRMETs() {
         try {
             // Fetch from AWC bulk cache (CSV is much smaller than XML: 19KB vs 85KB)
             const cacheUrl = 'https://aviationweather.gov/data/cache/gairmets.cache.csv.gz';
-            const response = await fetch(`${CORS_PROXY}${encodeURIComponent(cacheUrl)}`);
+            const response = await fetch(`${CORS_PROXY}${encodeURIComponent(cacheUrl)}`, { cache: 'no-store' });
 
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}`);

@@ -251,7 +251,7 @@
 
     .navlog-table {
         width: 100%;
-        page-break-inside: avoid;
+        /* Allow table to break across pages - individual rows have page-break-inside: avoid */
     }
 
     .navlog-table table {
@@ -415,7 +415,7 @@
         border: none !important;
         padding: 0;
         margin-bottom: 12pt;
-        page-break-inside: avoid;
+        /* Allow breaking - hazards can be long */
     }
 
     .results-section h2 {
@@ -430,6 +430,7 @@
         border-bottom: 2px solid black !important;
         padding: 0 0 8pt 0;
         margin-bottom: 12pt;
+        /* Allow breaking across pages - hazards section can be long */
     }
 
     .summary-item {
@@ -605,11 +606,10 @@
        ======================================== */
 
     /* Avoid breaking inside these elements */
-    .navlog-table,
+    /* Note: .navlog-table and .route-summary can break across pages to prevent blank first page */
     .wind-altitude-table,
     .stats-card,
-    .checklist-card,
-    .route-summary {
+    .checklist-card {
         page-break-inside: avoid;
     }
 

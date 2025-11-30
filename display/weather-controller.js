@@ -8,6 +8,8 @@ window.WeatherController = {
     currentSubtab: 'metar',
     weatherData: null,
     routeWaypoints: [], // Stores current route waypoints for hazard analysis
+    routeLegs: [],      // Stores route legs with leg times for time-based filtering
+    routeDepartureTime: null, // Departure time for ETA calculation
 
     /**
      * Initialize weather controller
@@ -111,6 +113,54 @@ window.WeatherController = {
      */
     updateRouteWaypoints(waypoints) {
         this.routeWaypoints = waypoints || [];
+    },
+
+    /**
+     * Update route legs for time-based hazard filtering
+     * Called when a route is calculated or cleared
+     * @param {Array} legs - Array of leg objects with legTime in minutes
+     * @param {Date} departureTime - Departure time for ETA calculation
+     */
+    updateRouteLegs(legs, departureTime = null) {
+        this.routeLegs = legs || [];
+        this.routeDepartureTime = departureTime || new Date();
+    },
+
+    /**
+     * Calculate ETAs for each waypoint based on current route legs
+     * @returns {Array} Array of Date objects for each waypoint's ETA
+     */
+    calculateWaypointETAs() {
+        if (!this.routeLegs || this.routeLegs.length === 0) {
+            return null;
+        }
+        const depTime = this.routeDepartureTime || new Date();
+        return window.Weather?.calculateWaypointETAs(this.routeLegs, depTime) || null;
+    },
+
+    /**
+     * Filter affected waypoints by time (ETA vs hazard expiration)
+     * @param {Array} affectedWaypoints - Array of {ident, index} objects
+     * @param {Object} hazard - G-AIRMET or SIGMET with expireTime
+     * @param {string} type - 'gairmet' or 'sigmet'
+     * @returns {Array} Time-filtered affected waypoints
+     */
+    filterAffectedByTime(affectedWaypoints, hazard, type) {
+        if (!affectedWaypoints || affectedWaypoints.length === 0) {
+            return affectedWaypoints;
+        }
+        const waypointETAs = this.calculateWaypointETAs();
+        if (!waypointETAs) {
+            return affectedWaypoints; // Can't filter without ETAs
+        }
+        return affectedWaypoints.filter(wp => {
+            // Check if hazard is active when we START the leg TO this waypoint
+            // For waypoint N (1-based), the leg TO it starts at waypoint N-1 (1-based)
+            // waypointETAs[N-2] = ETA at waypoint N-1 (since etas[0] = wp1, etas[1] = wp2, etc.)
+            const legStartIndex = Math.max(0, wp.index - 2);
+            const legStartETA = waypointETAs[legStartIndex];
+            return window.Weather?.isWeatherValidAtTime(hazard, legStartETA, type) ?? true;
+        });
     },
 
     /**
@@ -841,6 +891,8 @@ window.WeatherController = {
             const hoverClass = hasCoords ? 'hazard-row-clickable' : '';
 
             // Calculate affected waypoints if route exists (with index for range formatting)
+            // WX tab shows GEOGRAPHIC overlap only (no time filtering)
+            // Time filtering is done in navlog HAZARDS summary based on departure time
             let affectedStr = '--';
             if (hasRouteWaypoints && hasCoords && window.Weather?.findAffectedWaypointsWithIndex) {
                 const affected = window.Weather.findAffectedWaypointsWithIndex(sigmet, this.routeWaypoints, 30);
@@ -982,6 +1034,8 @@ window.WeatherController = {
             const hoverClass = hasCoords ? 'hazard-row-clickable' : '';
 
             // Calculate affected waypoints if route exists (with index for range formatting)
+            // WX tab shows GEOGRAPHIC overlap only (no time filtering)
+            // Time filtering is done in navlog HAZARDS summary based on departure time
             let affectedStr = '--';
             if (hasRouteWaypoints && hasCoords && window.Weather?.findAffectedWaypointsWithIndex) {
                 const affected = window.Weather.findAffectedWaypointsWithIndex(gairmet, this.routeWaypoints, 30);
