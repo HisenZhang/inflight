@@ -25,7 +25,7 @@ const AppVersion = {
     // Semantic version (sync with package.json)
     MAJOR: 3,
     MINOR: 3,
-    PATCH: 0,
+    PATCH: 1,
 
     // Full version string
     get VERSION() {
@@ -34,7 +34,7 @@ const AppVersion = {
 
     // Service worker cache version
     // Increment this number to force PWA updates
-    CACHE_VERSION: 149,
+    CACHE_VERSION: 150,
 
     // Full cache name for service worker
     get CACHE_NAME() {
@@ -45,7 +45,7 @@ const AppVersion = {
     BUILD_DATE: '2025-11-30',
 
     // Release name (optional)
-    RELEASE_NAME: 'ForeFlight FPL import/export and clipboard support',
+    RELEASE_NAME: 'Fix G-AIRMET polygon rendering outside view bounds',
 
     /**
      * Get full version info object

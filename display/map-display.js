@@ -2138,11 +2138,6 @@ function drawWeatherOverlays(project, bounds) {
                 return;
             }
 
-            // Check if G-AIRMET intersects map bounds (skip if completely outside view)
-            if (!polygonIntersectsBounds(gairmet.coords, bounds)) {
-                return;
-            }
-
             // Filter by hazard type (API returns: ICE, TURB-HI, TURB-LO, LLWS, IFR, MT_OBSC, FZLVL, M_FZLVL)
             const hazardType = (gairmet.hazard || '').toUpperCase();
             let shouldRender = false;
