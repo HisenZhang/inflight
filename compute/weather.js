@@ -629,16 +629,16 @@
          * Format relative time from departure as "T+xxH yyM"
          * @param {Date} targetTime - The time to format
          * @param {Date} departureTime - Departure time as reference
-         * @returns {string} Formatted relative time like "T+1H 30M" or "T+0H 15M"
+         * @returns {string} Formatted relative time like "+1:30" or "+0:15"
          */
         formatRelativeTime(targetTime, departureTime) {
             if (!targetTime || !departureTime) return '';
             const diffMs = targetTime.getTime() - departureTime.getTime();
-            if (diffMs < 0) return 'T+0H 0M'; // Before departure
+            if (diffMs < 0) return '+0:00'; // Before departure
             const totalMinutes = Math.round(diffMs / (60 * 1000));
             const hours = Math.floor(totalMinutes / 60);
             const minutes = totalMinutes % 60;
-            return `T+${hours}H ${minutes}M`;
+            return `+${hours}:${minutes.toString().padStart(2, '0')}`;
         },
 
         /**
@@ -681,7 +681,12 @@
                 }
 
                 if (isAffected) {
-                    affected.push({ ident, index: i + 1 }); // 1-based index
+                    affected.push({
+                        ident,
+                        index: i + 1, // 1-based index
+                        type: wp.waypointType || 'fix', // waypoint type for coloring
+                        isReportingPoint: wp.isReportingPoint || false // amber for reporting points
+                    });
                 }
             }
 
@@ -689,10 +694,36 @@
         },
 
         /**
-         * Format affected waypoints as range notation
-         * e.g., "KALB(1)-SYR(3), ROC(5)-BUF(7)" for consecutive ranges
-         * @param {Array} affectedWaypoints - Array of {ident, index} objects
-         * @returns {string} Formatted range string
+         * Get CSS class for waypoint type coloring
+         * @param {string} type - Waypoint type (airport, navaid, fix, etc.)
+         * @param {boolean} isReportingPoint - True if fix is a reporting point (amber)
+         * @returns {string} CSS class name
+         */
+        getWaypointColorClass(type, isReportingPoint = false) {
+            switch (type) {
+                case 'airport': return 'text-airport';
+                case 'navaid': return 'text-navaid';
+                case 'fix':
+                    return isReportingPoint ? 'text-reporting' : 'text-fix';
+                default: return 'text-fix';
+            }
+        },
+
+        /**
+         * Format a single waypoint with color and index
+         * @param {Object} wp - Waypoint object with ident, index, type, and isReportingPoint
+         * @returns {string} HTML formatted waypoint like <span class="text-airport">KALB[1]</span>
+         */
+        formatColoredWaypoint(wp) {
+            const colorClass = this.getWaypointColorClass(wp.type, wp.isReportingPoint);
+            return `<span class="${colorClass}">${wp.ident}[${wp.index}]</span>`;
+        },
+
+        /**
+         * Format affected waypoints as range notation with colors
+         * e.g., "<span class='text-airport'>KALB[1]</span>-<span class='text-navaid'>SYR[3]</span>"
+         * @param {Array} affectedWaypoints - Array of {ident, index, type} objects
+         * @returns {string} HTML formatted range string with color classes
          */
         formatAffectedWaypointsRange(affectedWaypoints) {
             if (!affectedWaypoints || affectedWaypoints.length === 0) {
@@ -722,12 +753,12 @@
             // Don't forget the last range
             ranges.push({ start: rangeStart, end: rangeEnd });
 
-            // Format ranges
+            // Format ranges with colors
             const formatted = ranges.map(range => {
                 if (range.start.index === range.end.index) {
-                    return `${range.start.ident}(${range.start.index})`;
+                    return this.formatColoredWaypoint(range.start);
                 } else {
-                    return `${range.start.ident}(${range.start.index})-${range.end.ident}(${range.end.index})`;
+                    return `${this.formatColoredWaypoint(range.start)}-${this.formatColoredWaypoint(range.end)}`;
                 }
             });
 
@@ -848,9 +879,9 @@
         },
 
         /**
-         * Parse turbulence info from PIREP raw text
+         * Parse turbulence info from PIREP raw text (includes NEG reports)
          * @param {string} rawOb - Raw PIREP text
-         * @returns {Object|null} {intensity, altLo, altHi} or null
+         * @returns {Object|null} {intensity, altLo, altHi, isNegative} or null
          */
         parsePirepTurbulence(rawOb) {
             if (!rawOb) return null;
@@ -865,19 +896,20 @@
             const intensityOrder = { 'NEG': 0, 'SMTH': 0, 'LGT': 1, 'MOD': 2, 'SEV': 3, 'EXTRM': 4 };
             const intensity = (intensityOrder[intensity2] || 0) > (intensityOrder[intensity1] || 0) ? intensity2 : intensity1;
 
-            if (intensity === 'NEG' || intensity === 'SMTH') return null; // No turbulence
+            const isNegative = intensity === 'NEG' || intensity === 'SMTH';
 
             return {
-                intensity,
+                intensity: isNegative ? 'NEG' : intensity,
                 altLo: match[3] ? parseInt(match[3]) * 100 : null,
-                altHi: match[4] ? parseInt(match[4]) * 100 : null
+                altHi: match[4] ? parseInt(match[4]) * 100 : null,
+                isNegative
             };
         },
 
         /**
-         * Parse icing info from PIREP raw text
+         * Parse icing info from PIREP raw text (includes NEG reports)
          * @param {string} rawOb - Raw PIREP text
-         * @returns {Object|null} {intensity, type, altLo, altHi} or null
+         * @returns {Object|null} {intensity, type, altLo, altHi, isNegative} or null
          */
         parsePirepIcing(rawOb) {
             if (!rawOb) return null;
@@ -887,14 +919,206 @@
             if (!match) return null;
 
             const intensity = (match[1] || '').toUpperCase();
-            if (intensity === 'NEG') return null; // No icing
+            const isNegative = intensity === 'NEG';
 
             return {
                 intensity,
                 type: (match[2] || '').toUpperCase() || null,
                 altLo: match[3] ? parseInt(match[3]) * 100 : null,
-                altHi: match[4] ? parseInt(match[4]) * 100 : null
+                altHi: match[4] ? parseInt(match[4]) * 100 : null,
+                isNegative
             };
+        },
+
+        /**
+         * Parse weather/precipitation info from PIREP raw text
+         * @param {string} rawOb - Raw PIREP text
+         * @returns {Object|null} {wxType, intensity} or null
+         */
+        parsePirepWeather(rawOb) {
+            if (!rawOb) return null;
+            // Match /WX followed by weather phenomena
+            // Examples: /WX RA, /WX +TSRA, /WX FG HZ, /WX -SN
+            const match = rawOb.match(/\/WX\s+([+-]?)(\w+(?:\s+\w+)?)/i);
+            if (!match) return null;
+
+            const modifier = match[1] || '';
+            const wxCode = (match[2] || '').toUpperCase();
+
+            // Skip if clear/no significant weather
+            if (wxCode === 'CLR' || wxCode === 'SKC' || wxCode === 'NSW') return null;
+
+            // Determine intensity from modifier or wx type
+            let intensity = 'MOD';
+            if (modifier === '+' || wxCode.includes('TS') || wxCode.includes('GR') || wxCode.includes('FC')) {
+                intensity = 'SEV';
+            } else if (modifier === '-' || wxCode === 'HZ' || wxCode === 'BR') {
+                intensity = 'LGT';
+            }
+
+            return {
+                wxType: wxCode,
+                intensity
+            };
+        },
+
+        /**
+         * Parse thunderstorm info from PIREP raw text
+         * @param {string} rawOb - Raw PIREP text
+         * @returns {Object|null} {intensity, movement, tops} or null
+         */
+        parsePirepThunderstorm(rawOb) {
+            if (!rawOb) return null;
+            // Match /TS or thunderstorm indicators in weather
+            // Examples: /TS, /TS MOV E, /WX +TSRA
+            const tsMatch = rawOb.match(/\/TS(?:\s+(?:MOV\s+)?([NESW]+))?(?:\s+TOPS?\s*(\d{3}))?/i);
+            const wxTsMatch = rawOb.match(/\/WX\s+[+-]?TS/i);
+
+            if (!tsMatch && !wxTsMatch) return null;
+
+            return {
+                intensity: 'SEV', // Thunderstorms are always severe hazard
+                movement: tsMatch?.[1]?.toUpperCase() || null,
+                tops: tsMatch?.[2] ? parseInt(tsMatch[2]) * 100 : null
+            };
+        },
+
+        /**
+         * Parse wind shear info from PIREP raw text
+         * @param {string} rawOb - Raw PIREP text
+         * @returns {Object|null} {intensity, altLo, altHi} or null
+         */
+        parsePirepWindShear(rawOb) {
+            if (!rawOb) return null;
+            // Match /WS or /WV (wind shear/wind variation)
+            // Examples: /WS +30KT 020-030, /LLWS, /WS MOD
+            const wsMatch = rawOb.match(/\/(?:WS|WV|LLWS)\s*(?:([+-]?\d+)\s*KT)?(?:\s+(\d{3})(?:-(\d{3}))?)?/i);
+            const llwsMatch = rawOb.match(/LLWS/i);
+
+            if (!wsMatch && !llwsMatch) return null;
+
+            // Determine intensity from knot change or presence of LLWS
+            let intensity = 'MOD';
+            if (llwsMatch || (wsMatch?.[1] && Math.abs(parseInt(wsMatch[1])) >= 20)) {
+                intensity = 'SEV';
+            } else if (wsMatch?.[1] && Math.abs(parseInt(wsMatch[1])) < 10) {
+                intensity = 'LGT';
+            }
+
+            return {
+                intensity,
+                knotChange: wsMatch?.[1] ? parseInt(wsMatch[1]) : null,
+                altLo: wsMatch?.[2] ? parseInt(wsMatch[2]) * 100 : null,
+                altHi: wsMatch?.[3] ? parseInt(wsMatch[3]) * 100 : null
+            };
+        },
+
+        /**
+         * Parse volcanic ash info from PIREP raw text
+         * @param {string} rawOb - Raw PIREP text
+         * @returns {Object|null} {intensity} or null
+         */
+        parsePirepVolcanicAsh(rawOb) {
+            if (!rawOb) return null;
+            // Match /VA or volcanic ash indicators
+            // Examples: /VA, /WX VA
+            const match = rawOb.match(/\/VA|\/WX\s+VA/i);
+            if (!match) return null;
+
+            return {
+                intensity: 'EXTRM' // Volcanic ash is always extreme hazard
+            };
+        },
+
+        /**
+         * Parse sky condition info from PIREP raw text
+         * @param {string} rawOb - Raw PIREP text
+         * @returns {Object|null} {layers: [{cover, base, top}], intensity} or null
+         */
+        parsePirepSkyCondition(rawOb) {
+            if (!rawOb) return null;
+            // Match /SK followed by sky conditions
+            // Examples: /SK OVC080, /SK BKN040-TOP060, /SK SCT020/BKN050/OVC100
+            const skMatch = rawOb.match(/\/SK\s+([^\/]+(?:\/[^\/]+)*)/i);
+            if (!skMatch) return null;
+
+            const layers = [];
+            const layerParts = skMatch[1].split('/');
+
+            for (const part of layerParts) {
+                // Match coverage and altitude: OVC080, BKN040-TOP060, CLR
+                const layerMatch = part.trim().match(/(CLR|SKC|FEW|SCT|BKN|OVC)(\d{3})?(?:-TOP(\d{3}))?/i);
+                if (layerMatch) {
+                    layers.push({
+                        cover: layerMatch[1].toUpperCase(),
+                        base: layerMatch[2] ? parseInt(layerMatch[2]) * 100 : null,
+                        top: layerMatch[3] ? parseInt(layerMatch[3]) * 100 : null
+                    });
+                }
+            }
+
+            if (layers.length === 0) return null;
+
+            // Determine intensity based on worst coverage
+            const coverOrder = { 'CLR': 0, 'SKC': 0, 'FEW': 1, 'SCT': 2, 'BKN': 3, 'OVC': 4 };
+            const worstCover = layers.reduce((worst, l) =>
+                (coverOrder[l.cover] || 0) > (coverOrder[worst] || 0) ? l.cover : worst, 'CLR');
+
+            // BKN/OVC is significant, others are info
+            const intensity = (worstCover === 'OVC' || worstCover === 'BKN') ? 'MOD' : 'LGT';
+
+            return {
+                layers,
+                intensity,
+                summary: layers.map(l => `${l.cover}${l.base ? Math.round(l.base/100).toString().padStart(3,'0') : ''}`).join('/')
+            };
+        },
+
+        /**
+         * Parse aircraft type from PIREP raw text
+         * @param {string} rawOb - Raw PIREP text
+         * @returns {string|null} Aircraft type code or null
+         */
+        parsePirepAircraftType(rawOb) {
+            if (!rawOb) return null;
+            // Match /TP followed by aircraft type
+            // Examples: /TP B737, /TP C172, /TP PA28
+            const match = rawOb.match(/\/TP\s+([A-Z0-9]{2,6})/i);
+            return match ? match[1].toUpperCase() : null;
+        },
+
+        /**
+         * Parse temperature from PIREP raw text
+         * @param {string} rawOb - Raw PIREP text
+         * @returns {Object|null} {tempC, dewpointC} or null
+         */
+        parsePirepTemperature(rawOb) {
+            if (!rawOb) return null;
+            // Match /TA (air temp) or /TB (temp at base) followed by temperature
+            // Examples: /TA -15, /TA M20, /TA 05
+            // Also match /TM for temperature in some formats
+            const tempMatch = rawOb.match(/\/T[AB]\s+(M?)(\d{1,2})/i);
+            if (!tempMatch) return null;
+
+            const isNegative = tempMatch[1].toUpperCase() === 'M';
+            const temp = parseInt(tempMatch[2]);
+
+            return {
+                tempC: isNegative ? -temp : temp
+            };
+        },
+
+        /**
+         * Check if PIREP is urgent (UUA)
+         * @param {string} rawOb - Raw PIREP text
+         * @param {string} reportType - Report type from API
+         * @returns {boolean} True if urgent PIREP
+         */
+        isPirepUrgent(rawOb, reportType) {
+            if (reportType === 'URGENT') return true;
+            if (!rawOb) return false;
+            // Check for UUA at start of report
+            return /^UUA\s/i.test(rawOb.trim());
         },
 
         /**
@@ -903,10 +1127,19 @@
          * @param {Array} waypoints - Array of waypoint objects
          * @param {number} corridorNm - Corridor width in nautical miles
          * @param {number} filedAltitude - Filed altitude in feet
-         * @returns {Object} {turbulence: [], icing: []} arrays of hazard PIREPs
+         * @returns {Object} Arrays of hazard PIREPs by type
          */
         analyzePirepsForRoute(pireps, waypoints, corridorNm = 30, filedAltitude = null) {
-            const result = { turbulence: [], icing: [] };
+            const result = {
+                turbulence: [],
+                icing: [],
+                weather: [],
+                thunderstorm: [],
+                windshear: [],
+                volcanicAsh: [],
+                skyCondition: [],
+                other: []  // PIREPs without specific hazard fields
+            };
             if (!pireps || !waypoints || waypoints.length === 0) return result;
 
             const now = Date.now() / 1000;
@@ -924,6 +1157,8 @@
                 let nearestWpLat = null;
                 let nearestWpLon = null;
 
+                let nearestWpType = 'fix';
+                let nearestWpIsReporting = false;
                 for (let i = 0; i < waypoints.length; i++) {
                     const wp = waypoints[i];
                     if (wp.lat !== undefined && wp.lon !== undefined) {
@@ -933,6 +1168,8 @@
                             minDist = dist;
                             nearestWpIndex = i + 1; // 1-based index
                             nearestWpIdent = wp.ident || wp.icao || wp.code || `WP${i + 1}`;
+                            nearestWpType = wp.waypointType || 'fix';
+                            nearestWpIsReporting = wp.isReportingPoint || false;
                             nearestWpLat = wp.lat;
                             nearestWpLon = wp.lon;
                         }
@@ -959,40 +1196,87 @@
                     return true;
                 };
 
-                // Parse turbulence
+                // Parse common fields: aircraft type, urgency, temperature
+                const aircraftType = this.parsePirepAircraftType(pirep.rawOb);
+                const isUrgent = this.isPirepUrgent(pirep.rawOb, pirep.reportType);
+                const tempData = this.parsePirepTemperature(pirep.rawOb);
+
+                // Common PIREP data for all hazard types
+                const commonData = {
+                    lat: pirep.lat,
+                    lon: pirep.lon,
+                    fltLvl: pirep.fltLvl,
+                    obsTime: pirep.obsTime,
+                    reportType: pirep.reportType,
+                    nearestWpIndex,
+                    nearestWpIdent,
+                    nearestWpType,
+                    nearestWpIsReporting,
+                    distanceNm: Math.round(minDist),
+                    direction: directionFromWp,
+                    rawOb: pirep.rawOb,
+                    aircraftType,
+                    isUrgent,
+                    tempC: tempData?.tempC ?? null
+                };
+
+                // Track if this PIREP matched any specific category
+                let matchedCategory = false;
+
+                // Parse turbulence (includes NEG reports)
                 const turb = this.parsePirepTurbulence(pirep.rawOb);
                 if (turb && altCheck(turb.altLo, turb.altHi)) {
-                    result.turbulence.push({
-                        ...turb,
-                        lat: pirep.lat,
-                        lon: pirep.lon,
-                        fltLvl: pirep.fltLvl,
-                        obsTime: pirep.obsTime,
-                        reportType: pirep.reportType,
-                        nearestWpIndex,
-                        nearestWpIdent,
-                        distanceNm: Math.round(minDist),
-                        direction: directionFromWp,
-                        rawOb: pirep.rawOb
-                    });
+                    result.turbulence.push({ ...turb, ...commonData });
+                    matchedCategory = true;
                 }
 
-                // Parse icing
+                // Parse icing (includes NEG reports)
                 const ice = this.parsePirepIcing(pirep.rawOb);
                 if (ice && altCheck(ice.altLo, ice.altHi)) {
-                    result.icing.push({
-                        ...ice,
-                        lat: pirep.lat,
-                        lon: pirep.lon,
-                        fltLvl: pirep.fltLvl,
-                        obsTime: pirep.obsTime,
-                        reportType: pirep.reportType,
-                        nearestWpIndex,
-                        nearestWpIdent,
-                        distanceNm: Math.round(minDist),
-                        direction: directionFromWp,
-                        rawOb: pirep.rawOb
-                    });
+                    result.icing.push({ ...ice, ...commonData });
+                    matchedCategory = true;
+                }
+
+                // Parse thunderstorm (check before general weather to avoid duplicates)
+                const ts = this.parsePirepThunderstorm(pirep.rawOb);
+                if (ts) {
+                    result.thunderstorm.push({ ...ts, ...commonData });
+                    matchedCategory = true;
+                }
+
+                // Parse weather (skip if thunderstorm already captured to avoid double-reporting)
+                if (!ts) {
+                    const wx = this.parsePirepWeather(pirep.rawOb);
+                    if (wx) {
+                        result.weather.push({ ...wx, ...commonData });
+                        matchedCategory = true;
+                    }
+                }
+
+                // Parse wind shear
+                const ws = this.parsePirepWindShear(pirep.rawOb);
+                if (ws && altCheck(ws.altLo, ws.altHi)) {
+                    result.windshear.push({ ...ws, ...commonData });
+                    matchedCategory = true;
+                }
+
+                // Parse volcanic ash (no altitude filter - always relevant)
+                const va = this.parsePirepVolcanicAsh(pirep.rawOb);
+                if (va) {
+                    result.volcanicAsh.push({ ...va, ...commonData });
+                    matchedCategory = true;
+                }
+
+                // Parse sky condition
+                const sk = this.parsePirepSkyCondition(pirep.rawOb);
+                if (sk) {
+                    result.skyCondition.push({ ...sk, ...commonData });
+                    matchedCategory = true;
+                }
+
+                // If PIREP didn't match any specific category, add to "other"
+                if (!matchedCategory) {
+                    result.other.push({ intensity: 'INFO', ...commonData });
                 }
             }
 

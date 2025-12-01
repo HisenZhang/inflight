@@ -314,13 +314,17 @@
                 }
 
                 // Collect legs with significant headwind (positive headwind)
-                // Leg notation: FROM(fromIndex)-TO(toIndex) e.g., "KALB(1)-PAYGE(2)" means leg from wp1 to wp2
+                // Leg notation: FROM[fromIndex]-TO[toIndex] e.g., "KALB[1]-PAYGE[2]" means leg from wp1 to wp2
                 if (headwind > thresholds.headwind) {
                     headwindLegs.push({
                         fromIndex: i + 1,  // 1-based waypoint index of FROM
                         toIndex: i + 2,    // 1-based waypoint index of TO
                         from: leg.from?.ident || leg.from?.icao || leg.from || `WPT${i + 1}`,
                         to: leg.to?.ident || leg.to?.icao || leg.to || `WPT${i + 2}`,
+                        fromType: leg.from?.waypointType || 'fix',
+                        toType: leg.to?.waypointType || 'fix',
+                        fromIsReporting: leg.from?.isReportingPoint || false,
+                        toIsReporting: leg.to?.isReportingPoint || false,
                         value: headwind
                     });
                 }
@@ -332,6 +336,10 @@
                         toIndex: i + 2,
                         from: leg.from?.ident || leg.from?.icao || leg.from || `WPT${i + 1}`,
                         to: leg.to?.ident || leg.to?.icao || leg.to || `WPT${i + 2}`,
+                        fromType: leg.from?.waypointType || 'fix',
+                        toType: leg.to?.waypointType || 'fix',
+                        fromIsReporting: leg.from?.isReportingPoint || false,
+                        toIsReporting: leg.to?.isReportingPoint || false,
                         value: absCrosswind,
                         direction: crosswind > 0 ? 'R' : 'L'
                     });

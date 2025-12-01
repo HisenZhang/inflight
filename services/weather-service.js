@@ -488,35 +488,64 @@
                 const allPirepData = allPireps.status === 'fulfilled' ? (allPireps.value || []) : [];
                 const pirepAnalysis = window.Weather.analyzePirepsForRoute(allPirepData, waypoints, 50, filedAltitude);
 
-                // Add turbulence PIREPs with intensity and waypoint info
+                // Helper to build common PIREP fields
+                const buildPirepEntry = (p, type, extra = {}) => ({
+                    type,
+                    intensity: p.intensity,
+                    altitude: p.fltLvl,
+                    nearestWpIndex: p.nearestWpIndex,
+                    nearestWpIdent: p.nearestWpIdent,
+                    nearestWpType: p.nearestWpType || 'fix',
+                    nearestWpIsReporting: p.nearestWpIsReporting || false,
+                    distanceNm: p.distanceNm,
+                    direction: p.direction,
+                    obsTime: p.obsTime,
+                    raw: p.rawOb,
+                    aircraftType: p.aircraftType,
+                    isUrgent: p.isUrgent,
+                    tempC: p.tempC,
+                    isNegative: p.isNegative || false,
+                    ...extra
+                });
+
+                // Add turbulence PIREPs (includes NEG reports)
                 for (const turb of pirepAnalysis.turbulence) {
-                    hazards.pireps.push({
-                        type: 'TURB',
-                        intensity: turb.intensity,
-                        altitude: turb.fltLvl,
-                        nearestWpIndex: turb.nearestWpIndex,
-                        nearestWpIdent: turb.nearestWpIdent,
-                        distanceNm: turb.distanceNm,
-                        direction: turb.direction,
-                        obsTime: turb.obsTime,
-                        raw: turb.rawOb
-                    });
+                    hazards.pireps.push(buildPirepEntry(turb, 'TURB'));
                 }
 
-                // Add icing PIREPs with intensity, type, and waypoint info
+                // Add icing PIREPs (includes NEG reports)
                 for (const ice of pirepAnalysis.icing) {
-                    hazards.pireps.push({
-                        type: 'ICE',
-                        intensity: ice.intensity,
-                        iceType: ice.type,
-                        altitude: ice.fltLvl,
-                        nearestWpIndex: ice.nearestWpIndex,
-                        nearestWpIdent: ice.nearestWpIdent,
-                        distanceNm: ice.distanceNm,
-                        direction: ice.direction,
-                        obsTime: ice.obsTime,
-                        raw: ice.rawOb
-                    });
+                    hazards.pireps.push(buildPirepEntry(ice, 'ICE', { iceType: ice.type }));
+                }
+
+                // Add thunderstorm PIREPs
+                for (const ts of pirepAnalysis.thunderstorm) {
+                    hazards.pireps.push(buildPirepEntry(ts, 'TS', { movement: ts.movement, tops: ts.tops }));
+                }
+
+                // Add weather/precipitation PIREPs
+                for (const wx of pirepAnalysis.weather) {
+                    hazards.pireps.push(buildPirepEntry(wx, 'WX', { wxType: wx.wxType }));
+                }
+
+                // Add wind shear PIREPs
+                for (const ws of pirepAnalysis.windshear) {
+                    hazards.pireps.push(buildPirepEntry(ws, 'WS', { knotChange: ws.knotChange }));
+                }
+
+                // Add volcanic ash PIREPs
+                for (const va of pirepAnalysis.volcanicAsh) {
+                    hazards.pireps.push(buildPirepEntry(va, 'VA'));
+                }
+
+                // Add sky condition PIREPs
+                for (const sk of pirepAnalysis.skyCondition) {
+                    hazards.pireps.push(buildPirepEntry(sk, 'SK', { skySummary: sk.summary, layers: sk.layers }));
+                }
+
+                // Add other PIREPs (those without specific hazard fields)
+                for (const other of pirepAnalysis.other) {
+                    hazards.pireps.push(buildPirepEntry(other, 'OTHER'));
                 }
 
                 console.log('[WeatherService] Weather hazards analyzed:', {

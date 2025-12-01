@@ -1440,41 +1440,6 @@ function buildHazardSummaryHTML(fuelStatus, windMetadata, options, terrainStatus
         return [...nonMergeableDetails, ...merged];
     }
 
-    // Helper to format leg ranges with FROM-TO notation
-    // e.g., "KALB(1)-PAYGE(2)" means leg from wp#1 (KALB) to wp#2 (PAYGE)
-    // Consecutive legs merge: "KALB(1)-KITH(3)" spans legs 1→2 and 2→3
-    function formatLegRangeWithIdents(legs) {
-        if (!legs || legs.length === 0) return '';
-
-        // Sort by fromIndex
-        const sorted = [...legs].sort((a, b) => a.fromIndex - b.fromIndex);
-
-        // Group into consecutive ranges (consecutive means toIndex of one = fromIndex of next)
-        const ranges = [];
-        let rangeStart = sorted[0];
-        let rangeEnd = sorted[0];
-
-        for (let i = 1; i < sorted.length; i++) {
-            const current = sorted[i];
-            // Consecutive if this leg starts where previous leg ends
-            if (current.fromIndex === rangeEnd.toIndex) {
-                rangeEnd = current;
-            } else {
-                ranges.push({ start: rangeStart, end: rangeEnd });
-                rangeStart = current;
-                rangeEnd = current;
-            }
-        }
-        ranges.push({ start: rangeStart, end: rangeEnd });
-
-        // Format ranges: FROM(fromIndex)-TO(toIndex)
-        const formatted = ranges.map(range => {
-            return `${range.start.from}(${range.start.fromIndex})-${range.end.to}(${range.end.toIndex})`;
-        });
-
-        return formatted.join(', ');
-    }
-
     // Check fuel hazards - insufficient for outbound
     if (fuelStatus && !fuelStatus.isSufficient) {
         const deficit = (fuelStatus.requiredReserve - fuelStatus.finalFob).toFixed(1);
@@ -1482,18 +1447,24 @@ function buildHazardSummaryHTML(fuelStatus, windMetadata, options, terrainStatus
     }
 
     // Check return fuel hazard - can we make it back without refueling?
+    // Need: final FOB >= taxi burn + return flight burn + reserve
     if (returnFuel && fuelStatus && fuelStatus.isSufficient) {
-        const fuelForReturn = returnFuel.returnFuel + fuelStatus.requiredReserve;
+        const taxiFuel = fuelStatus.taxiFuel || 0;
+        const fuelForReturn = taxiFuel + returnFuel.returnFuel + fuelStatus.requiredReserve;
         if (fuelStatus.finalFob < fuelForReturn) {
             const deficit = (fuelForReturn - fuelStatus.finalFob).toFixed(1);
-            addHazard('RETURN', 'warning', '⚠', `Cannot return without refuel (${deficit} GAL short)`);
+            addHazard('FUEL', 'warning', '⚠', `Cannot return without refuel (${deficit} GAL short)`);
         }
     }
 
     // Check terrain hazards
     if (terrainStatus) {
         if (terrainStatus.status === 'UNSAFE') {
-            addHazard('TERRAIN', 'critical', '✗', `${terrainStatus.deficit?.toLocaleString()}' below MORA (${terrainStatus.maxMORA?.toLocaleString()}')`);
+            // Different message for MORA vs raw terrain data
+            // MORA already includes 1000'/2000' buffer, raw terrain does not
+            const dataLabel = terrainStatus.isMORA ? 'MORA' : 'terrain';
+            const bufferNote = terrainStatus.isMORA ? '' : ', add buffer';
+            addHazard('TERRAIN', 'critical', '✗', `${terrainStatus.deficit?.toLocaleString()}' below ${dataLabel} (${terrainStatus.maxMORA?.toLocaleString()}'${bufferNote})`);
         }
     } else if (options.altitude) {
         addHazard('TERRAIN', 'info', '...', 'Analyzing...');
@@ -1513,23 +1484,69 @@ function buildHazardSummaryHTML(fuelStatus, windMetadata, options, terrainStatus
         }
     }
 
-    // Check high wind hazards - consolidated by type with leg range notation
+    // Check high wind hazards - split into separate entries for each non-consecutive range
     // Wind components (headwind/crosswind) apply to LEGS, not waypoints, because only legs have headings
-    // Pass preformatted leg string (no waypoint merging needed for wind hazards)
+    // Each range gets its own line with max wind for that range
     if (windAnalysis && windAnalysis.hasHazard) {
+        // Helper to split legs into consecutive ranges and compute max for each range
+        const splitIntoRanges = (legs) => {
+            if (!legs || legs.length === 0) return [];
+            const sorted = [...legs].sort((a, b) => a.fromIndex - b.fromIndex);
+            const ranges = [];
+            let rangeLegs = [sorted[0]];
+
+            for (let i = 1; i < sorted.length; i++) {
+                const current = sorted[i];
+                const prev = rangeLegs[rangeLegs.length - 1];
+                // Consecutive if this leg starts where previous leg ends
+                if (current.fromIndex === prev.toIndex) {
+                    rangeLegs.push(current);
+                } else {
+                    ranges.push(rangeLegs);
+                    rangeLegs = [current];
+                }
+            }
+            ranges.push(rangeLegs);
+            return ranges;
+        };
+
+        // Helper to get CSS class for waypoint type coloring (with reporting point support)
+        const getColorClass = (type, isReporting = false) => {
+            switch (type) {
+                case 'airport': return 'text-airport';
+                case 'navaid': return 'text-navaid';
+                case 'fix':
+                    return isReporting ? 'text-reporting' : 'text-fix';
+                default: return 'text-fix';
+            }
+        };
+
+        // Helper to format a single range with colors and brackets
+        const formatRange = (legs) => {
+            const first = legs[0];
+            const last = legs[legs.length - 1];
+            const fromClass = getColorClass(first.fromType, first.fromIsReporting);
+            const toClass = getColorClass(last.toType, last.toIsReporting);
+            return `<span class="${fromClass}">${first.from}[${first.fromIndex}]</span>-<span class="${toClass}">${last.to}[${last.toIndex}]</span>`;
+        };
+
         if (windAnalysis.headwindWarning && windAnalysis.headwindWarning.affectedLegs) {
-            const legRangeStr = formatLegRangeWithIdents(windAnalysis.headwindWarning.affectedLegs);
-            const maxVal = windAnalysis.headwindWarning.maxValue;
-            const firstIdx = windAnalysis.headwindWarning.affectedLegs[0]?.fromIndex || 999;
-            addWeatherHazard('HEADWIND', 'warning', '⚠', `max ${maxVal}KT`, null, [], legRangeStr, firstIdx);
+            const ranges = splitIntoRanges(windAnalysis.headwindWarning.affectedLegs);
+            for (const rangeLegs of ranges) {
+                const maxVal = Math.max(...rangeLegs.map(l => l.value));
+                const legRangeStr = formatRange(rangeLegs);
+                const firstIdx = rangeLegs[0].fromIndex || 999;
+                addWeatherHazard('HEADWIND', 'warning', '⚠', `${maxVal}KT`, null, [], legRangeStr, firstIdx);
+            }
         }
         if (windAnalysis.crosswindWarning && windAnalysis.crosswindWarning.affectedLegs) {
-            const legRangeStr = formatLegRangeWithIdents(windAnalysis.crosswindWarning.affectedLegs);
-            const maxVal = windAnalysis.crosswindWarning.maxValue;
-            const firstIdx = windAnalysis.crosswindWarning.affectedLegs[0]?.fromIndex || 999;
-            // Don't show direction in summary - it varies by leg. Just show max value.
-            // Pilot can check navlog detail for per-leg crosswind direction.
-            addWeatherHazard('XWIND', 'warning', '⚠', `max ${maxVal}KT`, null, [], legRangeStr, firstIdx);
+            const ranges = splitIntoRanges(windAnalysis.crosswindWarning.affectedLegs);
+            for (const rangeLegs of ranges) {
+                const maxVal = Math.max(...rangeLegs.map(l => l.value));
+                const legRangeStr = formatRange(rangeLegs);
+                const firstIdx = rangeLegs[0].fromIndex || 999;
+                addWeatherHazard('XWIND', 'warning', '⚠', `${maxVal}KT`, null, [], legRangeStr, firstIdx);
+            }
         }
     }
 
@@ -1557,48 +1574,96 @@ function buildHazardSummaryHTML(fuelStatus, windMetadata, options, terrainStatus
             addWeatherHazard(hazardType, 'warning', '⚠', gairmet.dueTo || null, timeStr, gairmet.affectedWaypoints || []);
         }
 
-        // PIREP hazards - group by type and waypoint for cleaner display
-        // First, group PIREPs by type (TURB/ICE) and waypoint
-        const pirepGroups = {};
+        // PIREP hazards - group by type, one combined table per type
+        // Map PIREP type codes to display labels
+        const pirepTypeLabels = {
+            'TURB': 'PIREP TB',
+            'ICE': 'PIREP IC',
+            'TS': 'PIREP TS',
+            'WX': 'PIREP WX',
+            'WS': 'PIREP WS',
+            'VA': 'PIREP VA',
+            'SK': 'PIREP SK',
+            'OTHER': 'PIREP'
+        };
+        const pirepsByType = {};
         for (const pirep of (weatherStatus.pireps || [])) {
-            const typeLabel = pirep.type === 'TURB' ? 'PIREP TB' : 'PIREP IC';
-            const wpKey = `${typeLabel}:${pirep.nearestWpIndex || 0}`;
-
-            if (!pirepGroups[wpKey]) {
-                pirepGroups[wpKey] = {
-                    type: typeLabel,
-                    wpIndex: pirep.nearestWpIndex || 999,
-                    wpIdent: pirep.nearestWpIdent || `WP${pirep.nearestWpIndex}`,
-                    pireps: []
-                };
+            const typeLabel = pirepTypeLabels[pirep.type] || `PIREP ${pirep.type}`;
+            if (!pirepsByType[typeLabel]) {
+                pirepsByType[typeLabel] = [];
             }
-            pirepGroups[wpKey].pireps.push(pirep);
+            pirepsByType[typeLabel].push(pirep);
         }
 
-        // Add grouped PIREPs to hazards
-        // Structure: waypoint header, then detail rows below
-        for (const group of Object.values(pirepGroups)) {
-            // Find worst severity in group
-            const hasSevere = group.pireps.some(p => p.intensity === 'SEV' || p.intensity === 'EXTRM');
-            const severity = hasSevere ? 'critical' : 'warning';
-            const icon = hasSevere ? '✗' : '⚠';
+        // Add one hazard entry per PIREP type with combined table
+        for (const [typeLabel, pireps] of Object.entries(pirepsByType)) {
+            if (pireps.length === 0) continue;
 
-            // Check if any PIREP has ice type (for column alignment)
-            const hasIceType = group.pireps.some(p => p.iceType);
+            // Sort: urgent first, then by waypoint index
+            pireps.sort((a, b) => {
+                if (a.isUrgent !== b.isUrgent) return a.isUrgent ? -1 : 1;
+                return (a.nearestWpIndex || 999) - (b.nearestWpIndex || 999);
+            });
 
-            // Format PIREPs as table rows for alignment
-            const pirepRows = group.pireps.map(pirep => {
-                const intColor = (pirep.intensity === 'SEV' || pirep.intensity === 'EXTRM') ? 'text-error' : 'text-warning';
-                const intensityCell = `<td class="${intColor} font-bold" style="width:36px;white-space:nowrap">${pirep.intensity || ''}</td>`;
+            // Find worst severity in group (NEG reports are info-level)
+            const hasUrgent = pireps.some(p => p.isUrgent);
+            const hasSevere = pireps.some(p => !p.isNegative && (p.intensity === 'SEV' || p.intensity === 'EXTRM'));
+            const allNegative = pireps.every(p => p.isNegative);
+            const severity = hasUrgent || hasSevere ? 'critical' : (allNegative ? 'info' : 'warning');
+            const icon = hasUrgent || hasSevere ? '✗' : (allNegative ? '✓' : '⚠');
 
-                // Ice type column (only if group has any ice types)
-                const typeCell = hasIceType
-                    ? `<td class="text-secondary" style="width:36px;white-space:nowrap">${pirep.iceType || ''}</td>`
-                    : '';
+            // Check for type-specific extra columns
+            const hasIceType = pireps.some(p => p.iceType);
+            const hasWxType = pireps.some(p => p.wxType);
+            const hasSkySummary = pireps.some(p => p.skySummary);
+            const hasTemp = pireps.some(p => p.tempC !== null && p.tempC !== undefined);
+            const hasAircraftType = pireps.some(p => p.aircraftType);
+
+            // Format all PIREPs as table rows - only show waypoint label when it changes
+            let lastWpKey = null;
+            const pirepRows = pireps.map(pirep => {
+                // UUA label for urgent PIREPs (no label for regular UA)
+                const urgentCell = pirep.isUrgent
+                    ? `<td class="text-error font-bold" style="width:28px;white-space:nowrap">UUA</td>`
+                    : `<td style="width:28px"></td>`;
+
+                // Intensity with color coding (NEG = green/info)
+                let intColor = 'text-secondary';
+                if (pirep.isNegative) {
+                    intColor = 'text-metric'; // green for negative reports
+                } else if (pirep.intensity === 'SEV' || pirep.intensity === 'EXTRM') {
+                    intColor = 'text-error';
+                } else if (pirep.intensity === 'MOD' || pirep.intensity === 'LGT') {
+                    intColor = 'text-warning';
+                }
+                const intensityCell = `<td class="${intColor} font-bold" style="width:40px;white-space:nowrap">${pirep.intensity || ''}</td>`;
+
+                // Type-specific info column (ice type, weather type, sky condition)
+                let typeCell = '';
+                if (hasIceType) {
+                    typeCell = `<td class="text-secondary" style="width:36px;white-space:nowrap">${pirep.iceType || ''}</td>`;
+                } else if (hasWxType) {
+                    typeCell = `<td class="text-secondary" style="width:48px;white-space:nowrap">${pirep.wxType || ''}</td>`;
+                } else if (hasSkySummary) {
+                    typeCell = `<td class="text-secondary" style="width:72px;white-space:nowrap">${pirep.skySummary || ''}</td>`;
+                }
 
                 // Altitude - monospace for numbers
                 const altStr = pirep.altitude ? `FL${Math.round(pirep.altitude / 100).toString().padStart(3, '0')}` : '';
                 const altCell = `<td class="text-airport" style="width:48px;white-space:nowrap;font-family:monospace">${altStr}</td>`;
+
+                // Temperature (if available in group)
+                let tempCell = '';
+                if (hasTemp) {
+                    const tempStr = pirep.tempC !== null && pirep.tempC !== undefined ? `${pirep.tempC}°` : '';
+                    tempCell = `<td class="text-secondary" style="width:32px;white-space:nowrap;font-family:monospace">${tempStr}</td>`;
+                }
+
+                // Aircraft type (if available in group)
+                let acftCell = '';
+                if (hasAircraftType) {
+                    acftCell = `<td class="text-secondary" style="width:40px;white-space:nowrap;opacity:0.7">${pirep.aircraftType || ''}</td>`;
+                }
 
                 // Age - right-aligned
                 let ageStr = '';
@@ -1608,23 +1673,40 @@ function buildHazardSummaryHTML(fuelStatus, windMetadata, options, terrainStatus
                 }
                 const ageCell = `<td class="text-secondary" style="width:28px;white-space:nowrap;text-align:right;opacity:0.7">${ageStr}</td>`;
 
-                // Location
-                const locStr = pirep.distanceNm > 0 ? `${pirep.distanceNm}NM ${pirep.direction || ''}` : '';
-                const locCell = `<td class="text-secondary" style="padding-left:6px;white-space:nowrap">${locStr}</td>`;
+                // Distance from waypoint (right-aligned)
+                const distStr = pirep.distanceNm > 0 ? `${pirep.distanceNm}NM` : '';
+                const distCell = `<td class="text-secondary" style="width:36px;white-space:nowrap;text-align:right">${distStr}</td>`;
 
-                return `<tr>${intensityCell}${typeCell}${altCell}${ageCell}${locCell}</tr>`;
+                // Direction from waypoint (right-aligned)
+                const dirStr = pirep.distanceNm > 0 ? (pirep.direction || '') : '';
+                const dirCell = `<td class="text-secondary" style="width:24px;white-space:nowrap;text-align:right;padding-left:2px">${dirStr}</td>`;
+
+                // Waypoint reference - only show if different from previous row
+                // Use waypoint type for coloring (airport=blue, navaid=magenta, fix=white/cyan, reporting=amber)
+                const wpKey = `${pirep.nearestWpIdent}-${pirep.nearestWpIndex}`;
+                const showWp = wpKey !== lastWpKey;
+                lastWpKey = wpKey;
+                const wpIdent = pirep.nearestWpIdent || `WP${pirep.nearestWpIndex}`;
+                let wpColorClass = 'text-fix';
+                if (pirep.nearestWpType === 'airport') {
+                    wpColorClass = 'text-airport';
+                } else if (pirep.nearestWpType === 'navaid') {
+                    wpColorClass = 'text-navaid';
+                } else if (pirep.nearestWpIsReporting) {
+                    wpColorClass = 'text-reporting';
+                }
+                const wpCell = showWp
+                    ? `<td class="${wpColorClass} font-bold" style="padding-left:8px;white-space:nowrap;text-align:right">${wpIdent}[${pirep.nearestWpIndex || '?'}]</td>`
+                    : `<td style="padding-left:8px"></td>`;
+
+                return `<tr>${urgentCell}${intensityCell}${typeCell}${altCell}${tempCell}${acftCell}${ageCell}${distCell}${dirCell}${wpCell}</tr>`;
             });
 
-            // Two-column layout: details left, waypoint right (top-aligned)
-            const wpStr = `${group.wpIdent}(${group.wpIndex})`;
+            // Single table for all PIREPs of this type
             const tableHtml = `<table style="border-collapse:collapse;line-height:1.3">${pirepRows.join('')}</table>`;
-            const description = `<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">` +
-                `<div>${tableHtml}</div>` +
-                `<div class="text-primary font-bold" style="white-space:nowrap">${wpStr}</div>` +
-                `</div>`;
 
-            // Pass null for waypointsStr since waypoint is in description
-            addWeatherHazard(group.type, severity, icon, description, null, [], null, group.wpIndex);
+            // Pass null for waypointsStr since waypoint is in each row
+            addWeatherHazard(typeLabel, severity, icon, tableHtml, null, [], null, pireps[0].nearestWpIndex || 999);
         }
 
         // Density altitude
@@ -1706,14 +1788,14 @@ function buildHazardSummaryHTML(fuelStatus, windMetadata, options, terrainStatus
                     valueHtml += `<span class="text-secondary">${d.description}</span> `;
                 }
 
-                // Time in dim color
+                // Time in dim color (no brackets)
                 if (d.timeStr) {
-                    valueHtml += `<span class="text-secondary" style="opacity: 0.7;">(${d.timeStr})</span> `;
+                    valueHtml += `<span class="text-secondary" style="opacity: 0.7;">${d.timeStr}</span> `;
                 }
 
-                // Waypoints (text-primary for screen/print compatibility)
+                // Waypoints (colored by type from formatAffectedWaypointsRange)
                 if (d.waypointsStr) {
-                    valueHtml += `<span class="text-primary font-bold">${d.waypointsStr}</span>`;
+                    valueHtml += `<span class="font-bold">${d.waypointsStr}</span>`;
                 }
 
                 if (!valueHtml) {
@@ -1904,21 +1986,21 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelSt
         </div>
     `;
 
-    // Add filed altitude if available
+    // Add planned altitude if available
     if (options.altitude) {
         summaryHTML += `
         <div class="summary-item">
-            <span class="summary-label text-secondary text-sm">FILED ALTITUDE</span>
+            <span class="summary-label text-secondary text-sm">PLANNED ALTITUDE</span>
             <span class="summary-value text-metric font-bold">${options.altitude} FT</span>
         </div>
         `;
     }
 
-    // Add filed speed (TAS) if available
+    // Add planned speed (TAS) if available
     if (options.tas) {
         summaryHTML += `
         <div class="summary-item">
-            <span class="summary-label text-secondary text-sm">FILED SPEED</span>
+            <span class="summary-label text-secondary text-sm">PLANNED SPEED</span>
             <span class="summary-value text-metric font-bold">${options.tas} KT</span>
         </div>
         `;
@@ -2025,7 +2107,9 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelSt
             const returnTimeMins = returnFuel.returnTime % 60;
 
             // Check if can return without refueling
-            const fuelForReturn = returnFuel.returnFuel + fuelStatus.requiredReserve;
+            // Need: final FOB >= taxi burn + return flight burn + reserve
+            const taxiFuel = fuelStatus.taxiFuel || 0;
+            const fuelForReturn = taxiFuel + returnFuel.returnFuel + fuelStatus.requiredReserve;
             const canReturn = fuelStatus.finalFob >= fuelForReturn;
             const returnColor = canReturn ? 'text-secondary' : 'text-warning';
 
@@ -2493,37 +2577,23 @@ function displayWindAltitudeTable(legs, filedAltitude) {
 // ============================================
 
 /**
- * Display terrain profile in navlog section
- * Shows MORA-based terrain analysis with planned altitude overlay
+ * Analyze terrain for route and update hazard summary
+ * Note: Profile plot removed - only provides hazard analysis
  * @param {Array} waypoints - Route waypoints
  * @param {Array} legs - Route legs
  * @param {number|null} plannedAltitude - Planned cruise altitude in feet
  */
-// Store terrain profile data for resize redraw
-let _terrainProfileData = null;
-
 async function displayNavlogTerrainProfile(waypoints, legs, plannedAltitude) {
-    const container = document.getElementById('navlogTerrainProfile');
-    const chartDiv = document.getElementById('navlogTerrainChart');
-    const statusEl = document.getElementById('navlogTerrainStatus');
-
-    if (!container || !chartDiv) return;
-
     // Need at least 2 waypoints for terrain analysis
     if (!waypoints || waypoints.length < 2) {
-        container.style.display = 'none';
-        _terrainProfileData = null;
+        updateHazardSummaryTerrain({ status: 'UNKNOWN' });
         return;
     }
-
-    // Show container with loading state
-    container.style.display = 'block';
-    chartDiv.innerHTML = '<div class="terrain-loading">Analyzing terrain...</div>';
 
     try {
         // Ensure TerrainAnalyzer is available
         if (!window.TerrainAnalyzer) {
-            chartDiv.innerHTML = '<div class="terrain-loading">Terrain analyzer not available</div>';
+            updateHazardSummaryTerrain({ status: 'UNKNOWN' });
             return;
         }
 
@@ -2536,39 +2606,31 @@ async function displayNavlogTerrainProfile(waypoints, legs, plannedAltitude) {
         const analysis = await window.TerrainAnalyzer.analyzeRouteTerrain(waypoints, legs);
 
         if (analysis.error) {
-            chartDiv.innerHTML = `<div class="terrain-loading">${analysis.error}</div>`;
-            _terrainProfileData = null;
+            updateHazardSummaryTerrain({ status: 'UNKNOWN' });
             return;
         }
 
-        // Store data for resize redraw
-        _terrainProfileData = { analysis, waypoints, legs, plannedAltitude };
-
-        // Render the terrain profile (defer to ensure container is fully laid out)
-        setTimeout(() => {
-            renderNavlogTerrainProfile(chartDiv, analysis, waypoints, legs, plannedAltitude);
-        }, 50);
-
-        // Update status with collision check
-        updateNavlogTerrainStatus(statusEl, analysis, plannedAltitude);
+        // Get data source from analysis (offline_mora or elevation_api)
+        const dataSource = analysis.statistics?.dataSource || 'unknown';
+        const isMORA = dataSource === 'offline_mora';
 
         // Update hazard summary with terrain status
-        // Terrain profile data IS MORA (already includes 1000'/2000' buffer)
-        // So we check planned altitude directly against MORA
         if (plannedAltitude) {
             const profile = analysis.terrainProfile || [];
-            let maxMORA = 0;
+            let maxElevation = 0;
             let hasConflict = false;
 
             for (const point of profile) {
                 const elev = point.elevationFt || 0;
-                if (elev > maxMORA) maxMORA = elev;
+                if (elev > maxElevation) maxElevation = elev;
                 if (plannedAltitude < elev) hasConflict = true;
             }
 
+            // For MORA data: elevation already includes buffer (1000'/2000')
+            // For raw terrain API: no buffer - pilot must add clearance
             const terrainStatus = hasConflict
-                ? { status: 'UNSAFE', deficit: maxMORA - plannedAltitude, maxMORA }
-                : { status: 'OK', margin: plannedAltitude - maxMORA, maxMORA };
+                ? { status: 'UNSAFE', deficit: maxElevation - plannedAltitude, maxMORA: maxElevation, isMORA }
+                : { status: 'OK', margin: plannedAltitude - maxElevation, maxMORA: maxElevation, isMORA };
 
             updateHazardSummaryTerrain(terrainStatus);
         } else {
@@ -2578,251 +2640,13 @@ async function displayNavlogTerrainProfile(waypoints, legs, plannedAltitude) {
 
     } catch (error) {
         console.error('[UIController] Terrain analysis error:', error);
-        chartDiv.innerHTML = '<div class="terrain-loading">Error analyzing terrain</div>';
-        _terrainProfileData = null;
-        // Clear terrain hazard on error
         updateHazardSummaryTerrain({ status: 'UNKNOWN' });
     }
 }
 
-// Redraw terrain profile on resize
-let _terrainResizeTimeout = null;
-window.addEventListener('resize', () => {
-    if (!_terrainProfileData) return;
-
-    // Debounce resize events
-    clearTimeout(_terrainResizeTimeout);
-    _terrainResizeTimeout = setTimeout(() => {
-        const chartDiv = document.getElementById('navlogTerrainChart');
-        if (chartDiv && _terrainProfileData) {
-            const { analysis, waypoints, legs, plannedAltitude } = _terrainProfileData;
-            renderNavlogTerrainProfile(chartDiv, analysis, waypoints, legs, plannedAltitude);
-        }
-    }, 100);
-});
-
 /**
- * Render terrain profile SVG for navlog
- * @param {HTMLElement} container - Container element
- * @param {Object} analysis - Terrain analysis data
- * @param {Array} waypoints - Route waypoints
- * @param {Array} legs - Route legs
- * @param {number|null} plannedAltitude - Planned altitude in feet
- */
-function renderNavlogTerrainProfile(container, analysis, waypoints, legs, plannedAltitude) {
-    const profile = analysis.terrainProfile;
-    const stats = analysis.statistics;
-
-    if (!profile || profile.length === 0) {
-        container.innerHTML = '<div class="terrain-loading">No terrain data available</div>';
-        return;
-    }
-
-    // Get actual container dimensions for proper aspect ratio
-    const width = container.clientWidth || 800;
-    const height = container.clientHeight || 100;
-
-    // Padding in pixels (extra right padding for destination label overflow, bottom for labels)
-    const padding = { top: 10, right: 30, bottom: 32, left: 38 };
-    const chartWidth = width - padding.left - padding.right;
-    const chartHeight = height - padding.top - padding.bottom;
-
-    // Font size based on height (so it scales with container)
-    const labelFontSize = Math.max(9, Math.min(12, height / 9));
-
-    // Calculate scales
-    const maxDistance = analysis.totalDistanceNM;
-    const validElevations = profile.map(p => p.elevationFt).filter(e => e !== null);
-    const maxMORA = stats.mora || 0;
-    const maxElevation = Math.max(
-        ...validElevations,
-        maxMORA,
-        plannedAltitude || 0
-    );
-    const minElevation = Math.min(...validElevations, 0);
-
-    // Add padding to elevation range
-    const elevRange = maxElevation - minElevation;
-    const elevPadding = elevRange * 0.15;
-    const yMin = Math.max(0, minElevation - elevPadding);
-    const yMax = maxElevation + elevPadding;
-
-    // Scale functions
-    const xScale = (distNM) => padding.left + (distNM / maxDistance) * chartWidth;
-    const yScale = (elev) => padding.top + chartHeight - ((elev - yMin) / (yMax - yMin)) * chartHeight;
-
-    // Build SVG - viewBox defines coordinate system, CSS controls actual size
-    let svg = `<svg viewBox="0 0 ${width} ${height}">`;
-
-    // Gradient definition for terrain fill
-    svg += `<defs>
-        <linearGradient id="navlogTerrainGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" style="stop-color:#8B4513;stop-opacity:0.8"/>
-            <stop offset="100%" style="stop-color:#654321;stop-opacity:0.6"/>
-        </linearGradient>
-    </defs>`;
-
-    // Check terrain clearance along entire route
-    // The terrain profile data IS MORA - compare planned altitude directly
-    let hasTerrainConflict = false;
-    if (plannedAltitude && profile.length > 0) {
-        for (const point of profile) {
-            if (point.elevationFt && plannedAltitude < point.elevationFt) {
-                hasTerrainConflict = true;
-                break;
-            }
-        }
-    }
-
-    // Draw collision zone where altitude is below terrain (MORA)
-    if (plannedAltitude && hasTerrainConflict) {
-        // Draw red zone for each segment where planned altitude < terrain
-        let inConflict = false;
-        let conflictStartX = 0;
-
-        profile.forEach((point, i) => {
-            const x = xScale(point.distanceNM);
-            const terrainElev = point.elevationFt || 0;
-
-            if (plannedAltitude < terrainElev) {
-                if (!inConflict) {
-                    inConflict = true;
-                    conflictStartX = x;
-                }
-            } else if (inConflict) {
-                // End of conflict zone
-                const altY = yScale(plannedAltitude);
-                const terrainY = yScale(profile[i - 1].elevationFt || maxMORA);
-                svg += `<rect x="${conflictStartX}" y="${terrainY}" width="${x - conflictStartX}" height="${altY - terrainY}" class="terrain-collision-zone"/>`;
-                inConflict = false;
-            }
-        });
-
-        // Close final conflict zone if still in conflict
-        if (inConflict) {
-            const lastX = xScale(maxDistance);
-            const altY = yScale(plannedAltitude);
-            const lastElev = profile[profile.length - 1].elevationFt || maxMORA;
-            const terrainY = yScale(lastElev);
-            svg += `<rect x="${conflictStartX}" y="${terrainY}" width="${lastX - conflictStartX}" height="${altY - terrainY}" class="terrain-collision-zone"/>`;
-        }
-    }
-
-    // Build terrain path (this IS the MORA data)
-    const terrainPoints = [];
-    const linePoints = [];
-
-    profile.forEach((point) => {
-        if (point.elevationFt !== null) {
-            const x = xScale(point.distanceNM);
-            const y = yScale(point.elevationFt);
-            terrainPoints.push(`${x},${y}`);
-            linePoints.push({ x, y, dist: point.distanceNM });
-        }
-    });
-
-    // Create filled area path (terrain fill)
-    if (terrainPoints.length > 0) {
-        const baseY = yScale(yMin);
-        const firstX = xScale(0);
-        const lastX = xScale(maxDistance);
-        svg += `<path d="M ${firstX},${baseY} L ${terrainPoints.join(' L ')} L ${lastX},${baseY} Z" fill="url(#navlogTerrainGradient)"/>`;
-
-        // Draw terrain outline
-        svg += `<path d="M ${linePoints.map(p => `${p.x},${p.y}`).join(' L ')}" class="terrain-line"/>`;
-    }
-
-    // Draw planned altitude line (dashed green, no label needed)
-    if (plannedAltitude) {
-        const altY = yScale(plannedAltitude);
-        svg += `<line x1="${padding.left}" y1="${altY}" x2="${padding.left + chartWidth}" y2="${altY}"
-                stroke="#00ff00" stroke-width="2.5" stroke-dasharray="12,6" fill="none"/>`;
-    }
-
-    // Draw waypoint markers with selective label display
-    let cumulativeDistance = 0;
-    const waypointPositions = [];
-
-    // First pass: calculate all waypoint positions
-    waypoints.forEach((wp, index) => {
-        const x = xScale(cumulativeDistance);
-        const label = wp.ident || wp.icao || `WP${index + 1}`;
-        waypointPositions.push({ x, label, dist: cumulativeDistance, index });
-
-        if (index < waypoints.length - 1 && legs && legs[index]) {
-            cumulativeDistance += legs[index].distance || 0;
-        }
-    });
-
-    // Second pass: draw markers and selectively show labels
-    const minLabelSpacing = 60; // Minimum pixels between labels
-    const visibleLabels = new Set();
-
-    // Always show first and last
-    visibleLabels.add(0);
-    visibleLabels.add(waypointPositions.length - 1);
-
-    // Check intermediate waypoints
-    for (let i = 1; i < waypointPositions.length - 1; i++) {
-        const pos = waypointPositions[i];
-        let tooClose = false;
-
-        for (const visIdx of visibleLabels) {
-            const visPos = waypointPositions[visIdx];
-            if (Math.abs(pos.x - visPos.x) < minLabelSpacing) {
-                tooClose = true;
-                break;
-            }
-        }
-
-        if (!tooClose) {
-            visibleLabels.add(i);
-        }
-    }
-
-    // Draw waypoint markers and labels
-    waypointPositions.forEach(({ x, label, index }) => {
-        // Always draw the vertical marker line
-        svg += `<line x1="${x}" y1="${padding.top}" x2="${x}" y2="${height - padding.bottom}"
-                stroke="#666" stroke-width="1" stroke-dasharray="3,3"/>`;
-
-        // Only draw label if not too close to others
-        if (visibleLabels.has(index)) {
-            svg += `<text x="${x}" y="${height - 18}" text-anchor="middle"
-                    font-size="${labelFontSize}" fill="#999" font-family="Roboto Mono, monospace">${label}</text>`;
-        }
-    });
-
-    // Y-axis labels (elevation)
-    const yTicks = 4;
-    for (let i = 0; i <= yTicks; i++) {
-        const elev = yMin + (i / yTicks) * (yMax - yMin);
-        const y = yScale(elev);
-        const elevLabel = Math.round(elev / 100) * 100;
-        svg += `<text x="${padding.left - 8}" y="${y + 5}" text-anchor="end"
-                font-size="${labelFontSize}" fill="#999" font-family="Roboto Mono, monospace">${elevLabel}</text>`;
-    }
-
-    // X-axis distance labels at 0%, 25%, 50%, 75%, 100%
-    const distanceMarkers = [0, 0.25, 0.5, 0.75, 1];
-    distanceMarkers.forEach(pct => {
-        const x = padding.left + pct * chartWidth;
-        const dist = Math.round(pct * maxDistance);
-        svg += `<text x="${x}" y="${height - 4}" text-anchor="middle"
-                font-size="${labelFontSize}" fill="#999" font-family="Roboto Mono, monospace">${dist}</text>`;
-    });
-
-    svg += '</svg>';
-    container.innerHTML = svg;
-}
-
-/**
- * Update terrain status with collision detection
- * Checks planned altitude against MORA along entire route
- * The terrain profile data IS MORA (already includes 1000'/2000' buffer)
- * @param {HTMLElement} statusEl - Status element
- * @param {Object} analysis - Terrain analysis data
- * @param {number|null} plannedAltitude - Planned altitude
+ * Update terrain status (legacy function - now unused)
+ * Status display removed along with terrain profile plot
  */
 function updateNavlogTerrainStatus(statusEl, analysis, plannedAltitude) {
     if (!statusEl) return;
