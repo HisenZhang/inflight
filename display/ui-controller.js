@@ -2617,20 +2617,20 @@ async function displayNavlogTerrainProfile(waypoints, legs, plannedAltitude) {
         // Update hazard summary with terrain status
         if (plannedAltitude) {
             const profile = analysis.terrainProfile || [];
-            let maxElevation = 0;
+            let maxMORA = 0;
             let hasConflict = false;
 
             for (const point of profile) {
-                const elev = point.elevationFt || 0;
-                if (elev > maxElevation) maxElevation = elev;
-                if (plannedAltitude < elev) hasConflict = true;
+                // Use MORA value directly - it already includes terrain + obstacle + clearance buffer
+                const mora = point.mora || 0;
+                if (mora > maxMORA) maxMORA = mora;
+                if (plannedAltitude < mora) hasConflict = true;
             }
 
-            // For MORA data: elevation already includes buffer (1000'/2000')
-            // For raw terrain API: no buffer - pilot must add clearance
+            // MORA already includes 1000'/2000' clearance buffer - compare altitude directly
             const terrainStatus = hasConflict
-                ? { status: 'UNSAFE', deficit: maxElevation - plannedAltitude, maxMORA: maxElevation, isMORA }
-                : { status: 'OK', margin: plannedAltitude - maxElevation, maxMORA: maxElevation, isMORA };
+                ? { status: 'UNSAFE', deficit: maxMORA - plannedAltitude, maxMORA, isMORA }
+                : { status: 'OK', margin: plannedAltitude - maxMORA, maxMORA, isMORA };
 
             updateHazardSummaryTerrain(terrainStatus);
         } else {
@@ -2653,38 +2653,38 @@ function updateNavlogTerrainStatus(statusEl, analysis, plannedAltitude) {
 
     const profile = analysis.terrainProfile || [];
 
-    // Find the max terrain (MORA) along the route
-    let maxTerrain = 0;
+    // Find the max MORA along the route (MORA already includes clearance buffer)
+    let maxMORA = 0;
     for (const point of profile) {
-        const elev = point.elevationFt || 0;
-        if (elev > maxTerrain) {
-            maxTerrain = elev;
+        const mora = point.mora || 0;
+        if (mora > maxMORA) {
+            maxMORA = mora;
         }
     }
 
     if (!plannedAltitude) {
-        statusEl.textContent = `MAX MORA: ${maxTerrain || '—'}' | Enter altitude to check clearance`;
+        statusEl.textContent = `MAX MORA: ${maxMORA || '—'}' | Enter altitude to check clearance`;
         statusEl.className = 'terrain-status';
         return;
     }
 
-    // Check altitude against terrain at each point along the route
-    // Terrain profile data IS MORA - altitude >= terrain is safe
+    // Check altitude against MORA at each point along the route
+    // MORA already includes terrain + obstacle + clearance buffer
     let hasConflict = false;
     let maxConflict = 0;
 
     for (const point of profile) {
-        const elev = point.elevationFt || 0;
-        if (plannedAltitude < elev) {
+        const mora = point.mora || 0;
+        if (plannedAltitude < mora) {
             hasConflict = true;
-            if (elev > maxConflict) {
-                maxConflict = elev;
+            if (mora > maxConflict) {
+                maxConflict = mora;
             }
         }
     }
 
     if (!hasConflict) {
-        const margin = plannedAltitude - maxTerrain;
+        const margin = plannedAltitude - maxMORA;
         statusEl.textContent = `✓ CLEAR: ${margin}' above MORA`;
         statusEl.className = 'terrain-status ok';
     } else {
