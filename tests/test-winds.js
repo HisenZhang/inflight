@@ -58,6 +58,33 @@ window.WindsTests = TestFramework.describe('Winds Aloft Data', function({ it }) 
         assert.isTrue(result.includes('06:30Z'), 'should include time');
     });
 
+    it('should format Zulu time with correct month at month boundary', () => {
+        // Simulate: current UTC is Dec 1, timestamp is 301800Z (Nov 30)
+        const now = new Date();
+        const currentDay = now.getUTCDate();
+
+        // Only run this test meaningfully on days 1-5 of the month
+        // where we can test a day from the previous month
+        if (currentDay <= 5) {
+            const previousMonthDay = 28; // Safe day that exists in all months
+            const zuluTime = `${previousMonthDay}1800Z`;
+            const result = window.Utils.formatZuluTime(zuluTime);
+
+            // The day 28 is greater than current day (1-5), so should show previous month
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const expectedMonth = months[(now.getUTCMonth() - 1 + 12) % 12];
+
+            assert.isTrue(result.includes(expectedMonth),
+                `Expected previous month "${expectedMonth}" in "${result}" (current day: ${currentDay})`);
+            assert.isTrue(result.includes('28'), 'should include day 28');
+            assert.isTrue(result.includes('18:00Z'), 'should include time');
+        } else {
+            // On other days, just verify the function doesn't crash
+            const result = window.Utils.formatZuluTime('281800Z');
+            assert.isTrue(result.includes('18:00Z'), 'should include time');
+        }
+    });
+
     it('should format use window correctly', () => {
         const result = window.Utils.formatUseWindow('0200-0900Z');
         assert.equals(result, '02:00-09:00Z');

@@ -210,7 +210,15 @@ function formatZuluTime(zuluTime) {
 
     // Otherwise show day and time
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const month = months[now.getUTCMonth()];
+    let monthIndex = now.getUTCMonth();
+
+    // If the day in the timestamp is greater than current day, it's from previous month
+    // (e.g., current is Dec 1, timestamp day is 30 -> must be Nov 30)
+    if (day > currentDay) {
+        monthIndex = (monthIndex - 1 + 12) % 12;
+    }
+
+    const month = months[monthIndex];
     return `${month} ${day} ${hour}:${minute}Z`;
 }
 
