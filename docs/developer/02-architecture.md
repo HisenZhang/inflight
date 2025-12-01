@@ -6,7 +6,14 @@ IN-FLIGHT is a browser-based flight planning and navigation application built wi
 
 ## Architecture Version
 
-**Current: v3.0.0** - Complete layered architecture with dependency injection
+**Current: v3.2.0** - Complete layered architecture with dependency injection
+
+**Recent Updates (v3.1.0 - v3.2.0):**
+- Enhanced weather hazard analysis with time-based filtering
+- Return fuel calculations for round-trip planning
+- Improved PIREP display with aircraft type and temperature
+- NASR data expiration warning system
+- Wind hazard consolidation with consecutive leg ranges
 
 ## Design Philosophy
 
@@ -102,6 +109,9 @@ inflight/
 │   ├── app.js                  # Application coordinator
 │   ├── ui-controller.js        # Form inputs, navlog, status
 │   ├── map-display.js          # Vector map, GPS tracking
+│   ├── weather-controller.js   # WX tab, METAR/TAF/PIREP/hazards
+│   ├── charts-controller.js    # Charts tab, TPP chart access
+│   ├── inflight-controller.js  # In-flight monitoring tab
 │   ├── checklist-controller.js # Interactive checklist
 │   └── stats-controller.js     # Flight statistics
 │
@@ -353,6 +363,58 @@ async function bootstrap() {
 }
 ```
 
+## Display Layer Controllers
+
+### WeatherController
+
+The `WeatherController` manages the WX tab and provides weather hazard analysis:
+
+```javascript
+window.WeatherController = {
+    // Current state
+    currentIcao: null,           // Currently displayed airport
+    weatherData: null,           // Fetched weather data
+    routeWaypoints: [],          // Route waypoints for hazard analysis
+    routeLegs: [],               // Leg times for ETA calculation
+    routeDepartureTime: null,    // Departure time for time filtering
+
+    // Key methods
+    fetchWeather(),              // Fetch METAR/TAF/PIREPs/SIGMETs
+    updateRouteWaypoints(wps),   // Update route for hazard analysis
+    updateRouteLegs(legs, dep),  // Update legs for ETA calculation
+    calculateWaypointETAs(),     // Calculate ETAs for each waypoint
+    filterAffectedByTime(),      // Time-based hazard filtering
+    showHazardOnMap(type, idx),  // Display hazard polygon on map
+};
+```
+
+**Route Integration:**
+- Receives route waypoints from `UIController` after route calculation
+- Calculates ETAs based on leg times and departure time
+- Filters hazards by validity time vs. ETA at affected waypoints
+
+### ChartsController
+
+The `ChartsController` manages the Charts tab for TPP chart access:
+
+```javascript
+window.ChartsController = {
+    // Methods
+    searchCharts(),                    // Search by airport code
+    showChartsForAirport(code, name),  // Display charts for airport
+    updateRouteAirports(airports),     // Update quick-select bar
+
+    // History
+    saveToHistory(icao),               // Save to recent history
+    displayChartsHistory(),            // Display recent airports
+};
+```
+
+**Chart Organization:**
+- Groups charts by type (APD, IAP, DP, STAR, MIN, HOT)
+- Further groups approaches by type (ILS, RNAV, VOR, etc.)
+- Formats runway numbers with highlighting
+
 ## Legacy Compatibility
 
 v3 coexists with legacy code during migration:
@@ -525,4 +587,4 @@ Terrain.checkClearance({ maxMORA: 6000 }, 8000); // { status: 'OK' }
 ---
 
 **Last Updated**: November 2025
-**Architecture Version**: v3.0.0
+**Architecture Version**: v3.2.0

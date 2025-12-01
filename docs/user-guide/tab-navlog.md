@@ -96,6 +96,73 @@ FUEL RESERVE REQ: 4.3 GAL (30 MIN)
 
 If any of these look wrong, go back to ROUTE tab and check your settings.
 
+## Hazard Summary
+
+::: tip NEW in v3.2.0
+The navlog now includes a consolidated hazard summary at the top of the page.
+:::
+
+When weather hazards, terrain issues, or fuel concerns affect your route, a hazard summary appears after the route summary:
+
+```text
+═══════════════════════════════════════════════════════════════
+HAZARDS SUMMARY
+═══════════════════════════════════════════════════════════════
+
+⚠️ TERRAIN: MORA 8500 FT exceeds filed altitude (7500 FT)
+   Affected: MISEN(2)-FAITH(4)
+
+⚠️ ICING: G-AIRMET ZULU - Moderate icing FL040-FL120
+   Affected: KALB(1)-SYR(3)
+   Valid: Until 18:00Z
+
+⚠️ WIND: Strong headwind component (>25 KT)
+   Affected: BSR(5)-DRK(8)
+
+⚠️ FUEL: Return trip requires 24.2 GAL (outbound: 18.5 GAL)
+
+═══════════════════════════════════════════════════════════════
+```
+
+### Hazard Types
+
+| Type | Description |
+|------|-------------|
+| **TERRAIN** | Route crosses areas requiring higher minimum altitude |
+| **ICING** | G-AIRMET or SIGMET for icing conditions along route |
+| **TURBULENCE** | G-AIRMET or SIGMET for turbulence along route |
+| **IFR** | G-AIRMET for IFR conditions (low ceilings/visibility) |
+| **CONVECTIVE** | Convective SIGMET for thunderstorms |
+| **WIND** | Strong headwind or crosswind components |
+| **FUEL** | Fuel concerns (insufficient, return trip, reserves) |
+| **PIREP** | Recent PIREPs reporting hazardous conditions |
+
+### Time-Based Filtering
+
+Hazards are filtered based on your **departure time** and **ETA at each waypoint**:
+
+- If a hazard expires before you reach the affected segment, it's excluded
+- If a hazard starts after you pass the affected segment, it's excluded
+- Only hazards that will be active during your transit are shown
+
+**Example:**
+- Departure: 14:00Z
+- G-AIRMET valid: 12:00Z - 16:00Z
+- ETA at affected waypoint: 15:30Z
+- **Result: Hazard is shown** (still active at your ETA)
+
+### Affected Waypoint Notation
+
+The "Affected" field uses range notation:
+
+```
+KALB(1)-SYR(3)
+```
+
+- **KALB(1)** = First waypoint affected (waypoint #1 in your route)
+- **SYR(3)** = Last waypoint affected (waypoint #3)
+- All legs between these waypoints are potentially affected
+
 ## Reading a Navlog Entry
 
 ### Example: VFR Cross-Country Leg
@@ -252,6 +319,36 @@ You won't make it with required reserves. Options:
 2. Reduce weight/distance
 3. Increase fuel capacity (wrong aircraft?)
 4. Check your burn rate (too high?)
+
+### Return Fuel Calculation
+
+::: tip NEW in v3.2.0
+IN-FLIGHT now calculates fuel requirements for a return trip.
+:::
+
+When wind conditions differ significantly between outbound and return legs, the return trip may require more fuel than the outbound:
+
+**Example scenario:**
+- Outbound: 30 KT tailwind → Ground speed 150 KT
+- Return: 30 KT headwind → Ground speed 90 KT
+- Same distance, but return takes 67% longer!
+
+**Return fuel display:**
+```text
+OUTBOUND FUEL: 18.5 GAL
+RETURN FUEL:   24.2 GAL (+30%)
+```
+
+**Why this matters:**
+- If you plan to return same day, ensure fuel for **both** legs
+- Strong headwinds on return may require fuel stop
+- Consider this for round-robin training flights
+
+**Fuel hazard warning:**
+When return fuel significantly exceeds outbound fuel, a hazard warning appears in the navlog summary:
+```text
+⚠️ RETURN FUEL: 24.2 GAL exceeds outbound (18.5 GAL)
+```
 
 ### Reserve Fuel Rules
 

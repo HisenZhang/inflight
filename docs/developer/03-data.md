@@ -522,6 +522,85 @@ You can manually reindex from WELCOME tab → LOAD DATA
 - Recommendation to update shown in UI
 - App continues to function normally
 
+### NASR Data Expiration Warning (v3.1.0+)
+
+::: tip NEW in v3.1.0
+IN-FLIGHT now allows loading expired NASR data with a warning banner instead of failing.
+:::
+
+**Previous behavior (pre-v3.1.0):**
+- NASR data older than 28 days would fail to load
+- Users were forced to reload data even when offline
+
+**Current behavior (v3.1.0+):**
+- Expired NASR data loads successfully
+- Amber warning banner appears at top of screen
+- Warning includes: age of data, recommendation to update
+
+**Warning Banner:**
+```
+⚠️ NASR DATA EXPIRED (35 DAYS OLD)
+Aviation data may be outdated. Update recommended when online.
+```
+
+**Implementation:**
+
+```javascript
+// UIController exposes warning functions
+UIController.showDataWarning(message);
+UIController.hideDataWarning();
+
+// Called during data loading when NASR is expired
+if (daysOld > 28) {
+    UIController.showDataWarning(`NASR data is ${daysOld} days old`);
+}
+```
+
+**Why this matters:**
+- **Offline flights:** Pilots can use cached data when no internet available
+- **No forced refresh:** App remains functional with stale data
+- **Transparency:** Users know data age and can update when convenient
+- **Safety:** Warning ensures pilots are aware of potential discrepancies
+
+### Weather Data Caching (v3.1.0+)
+
+::: tip NEW in v3.1.0
+Weather data now uses validity-based caching rather than fixed TTL.
+:::
+
+**METAR Caching:**
+- **Strategy:** Cache until 5 minutes past the next hour
+- **Rationale:** METARs are typically issued at :53-:56 of each hour
+- **Example:** METAR fetched at 14:30 cached until 15:05
+
+**TAF Caching:**
+- **Strategy:** Cache until `validTimeTo` from the TAF itself
+- **Rationale:** TAFs specify their own validity period
+- **Example:** TAF valid until 18:00Z cached until 18:00Z
+
+**Implementation:**
+
+```javascript
+// WeatherService caching logic
+function getCacheExpiry(type, data) {
+    if (type === 'metar') {
+        // Cache until 5 minutes past next hour
+        const nextHour = new Date();
+        nextHour.setHours(nextHour.getHours() + 1, 5, 0, 0);
+        return nextHour.getTime();
+    } else if (type === 'taf' && data.validTimeTo) {
+        // Cache until TAF validity expires
+        return data.validTimeTo * 1000;
+    }
+    return Date.now() + (30 * 60 * 1000); // Default 30 min
+}
+```
+
+**Benefits:**
+- More accurate cache invalidation
+- Reduces unnecessary API calls
+- Respects actual weather product validity
+
 ### CSV Compression
 
 **Module:** [utils/compression.js](../../utils/compression.js)

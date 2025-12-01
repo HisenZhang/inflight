@@ -121,7 +121,67 @@ This is a **potential icing alert only**. Actual icing requires visible moisture
 - **Display:** Yellow caution box
 - **Example:** `Crosswind component 23 KT`
 
+#### Wind Hazards (Route-Based)
+
+::: tip NEW in v3.2.0
+Wind hazard analysis now shows consecutive affected leg ranges.
+:::
+
+When strong headwinds or crosswinds affect multiple consecutive legs, the display consolidates them:
+
+```
+WIND HAZARD: KALB(1)-SYR(3)
+Headwind component > 25 KT on legs 1-3
+```
+
+This notation means:
+- **KALB(1)** = First affected waypoint (waypoint #1)
+- **SYR(3)** = Last affected waypoint (waypoint #3)
+- All legs between are affected
+
+#### Terrain Hazards
+
+Displays terrain clearance warnings when your altitude approaches or violates minimum safe altitudes:
+
+- **MORA violations** = Route crosses terrain requiring higher altitude
+- **Clearance warnings** = Less than 1,000 ft above highest terrain
+
+#### Fuel Hazards
+
+::: tip NEW in v3.2.0
+Enhanced fuel hazard detection with reserve calculations.
+:::
+
+Fuel warnings include:
+
+| Warning | Trigger |
+|---------|---------|
+| **FUEL CRITICAL** | Remaining fuel below reserve requirement |
+| **FUEL WARNING** | Remaining fuel approaching reserve minimum |
+| **RETURN FUEL** | Return trip requires more fuel than outbound |
+
 **Note:** Hazard warnings are based on **forecast data** and your current flight parameters. Always use official weather sources and PIREPs for flight decision-making.
+
+#### PIREP-Based Hazards
+
+::: tip NEW in v3.2.0
+Enhanced PIREP display with aircraft type and temperature.
+:::
+
+Pilot reports (PIREPs) near your route are analyzed for hazards:
+
+**Display format:**
+```
+PIREP: MOD ICE (C172 @ FL085, -8°C)
+Location: 42.5N 73.8W | 45m ago
+```
+
+Information shown:
+- **Hazard type** = Turbulence/Icing intensity
+- **Aircraft type** = Reporting aircraft (helps assess relevance)
+- **Altitude** = Flight level of report
+- **Temperature** = Observed temperature (important for icing)
+- **Age** = How recent the report is
 
 ### 5. NEAREST AIRPORTS (DIVERSION)
 

@@ -70,6 +70,8 @@ Install as a PWA for offline access. If your primary EFB fails, you still have n
 - **[ROUTE Tab](tab-route)** - Route entry syntax and autocomplete
 - **[NAVLOG Tab](tab-navlog)** - Navigation log and fuel calculations
 - **[MAP Tab](tab-map)** - GPS moving map and tracking
+- **[WX Tab](tab-weather)** - Weather data (METAR, TAF, PIREPs, SIGMETs, G-AIRMETs)
+- **[CHARTS Tab](tab-charts)** - FAA instrument procedures and airport diagrams
 - **[IN-FLIGHT Tab](tab-inflight)** - Real-time situational awareness and diversion planning
 - **[CHKLST Tab](tab-chklst)** - Customizable checklists
 - **[STATS Tab](tab-stats)** - Flight statistics
