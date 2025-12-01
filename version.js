@@ -34,7 +34,7 @@ const AppVersion = {
 
     // Service worker cache version
     // Increment this number to force PWA updates
-    CACHE_VERSION: 148,
+    CACHE_VERSION: 149,
 
     // Full cache name for service worker
     get CACHE_NAME() {
@@ -45,7 +45,7 @@ const AppVersion = {
     BUILD_DATE: '2025-11-30',
 
     // Release name (optional)
-    RELEASE_NAME: 'ForeFlight FPL import/export',
+    RELEASE_NAME: 'ForeFlight FPL import/export and clipboard support',
 
     /**
      * Get full version info object

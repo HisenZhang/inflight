@@ -872,6 +872,91 @@ function importFromFile(file) {
 }
 
 // ============================================
+// CLIPBOARD OPERATIONS
+// ============================================
+
+/**
+ * Copy flight plan to clipboard as JSON
+ * @returns {Promise<boolean>} True if copied successfully
+ */
+async function copyToClipboard() {
+    if (!isFlightPlanValid()) {
+        console.error('[FlightState] No valid flight plan to copy');
+        return false;
+    }
+
+    try {
+        const exportData = {
+            version: '1.0',
+            format: 'inflight-navlog',
+            exportTimestamp: Date.now(),
+            exportDate: new Date().toISOString(),
+            routeString: flightPlan.routeString,
+            departure: flightPlan.departure,
+            destination: flightPlan.destination,
+            routeMiddle: flightPlan.routeMiddle,
+            waypoints: flightPlan.waypoints,
+            legs: flightPlan.legs,
+            totalDistance: flightPlan.totalDistance,
+            totalTime: flightPlan.totalTime,
+            fuelStatus: flightPlan.fuelStatus,
+            options: flightPlan.options,
+            altitude: flightPlan.altitude,
+            tas: flightPlan.tas,
+            windData: flightPlan.windData,
+            windMetadata: flightPlan.windMetadata
+        };
+
+        const json = JSON.stringify(exportData, null, 2);
+        await navigator.clipboard.writeText(json);
+
+        console.log('[FlightState] Flight plan copied to clipboard');
+        return true;
+    } catch (error) {
+        console.error('[FlightState] Failed to copy to clipboard:', error);
+        return false;
+    }
+}
+
+/**
+ * Paste flight plan from clipboard (JSON format)
+ * @returns {Promise<object>} Parsed navlog data
+ */
+async function pasteFromClipboard() {
+    try {
+        const clipboardText = await navigator.clipboard.readText();
+
+        if (!clipboardText || !clipboardText.trim()) {
+            throw new Error('Clipboard is empty');
+        }
+
+        // Try to parse as JSON
+        let navlogData;
+        try {
+            navlogData = JSON.parse(clipboardText);
+        } catch (parseError) {
+            throw new Error('Clipboard does not contain valid JSON');
+        }
+
+        // Validate structure - must have routeString, waypoints, and legs
+        if (!navlogData.routeString || !navlogData.waypoints || !navlogData.legs) {
+            throw new Error('Invalid navlog format - missing required fields');
+        }
+
+        // Validate waypoints array
+        if (!Array.isArray(navlogData.waypoints) || navlogData.waypoints.length < 2) {
+            throw new Error('Invalid navlog format - must have at least 2 waypoints');
+        }
+
+        console.log('[FlightState] Flight plan pasted from clipboard:', navlogData.routeString);
+        return navlogData;
+    } catch (error) {
+        console.error('[FlightState] Failed to paste from clipboard:', error);
+        throw error;
+    }
+}
+
+// ============================================
 // ROUTE HISTORY
 // ============================================
 
@@ -945,6 +1030,10 @@ window.FlightState = {
     exportToForeFlightFPL,
     importFromFile,
     importFromForeFlightFPL,
+
+    // Clipboard
+    copyToClipboard,
+    pasteFromClipboard,
 
     // Route history
     saveToHistory,

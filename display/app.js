@@ -247,6 +247,7 @@ function setupEventListeners() {
     // Navlog export/import dropdowns
     setupExportDropdown();
     setupImportDropdown();
+    setupClipboardButtons();
 
     // Flight tracks management
     const refreshTracksBtn = document.getElementById('refreshTracksBtn');
@@ -1171,6 +1172,76 @@ async function handleImportFile(event) {
         // Clear file input and format
         event.target.value = '';
         delete fileInput.dataset.format;
+    }
+}
+
+// ============================================
+// CLIPBOARD OPERATIONS
+// ============================================
+
+function setupClipboardButtons() {
+    const copyBtn = document.getElementById('copyNavlogBtn');
+    const pasteBtn = document.getElementById('pasteNavlogBtn');
+
+    if (copyBtn) {
+        copyBtn.addEventListener('click', handleCopyToClipboard);
+    }
+
+    if (pasteBtn) {
+        pasteBtn.addEventListener('click', handlePasteFromClipboard);
+    }
+}
+
+async function handleCopyToClipboard() {
+    if (!currentNavlogData) {
+        alert('ERROR: NO NAVLOG TO COPY\n\nCalculate a route first.');
+        return;
+    }
+
+    if (!window.FlightState) {
+        alert('ERROR: FLIGHTSTATE NOT AVAILABLE');
+        return;
+    }
+
+    // Ensure FlightState has current data
+    window.FlightState.updateFlightPlan(currentNavlogData);
+
+    try {
+        const success = await window.FlightState.copyToClipboard();
+        if (success) {
+            alert('COPIED TO CLIPBOARD\n\nFlight plan copied as JSON.\nPaste into another IN-FLIGHT session or save to a file.');
+        } else {
+            alert('ERROR: FAILED TO COPY\n\nClipboard access may be blocked.');
+        }
+    } catch (error) {
+        console.error('Copy error:', error);
+        alert(`ERROR: FAILED TO COPY\n\n${error.message}`);
+    }
+}
+
+async function handlePasteFromClipboard() {
+    if (!window.FlightState) {
+        alert('ERROR: FLIGHTSTATE NOT AVAILABLE');
+        return;
+    }
+
+    try {
+        const navlogData = await window.FlightState.pasteFromClipboard();
+
+        // Restore the navlog
+        UIController.restoreNavlog(navlogData);
+
+        // Store as current
+        currentNavlogData = navlogData;
+
+        // Update flight plan and save for crash recovery
+        window.FlightState.updateFlightPlan(navlogData);
+        window.FlightState.saveToStorage();
+
+        alert(`PASTED FROM CLIPBOARD\n\nRoute: ${navlogData.routeString}`);
+    } catch (error) {
+        console.error('Paste error:', error);
+        alert(`ERROR: FAILED TO PASTE\n\n${error.message}`);
     }
 }
 

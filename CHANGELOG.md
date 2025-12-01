@@ -21,13 +21,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Supports all waypoint types: AIRPORT, VOR, NDB, INT, USER WAYPOINT
   - Populates route inputs for recalculation with current winds
 
+#### Clipboard Copy & Paste
+- **COPY button** - Copy flight plan to clipboard as JSON for quick sharing
+  - Works between IN-FLIGHT sessions on same or different devices
+  - Full route, calculations, and settings included
+- **PASTE button** - Paste flight plan from clipboard
+  - Instantly restores navlog from copied JSON
+  - Great for transferring between browser tabs or devices
+
 #### Testing
-- 9 new tests for ForeFlight FPL import/export functionality
-- Total test count: 598 tests (all passing)
+- 12 new tests for ForeFlight FPL and clipboard functionality
+- Total test count: 601 tests (all passing)
 
 ### Changed
 - Export dropdown now includes ForeFlight FPL option alongside JSON, CSV, and KML
 - Import dropdown now supports both IN-FLIGHT JSON and ForeFlight FPL formats
+- Added COPY and PASTE buttons to navlog actions bar
 
 ## [3.0.0] - 2025-11-28
 

@@ -495,6 +495,26 @@ IN-FLIGHT supports multiple export formats for compatibility with other aviation
 
 **Important:** Wind data in imported files is historical (from when you exported). If you're flying days later, recalculate with current winds.
 
+### Clipboard Copy & Paste
+
+For quick sharing between browser tabs or devices:
+
+**COPY button:**
+- Copies the current flight plan to clipboard as JSON
+- Works between IN-FLIGHT sessions on same or different devices
+- JSON includes full route, calculations, and settings
+
+**PASTE button:**
+- Reads flight plan JSON from clipboard
+- Restores the complete navlog instantly
+- Works with data copied from another IN-FLIGHT session
+
+**Use cases:**
+- Share flight plan via messaging apps (copy JSON, paste in chat)
+- Transfer between desktop and mobile browsers
+- Quick backup without downloading files
+- Collaborate with copilot/instructor
+
 ## Using This In-Flight
 
 ### Pre-Flight Review

@@ -629,6 +629,29 @@ TestFramework.describe('FlightState Import/Export', function({ it, beforeEach })
         const altitude = altitudeEl ? parseInt(altitudeEl.textContent, 10) || 5000 : 5000;
         assert.equals(altitude, 5000, 'Should default to 5000 for empty altitude');
     });
+
+    // ============================================
+    // CLIPBOARD OPERATIONS
+    // ============================================
+
+    it('should have copyToClipboard function', () => {
+        assert.isTrue(typeof window.FlightState.copyToClipboard === 'function',
+            'Should have copyToClipboard function');
+    });
+
+    it('should have pasteFromClipboard function', () => {
+        assert.isTrue(typeof window.FlightState.pasteFromClipboard === 'function',
+            'Should have pasteFromClipboard function');
+    });
+
+    it('should not copy empty flight plan to clipboard', async () => {
+        // Clear any existing flight plan
+        window.FlightState.clearFlightPlan();
+
+        // copyToClipboard should return false for empty plan
+        const result = await window.FlightState.copyToClipboard();
+        assert.isFalse(result, 'Should not copy without valid flight plan');
+    });
 });
 
 // ============================================
