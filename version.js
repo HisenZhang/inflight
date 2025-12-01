@@ -24,7 +24,7 @@
 const AppVersion = {
     // Semantic version (sync with package.json)
     MAJOR: 3,
-    MINOR: 1,
+    MINOR: 2,
     PATCH: 0,
 
     // Full version string
@@ -34,7 +34,7 @@ const AppVersion = {
 
     // Service worker cache version
     // Increment this number to force PWA updates
-    CACHE_VERSION: 146,
+    CACHE_VERSION: 147,
 
     // Full cache name for service worker
     get CACHE_NAME() {
@@ -42,10 +42,10 @@ const AppVersion = {
     },
 
     // Build metadata (optional)
-    BUILD_DATE: '2025-11-29',
+    BUILD_DATE: '2025-11-30',
 
     // Release name (optional)
-    RELEASE_NAME: 'Data expiration warning - Show banner when NASR data is expired',
+    RELEASE_NAME: 'Terrain and fuel hazards improvements',
 
     /**
      * Get full version info object
