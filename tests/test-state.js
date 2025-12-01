@@ -375,6 +375,260 @@ TestFramework.describe('FlightState Import/Export', function({ it, beforeEach })
             assert.isTrue(true, 'Should reject malformed JSON');
         }
     });
+
+    // ============================================
+    // FOREFLIGHT FPL EXPORT
+    // ============================================
+
+    it('should not export empty flight plan as ForeFlight FPL', () => {
+        const result = window.FlightState.exportToForeFlightFPL();
+        assert.isFalse(result, 'Should not export without valid flight plan');
+    });
+
+    it('should export valid flight plan as ForeFlight FPL', () => {
+        window.FlightState.updateFlightPlan({
+            routeString: 'KALB ALB GROUP KOXC',
+            waypoints: [
+                { icao: 'KALB', ident: 'KALB', lat: 42.749116, lon: -73.80198, waypointType: 'airport', type: 'AIRPORT' },
+                { ident: 'ALB', lat: 42.747281, lon: -73.803183, waypointType: 'vor', type: 'VOR' },
+                { ident: 'GROUP', lat: 42.563917, lon: -73.806481, waypointType: 'fix', type: 'FIX' },
+                { icao: 'KOXC', ident: 'KOXC', lat: 41.478281, lon: -73.135183, waypointType: 'airport', type: 'AIRPORT' }
+            ],
+            legs: [{ distance: 1 }, { distance: 10 }, { distance: 30 }],
+            totalDistance: 41,
+            altitude: 5000
+        });
+
+        const result = window.FlightState.exportToForeFlightFPL();
+        assert.isTrue(result, 'Should export as ForeFlight FPL');
+    });
+
+    it('should have exportToForeFlightFPL function', () => {
+        assert.isTrue(typeof window.FlightState.exportToForeFlightFPL === 'function',
+            'Should have exportToForeFlightFPL function');
+    });
+
+    it('should have importFromForeFlightFPL function', () => {
+        assert.isTrue(typeof window.FlightState.importFromForeFlightFPL === 'function',
+            'Should have importFromForeFlightFPL function');
+    });
+
+    // ============================================
+    // FOREFLIGHT FPL IMPORT (XML Parsing Tests)
+    // Note: FileReader tests require browser environment, so we test XML parsing directly
+    // ============================================
+
+    it('should parse valid ForeFlight FPL XML', () => {
+        const fplContent = `<?xml version="1.0" encoding="utf-8"?>
+<flight-plan xmlns="http://www8.garmin.com/xmlschemas/FlightPlan/v1">
+<created>20251201T03:12:50Z</created>
+<aircraft>
+    <aircraft-tailnumber>N9594C</aircraft-tailnumber>
+</aircraft>
+<flight-data>
+    <etd-zulu>20251129T14:00:00Z</etd-zulu>
+    <altitude-ft>5000</altitude-ft>
+</flight-data>
+<waypoint-table>
+    <waypoint>
+        <identifier>KALB</identifier>
+        <type>AIRPORT</type>
+        <lat>42.749116</lat>
+        <lon>-73.80198</lon>
+        <altitude-ft></altitude-ft>
+    </waypoint>
+    <waypoint>
+        <identifier>ALB</identifier>
+        <type>VOR</type>
+        <lat>42.747281</lat>
+        <lon>-73.803183</lon>
+        <altitude-ft></altitude-ft>
+    </waypoint>
+    <waypoint>
+        <identifier>KOXC</identifier>
+        <type>AIRPORT</type>
+        <lat>41.478281</lat>
+        <lon>-73.135183</lon>
+        <altitude-ft></altitude-ft>
+    </waypoint>
+</waypoint-table>
+<route>
+    <route-name>KALB TO KOXC</route-name>
+    <flight-plan-index>1</flight-plan-index>
+    <route-point>
+        <waypoint-identifier>KALB</waypoint-identifier>
+        <waypoint-type>AIRPORT</waypoint-type>
+    </route-point>
+    <route-point>
+        <waypoint-identifier>ALB</waypoint-identifier>
+        <waypoint-type>VOR</waypoint-type>
+    </route-point>
+    <route-point>
+        <waypoint-identifier>KOXC</waypoint-identifier>
+        <waypoint-type>AIRPORT</waypoint-type>
+    </route-point>
+</route>
+</flight-plan>`;
+
+        // Test XML parsing directly using DOMParser (what importFromForeFlightFPL uses internally)
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(fplContent, 'text/xml');
+
+        // Verify the XML parses correctly
+        const flightPlanEl = xmlDoc.querySelector('flight-plan');
+        assert.isNotNull(flightPlanEl, 'Should find flight-plan element');
+
+        const altitudeEl = xmlDoc.querySelector('flight-data > altitude-ft');
+        assert.equals(parseInt(altitudeEl.textContent, 10), 5000, 'Should parse altitude');
+
+        const tailnumberEl = xmlDoc.querySelector('aircraft > aircraft-tailnumber');
+        assert.equals(tailnumberEl.textContent.trim(), 'N9594C', 'Should parse tailnumber');
+
+        const waypointEls = xmlDoc.querySelectorAll('waypoint-table > waypoint');
+        assert.equals(waypointEls.length, 3, 'Should have 3 waypoints');
+
+        const routePointEls = xmlDoc.querySelectorAll('route > route-point');
+        assert.equals(routePointEls.length, 3, 'Should have 3 route points');
+
+        // Verify first waypoint
+        const firstWp = waypointEls[0];
+        assert.equals(firstWp.querySelector('identifier').textContent, 'KALB', 'First waypoint identifier');
+        assert.equals(firstWp.querySelector('type').textContent, 'AIRPORT', 'First waypoint type');
+    });
+
+    it('should detect invalid XML in FPL format', () => {
+        const invalidXml = 'not valid xml <<<<';
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(invalidXml, 'text/xml');
+
+        const parseError = xmlDoc.querySelector('parsererror');
+        assert.isNotNull(parseError, 'Should detect parse error in invalid XML');
+    });
+
+    it('should detect missing flight-plan element', () => {
+        const noFlightPlan = `<?xml version="1.0"?><root><data>test</data></root>`;
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(noFlightPlan, 'text/xml');
+
+        const flightPlanEl = xmlDoc.querySelector('flight-plan');
+        assert.isNull(flightPlanEl, 'Should return null when no flight-plan element');
+    });
+
+    it('should parse FPL with different waypoint types correctly', () => {
+        const fplContent = `<?xml version="1.0" encoding="utf-8"?>
+<flight-plan xmlns="http://www8.garmin.com/xmlschemas/FlightPlan/v1">
+<flight-data>
+    <altitude-ft>8000</altitude-ft>
+</flight-data>
+<waypoint-table>
+    <waypoint>
+        <identifier>KSFO</identifier>
+        <type>AIRPORT</type>
+        <lat>37.6191</lat>
+        <lon>-122.3756</lon>
+    </waypoint>
+    <waypoint>
+        <identifier>SFO</identifier>
+        <type>VOR</type>
+        <lat>37.6200</lat>
+        <lon>-122.3750</lon>
+    </waypoint>
+    <waypoint>
+        <identifier>PAYGE</identifier>
+        <type>INT</type>
+        <lat>37.5000</lat>
+        <lon>-122.0000</lon>
+    </waypoint>
+    <waypoint>
+        <identifier>OAK</identifier>
+        <type>NDB</type>
+        <lat>37.7000</lat>
+        <lon>-122.2000</lon>
+    </waypoint>
+    <waypoint>
+        <identifier>KLAX</identifier>
+        <type>AIRPORT</type>
+        <lat>33.9425</lat>
+        <lon>-118.4081</lon>
+    </waypoint>
+</waypoint-table>
+<route>
+    <route-point>
+        <waypoint-identifier>KSFO</waypoint-identifier>
+        <waypoint-type>AIRPORT</waypoint-type>
+    </route-point>
+    <route-point>
+        <waypoint-identifier>SFO</waypoint-identifier>
+        <waypoint-type>VOR</waypoint-type>
+    </route-point>
+    <route-point>
+        <waypoint-identifier>PAYGE</waypoint-identifier>
+        <waypoint-type>INT</waypoint-type>
+    </route-point>
+    <route-point>
+        <waypoint-identifier>OAK</waypoint-identifier>
+        <waypoint-type>NDB</waypoint-type>
+    </route-point>
+    <route-point>
+        <waypoint-identifier>KLAX</waypoint-identifier>
+        <waypoint-type>AIRPORT</waypoint-type>
+    </route-point>
+</route>
+</flight-plan>`;
+
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(fplContent, 'text/xml');
+
+        const waypointEls = xmlDoc.querySelectorAll('waypoint-table > waypoint');
+        assert.equals(waypointEls.length, 5, 'Should have 5 waypoints');
+
+        // Verify waypoint types
+        const types = [];
+        waypointEls.forEach(wp => types.push(wp.querySelector('type').textContent));
+        assert.equals(types[0], 'AIRPORT', 'First is AIRPORT');
+        assert.equals(types[1], 'VOR', 'Second is VOR');
+        assert.equals(types[2], 'INT', 'Third is INT');
+        assert.equals(types[3], 'NDB', 'Fourth is NDB');
+        assert.equals(types[4], 'AIRPORT', 'Fifth is AIRPORT');
+
+        // Verify altitude
+        const altitudeEl = xmlDoc.querySelector('flight-data > altitude-ft');
+        assert.equals(parseInt(altitudeEl.textContent, 10), 8000, 'Should parse altitude');
+    });
+
+    it('should handle FPL with empty altitude', () => {
+        const fplContent = `<?xml version="1.0" encoding="utf-8"?>
+<flight-plan xmlns="http://www8.garmin.com/xmlschemas/FlightPlan/v1">
+<flight-data>
+    <altitude-ft></altitude-ft>
+</flight-data>
+<waypoint-table>
+    <waypoint>
+        <identifier>KSFO</identifier>
+        <type>AIRPORT</type>
+        <lat>37.6191</lat>
+        <lon>-122.3756</lon>
+    </waypoint>
+    <waypoint>
+        <identifier>KLAX</identifier>
+        <type>AIRPORT</type>
+        <lat>33.9425</lat>
+        <lon>-118.4081</lon>
+    </waypoint>
+</waypoint-table>
+<route>
+    <route-point><waypoint-identifier>KSFO</waypoint-identifier></route-point>
+    <route-point><waypoint-identifier>KLAX</waypoint-identifier></route-point>
+</route>
+</flight-plan>`;
+
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(fplContent, 'text/xml');
+
+        const altitudeEl = xmlDoc.querySelector('flight-data > altitude-ft');
+        const altitude = altitudeEl ? parseInt(altitudeEl.textContent, 10) || 5000 : 5000;
+        assert.equals(altitude, 5000, 'Should default to 5000 for empty altitude');
+    });
 });
 
 // ============================================

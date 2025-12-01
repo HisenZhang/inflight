@@ -5,6 +5,30 @@ All notable changes to IN-FLIGHT will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.3.0] - 2025-11-30
+
+### Added
+
+#### ForeFlight FPL Import/Export
+- **Export to ForeFlight FPL (.fpl)** - Export flight plans in Garmin FlightPlan v1 XML format
+  - Compatible with ForeFlight, Garmin, and many other aviation apps
+  - Includes route waypoints with coordinates and types (AIRPORT, VOR, NDB, INT)
+  - Contains aircraft tailnumber, altitude, and departure time
+  - Filename format: `DEPARTURE_DESTINATION.fpl`
+- **Import from ForeFlight FPL (.fpl)** - Import flight plans from ForeFlight and other EFBs
+  - Parses Garmin FlightPlan v1 XML format
+  - Extracts waypoints with coordinates, types, and altitude
+  - Supports all waypoint types: AIRPORT, VOR, NDB, INT, USER WAYPOINT
+  - Populates route inputs for recalculation with current winds
+
+#### Testing
+- 9 new tests for ForeFlight FPL import/export functionality
+- Total test count: 598 tests (all passing)
+
+### Changed
+- Export dropdown now includes ForeFlight FPL option alongside JSON, CSV, and KML
+- Import dropdown now supports both IN-FLIGHT JSON and ForeFlight FPL formats
+
 ## [3.0.0] - 2025-11-28
 
 ### Architecture v3.0.0 - Complete Layered Architecture

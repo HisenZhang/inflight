@@ -1055,7 +1055,11 @@ function setupImportDropdown() {
             // Trigger file input with correct accept type
             if (format === 'json') {
                 fileInput.accept = '.json';
+            } else if (format === 'fpl') {
+                fileInput.accept = '.fpl';
             }
+            // Store the selected format for use in handleImportFile
+            fileInput.dataset.format = format;
             fileInput.click();
             // Reset to default option
             e.target.value = '';
@@ -1108,6 +1112,15 @@ function handleExportFormat(format) {
             }
             break;
 
+        case 'fpl':
+            success = window.FlightState.exportToForeFlightFPL();
+            if (success) {
+                alert('FPL EXPORTED\n\nGarmin FlightPlan format (.fpl)\n\nImport into ForeFlight via:\n- AirDrop from Mac\n- Email attachment\n- iTunes/Finder\n- iCloud Drive');
+            } else {
+                alert('ERROR: FAILED TO EXPORT FPL');
+            }
+            break;
+
         default:
             alert('ERROR: UNKNOWN EXPORT FORMAT');
     }
@@ -1117,12 +1130,29 @@ async function handleImportFile(event) {
     const file = event.target.files[0];
     if (!file) return;
 
+    // Get the format from the stored dataset or detect from file extension
+    const fileInput = event.target;
+    const format = fileInput.dataset.format || (file.name.endsWith('.fpl') ? 'fpl' : 'json');
+
     try {
         if (!window.FlightState) {
             throw new Error('FlightState not available');
         }
 
-        const navlogData = await window.FlightState.importFromFile(file);
+        let navlogData;
+
+        if (format === 'fpl') {
+            // Import ForeFlight .fpl (Garmin XML) file
+            navlogData = await window.FlightState.importFromForeFlightFPL(file);
+
+            // FPL imports need route recalculation since they only have waypoint coordinates
+            // For now, just show the imported route - user can recalculate via GO button
+            alert(`FPL IMPORTED\n\nRoute: ${navlogData.routeString}\nAltitude: ${navlogData.altitude} ft\n\nNote: Click GO to recalculate distances and times.`);
+        } else {
+            // Import IN-FLIGHT JSON file
+            navlogData = await window.FlightState.importFromFile(file);
+            alert(`NAVLOG IMPORTED\n\nRoute: ${navlogData.routeString}`);
+        }
 
         // Restore the navlog
         UIController.restoreNavlog(navlogData);
@@ -1134,13 +1164,13 @@ async function handleImportFile(event) {
         window.FlightState.updateFlightPlan(navlogData);
         window.FlightState.saveToStorage();
 
-        alert(`NAVLOG IMPORTED\n\nRoute: ${navlogData.routeString}`);
     } catch (error) {
         console.error('Import error:', error);
         alert(`ERROR: FAILED TO IMPORT\n\n${error.message}`);
     } finally {
-        // Clear file input
+        // Clear file input and format
         event.target.value = '';
+        delete fileInput.dataset.format;
     }
 }
 

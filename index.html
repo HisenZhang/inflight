@@ -436,14 +436,16 @@
                     <select id="exportNavlogSelect" class="btn btn-secondary btn-sm">
                         <option value="">EXPORT</option>
                         <option value="json">IN-FLIGHT (.json)</option>
+                        <option value="fpl">ForeFlight (.fpl)</option>
                         <option value="csv">ForeFlight CSV (.csv)</option>
                         <option value="kml">ForeFlight KML (.kml)</option>
                     </select>
                     <select id="importNavlogSelect" class="btn btn-secondary btn-sm">
                         <option value="">IMPORT</option>
                         <option value="json">IN-FLIGHT (.json)</option>
+                        <option value="fpl">ForeFlight (.fpl)</option>
                     </select>
-                    <input type="file" id="importNavlogInput" accept=".json" style="display: none;">
+                    <input type="file" id="importNavlogInput" accept=".json,.fpl" style="display: none;">
                 </div>
             </div>
             <div id="routeSummary" class="route-summary"></div>

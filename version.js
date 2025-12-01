@@ -24,7 +24,7 @@
 const AppVersion = {
     // Semantic version (sync with package.json)
     MAJOR: 3,
-    MINOR: 2,
+    MINOR: 3,
     PATCH: 0,
 
     // Full version string
@@ -34,7 +34,7 @@ const AppVersion = {
 
     // Service worker cache version
     // Increment this number to force PWA updates
-    CACHE_VERSION: 147,
+    CACHE_VERSION: 148,
 
     // Full cache name for service worker
     get CACHE_NAME() {
@@ -45,7 +45,7 @@ const AppVersion = {
     BUILD_DATE: '2025-11-30',
 
     // Release name (optional)
-    RELEASE_NAME: 'Terrain and fuel hazards improvements',
+    RELEASE_NAME: 'ForeFlight FPL import/export',
 
     /**
      * Get full version info object

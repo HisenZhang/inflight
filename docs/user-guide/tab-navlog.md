@@ -435,38 +435,65 @@ Enter winds manually at multiple altitudes in the ROUTE tab. IN-FLIGHT automatic
 
 ## Export & Import
 
+### Export Formats
+
+IN-FLIGHT supports multiple export formats for compatibility with other aviation apps:
+
+| Format | File Extension | Best For |
+|--------|---------------|----------|
+| **IN-FLIGHT JSON** | `.json` | Full backup with all calculations |
+| **ForeFlight FPL** | `.fpl` | ForeFlight, Garmin, and other EFBs |
+| **ForeFlight CSV** | `.csv` | ForeFlight user waypoints |
+| **ForeFlight KML** | `.kml` | Google Earth, ForeFlight waypoints |
+
 ### Export Your Navlog
 
-**Use cases:**
-- Backup before flight
-- Share with copilot / flight instructor
-- Keep records for logbook
-- Compare planned vs. actual performance later
-
 **To export:**
-1. Click **EXPORT** button at top of NAVLOG tab
-2. File downloads: `navlog_KSFO_KLAS_20251115.json`
-3. Save to cloud / email to yourself
+1. Click the **EXPORT** dropdown at top of NAVLOG tab
+2. Select your desired format
+3. File downloads automatically
 
-**What's included:**
-- Full route (all waypoints)
-- All calculations (headings, distances, fuel, time)
+**IN-FLIGHT JSON (.json)**
+- Full backup with all calculations (headings, distances, fuel, time)
 - Wind data (snapshot from when you calculated)
 - Aircraft settings (TAS, burn rate, etc.)
+- Filename: `IN-FLIGHT_2025-11-30T14-30-00Z_KSFO_KLAX.json`
+
+**ForeFlight FPL (.fpl)**
+- Garmin FlightPlan v1 XML format
+- Compatible with ForeFlight, Garmin, and many aviation apps
+- Contains route waypoints with coordinates and types
+- Filename: `KSFO_KLAX.fpl`
+- Import into ForeFlight via AirDrop, email, or iCloud Drive
+
+**ForeFlight CSV (.csv)**
+- User waypoints format for ForeFlight Content Packs
+- Filename: `user_waypoints.csv`
+- Import via iTunes/Finder file sharing
+
+**ForeFlight KML (.kml)**
+- Google Earth format for waypoint visualization
+- Filename: `user_waypoints.kml`
+- Import via AirDrop, email, or file sharing
 
 ### Import a Saved Navlog
 
-**Use cases:**
-- Re-fly a common route
-- Load a backup from earlier
-- Review a flight plan you made last week
+**Supported import formats:**
+- IN-FLIGHT JSON (`.json`) - Full route with all calculations
+- ForeFlight FPL (`.fpl`) - Waypoints with coordinates (recalculation required)
 
 **To import:**
-1. Click **IMPORT** button
-2. Select `.json` navlog file
-3. Route loads instantly with all calculations
+1. Click the **IMPORT** dropdown
+2. Select the format type
+3. Choose your file
+4. Route loads automatically
 
-**Important:** Wind data is historical (from when you exported). If you're flying days later, recalculate with current winds.
+**When importing ForeFlight FPL files:**
+- Waypoints are extracted with coordinates
+- Click **GO** to recalculate distances, times, and wind corrections
+- Altitude is preserved from the FPL file
+
+**Important:** Wind data in imported files is historical (from when you exported). If you're flying days later, recalculate with current winds.
 
 ## Using This In-Flight
 

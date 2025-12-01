@@ -544,6 +544,300 @@ ${placemarks.join('\n')}
 }
 
 /**
+ * Export flight plan as ForeFlight-compatible .fpl (Garmin XML) file for download
+ * Format: Garmin FlightPlan v1 XML
+ * This format is used by ForeFlight, Garmin, and many other aviation apps
+ * @returns {boolean} True if exported successfully
+ */
+function exportToForeFlightFPL() {
+    if (!isFlightPlanValid()) {
+        console.error('[FlightState] No valid flight plan to export');
+        return false;
+    }
+
+    try {
+        // Build created timestamp in Garmin format (YYYYMMDDThhmmssZ)
+        const now = new Date();
+        const created = now.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+
+        // Get departure time (ETD) - use first waypoint time or current time
+        const etd = now.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+
+        // Get altitude (default to 5000 if not set)
+        const altitude = flightPlan.altitude || 5000;
+
+        // Get aircraft tailnumber from options (default to N00000)
+        const tailnumber = flightPlan.options?.tailnumber || 'N00000';
+
+        // Build waypoint table
+        const waypointEntries = [];
+        const routePoints = [];
+
+        flightPlan.waypoints.forEach((waypoint, index) => {
+            // Determine identifier and type
+            let identifier = '';
+            let wpType = 'USER WAYPOINT';
+
+            if (waypoint.waypointType === 'airport') {
+                identifier = waypoint.icao || waypoint.ident || `WPT${index + 1}`;
+                wpType = 'AIRPORT';
+            } else if (waypoint.waypointType === 'vor' || waypoint.type === 'VOR') {
+                identifier = waypoint.ident || waypoint.icao || `WPT${index + 1}`;
+                wpType = 'VOR';
+            } else if (waypoint.waypointType === 'ndb' || waypoint.type === 'NDB') {
+                identifier = waypoint.ident || waypoint.icao || `WPT${index + 1}`;
+                wpType = 'NDB';
+            } else if (waypoint.waypointType === 'fix' || waypoint.type === 'FIX') {
+                identifier = waypoint.ident || waypoint.icao || `WPT${index + 1}`;
+                wpType = 'INT';
+            } else {
+                identifier = waypoint.ident || waypoint.icao || `WPT${index + 1}`;
+                wpType = 'INT';
+            }
+
+            identifier = identifier.toUpperCase();
+
+            // Build waypoint entry
+            const waypointXml = `    <waypoint>
+        <identifier>${escapeXml(identifier)}</identifier>
+        <type>${wpType}</type>
+        <lat>${waypoint.lat}</lat>
+        <lon>${waypoint.lon}</lon>
+        <altitude-ft></altitude-ft>
+    </waypoint>`;
+            waypointEntries.push(waypointXml);
+
+            // Build route point
+            const routePointXml = `    <route-point>
+        <waypoint-identifier>${escapeXml(identifier)}</waypoint-identifier>
+        <waypoint-type>${wpType}</waypoint-type>
+    </route-point>`;
+            routePoints.push(routePointXml);
+        });
+
+        // Build route name from departure and destination
+        const depIcao = flightPlan.departure?.icao || flightPlan.waypoints[0]?.icao || 'DEP';
+        const destIcao = flightPlan.destination?.icao || flightPlan.waypoints[flightPlan.waypoints.length - 1]?.icao || 'DEST';
+        const routeName = `${depIcao} TO ${destIcao}`;
+
+        // Build complete FPL XML document
+        const fplContent = `<?xml version="1.0" encoding="utf-8"?>
+<flight-plan xmlns="http://www8.garmin.com/xmlschemas/FlightPlan/v1">
+<created>${created}</created>
+<aircraft>
+    <aircraft-tailnumber>${escapeXml(tailnumber)}</aircraft-tailnumber>
+</aircraft>
+<flight-data>
+    <etd-zulu>${etd}</etd-zulu>
+    <altitude-ft>${altitude}</altitude-ft>
+</flight-data>
+<waypoint-table>
+
+${waypointEntries.join('\n    \n')}
+
+</waypoint-table>
+<route>
+    <route-name>${escapeXml(routeName)}</route-name>
+    <flight-plan-index>1</flight-plan-index>
+
+${routePoints.join('\n    \n')}
+
+</route>
+</flight-plan>`;
+
+        // Create blob and download
+        const blob = new Blob([fplContent], { type: 'application/xml;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+
+        // Build filename: DEPARTURE_DESTINATION.fpl (ForeFlight convention)
+        const filename = `${depIcao}_${destIcao}.fpl`;
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+
+        URL.revokeObjectURL(url);
+        console.log('[FlightState] ForeFlight FPL exported:', filename, `(${waypointEntries.length} waypoints)`);
+        return true;
+    } catch (error) {
+        console.error('[FlightState] Failed to export ForeFlight FPL:', error);
+        return false;
+    }
+}
+
+/**
+ * Escape special XML characters
+ * @param {string} str - String to escape
+ * @returns {string} Escaped string
+ */
+function escapeXml(str) {
+    if (!str) return '';
+    return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&apos;');
+}
+
+/**
+ * Import flight plan from ForeFlight .fpl (Garmin XML) file
+ * @param {File} file - File object from file input
+ * @returns {Promise<object>} Parsed navlog data
+ */
+function importFromForeFlightFPL(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+
+        reader.onload = (e) => {
+            try {
+                const xmlString = e.target.result;
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(xmlString, 'text/xml');
+
+                // Check for parse errors
+                const parseError = xmlDoc.querySelector('parsererror');
+                if (parseError) {
+                    throw new Error('Invalid XML format');
+                }
+
+                // Extract flight plan data
+                const flightPlanEl = xmlDoc.querySelector('flight-plan');
+                if (!flightPlanEl) {
+                    throw new Error('No flight-plan element found');
+                }
+
+                // Get altitude
+                const altitudeEl = xmlDoc.querySelector('flight-data > altitude-ft');
+                const altitude = altitudeEl ? parseInt(altitudeEl.textContent, 10) || 5000 : 5000;
+
+                // Get tailnumber
+                const tailnumberEl = xmlDoc.querySelector('aircraft > aircraft-tailnumber');
+                const tailnumber = tailnumberEl ? tailnumberEl.textContent.trim() : '';
+
+                // Get route name
+                const routeNameEl = xmlDoc.querySelector('route > route-name');
+                const routeName = routeNameEl ? routeNameEl.textContent.trim() : '';
+
+                // Parse waypoint table
+                const waypointEls = xmlDoc.querySelectorAll('waypoint-table > waypoint');
+                const waypointMap = new Map();
+
+                waypointEls.forEach(wpEl => {
+                    const identifier = wpEl.querySelector('identifier')?.textContent?.trim() || '';
+                    const type = wpEl.querySelector('type')?.textContent?.trim() || 'USER WAYPOINT';
+                    const lat = parseFloat(wpEl.querySelector('lat')?.textContent || 0);
+                    const lon = parseFloat(wpEl.querySelector('lon')?.textContent || 0);
+                    const wpAltitude = wpEl.querySelector('altitude-ft')?.textContent?.trim();
+
+                    if (identifier && !isNaN(lat) && !isNaN(lon)) {
+                        waypointMap.set(identifier, {
+                            ident: identifier,
+                            lat,
+                            lon,
+                            type: type,
+                            waypointType: mapFplTypeToWaypointType(type),
+                            altitude: wpAltitude ? parseInt(wpAltitude, 10) : null
+                        });
+                    }
+                });
+
+                // Parse route to get ordered waypoints
+                const routePointEls = xmlDoc.querySelectorAll('route > route-point');
+                const waypoints = [];
+                const routeParts = [];
+
+                routePointEls.forEach(rpEl => {
+                    const identifier = rpEl.querySelector('waypoint-identifier')?.textContent?.trim() || '';
+                    if (identifier && waypointMap.has(identifier)) {
+                        const wp = waypointMap.get(identifier);
+                        // Set icao for airports
+                        if (wp.waypointType === 'airport') {
+                            wp.icao = identifier;
+                        }
+                        waypoints.push(wp);
+                        routeParts.push(identifier);
+                    }
+                });
+
+                if (waypoints.length < 2) {
+                    throw new Error('Flight plan must have at least 2 waypoints');
+                }
+
+                // Build route string
+                const routeString = routeParts.join(' ');
+
+                // Extract departure and destination
+                const departure = waypoints[0];
+                const destination = waypoints[waypoints.length - 1];
+
+                // Build legs (distances will be 0 - need to be calculated by route service)
+                const legs = [];
+                for (let i = 0; i < waypoints.length - 1; i++) {
+                    legs.push({
+                        from: waypoints[i],
+                        to: waypoints[i + 1],
+                        distance: 0,
+                        bearing: 0
+                    });
+                }
+
+                // Build route middle (everything except departure and destination)
+                const routeMiddle = routeParts.length > 2 ? routeParts.slice(1, -1).join(' ') : '';
+
+                const navlogData = {
+                    routeString,
+                    departure,
+                    destination,
+                    routeMiddle,
+                    waypoints,
+                    legs,
+                    totalDistance: 0,
+                    totalTime: 0,
+                    fuelStatus: null,
+                    options: {
+                        tailnumber,
+                        importedFrom: 'ForeFlight FPL'
+                    },
+                    altitude,
+                    tas: null,
+                    windData: null,
+                    windMetadata: null
+                };
+
+                console.log('[FlightState] ForeFlight FPL imported:', routeString);
+                resolve(navlogData);
+            } catch (error) {
+                console.error('[FlightState] Failed to parse ForeFlight FPL:', error);
+                reject(error);
+            }
+        };
+
+        reader.onerror = () => {
+            reject(new Error('Failed to read file'));
+        };
+
+        reader.readAsText(file);
+    });
+}
+
+/**
+ * Map FPL waypoint type to IN-FLIGHT waypointType
+ * @param {string} fplType - FPL type (AIRPORT, VOR, NDB, INT, USER WAYPOINT)
+ * @returns {string} IN-FLIGHT waypointType
+ */
+function mapFplTypeToWaypointType(fplType) {
+    const typeMap = {
+        'AIRPORT': 'airport',
+        'VOR': 'vor',
+        'NDB': 'ndb',
+        'INT': 'fix',
+        'USER WAYPOINT': 'fix'
+    };
+    return typeMap[fplType] || 'fix';
+}
+
+/**
  * Import flight plan from JSON file
  * @param {File} file - File object from file input
  * @returns {Promise<object>} Parsed navlog data
@@ -648,7 +942,9 @@ window.FlightState = {
     exportAsFile,
     exportToForeFlightCSV,
     exportToForeFlightKML,
+    exportToForeFlightFPL,
     importFromFile,
+    importFromForeFlightFPL,
 
     // Route history
     saveToHistory,
