@@ -72,6 +72,7 @@ const files = {
     routeResolver: fs.readFileSync(path.join(projectRoot, 'compute/route-resolver.js'), 'utf8'),
     routeEngine: fs.readFileSync(path.join(projectRoot, 'compute/route-engine.js'), 'utf8'),
     routeCalculator: fs.readFileSync(path.join(projectRoot, 'compute/route-calculator.js'), 'utf8'),
+    routeExpander: fs.readFileSync(path.join(projectRoot, 'compute/route-expander.js'), 'utf8'),
     windsAloft: fs.readFileSync(path.join(projectRoot, 'compute/winds-aloft.js'), 'utf8'),
     terrainAnalyzer: fs.readFileSync(path.join(projectRoot, 'compute/terrain-analyzer.js'), 'utf8'),
 
@@ -92,6 +93,7 @@ const files = {
     testTerrainAnalyzer: fs.readFileSync(path.join(__dirname, 'test-terrain-analyzer.js'), 'utf8'),
     testQueryEngine: fs.readFileSync(path.join(__dirname, 'test-query-engine.js'), 'utf8'),
     testDataManager: fs.readFileSync(path.join(__dirname, 'test-data-manager.js'), 'utf8'),
+    testRouteExpansion: fs.readFileSync(path.join(__dirname, 'test-route-expansion.js'), 'utf8'),
 
     // Test suites - v3 Architecture
     testDataCore: fs.readFileSync(path.join(__dirname, 'test-data-core.js'), 'utf8'),
@@ -239,6 +241,7 @@ let testResults = {
             ${wrapInIIFE(files.routeResolver)}
             ${wrapInIIFE(files.routeEngine)}
             ${wrapInIIFE(files.routeCalculator)}
+            ${wrapInIIFE(files.routeExpander)}
             ${wrapInIIFE(files.windsAloft)}
             ${wrapInIIFE(files.terrainAnalyzer)}
 
@@ -268,6 +271,7 @@ let testResults = {
             ${wrapInIIFE(files.testTerrainAnalyzer)}
             ${wrapInIIFE(files.testQueryEngine)}
             ${wrapInIIFE(files.testDataManager)}
+            ${wrapInIIFE(files.testRouteExpansion)}
         `;
 
         // Evaluate in window context

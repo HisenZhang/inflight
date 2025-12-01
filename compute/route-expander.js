@@ -122,6 +122,34 @@ function expandRoute(routeString) {
         }
 
         // Check for airway pattern: WAYPOINT AIRWAY WAYPOINT
+        // Case 1: Current token IS an airway (e.g., after procedure expansion left us at airway)
+        // Pattern: [last expanded waypoint] AIRWAY WAYPOINT
+        const currentTokenType = window.QueryEngine?.getTokenType(token);
+        if (currentTokenType === 'AIRWAY' && i + 1 < tokens.length && expanded.length > 0) {
+            const fromFix = expanded[expanded.length - 1];
+            const airwayToken = token;
+            const toFix = tokens[i + 1];
+
+            console.debug(`[RouteExpander] Checking airway pattern (current is airway): ${fromFix} ${airwayToken} ${toFix}`);
+
+            const segment = expandAirway(fromFix, airwayToken, toFix);
+            if (segment.expanded) {
+                console.log(`[RouteExpander] Expanded airway ${airwayToken}: ${fromFix} to ${toFix} (${segment.fixes.length} fixes)`);
+                // fromFix is already the last element in expanded, so skip it
+                expanded.push(...segment.fixes.slice(1));
+                // Skip PAST toFix since it's already included in the expansion
+                // Unlike Case 2 where toFix is the next starting point for chaining,
+                // here toFix is already in expanded, so we skip to the token after toFix
+                i += 2;
+                continue;
+            } else {
+                console.warn(`[RouteExpander] Airway expansion failed: ${fromFix} ${airwayToken} ${toFix}`);
+                errors.push(`Airway ${airwayToken} expansion failed: ${fromFix} to ${toFix}`);
+                // Fall through to push token as-is (will error later as unrecognized waypoint)
+            }
+        }
+
+        // Case 2: Standard pattern - WAYPOINT AIRWAY WAYPOINT (airway is next token)
         if (i + 2 < tokens.length) {
             const fromFix = tokens[i];
             const airwayToken = tokens[i + 1];

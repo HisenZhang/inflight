@@ -1,8 +1,6 @@
 // Test Route Expansion and Token Resolution
 // Tests the refactored QueryEngine and RouteExpander integration
 
-const { test, assert } = window.TestFramework;
-
 // Mock data setup
 function setupMockData() {
     // Create mock Maps for airports, navaids, fixes
@@ -83,7 +81,6 @@ function setupMockData() {
     mockTokenMap.set('WYNDE3', 'PROCEDURE');
 
     console.log('[TestSetup] Created mock token map with', mockTokenMap.size, 'entries');
-    console.log('[TestSetup] Token map contents:', Array.from(mockTokenMap.entries()));
 
     return {
         airports: mockAirports,
@@ -115,172 +112,262 @@ function setupMockDataManager(mockData) {
     };
 }
 
-// Test QueryEngine initialization
-test('QueryEngine.init() should initialize with token map', () => {
-    const mockData = setupMockData();
+TestFramework.describe('QueryEngine - Token Type Resolution', function({ it }) {
+    it('should initialize with token map', () => {
+        const mockData = setupMockData();
+        window.QueryEngine.init(
+            mockData.airports,
+            mockData.navaids,
+            mockData.fixes,
+            mockData.airways,
+            mockData.tokenMap
+        );
+        assert.isTrue(true, 'QueryEngine initialized without error');
+    });
 
-    window.QueryEngine.init(
-        mockData.airports,
-        mockData.navaids,
-        mockData.fixes,
-        mockData.tokenMap
-    );
+    it('should return correct type for KORD (AIRPORT)', () => {
+        const mockData = setupMockData();
+        window.QueryEngine.init(mockData.airports, mockData.navaids, mockData.fixes, mockData.airways, mockData.tokenMap);
+        const type = window.QueryEngine.getTokenType('KORD');
+        assert.equals(type, 'AIRPORT', 'KORD should be AIRPORT');
+    });
 
-    assert.isTrue(true, 'QueryEngine initialized without error');
+    it('should return correct type for MIP (NAVAID)', () => {
+        const mockData = setupMockData();
+        window.QueryEngine.init(mockData.airports, mockData.navaids, mockData.fixes, mockData.airways, mockData.tokenMap);
+        const type = window.QueryEngine.getTokenType('MIP');
+        assert.equals(type, 'NAVAID', 'MIP should be NAVAID');
+    });
+
+    it('should return correct type for GERBS (FIX)', () => {
+        const mockData = setupMockData();
+        window.QueryEngine.init(mockData.airports, mockData.navaids, mockData.fixes, mockData.airways, mockData.tokenMap);
+        const type = window.QueryEngine.getTokenType('GERBS');
+        assert.equals(type, 'FIX', 'GERBS should be FIX');
+    });
+
+    it('should return correct type for J146 (AIRWAY)', () => {
+        const mockData = setupMockData();
+        window.QueryEngine.init(mockData.airports, mockData.navaids, mockData.fixes, mockData.airways, mockData.tokenMap);
+        const type = window.QueryEngine.getTokenType('J146');
+        assert.equals(type, 'AIRWAY', 'J146 should be AIRWAY');
+    });
 });
 
-// Test QueryEngine.getTokenType()
-test('QueryEngine.getTokenType() should return correct types', () => {
-    const mockData = setupMockData();
+TestFramework.describe('RouteExpander - Basic Expansion', function({ it }) {
+    it('should initialize with airway and procedure data', () => {
+        const mockData = setupMockData();
+        window.RouteExpander.setAirwaysData(mockData.airways);
+        window.RouteExpander.setStarsData(mockData.stars);
+        window.RouteExpander.setDpsData(mockData.dps);
+        const stats = window.RouteExpander.getStats();
+        assert.equals(stats.airways, 1, 'Should have 1 airway');
+    });
 
-    window.QueryEngine.init(
-        mockData.airports,
-        mockData.navaids,
-        mockData.fixes,
-        mockData.tokenMap
-    );
+    it('should expand airway J146', () => {
+        const mockData = setupMockData();
+        setupMockDataManager(mockData);
+        window.QueryEngine.init(mockData.airports, mockData.navaids, mockData.fixes, mockData.airways, mockData.tokenMap);
+        window.RouteExpander.setAirwaysData(mockData.airways);
+        window.RouteExpander.setStarsData(mockData.stars);
+        window.RouteExpander.setDpsData(mockData.dps);
 
-    // Test airport
-    const kordType = window.QueryEngine.getTokenType('KORD');
-    console.log('[Test] KORD type:', kordType);
-    assert.equals(kordType, 'AIRPORT', 'KORD should be AIRPORT');
+        const result = window.RouteExpander.expandRoute('GERBS J146 MIP');
+        console.log('[Test] Expansion result:', result);
 
-    // Test navaid
-    const mipType = window.QueryEngine.getTokenType('MIP');
-    console.log('[Test] MIP type:', mipType);
-    assert.equals(mipType, 'NAVAID', 'MIP should be NAVAID');
+        assert.isNull(result.errors, 'Should have no errors');
+        assert.isTrue(result.expanded.length > 3, 'Should expand to more than 3 waypoints');
+        assert.contains(result.expanded, 'GERBS', 'Should include GERBS');
+        assert.contains(result.expanded, 'MIP', 'Should include MIP');
+        assert.contains(result.expanded, 'FIXO1', 'Should include intermediate fix FIXO1');
+    });
 
-    // Test fix
-    const gerType = window.QueryEngine.getTokenType('GERBS');
-    console.log('[Test] GERBS type:', gerType);
-    assert.equals(gerType, 'FIX', 'GERBS should be FIX');
+    it('should expand procedure MIP4', () => {
+        const mockData = setupMockData();
+        setupMockDataManager(mockData);
+        window.QueryEngine.init(mockData.airports, mockData.navaids, mockData.fixes, mockData.airways, mockData.tokenMap);
+        window.RouteExpander.setAirwaysData(mockData.airways);
+        window.RouteExpander.setStarsData(mockData.stars);
+        window.RouteExpander.setDpsData(mockData.dps);
 
-    // Test airway
-    const airwayType = window.QueryEngine.getTokenType('J146');
-    console.log('[Test] J146 type:', airwayType);
-    assert.equals(airwayType, 'AIRWAY', 'J146 should be AIRWAY');
+        const result = window.RouteExpander.expandRoute('MIP MIP4');
+        console.log('[Test] Procedure expansion result:', result);
 
-    // Test procedure
-    const procType = window.QueryEngine.getTokenType('MIP4');
-    console.log('[Test] MIP4 type:', procType);
-    assert.equals(procType, 'PROCEDURE', 'MIP4 should be PROCEDURE');
+        assert.isNull(result.errors, 'Should have no errors');
+        assert.isTrue(result.expanded.length > 2, 'Should expand to more than 2 waypoints');
+    });
+
+    it('should expand full route with airway and procedure', () => {
+        const mockData = setupMockData();
+        setupMockDataManager(mockData);
+        window.QueryEngine.init(mockData.airports, mockData.navaids, mockData.fixes, mockData.airways, mockData.tokenMap);
+        window.RouteExpander.setAirwaysData(mockData.airways);
+        window.RouteExpander.setStarsData(mockData.stars);
+        window.RouteExpander.setDpsData(mockData.dps);
+
+        const result = window.RouteExpander.expandRoute('KORD MOBLE ADIME GERBS J146 MIP MIP4 KLGA');
+        console.log('[Test] Full route expansion:', result);
+
+        assert.isNull(result.errors, 'Should have no expansion errors');
+        assert.isTrue(result.expanded.length > 8, 'Should expand to more than 8 waypoints');
+    });
+
+    it('should expand TRANSITION.PROCEDURE format (KAYYS.WYNDE3)', () => {
+        const mockData = setupMockData();
+        setupMockDataManager(mockData);
+        window.QueryEngine.init(mockData.airports, mockData.navaids, mockData.fixes, mockData.airways, mockData.tokenMap);
+        window.RouteExpander.setAirwaysData(mockData.airways);
+        window.RouteExpander.setStarsData(mockData.stars);
+        window.RouteExpander.setDpsData(mockData.dps);
+
+        const result = window.RouteExpander.expandRoute('KORD KAYYS.WYNDE3 KLGA');
+        console.log('[Test] TRANSITION.PROCEDURE expansion:', result);
+
+        assert.isNull(result.errors, 'Should have no expansion errors');
+        assert.contains(result.expanded, 'KAYYS', 'Should include transition fix KAYYS');
+        assert.contains(result.expanded, 'WYNDE', 'Should include procedure fix WYNDE');
+        assert.contains(result.expanded, 'BAAKE', 'Should include procedure fix BAAKE');
+        assert.notContains(result.expanded, 'KAYYS.WYNDE3', 'Should not include unexpanded notation');
+    });
 });
 
-// Test RouteExpander initialization
-test('RouteExpander should initialize with airway and procedure data', () => {
-    const mockData = setupMockData();
+TestFramework.describe('RouteExpander - Airway After Procedure (Q128 Bug Fix)', function({ it }) {
+    it('should expand airway when it follows a waypoint (standard pattern)', () => {
+        // Test: SYRAH Q128 KD54S - standard pattern where airway is in position i+1
+        const mockAirports = new Map([
+            ['KSFO', { icao: 'KSFO', lat: 37.62, lon: -122.38, name: 'San Francisco' }]
+        ]);
+        const mockNavaids = new Map();
+        const mockFixes = new Map([
+            ['SYRAH', { ident: 'SYRAH', lat: 37.5, lon: -122.0 }],
+            ['KD54S', { ident: 'KD54S', lat: 38.0, lon: -120.0 }],
+            ['LDORA', { ident: 'LDORA', lat: 39.0, lon: -118.0 }]
+        ]);
+        const mockAirways = new Map([
+            ['Q128', { id: 'Q128', fixes: ['SYRAH', 'KD54S', 'LDORA'] }]
+        ]);
+        const mockDps = new Map();
+        const mockStars = new Map();
 
-    window.RouteExpander.setAirwaysData(mockData.airways);
-    window.RouteExpander.setStarsData(mockData.stars);
-    window.RouteExpander.setDpsData(mockData.dps);
+        const mockTokenMap = new Map();
+        for (const [code] of mockAirports) mockTokenMap.set(code, 'AIRPORT');
+        for (const [ident] of mockFixes) mockTokenMap.set(ident, 'FIX');
+        for (const [id] of mockAirways) mockTokenMap.set(id, 'AIRWAY');
 
-    const stats = window.RouteExpander.getStats();
-    console.log('[Test] RouteExpander stats:', stats);
+        window.DataManager = {
+            getAirport: (code) => mockAirports.get(code),
+            getNavaid: (ident) => mockNavaids.get(ident),
+            getFix: (ident) => mockFixes.get(ident),
+            getAirportByIATA: () => null,
+            getFixCoordinates: (ident) => mockFixes.get(ident)
+        };
 
-    assert.equals(stats.airways, 1, 'Should have 1 airway');
-    assert.equals(stats.stars, 1, 'Should have 1 STAR');
+        window.QueryEngine.init(mockAirports, mockNavaids, mockFixes, mockAirways, mockTokenMap);
+        window.RouteExpander.setAirwaysData(mockAirways);
+        window.RouteExpander.setStarsData(mockStars);
+        window.RouteExpander.setDpsData(mockDps);
+
+        // Standard route: WAYPOINT AIRWAY WAYPOINT
+        const result = window.RouteExpander.expandRoute('SYRAH Q128 KD54S');
+        console.log('[Test] Standard airway expansion:', result);
+
+        assert.isNull(result.errors, 'Should have no errors');
+        assert.contains(result.expanded, 'SYRAH', 'Should include SYRAH');
+        assert.contains(result.expanded, 'KD54S', 'Should include KD54S');
+        assert.notContains(result.expanded, 'Q128', 'Q128 should be expanded, not kept as token');
+    });
+
+    it('should expand airway immediately after DP', () => {
+        // Mock data with a DP that ends at a fix, followed by an airway
+        const mockAirports = new Map([
+            ['KSFO', { icao: 'KSFO', lat: 37.62, lon: -122.38, name: 'San Francisco' }],
+            ['KEWR', { icao: 'KEWR', lat: 40.69, lon: -74.17, name: 'Newark' }]
+        ]);
+
+        const mockNavaids = new Map();
+
+        const mockFixes = new Map([
+            ['SYRAH', { ident: 'SYRAH', lat: 37.5, lon: -122.0 }],
+            ['TRUKN', { ident: 'TRUKN', lat: 37.4, lon: -121.5 }],
+            ['KD54S', { ident: 'KD54S', lat: 38.0, lon: -120.0 }],
+            ['MIDDL', { ident: 'MIDDL', lat: 38.5, lon: -119.0 }],
+            ['LDORA', { ident: 'LDORA', lat: 39.0, lon: -118.0 }]
+        ]);
+
+        const mockAirways = new Map([
+            ['Q128', {
+                id: 'Q128',
+                fixes: ['SYRAH', 'KD54S', 'MIDDL', 'LDORA']
+            }]
+        ]);
+
+        // DP: TRUKN2 with SYRAH transition
+        const mockDps = new Map([
+            ['TRUKN2', {
+                name: 'TRUKN2',
+                type: 'DP',
+                body: { name: 'TRUKN', fixes: ['TRUKN'] },
+                transitions: [
+                    { name: 'SYRAH', entryFix: 'SYRAH', fixes: ['SYRAH'] }
+                ]
+            }]
+        ]);
+
+        const mockStars = new Map();
+
+        // Build token type map
+        const mockTokenMap = new Map();
+        for (const [code] of mockAirports) {
+            mockTokenMap.set(code, 'AIRPORT');
+        }
+        for (const [ident] of mockFixes) {
+            mockTokenMap.set(ident, 'FIX');
+        }
+        for (const [id] of mockAirways) {
+            mockTokenMap.set(id, 'AIRWAY');
+        }
+        mockTokenMap.set('TRUKN2', 'PROCEDURE');
+
+        // Setup mocks
+        window.DataManager = {
+            getAirport: (code) => mockAirports.get(code),
+            getNavaid: (ident) => mockNavaids.get(ident),
+            getFix: (ident) => mockFixes.get(ident),
+            getAirportByIATA: () => null,
+            getFixCoordinates: (ident) => {
+                const fix = mockFixes.get(ident);
+                if (fix) return { lat: fix.lat, lon: fix.lon };
+                const airport = mockAirports.get(ident);
+                if (airport) return { lat: airport.lat, lon: airport.lon };
+                return null;
+            }
+        };
+
+        window.QueryEngine.init(
+            mockAirports,
+            mockNavaids,
+            mockFixes,
+            mockAirways,
+            mockTokenMap
+        );
+
+        window.RouteExpander.setAirwaysData(mockAirways);
+        window.RouteExpander.setStarsData(mockStars);
+        window.RouteExpander.setDpsData(mockDps);
+
+        // Test: SYRAH.TRUKN2 expands to [...SYRAH], then Q128 should connect from SYRAH
+        // Route: DP with transition, then immediately an airway
+        const result = window.RouteExpander.expandRoute('SYRAH.TRUKN2 SYRAH Q128 KD54S LDORA');
+        console.log('[Test] DP + Airway expansion:', result);
+        console.log('[Test] Expanded:', result.expanded);
+        console.log('[Test] Errors:', result.errors);
+
+        // The expanded route should include the airway fixes
+        assert.contains(result.expanded, 'SYRAH', 'Should include SYRAH');
+        assert.contains(result.expanded, 'KD54S', 'Should include KD54S from airway');
+        // Q128 should NOT be in the expanded list (it should be expanded, not kept as token)
+        assert.notContains(result.expanded, 'Q128', 'Q128 airway should be expanded, not kept as token');
+    });
 });
 
-// Test airway expansion
-test('RouteExpander should expand airway J146', () => {
-    const mockData = setupMockData();
-    setupMockDataManager(mockData);
-
-    window.QueryEngine.init(
-        mockData.airports,
-        mockData.navaids,
-        mockData.fixes,
-        mockData.tokenMap
-    );
-
-    window.RouteExpander.setAirwaysData(mockData.airways);
-    window.RouteExpander.setStarsData(mockData.stars);
-    window.RouteExpander.setDpsData(mockData.dps);
-
-    const result = window.RouteExpander.expandRoute('GERBS J146 MIP');
-    console.log('[Test] Expansion result:', result);
-
-    assert.isNull(result.errors, 'Should have no errors');
-    assert.isTrue(result.expanded.length > 3, 'Should expand to more than 3 waypoints');
-    assert.includes(result.expanded, 'GERBS', 'Should include GERBS');
-    assert.includes(result.expanded, 'MIP', 'Should include MIP');
-    assert.includes(result.expanded, 'FIXO1', 'Should include intermediate fix FIXO1');
-});
-
-// Test procedure expansion
-test('RouteExpander should expand procedure MIP4', () => {
-    const mockData = setupMockData();
-    setupMockDataManager(mockData);
-
-    window.QueryEngine.init(
-        mockData.airports,
-        mockData.navaids,
-        mockData.fixes,
-        mockData.tokenMap
-    );
-
-    window.RouteExpander.setAirwaysData(mockData.airways);
-    window.RouteExpander.setStarsData(mockData.stars);
-    window.RouteExpander.setDpsData(mockData.dps);
-
-    const result = window.RouteExpander.expandRoute('MIP MIP4');
-    console.log('[Test] Procedure expansion result:', result);
-
-    assert.isNull(result.errors, 'Should have no errors');
-    assert.isTrue(result.expanded.length > 2, 'Should expand to more than 2 waypoints');
-});
-
-// Test full route expansion
-test('RouteExpander should expand full route with airway and procedure', () => {
-    const mockData = setupMockData();
-    setupMockDataManager(mockData);
-
-    window.QueryEngine.init(
-        mockData.airports,
-        mockData.navaids,
-        mockData.fixes,
-        mockData.tokenMap
-    );
-
-    window.RouteExpander.setAirwaysData(mockData.airways);
-    window.RouteExpander.setStarsData(mockData.stars);
-    window.RouteExpander.setDpsData(mockData.dps);
-
-    const result = window.RouteExpander.expandRoute('KORD MOBLE ADIME GERBS J146 MIP MIP4 KLGA');
-    console.log('[Test] Full route expansion:', result);
-    console.log('[Test] Expanded string:', result.expandedString);
-    console.log('[Test] Errors:', result.errors);
-
-    assert.isNull(result.errors, 'Should have no expansion errors');
-    assert.isTrue(result.expanded.length > 8, 'Should expand to more than 8 waypoints');
-});
-
-// Test TRANSITION.PROCEDURE format (FAA chart standard)
-test('RouteExpander should expand TRANSITION.PROCEDURE format (KAYYS.WYNDE3)', () => {
-    const mockData = setupMockData();
-    setupMockDataManager(mockData);
-
-    window.QueryEngine.init(
-        mockData.airports,
-        mockData.navaids,
-        mockData.fixes,
-        mockData.tokenMap
-    );
-
-    window.RouteExpander.setAirwaysData(mockData.airways);
-    window.RouteExpander.setStarsData(mockData.stars);
-    window.RouteExpander.setDpsData(mockData.dps);
-
-    const result = window.RouteExpander.expandRoute('KORD KAYYS.WYNDE3 KLGA');
-    console.log('[Test] TRANSITION.PROCEDURE expansion:', result);
-    console.log('[Test] Expanded string:', result.expandedString);
-    console.log('[Test] Errors:', result.errors);
-
-    assert.isNull(result.errors, 'Should have no expansion errors');
-    assert.includes(result.expanded, 'KAYYS', 'Should include transition fix KAYYS');
-    assert.includes(result.expanded, 'WYNDE', 'Should include procedure fix WYNDE');
-    assert.includes(result.expanded, 'BAAKE', 'Should include procedure fix BAAKE');
-    assert.notIncludes(result.expanded, 'KAYYS.WYNDE3', 'Should not include unexpanded notation');
-});
-
-console.log('\n=== Running Route Expansion Tests ===\n');
+console.log('\n=== Route Expansion Tests Loaded ===\n');

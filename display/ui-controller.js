@@ -2085,11 +2085,17 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelSt
     if (fuelStatus) {
         const fuelColor = fuelStatus.isSufficient ? 'text-metric' : 'text-error';
         const fuelIcon = fuelStatus.isSufficient ? '✓' : '!';
+        // Calculate trip fuel burn (usable - taxi - finalFob)
+        const tripFuelBurn = fuelStatus.usableFuel - fuelStatus.taxiFuel - fuelStatus.finalFob;
         // Always add separator before fuel section (whether or not wind data is present)
         summaryHTML += `
         <div class="summary-item" style="border-top: 1px solid var(--border-color); padding-top: 8px; margin-top: 8px;">
             <span class="summary-label text-secondary text-sm">FUEL STATUS</span>
             <span class="summary-value ${fuelColor} font-bold">${fuelIcon} ${fuelStatus.isSufficient ? 'SUFFICIENT' : 'INSUFFICIENT'}</span>
+        </div>
+        <div class="summary-item">
+            <span class="summary-label text-secondary text-sm">FUEL BURN</span>
+            <span class="summary-value text-secondary">${tripFuelBurn.toFixed(1)} GAL</span>
         </div>
         <div class="summary-item">
             <span class="summary-label text-secondary text-sm">FINAL FOB</span>
@@ -2106,12 +2112,11 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelSt
             const returnTimeHrs = Math.floor(returnFuel.returnTime / 60);
             const returnTimeMins = returnFuel.returnTime % 60;
 
-            // Check if can return without refueling
-            // Need: final FOB >= taxi burn + return flight burn + reserve
+            // Calculate FOB after return trip = finalFob - taxi - return fuel
             const taxiFuel = fuelStatus.taxiFuel || 0;
-            const fuelForReturn = taxiFuel + returnFuel.returnFuel + fuelStatus.requiredReserve;
-            const canReturn = fuelStatus.finalFob >= fuelForReturn;
-            const returnColor = canReturn ? 'text-secondary' : 'text-warning';
+            const fobAfterReturn = fuelStatus.finalFob - taxiFuel - returnFuel.returnFuel;
+            const fobAfterReturnSufficient = fobAfterReturn >= fuelStatus.requiredReserve;
+            const fobAfterReturnColor = fobAfterReturnSufficient ? 'text-metric' : 'text-error';
 
             // Format fuel difference string
             let fuelDiffStr;
@@ -2136,11 +2141,15 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelSt
             summaryHTML += `
         <div class="summary-item">
             <span class="summary-label text-secondary text-sm">RETURN FUEL</span>
-            <span class="summary-value ${returnColor}">${returnFuel.returnFuel.toFixed(1)} GAL (${fuelDiffStr})</span>
+            <span class="summary-value text-secondary">${returnFuel.returnFuel.toFixed(1)} GAL (${fuelDiffStr})</span>
         </div>
         <div class="summary-item">
             <span class="summary-label text-secondary text-sm">RETURN TIME</span>
             <span class="summary-value text-secondary">${returnTimeHrs}H ${returnTimeMins}M (${timeDiffStr})</span>
+        </div>
+        <div class="summary-item">
+            <span class="summary-label text-secondary text-sm">FOB AFTER RETURN</span>
+            <span class="summary-value ${fobAfterReturnColor} font-bold">${fobAfterReturn.toFixed(1)} GAL (${Utils.formatDecimalHours(fobAfterReturn / fuelStatus.burnRate)})</span>
         </div>
             `;
         }
