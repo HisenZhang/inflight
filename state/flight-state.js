@@ -544,21 +544,24 @@ ${placemarks.join('\n')}
 }
 
 /**
- * Export flight plan as ForeFlight-compatible .fpl (Garmin XML) file for download
- * Format: Garmin FlightPlan v1 XML
- * This format is used by ForeFlight, Garmin, and many other aviation apps
+ * Export flight plan as Garmin-compatible .fpl (Garmin XML) file for download
+ * Format: Garmin FlightPlan v1 XML (Full Specification)
+ * Compatible with: ForeFlight, Garmin Pilot, G1000, GTN 650/750, GNS 430W/530W
+ * @param {object} options - Export options
+ * @param {string} options.author - Author name (optional)
+ * @param {string} options.description - File description (optional)
  * @returns {boolean} True if exported successfully
  */
-function exportToForeFlightFPL() {
+function exportToForeFlightFPL(options = {}) {
     if (!isFlightPlanValid()) {
         console.error('[FlightState] No valid flight plan to export');
         return false;
     }
 
     try {
-        // Build created timestamp in Garmin format (YYYYMMDDThhmmssZ)
+        // Build created timestamp in ISO 8601 format
         const now = new Date();
-        const created = now.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+        const created = now.toISOString();
 
         // Get departure time (ETD) - use first waypoint time or current time
         const etd = now.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
@@ -569,7 +572,12 @@ function exportToForeFlightFPL() {
         // Get aircraft tailnumber from options (default to N00000)
         const tailnumber = flightPlan.options?.tailnumber || 'N00000';
 
-        // Build waypoint table
+        // Build route name from departure and destination
+        const depIcao = flightPlan.departure?.icao || flightPlan.waypoints[0]?.icao || flightPlan.waypoints[0]?.ident || 'DEP';
+        const destIcao = flightPlan.destination?.icao || flightPlan.waypoints[flightPlan.waypoints.length - 1]?.icao || flightPlan.waypoints[flightPlan.waypoints.length - 1]?.ident || 'DEST';
+        const routeName = `${depIcao} TO ${destIcao}`;
+
+        // Build waypoint table and route points
         const waypointEntries = [];
         const routePoints = [];
 
@@ -577,79 +585,123 @@ function exportToForeFlightFPL() {
             // Determine identifier and type
             let identifier = '';
             let wpType = 'USER WAYPOINT';
+            let countryCode = '';
 
             if (waypoint.waypointType === 'airport') {
                 identifier = waypoint.icao || waypoint.ident || `WPT${index + 1}`;
                 wpType = 'AIRPORT';
+                // Extract country code from ICAO (first 1-2 chars for most countries)
+                countryCode = getCountryCodeFromIcao(identifier);
             } else if (waypoint.waypointType === 'vor' || waypoint.type === 'VOR') {
                 identifier = waypoint.ident || waypoint.icao || `WPT${index + 1}`;
                 wpType = 'VOR';
+                countryCode = waypoint.countryCode || getCountryCodeFromRegion(waypoint);
             } else if (waypoint.waypointType === 'ndb' || waypoint.type === 'NDB') {
                 identifier = waypoint.ident || waypoint.icao || `WPT${index + 1}`;
                 wpType = 'NDB';
-            } else if (waypoint.waypointType === 'fix' || waypoint.type === 'FIX') {
+                countryCode = waypoint.countryCode || getCountryCodeFromRegion(waypoint);
+            } else if (waypoint.waypointType === 'fix' || waypoint.type === 'FIX' || waypoint.type === 'INT') {
                 identifier = waypoint.ident || waypoint.icao || `WPT${index + 1}`;
                 wpType = 'INT';
+                countryCode = waypoint.countryCode || getCountryCodeFromRegion(waypoint);
+            } else if (waypoint.waypointType === 'vrp' || waypoint.type === 'VRP') {
+                identifier = waypoint.ident || waypoint.icao || `WPT${index + 1}`;
+                wpType = 'INT-VRP';
+                countryCode = waypoint.countryCode || getCountryCodeFromRegion(waypoint);
             } else {
+                // User waypoint - no country code
                 identifier = waypoint.ident || waypoint.icao || `WPT${index + 1}`;
-                wpType = 'INT';
+                wpType = 'USER WAYPOINT';
+                countryCode = ''; // Country code must be empty for user waypoints
             }
 
-            identifier = identifier.toUpperCase();
+            // Ensure identifier is uppercase and max 12 chars
+            identifier = identifier.toUpperCase().substring(0, 12);
 
-            // Build waypoint entry
-            const waypointXml = `    <waypoint>
+            // Build comment (max 25 chars, alphanumeric/space/slash only)
+            let comment = '';
+            if (waypoint.name) {
+                comment = waypoint.name.substring(0, 25).replace(/[^a-zA-Z0-9 /]/g, '');
+            }
+
+            // Get elevation in feet (convert from meters if needed)
+            let elevationFt = '';
+            if (waypoint.elevation !== undefined && waypoint.elevation !== null) {
+                elevationFt = Math.round(waypoint.elevation);
+            } else if (waypoint.alt !== undefined && waypoint.alt !== null) {
+                elevationFt = Math.round(waypoint.alt);
+            }
+
+            // Build waypoint description
+            let waypointDesc = '';
+            if (waypoint.name) {
+                waypointDesc = `${identifier} - ${waypoint.name}`.substring(0, 50);
+            }
+
+            // Build waypoint entry with all fields
+            let waypointXml = `    <waypoint>
         <identifier>${escapeXml(identifier)}</identifier>
         <type>${wpType}</type>
-        <lat>${waypoint.lat}</lat>
-        <lon>${waypoint.lon}</lon>
-        <altitude-ft></altitude-ft>
-    </waypoint>`;
+        <country-code>${escapeXml(countryCode)}</country-code>
+        <lat>${waypoint.lat.toFixed(6)}</lat>
+        <lon>${waypoint.lon.toFixed(6)}</lon>`;
+
+            if (comment) {
+                waypointXml += `\n        <comment>${escapeXml(comment)}</comment>`;
+            }
+            if (elevationFt !== '') {
+                waypointXml += `\n        <elevation>${elevationFt}</elevation>`;
+            }
+            if (waypointDesc) {
+                waypointXml += `\n        <waypoint-description>${escapeXml(waypointDesc)}</waypoint-description>`;
+            }
+
+            waypointXml += `\n    </waypoint>`;
             waypointEntries.push(waypointXml);
 
-            // Build route point
-            const routePointXml = `    <route-point>
+            // Build route point with country code
+            let routePointXml = `    <route-point>
         <waypoint-identifier>${escapeXml(identifier)}</waypoint-identifier>
-        <waypoint-type>${wpType}</waypoint-type>
-    </route-point>`;
+        <waypoint-type>${wpType}</waypoint-type>`;
+
+            if (countryCode) {
+                routePointXml += `\n        <waypoint-country-code>${escapeXml(countryCode)}</waypoint-country-code>`;
+            }
+
+            routePointXml += `\n    </route-point>`;
             routePoints.push(routePointXml);
         });
 
-        // Build route name from departure and destination
-        const depIcao = flightPlan.departure?.icao || flightPlan.waypoints[0]?.icao || 'DEP';
-        const destIcao = flightPlan.destination?.icao || flightPlan.waypoints[flightPlan.waypoints.length - 1]?.icao || 'DEST';
-        const routeName = `${depIcao} TO ${destIcao}`;
+        // Build file description
+        const fileDesc = options.description || `Flight plan from ${depIcao} to ${destIcao}`;
 
-        // Build complete FPL XML document
+        // Build author section
+        const authorName = options.author || 'IN-FLIGHT';
+
+        // Build complete FPL XML document (Full Garmin FlightPlan v1 spec)
         const fplContent = `<?xml version="1.0" encoding="utf-8"?>
 <flight-plan xmlns="http://www8.garmin.com/xmlschemas/FlightPlan/v1">
-<created>${created}</created>
-<aircraft>
-    <aircraft-tailnumber>${escapeXml(tailnumber)}</aircraft-tailnumber>
-</aircraft>
-<flight-data>
-    <etd-zulu>${etd}</etd-zulu>
-    <altitude-ft>${altitude}</altitude-ft>
-</flight-data>
-<waypoint-table>
-
-${waypointEntries.join('\n    \n')}
-
-</waypoint-table>
-<route>
+  <file-description>${escapeXml(fileDesc)}</file-description>
+  <author>
+    <author-name>${escapeXml(authorName)}</author-name>
+  </author>
+  <created>${created}</created>
+  <waypoint-table>
+${waypointEntries.join('\n')}
+  </waypoint-table>
+  <route>
     <route-name>${escapeXml(routeName)}</route-name>
+    <route-description>${escapeXml(fileDesc)}</route-description>
     <flight-plan-index>1</flight-plan-index>
-
-${routePoints.join('\n    \n')}
-
-</route>
+${routePoints.join('\n')}
+  </route>
 </flight-plan>`;
 
         // Create blob and download
         const blob = new Blob([fplContent], { type: 'application/xml;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
 
-        // Build filename: DEPARTURE_DESTINATION.fpl (ForeFlight convention)
+        // Build filename: DEPARTURE_DESTINATION.fpl (Garmin convention)
         const filename = `${depIcao}_${destIcao}.fpl`;
         const a = document.createElement('a');
         a.href = url;
@@ -657,12 +709,181 @@ ${routePoints.join('\n    \n')}
         a.click();
 
         URL.revokeObjectURL(url);
-        console.log('[FlightState] ForeFlight FPL exported:', filename, `(${waypointEntries.length} waypoints)`);
+        console.log('[FlightState] Garmin FPL exported:', filename, `(${waypointEntries.length} waypoints)`);
         return true;
     } catch (error) {
-        console.error('[FlightState] Failed to export ForeFlight FPL:', error);
+        console.error('[FlightState] Failed to export Garmin FPL:', error);
         return false;
     }
+}
+
+/**
+ * Get country code from ICAO airport code
+ * @param {string} icao - ICAO airport code (e.g., KJFK, EGLL, LFPG)
+ * @returns {string} Two-letter country code or empty string
+ */
+function getCountryCodeFromIcao(icao) {
+    if (!icao || icao.length < 2) return '';
+
+    // ICAO prefix to country code mapping
+    const icaoToCountry = {
+        'K': 'US',   // United States (contiguous)
+        'PA': 'US',  // Alaska
+        'PH': 'US',  // Hawaii
+        'PG': 'US',  // Guam
+        'C': 'CA',   // Canada
+        'E': '',     // Northern Europe (varies)
+        'EG': 'GB',  // United Kingdom
+        'EI': 'IE',  // Ireland
+        'EH': 'NL',  // Netherlands
+        'ED': 'DE',  // Germany (civil)
+        'ET': 'DE',  // Germany (military)
+        'LF': 'FR',  // France
+        'LE': 'ES',  // Spain
+        'LI': 'IT',  // Italy
+        'LP': 'PT',  // Portugal
+        'LO': 'AT',  // Austria
+        'LS': 'CH',  // Switzerland
+        'LZ': 'SK',  // Slovakia
+        'LK': 'CZ',  // Czech Republic
+        'EP': 'PL',  // Poland
+        'EE': 'EE',  // Estonia
+        'EV': 'LV',  // Latvia
+        'EY': 'LT',  // Lithuania
+        'EF': 'FI',  // Finland
+        'ES': 'SE',  // Sweden
+        'EN': 'NO',  // Norway
+        'BI': 'IS',  // Iceland
+        'EK': 'DK',  // Denmark
+        'LH': 'HU',  // Hungary
+        'LR': 'RO',  // Romania
+        'LB': 'BG',  // Bulgaria
+        'LG': 'GR',  // Greece
+        'LT': 'TR',  // Turkey
+        'LL': 'IL',  // Israel
+        'OJ': 'JO',  // Jordan
+        'OE': 'SA',  // Saudi Arabia
+        'OM': 'AE',  // UAE
+        'OO': 'OM',  // Oman
+        'OB': 'BH',  // Bahrain
+        'OK': 'KW',  // Kuwait
+        'OI': 'IR',  // Iran
+        'OP': 'PK',  // Pakistan
+        'VI': 'IN',  // India (North)
+        'VO': 'IN',  // India (South)
+        'VA': 'IN',  // India (West)
+        'VE': 'IN',  // India (East)
+        'VT': 'TH',  // Thailand
+        'VV': 'VN',  // Vietnam
+        'VL': 'LA',  // Laos
+        'VY': 'MM',  // Myanmar
+        'WS': 'SG',  // Singapore
+        'WM': 'MY',  // Malaysia (West)
+        'WB': 'MY',  // Malaysia (East)
+        'WI': 'ID',  // Indonesia
+        'RP': 'PH',  // Philippines
+        'RJ': 'JP',  // Japan (civil)
+        'RO': 'JP',  // Japan (military)
+        'RK': 'KR',  // South Korea
+        'ZK': 'KP',  // North Korea
+        'Z': 'CN',   // China
+        'ZB': 'CN',  // China
+        'ZG': 'CN',  // China
+        'ZH': 'CN',  // China
+        'ZJ': 'CN',  // China
+        'ZL': 'CN',  // China
+        'ZP': 'CN',  // China
+        'ZS': 'CN',  // China
+        'ZU': 'CN',  // China
+        'ZW': 'CN',  // China
+        'ZY': 'CN',  // China
+        'VH': 'HK',  // Hong Kong
+        'VM': 'MO',  // Macau
+        'RC': 'TW',  // Taiwan
+        'U': 'RU',   // Russia
+        'Y': 'AU',   // Australia
+        'NZ': 'NZ',  // New Zealand
+        'S': '',     // South America (varies)
+        'SA': 'AR',  // Argentina
+        'SB': 'BR',  // Brazil
+        'SC': 'CL',  // Chile
+        'SE': 'EC',  // Ecuador
+        'SK': 'CO',  // Colombia
+        'SP': 'PE',  // Peru
+        'SV': 'VE',  // Venezuela
+        'SU': 'UY',  // Uruguay
+        'SG': 'PY',  // Paraguay
+        'SL': 'BO',  // Bolivia
+        'M': '',     // Central America/Caribbean (varies)
+        'MM': 'MX',  // Mexico
+        'MU': 'CU',  // Cuba
+        'MK': 'JM',  // Jamaica
+        'TJ': 'PR',  // Puerto Rico
+        'T': '',     // Caribbean (varies)
+        'TF': 'FR',  // French Caribbean
+        'TN': '',    // Caribbean Netherlands
+        'F': '',     // Africa (varies)
+        'FA': 'ZA',  // South Africa
+        'H': '',     // Africa (varies)
+        'HA': 'ET',  // Ethiopia
+        'HE': 'EG',  // Egypt
+        'DT': 'TN',  // Tunisia
+        'DA': 'DZ',  // Algeria
+        'GM': 'MA',  // Morocco
+    };
+
+    // Try two-letter prefix first, then single letter
+    const twoChar = icao.substring(0, 2).toUpperCase();
+    if (icaoToCountry[twoChar] !== undefined) {
+        return icaoToCountry[twoChar];
+    }
+
+    const oneChar = icao.substring(0, 1).toUpperCase();
+    if (icaoToCountry[oneChar] !== undefined) {
+        return icaoToCountry[oneChar];
+    }
+
+    return '';
+}
+
+/**
+ * Get country code from waypoint region/country data
+ * @param {object} waypoint - Waypoint object with potential region/country info
+ * @returns {string} Two-letter country code or empty string
+ */
+function getCountryCodeFromRegion(waypoint) {
+    // Check for explicit country code
+    if (waypoint.countryCode) return waypoint.countryCode;
+    if (waypoint.country) {
+        // If it's already a 2-letter code, use it
+        if (waypoint.country.length === 2) return waypoint.country.toUpperCase();
+    }
+
+    // Try to infer from region or location
+    if (waypoint.region) {
+        // Common region to country mappings
+        const regionToCountry = {
+            'K1': 'US', 'K2': 'US', 'K3': 'US', 'K4': 'US', 'K5': 'US', 'K6': 'US', 'K7': 'US',
+            'US': 'US', 'USA': 'US',
+            'CA': 'CA', 'CAN': 'CA',
+            'UK': 'GB', 'GB': 'GB',
+            'EU': '', // Europe varies
+        };
+        if (regionToCountry[waypoint.region]) {
+            return regionToCountry[waypoint.region];
+        }
+    }
+
+    // For navaids, try to determine from lat/lon (rough US detection)
+    if (waypoint.lat !== undefined && waypoint.lon !== undefined) {
+        // Very rough US bounds check (contiguous US)
+        if (waypoint.lat >= 24 && waypoint.lat <= 50 &&
+            waypoint.lon >= -125 && waypoint.lon <= -66) {
+            return 'US';
+        }
+    }
+
+    return '';
 }
 
 /**
@@ -681,7 +902,8 @@ function escapeXml(str) {
 }
 
 /**
- * Import flight plan from ForeFlight .fpl (Garmin XML) file
+ * Import flight plan from Garmin .fpl (Garmin XML) file
+ * Supports full Garmin FlightPlan v1 specification
  * @param {File} file - File object from file input
  * @returns {Promise<object>} Parsed navlog data
  */
@@ -692,123 +914,11 @@ function importFromForeFlightFPL(file) {
         reader.onload = (e) => {
             try {
                 const xmlString = e.target.result;
-                const parser = new DOMParser();
-                const xmlDoc = parser.parseFromString(xmlString, 'text/xml');
-
-                // Check for parse errors
-                const parseError = xmlDoc.querySelector('parsererror');
-                if (parseError) {
-                    throw new Error('Invalid XML format');
-                }
-
-                // Extract flight plan data
-                const flightPlanEl = xmlDoc.querySelector('flight-plan');
-                if (!flightPlanEl) {
-                    throw new Error('No flight-plan element found');
-                }
-
-                // Get altitude
-                const altitudeEl = xmlDoc.querySelector('flight-data > altitude-ft');
-                const altitude = altitudeEl ? parseInt(altitudeEl.textContent, 10) || 5000 : 5000;
-
-                // Get tailnumber
-                const tailnumberEl = xmlDoc.querySelector('aircraft > aircraft-tailnumber');
-                const tailnumber = tailnumberEl ? tailnumberEl.textContent.trim() : '';
-
-                // Get route name
-                const routeNameEl = xmlDoc.querySelector('route > route-name');
-                const routeName = routeNameEl ? routeNameEl.textContent.trim() : '';
-
-                // Parse waypoint table
-                const waypointEls = xmlDoc.querySelectorAll('waypoint-table > waypoint');
-                const waypointMap = new Map();
-
-                waypointEls.forEach(wpEl => {
-                    const identifier = wpEl.querySelector('identifier')?.textContent?.trim() || '';
-                    const type = wpEl.querySelector('type')?.textContent?.trim() || 'USER WAYPOINT';
-                    const lat = parseFloat(wpEl.querySelector('lat')?.textContent || 0);
-                    const lon = parseFloat(wpEl.querySelector('lon')?.textContent || 0);
-                    const wpAltitude = wpEl.querySelector('altitude-ft')?.textContent?.trim();
-
-                    if (identifier && !isNaN(lat) && !isNaN(lon)) {
-                        waypointMap.set(identifier, {
-                            ident: identifier,
-                            lat,
-                            lon,
-                            type: type,
-                            waypointType: mapFplTypeToWaypointType(type),
-                            altitude: wpAltitude ? parseInt(wpAltitude, 10) : null
-                        });
-                    }
-                });
-
-                // Parse route to get ordered waypoints
-                const routePointEls = xmlDoc.querySelectorAll('route > route-point');
-                const waypoints = [];
-                const routeParts = [];
-
-                routePointEls.forEach(rpEl => {
-                    const identifier = rpEl.querySelector('waypoint-identifier')?.textContent?.trim() || '';
-                    if (identifier && waypointMap.has(identifier)) {
-                        const wp = waypointMap.get(identifier);
-                        // Set icao for airports
-                        if (wp.waypointType === 'airport') {
-                            wp.icao = identifier;
-                        }
-                        waypoints.push(wp);
-                        routeParts.push(identifier);
-                    }
-                });
-
-                if (waypoints.length < 2) {
-                    throw new Error('Flight plan must have at least 2 waypoints');
-                }
-
-                // Build route string
-                const routeString = routeParts.join(' ');
-
-                // Extract departure and destination
-                const departure = waypoints[0];
-                const destination = waypoints[waypoints.length - 1];
-
-                // Build legs (distances will be 0 - need to be calculated by route service)
-                const legs = [];
-                for (let i = 0; i < waypoints.length - 1; i++) {
-                    legs.push({
-                        from: waypoints[i],
-                        to: waypoints[i + 1],
-                        distance: 0,
-                        bearing: 0
-                    });
-                }
-
-                // Build route middle (everything except departure and destination)
-                const routeMiddle = routeParts.length > 2 ? routeParts.slice(1, -1).join(' ') : '';
-
-                const navlogData = {
-                    routeString,
-                    departure,
-                    destination,
-                    routeMiddle,
-                    waypoints,
-                    legs,
-                    totalDistance: 0,
-                    totalTime: 0,
-                    fuelStatus: null,
-                    options: {
-                        tailnumber,
-                        importedFrom: 'ForeFlight FPL'
-                    },
-                    altitude,
-                    tas: null,
-                    windData: null,
-                    windMetadata: null
-                };
-
-                console.log('[FlightState] ForeFlight FPL imported:', routeString);
+                const navlogData = parseFplXml(xmlString);
+                console.log('[FlightState] Garmin FPL imported:', navlogData.routeString);
                 resolve(navlogData);
             } catch (error) {
-                console.error('[FlightState] Failed to parse ForeFlight FPL:', error);
+                console.error('[FlightState] Failed to parse Garmin FPL:', error);
                 reject(error);
             }
         };
@@ -822,8 +932,197 @@ function importFromForeFlightFPL(file) {
 }
 
 /**
+ * Parse FPL XML string into navlog data structure
+ * Exported for testing purposes
+ * @param {string} xmlString - FPL XML content
+ * @returns {object} Parsed navlog data
+ */
+function parseFplXml(xmlString) {
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(xmlString, 'text/xml');
+
+    // Check for parse errors
+    const parseError = xmlDoc.querySelector('parsererror');
+    if (parseError) {
+        throw new Error('Invalid XML format');
+    }
+
+    // Extract flight plan data
+    const flightPlanEl = xmlDoc.querySelector('flight-plan');
+    if (!flightPlanEl) {
+        throw new Error('No flight-plan element found');
+    }
+
+    // Get file metadata
+    const fileDescEl = xmlDoc.querySelector('file-description');
+    const fileDescription = fileDescEl ? fileDescEl.textContent.trim() : '';
+
+    const authorNameEl = xmlDoc.querySelector('author > author-name');
+    const authorName = authorNameEl ? authorNameEl.textContent.trim() : '';
+
+    const createdEl = xmlDoc.querySelector('created');
+    const created = createdEl ? createdEl.textContent.trim() : '';
+
+    // Get altitude (check multiple locations)
+    let altitude = 5000; // default
+    const altitudeEl = xmlDoc.querySelector('flight-data > altitude-ft');
+    if (altitudeEl && altitudeEl.textContent.trim()) {
+        altitude = parseInt(altitudeEl.textContent, 10) || 5000;
+    }
+
+    // Get tailnumber
+    const tailnumberEl = xmlDoc.querySelector('aircraft > aircraft-tailnumber');
+    const tailnumber = tailnumberEl ? tailnumberEl.textContent.trim() : '';
+
+    // Get route name and description
+    const routeNameEl = xmlDoc.querySelector('route > route-name');
+    const routeName = routeNameEl ? routeNameEl.textContent.trim() : '';
+
+    const routeDescEl = xmlDoc.querySelector('route > route-description');
+    const routeDescription = routeDescEl ? routeDescEl.textContent.trim() : '';
+
+    // Get flight plan index
+    const fplIndexEl = xmlDoc.querySelector('route > flight-plan-index');
+    const flightPlanIndex = fplIndexEl ? parseInt(fplIndexEl.textContent, 10) || 1 : 1;
+
+    // Parse waypoint table with full spec support
+    const waypointEls = xmlDoc.querySelectorAll('waypoint-table > waypoint');
+    const waypointMap = new Map();
+
+    waypointEls.forEach(wpEl => {
+        const identifier = wpEl.querySelector('identifier')?.textContent?.trim() || '';
+        const type = wpEl.querySelector('type')?.textContent?.trim() || 'USER WAYPOINT';
+        const countryCode = wpEl.querySelector('country-code')?.textContent?.trim() || '';
+        const lat = parseFloat(wpEl.querySelector('lat')?.textContent || 0);
+        const lon = parseFloat(wpEl.querySelector('lon')?.textContent || 0);
+
+        // Parse optional fields
+        const commentEl = wpEl.querySelector('comment');
+        const comment = commentEl ? commentEl.textContent.trim() : '';
+
+        const elevationEl = wpEl.querySelector('elevation');
+        const elevation = elevationEl && elevationEl.textContent.trim() ?
+            parseInt(elevationEl.textContent, 10) : null;
+
+        const altFtEl = wpEl.querySelector('altitude-ft');
+        const altitudeFt = altFtEl && altFtEl.textContent.trim() ?
+            parseInt(altFtEl.textContent, 10) : null;
+
+        const waypointDescEl = wpEl.querySelector('waypoint-description');
+        const waypointDescription = waypointDescEl ? waypointDescEl.textContent.trim() : '';
+
+        if (identifier && !isNaN(lat) && !isNaN(lon)) {
+            // Create unique key for waypoints (identifier + type + country)
+            const key = `${identifier}|${type}|${countryCode}`;
+
+            const waypoint = {
+                ident: identifier,
+                lat,
+                lon,
+                type: type,
+                waypointType: mapFplTypeToWaypointType(type),
+                countryCode: countryCode,
+                comment: comment,
+                elevation: elevation,
+                altitude: altitudeFt,
+                description: waypointDescription,
+                // Extract name from comment or description
+                name: comment || (waypointDescription ? waypointDescription.replace(`${identifier} - `, '') : '')
+            };
+
+            // Store with both simple key and full key for flexible lookup
+            waypointMap.set(identifier, waypoint);
+            waypointMap.set(key, waypoint);
+        }
+    });
+
+    // Parse route to get ordered waypoints
+    const routePointEls = xmlDoc.querySelectorAll('route > route-point');
+    const waypoints = [];
+    const routeParts = [];
+
+    routePointEls.forEach(rpEl => {
+        const identifier = rpEl.querySelector('waypoint-identifier')?.textContent?.trim() || '';
+        const rpType = rpEl.querySelector('waypoint-type')?.textContent?.trim() || '';
+        const rpCountryCode = rpEl.querySelector('waypoint-country-code')?.textContent?.trim() || '';
+
+        // Try to find waypoint by full key first, then by identifier
+        const fullKey = `${identifier}|${rpType}|${rpCountryCode}`;
+        let wp = waypointMap.get(fullKey);
+
+        if (!wp) {
+            wp = waypointMap.get(identifier);
+        }
+
+        if (identifier && wp) {
+            // Clone to avoid modifying the map entry
+            const waypointCopy = { ...wp };
+
+            // Set icao for airports
+            if (waypointCopy.waypointType === 'airport') {
+                waypointCopy.icao = identifier;
+            }
+
+            waypoints.push(waypointCopy);
+            routeParts.push(identifier);
+        }
+    });
+
+    if (waypoints.length < 2) {
+        throw new Error('Flight plan must have at least 2 waypoints');
+    }
+
+    // Build route string
+    const routeString = routeParts.join(' ');
+
+    // Extract departure and destination
+    const departure = waypoints[0];
+    const destination = waypoints[waypoints.length - 1];
+
+    // Build legs (distances will be 0 - need to be calculated by route service)
+    const legs = [];
+    for (let i = 0; i < waypoints.length - 1; i++) {
+        legs.push({
+            from: waypoints[i],
+            to: waypoints[i + 1],
+            distance: 0,
+            bearing: 0
+        });
+    }
+
+    // Build route middle (everything except departure and destination)
+    const routeMiddle = routeParts.length > 2 ? routeParts.slice(1, -1).join(' ') : '';
+
+    return {
+        routeString,
+        departure,
+        destination,
+        routeMiddle,
+        waypoints,
+        legs,
+        totalDistance: 0,
+        totalTime: 0,
+        fuelStatus: null,
+        options: {
+            tailnumber,
+            importedFrom: 'Garmin FPL',
+            fileDescription,
+            authorName,
+            created,
+            routeName,
+            routeDescription,
+            flightPlanIndex
+        },
+        altitude,
+        tas: null,
+        windData: null,
+        windMetadata: null
+    };
+}
+
+/**
  * Map FPL waypoint type to IN-FLIGHT waypointType
- * @param {string} fplType - FPL type (AIRPORT, VOR, NDB, INT, USER WAYPOINT)
+ * @param {string} fplType - FPL type (AIRPORT, VOR, NDB, INT, INT-VRP, USER WAYPOINT)
  * @returns {string} IN-FLIGHT waypointType
  */
 function mapFplTypeToWaypointType(fplType) {
@@ -832,6 +1131,7 @@ function mapFplTypeToWaypointType(fplType) {
         'VOR': 'vor',
         'NDB': 'ndb',
         'INT': 'fix',
+        'INT-VRP': 'vrp',
         'USER WAYPOINT': 'fix'
     };
     return typeMap[fplType] || 'fix';
@@ -1030,6 +1330,12 @@ window.FlightState = {
     exportToForeFlightFPL,
     importFromFile,
     importFromForeFlightFPL,
+
+    // FPL utilities (exported for testing)
+    parseFplXml,
+    getCountryCodeFromIcao,
+    getCountryCodeFromRegion,
+    mapFplTypeToWaypointType,
 
     // Clipboard
     copyToClipboard,
