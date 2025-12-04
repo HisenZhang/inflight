@@ -592,7 +592,8 @@ function exportToForeFlightFPL(options = {}) {
                 wpType = 'AIRPORT';
                 // Extract country code from ICAO (first 1-2 chars for most countries)
                 countryCode = getCountryCodeFromIcao(identifier);
-            } else if (waypoint.waypointType === 'vor' || waypoint.type === 'VOR') {
+            } else if (waypoint.waypointType === 'vor' || (waypoint.type && (waypoint.type.includes('VOR') || waypoint.type === 'VORTAC' || waypoint.type === 'TACAN' || waypoint.type === 'DME'))) {
+                // VOR-type navaids: VOR, VOR-DME, VORTAC, TACAN, DME all export as Garmin type "VOR"
                 identifier = waypoint.ident || waypoint.icao || `WPT${index + 1}`;
                 wpType = 'VOR';
                 countryCode = waypoint.countryCode || getCountryCodeFromRegion(waypoint);

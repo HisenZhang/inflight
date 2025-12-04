@@ -1045,30 +1045,32 @@ function setupExportDropdown() {
 }
 
 function setupImportDropdown() {
-    const importSelect = document.getElementById('importNavlogSelect');
+    const formatSelect = document.getElementById('importFormatSelect');
     const fileInput = document.getElementById('importNavlogInput');
 
-    if (!importSelect || !fileInput) return;
+    if (!formatSelect || !fileInput) return;
 
-    importSelect.addEventListener('change', (e) => {
-        const format = e.target.value;
-        if (format) {
-            // Trigger file input with correct accept type
-            if (format === 'json') {
-                fileInput.accept = '.json';
-            } else if (format === 'fpl') {
-                fileInput.accept = '.fpl';
-            }
-            // Store the selected format for use in handleImportFile
-            fileInput.dataset.format = format;
-            fileInput.click();
-            // Reset to default option
-            e.target.value = '';
+    // Update file input accept attribute when format changes
+    formatSelect.addEventListener('change', () => {
+        const format = formatSelect.value;
+        if (format === 'json') {
+            fileInput.accept = '.json';
+        } else if (format === 'fpl') {
+            fileInput.accept = '.fpl';
         }
     });
 
-    // Handle file selection
-    fileInput.addEventListener('change', handleImportFile);
+    // Set initial accept based on default selection
+    fileInput.accept = formatSelect.value === 'fpl' ? '.fpl' : '.json';
+
+    // Handle file selection - the label element triggers the file input directly
+    // This works on iOS because clicking a <label for="input"> is a direct user gesture
+    fileInput.addEventListener('change', (event) => {
+        // Get format from the select element
+        const format = formatSelect.value;
+        event.target.dataset.format = format;
+        handleImportFile(event);
+    });
 }
 
 function handleExportFormat(format) {
