@@ -282,7 +282,9 @@ header {
 
 .navlog-actions {
     display: flex;
+    flex-wrap: wrap;
     gap: 4px;
+    margin-bottom: 0.5rem;
 }
 
 .navlog-actions select {

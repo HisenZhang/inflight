@@ -195,8 +195,6 @@
 
         <!-- Input Section -->
         <div class="input-section" style="display: none;">
-            <h2 class="font-bold text-primary">ROUTE ENTRY</h2>
-
             <!-- ICAO-Style Route Input (Required) -->
             <div class="route-input-icao">
                 <!-- Departure Airport -->
@@ -417,23 +415,20 @@
 
         <!-- Tab: Navlog -->
         <div class="tab-content" id="tab-navlog">
-        <!-- Navlog header and action bar - always visible -->
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-            <h2 class="font-bold text-primary">NAVIGATION LOG</h2>
-            <div class="navlog-actions">
-                <button id="printNavlogBtn" class="btn btn-secondary btn-sm" onclick="window.print()" disabled>PRINT</button>
-                <select id="exportNavlogSelect" class="btn btn-secondary btn-sm" disabled>
-                    <option value="">EXPORT</option>
-                    <option value="json">IN-FLIGHT (.json)</option>
-                    <option value="fpl">Garmin FPL (.fpl)</option>
-                    <option value="csv">ForeFlight CSV (.csv)</option>
-                    <option value="kml">ForeFlight KML (.kml)</option>
-                </select>
-                <label for="importNavlogInput" class="btn btn-secondary btn-sm" style="cursor: pointer; margin: 0;">IMPORT</label>
-                <input type="file" id="importNavlogInput" accept=".json,.fpl" style="display: none;">
-                <button id="pasteNavlogBtn" class="btn btn-secondary btn-sm" title="Paste from clipboard">PASTE</button>
-                <button id="copyNavlogBtn" class="btn btn-secondary btn-sm" title="Copy to clipboard" disabled>COPY</button>
-            </div>
+        <!-- Navlog action bar - always visible -->
+        <div class="navlog-actions">
+            <button id="printNavlogBtn" class="btn btn-secondary btn-sm" onclick="window.print()" disabled>PRINT</button>
+            <select id="exportNavlogSelect" class="btn btn-secondary btn-sm" disabled>
+                <option value="">EXPORT</option>
+                <option value="json">IN-FLIGHT (.json)</option>
+                <option value="fpl">Garmin FPL (.fpl)</option>
+                <option value="csv">ForeFlight CSV (.csv)</option>
+                <option value="kml">ForeFlight KML (.kml)</option>
+            </select>
+            <label for="importNavlogInput" class="btn btn-secondary btn-sm" style="cursor: pointer; margin: 0;">IMPORT</label>
+            <input type="file" id="importNavlogInput" accept=".json,.fpl" style="display: none;">
+            <button id="pasteNavlogBtn" class="btn btn-secondary btn-sm" title="Paste from clipboard">PASTE</button>
+            <button id="copyNavlogBtn" class="btn btn-secondary btn-sm" title="Copy to clipboard" disabled>COPY</button>
         </div>
 
         <!-- Placeholder when no route calculated -->
@@ -1290,8 +1285,6 @@
         <!-- Tab: Stats -->
         <div class="tab-content" id="tab-stats">
             <div class="stats-section">
-                <h2 class="font-bold text-primary">FLIGHT STATISTICS</h2>
-
                 <!-- Flight Status (Most Important) -->
                 <div class="stats-card">
                     <div class="stat-item-large">

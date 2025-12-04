@@ -25,7 +25,7 @@ const AppVersion = {
     // Semantic version (sync with package.json)
     MAJOR: 3,
     MINOR: 3,
-    PATCH: 4,
+    PATCH: 6,
 
     // Full version string
     get VERSION() {
@@ -34,7 +34,7 @@ const AppVersion = {
 
     // Service worker cache version
     // Increment this number to force PWA updates
-    CACHE_VERSION: 153,
+    CACHE_VERSION: 155,
 
     // Full cache name for service worker
     get CACHE_NAME() {
@@ -45,7 +45,7 @@ const AppVersion = {
     BUILD_DATE: '2025-12-04',
 
     // Release name (optional)
-    RELEASE_NAME: 'Fix FPL import validation and navlog display',
+    RELEASE_NAME: 'Remove redundant tab headers, fix action bar overflow',
 
     /**
      * Get full version info object
