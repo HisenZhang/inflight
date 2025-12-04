@@ -1080,14 +1080,43 @@ function parseFplXml(xmlString) {
     const departure = waypoints[0];
     const destination = waypoints[waypoints.length - 1];
 
-    // Build legs (distances will be 0 - need to be calculated by route service)
+    // Build legs with calculated distances and bearings from waypoint coordinates
     const legs = [];
+    let totalDistance = 0;
     for (let i = 0; i < waypoints.length - 1; i++) {
+        const from = waypoints[i];
+        const to = waypoints[i + 1];
+
+        // Calculate distance, bearing, and magnetic heading from coordinates
+        // Use RouteCalculator functions (available globally at runtime)
+        let distance = 0;
+        let trueCourse = 0;
+        let magHeading = null;
+
+        if (window.RouteCalculator && from.lat && from.lon && to.lat && to.lon) {
+            distance = window.RouteCalculator.calculateDistance(from.lat, from.lon, to.lat, to.lon);
+            trueCourse = window.RouteCalculator.calculateBearing(from.lat, from.lon, to.lat, to.lon);
+
+            // Calculate magnetic heading (trueCourse - magnetic variation)
+            // No wind correction applied - that requires full route calculation
+            const magVar = window.RouteCalculator.getMagneticDeclination(from.lat, from.lon);
+            if (magVar !== null) {
+                magHeading = trueCourse - magVar;
+                // Normalize to 0-360
+                if (magHeading < 0) magHeading += 360;
+                if (magHeading >= 360) magHeading -= 360;
+            }
+        }
+
+        totalDistance += distance;
+
         legs.push({
-            from: waypoints[i],
-            to: waypoints[i + 1],
-            distance: 0,
-            bearing: 0
+            from,
+            to,
+            distance,
+            trueCourse,
+            bearing: trueCourse, // Alias for compatibility
+            magHeading // Will be null if mag var unavailable
         });
     }
 
@@ -1101,7 +1130,7 @@ function parseFplXml(xmlString) {
         routeMiddle,
         waypoints,
         legs,
-        totalDistance: 0,
+        totalDistance,
         totalTime: 0,
         fuelStatus: null,
         options: {

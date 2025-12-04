@@ -1140,7 +1140,19 @@ function validateImportedWaypoints(waypoints) {
             if (airport) found = true;
         }
 
-        // Check navaids and fixes via QueryEngine
+        // Check navaids directly via DataManager
+        if (!found && window.DataManager?.getNavaid) {
+            const navaid = window.DataManager.getNavaid(ident);
+            if (navaid) found = true;
+        }
+
+        // Check fixes directly via DataManager
+        if (!found && window.DataManager?.getFix) {
+            const fix = window.DataManager.getFix(ident);
+            if (fix) found = true;
+        }
+
+        // Check navaids and fixes via QueryEngine (fallback)
         if (!found && window.QueryEngine?.getTokenType) {
             const tokenType = window.QueryEngine.getTokenType(ident);
             if (tokenType) found = true;
