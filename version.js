@@ -25,7 +25,7 @@ const AppVersion = {
     // Semantic version (sync with package.json)
     MAJOR: 3,
     MINOR: 3,
-    PATCH: 2,
+    PATCH: 3,
 
     // Full version string
     get VERSION() {
@@ -34,7 +34,7 @@ const AppVersion = {
 
     // Service worker cache version
     // Increment this number to force PWA updates
-    CACHE_VERSION: 151,
+    CACHE_VERSION: 152,
 
     // Full cache name for service worker
     get CACHE_NAME() {
@@ -45,7 +45,7 @@ const AppVersion = {
     BUILD_DATE: '2025-12-04',
 
     // Release name (optional)
-    RELEASE_NAME: 'Improve navlog import UX with smart format detection',
+    RELEASE_NAME: 'Auto-recalculate FPL imports and persistent navlog buttons',
 
     /**
      * Get full version info object

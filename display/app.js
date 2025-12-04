@@ -1223,13 +1223,24 @@ async function handleImportFile(event) {
             message += `\n\nWARNING: ${unknownWaypoints.length} waypoint(s) not in database:\n${unknownWaypoints.join(', ')}`;
         }
 
+        // Check if TAS and altitude are set for auto-recalculation
+        const elements = UIController.getElements();
+        const tasValue = parseFloat(elements.tasInput.value);
+        const altitudeValue = parseFloat(elements.altitudeInput.value);
+        const canAutoRecalc = !isNaN(tasValue) && tasValue > 0 && !isNaN(altitudeValue) && altitudeValue >= 0;
+
+        // For FPL imports, tell user what will happen
         if (format === 'fpl') {
-            message += '\n\nNote: Click GO to recalculate distances and times.';
+            if (canAutoRecalc) {
+                message += '\n\nRoute will be recalculated automatically.';
+            } else {
+                message += '\n\nNote: Set TAS and altitude in ROUTE tab, then click CALCULATE.';
+            }
         }
 
         alert(message);
 
-        // Restore the navlog
+        // Restore the navlog (populates route input fields)
         UIController.restoreNavlog(navlogData);
 
         // Store as current
@@ -1238,6 +1249,17 @@ async function handleImportFile(event) {
         // Update flight plan and save for crash recovery
         window.FlightState.updateFlightPlan(navlogData);
         window.FlightState.saveToStorage();
+
+        // For FPL imports, auto-recalculate to compute distances/times if possible
+        if (format === 'fpl' && canAutoRecalc) {
+            console.log('[App] Auto-recalculating FPL import...');
+            try {
+                await handleCalculateRoute();
+            } catch (calcError) {
+                console.warn('[App] Auto-recalculation failed:', calcError.message);
+                // Route is still imported, user can manually recalculate
+            }
+        }
 
     } catch (error) {
         console.error('Import error:', error);

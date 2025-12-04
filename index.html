@@ -417,37 +417,36 @@
 
         <!-- Tab: Navlog -->
         <div class="tab-content" id="tab-navlog">
+        <!-- Navlog header and action bar - always visible -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <h2 class="font-bold text-primary">NAVIGATION LOG</h2>
+            <div class="navlog-actions">
+                <button id="printNavlogBtn" class="btn btn-secondary btn-sm" onclick="window.print()" disabled>PRINT</button>
+                <select id="exportNavlogSelect" class="btn btn-secondary btn-sm" disabled>
+                    <option value="">EXPORT</option>
+                    <option value="json">IN-FLIGHT (.json)</option>
+                    <option value="fpl">Garmin FPL (.fpl)</option>
+                    <option value="csv">ForeFlight CSV (.csv)</option>
+                    <option value="kml">ForeFlight KML (.kml)</option>
+                </select>
+                <label for="importNavlogInput" class="btn btn-secondary btn-sm" style="cursor: pointer; margin: 0;">IMPORT</label>
+                <input type="file" id="importNavlogInput" accept=".json,.fpl" style="display: none;">
+                <button id="pasteNavlogBtn" class="btn btn-secondary btn-sm" title="Paste from clipboard">PASTE</button>
+                <button id="copyNavlogBtn" class="btn btn-secondary btn-sm" title="Copy to clipboard" disabled>COPY</button>
+            </div>
+        </div>
+
         <!-- Placeholder when no route calculated -->
-        <div id="navlogPlaceholder" class="welcome-brief">
-            <h2 class="font-bold text-primary" style="font-size: 1.5rem; letter-spacing: 4px; margin-bottom: 1rem;">NAVIGATION LOG</h2>
+        <div id="navlogPlaceholder" class="welcome-brief" style="padding-top: 2rem;">
             <div class="welcome-info" style="max-width: 500px; margin: 0 auto 1.5rem auto;">
                 <p>The navigation log displays your calculated flight plan with detailed leg-by-leg information.</p>
                 <p style="margin-bottom: 0;"><strong>Includes:</strong> Waypoints • Courses • Distances • Time estimates • Wind correction • Fuel calculations</p>
             </div>
-            <p class="text-secondary" style="font-size: 0.75rem; margin-bottom: 1rem;">Calculate a route in the ROUTE tab, or load a saved flight plan:</p>
-            <div class="navlog-import-actions">
-                <label for="importNavlogInput" class="btn btn-secondary btn-sm" style="cursor: pointer; margin: 0;">IMPORT</label>
-                <input type="file" id="importNavlogInput" accept=".json,.fpl" style="display: none;">
-                <button id="pasteNavlogBtn" class="btn btn-secondary btn-sm" title="Paste from clipboard">PASTE</button>
-            </div>
+            <p class="text-secondary" style="font-size: 0.75rem; margin-bottom: 0;">Calculate a route in the ROUTE tab, or click IMPORT to load a saved flight plan.</p>
         </div>
 
         <!-- Results Section -->
         <div id="resultsSection" class="results-section" style="display: none;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                <h2 class="font-bold text-primary">NAVIGATION LOG</h2>
-                <div class="navlog-actions">
-                    <button id="printNavlogBtn" class="btn btn-secondary btn-sm" onclick="window.print()">PRINT</button>
-                    <select id="exportNavlogSelect" class="btn btn-secondary btn-sm">
-                        <option value="">EXPORT</option>
-                        <option value="json">IN-FLIGHT (.json)</option>
-                        <option value="fpl">Garmin FPL (.fpl)</option>
-                        <option value="csv">ForeFlight CSV (.csv)</option>
-                        <option value="kml">ForeFlight KML (.kml)</option>
-                    </select>
-                    <button id="copyNavlogBtn" class="btn btn-secondary btn-sm" title="Copy to clipboard">COPY</button>
-                </div>
-            </div>
             <div id="routeSummary" class="route-summary"></div>
 
             <!-- Wind Altitude Table (shown when wind correction enabled) -->
