@@ -1116,64 +1116,186 @@ function handleExportFormat(format) {
 }
 
 /**
+ * Convert decimal degrees to FAA coordinate format (DDMM/DDDMM with hemisphere)
+ * @param {number} lat - Latitude in decimal degrees
+ * @param {number} lon - Longitude in decimal degrees
+ * @returns {string} FAA format coordinate (e.g., "4814N/06848W")
+ */
+function decimalToFaaCoord(lat, lon) {
+    // Latitude: DDMM format
+    const latHemi = lat >= 0 ? 'N' : 'S';
+    const latAbs = Math.abs(lat);
+    const latDeg = Math.floor(latAbs);
+    const latMin = Math.round((latAbs - latDeg) * 60);
+    // Handle edge case where minutes round to 60
+    const latDegFinal = latMin === 60 ? latDeg + 1 : latDeg;
+    const latMinFinal = latMin === 60 ? 0 : latMin;
+    const latStr = String(latDegFinal).padStart(2, '0') + String(latMinFinal).padStart(2, '0');
+
+    // Longitude: DDDMM format
+    const lonHemi = lon >= 0 ? 'E' : 'W';
+    const lonAbs = Math.abs(lon);
+    const lonDeg = Math.floor(lonAbs);
+    const lonMin = Math.round((lonAbs - lonDeg) * 60);
+    // Handle edge case where minutes round to 60
+    const lonDegFinal = lonMin === 60 ? lonDeg + 1 : lonDeg;
+    const lonMinFinal = lonMin === 60 ? 0 : lonMin;
+    const lonStr = String(lonDegFinal).padStart(3, '0') + String(lonMinFinal).padStart(2, '0');
+
+    return `${latStr}${latHemi}/${lonStr}${lonHemi}`;
+}
+
+/**
+ * Calculate distance between two coordinates in nautical miles
+ * Uses simple spherical approximation for small distances
+ * @param {number} lat1 - Latitude 1 in decimal degrees
+ * @param {number} lon1 - Longitude 1 in decimal degrees
+ * @param {number} lat2 - Latitude 2 in decimal degrees
+ * @param {number} lon2 - Longitude 2 in decimal degrees
+ * @returns {number} Distance in nautical miles
+ */
+function simpleDistanceNm(lat1, lon1, lat2, lon2) {
+    const R = 3440.065; // Earth radius in nautical miles
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+}
+
+/**
+ * Look up a waypoint in the database and return it if found
+ * @param {string} ident - Waypoint identifier
+ * @returns {object|null} Waypoint object or null if not found
+ */
+function lookupWaypointInDatabase(ident) {
+    // Check airports
+    if (window.DataManager?.getAirport) {
+        const airport = window.DataManager.getAirport(ident);
+        if (airport) return airport;
+    }
+
+    // Check navaids directly via DataManager
+    if (window.DataManager?.getNavaid) {
+        const navaid = window.DataManager.getNavaid(ident);
+        if (navaid) return navaid;
+    }
+
+    // Check fixes directly via DataManager
+    if (window.DataManager?.getFix) {
+        const fix = window.DataManager.getFix(ident);
+        if (fix) return fix;
+    }
+
+    // Check navaids and fixes via QueryEngine (fallback)
+    if (window.QueryEngine?.getWaypointByIdent) {
+        const waypoint = window.QueryEngine.getWaypointByIdent(ident);
+        if (waypoint) return waypoint;
+    }
+
+    // Check via App's queryEngine (v3 architecture)
+    if (window.App?.queryEngine?.getWaypoint) {
+        const waypoint = window.App.queryEngine.getWaypoint(ident);
+        if (waypoint) return waypoint;
+    }
+
+    return null;
+}
+
+/**
  * Validate imported waypoints against database
- * @param {Array} waypoints - Array of waypoint objects
- * @returns {Array} Array of waypoint identifiers not found in database
+ * Returns unknown waypoints and coordinate mismatches
+ * @param {Array} waypoints - Array of waypoint objects with ident, lat, lon
+ * @returns {object} { unknown: [...], mismatches: [...] }
+ *   - unknown: Array of {ident, lat, lon} for waypoints not in database
+ *   - mismatches: Array of {ident, fplLat, fplLon, dbLat, dbLon, distanceNm} for coordinate disagreements
  */
 function validateImportedWaypoints(waypoints) {
     const unknown = [];
+    const mismatches = [];
+    const MISMATCH_THRESHOLD_NM = 1.0; // Warn if coordinates differ by more than 1 nm
 
     if (!waypoints || !Array.isArray(waypoints)) {
-        return unknown;
+        return { unknown: [], mismatches: [] };
     }
 
     for (const wp of waypoints) {
         const ident = wp.ident || wp.icao || '';
         if (!ident) continue;
 
-        // Check if waypoint exists in database
-        let found = false;
-
-        // Check airports
-        if (window.DataManager?.getAirport) {
-            const airport = window.DataManager.getAirport(ident);
-            if (airport) found = true;
+        // Skip coordinate waypoints (already in lat/lon format)
+        if (wp.waypointType === 'coordinate' || wp.type === 'COORDINATE') {
+            continue;
         }
 
-        // Check navaids directly via DataManager
-        if (!found && window.DataManager?.getNavaid) {
-            const navaid = window.DataManager.getNavaid(ident);
-            if (navaid) found = true;
-        }
+        const dbWaypoint = lookupWaypointInDatabase(ident);
 
-        // Check fixes directly via DataManager
-        if (!found && window.DataManager?.getFix) {
-            const fix = window.DataManager.getFix(ident);
-            if (fix) found = true;
-        }
-
-        // Check navaids and fixes via QueryEngine (fallback)
-        if (!found && window.QueryEngine?.getTokenType) {
-            const tokenType = window.QueryEngine.getTokenType(ident);
-            if (tokenType) found = true;
-        }
-
-        // Check via App's queryEngine (v3 architecture)
-        if (!found && window.App?.queryEngine?.getWaypoint) {
-            const waypoint = window.App.queryEngine.getWaypoint(ident);
-            if (waypoint) found = true;
-        }
-
-        if (!found) {
-            unknown.push(ident);
+        if (!dbWaypoint) {
+            // Waypoint not in database - store with coordinates for substitution
+            if (wp.lat !== undefined && wp.lon !== undefined) {
+                unknown.push({
+                    ident,
+                    lat: wp.lat,
+                    lon: wp.lon
+                });
+            } else {
+                unknown.push({ ident, lat: null, lon: null });
+            }
+        } else {
+            // Waypoint found in database - check coordinate agreement
+            if (wp.lat !== undefined && wp.lon !== undefined &&
+                dbWaypoint.lat !== undefined && dbWaypoint.lon !== undefined) {
+                const distanceNm = simpleDistanceNm(wp.lat, wp.lon, dbWaypoint.lat, dbWaypoint.lon);
+                if (distanceNm > MISMATCH_THRESHOLD_NM) {
+                    mismatches.push({
+                        ident,
+                        fplLat: wp.lat,
+                        fplLon: wp.lon,
+                        dbLat: dbWaypoint.lat,
+                        dbLon: dbWaypoint.lon,
+                        distanceNm: distanceNm.toFixed(1)
+                    });
+                }
+            }
         }
     }
 
     if (unknown.length > 0) {
-        console.warn('[App] Unknown waypoints in import:', unknown);
+        console.warn('[App] Unknown waypoints in import:', unknown.map(u => u.ident));
+    }
+    if (mismatches.length > 0) {
+        console.warn('[App] Coordinate mismatches in import:', mismatches);
     }
 
-    return unknown;
+    return { unknown, mismatches };
+}
+
+/**
+ * Substitute unknown waypoint identifiers with their FPL coordinates in the route string
+ * @param {string} routeString - Original route string
+ * @param {Array} unknownWaypoints - Array of {ident, lat, lon} from validateImportedWaypoints
+ * @returns {string} Modified route string with coordinates substituted
+ */
+function substituteUnknownWaypointsWithCoords(routeString, unknownWaypoints) {
+    if (!unknownWaypoints || unknownWaypoints.length === 0) {
+        return routeString;
+    }
+
+    let modifiedRoute = routeString;
+
+    for (const wp of unknownWaypoints) {
+        if (wp.lat !== null && wp.lon !== null) {
+            const coordStr = decimalToFaaCoord(wp.lat, wp.lon);
+            // Replace the identifier with the coordinate (case-insensitive, whole word)
+            const regex = new RegExp(`\\b${wp.ident}\\b`, 'gi');
+            modifiedRoute = modifiedRoute.replace(regex, coordStr);
+            console.log(`[App] Substituted ${wp.ident} with ${coordStr}`);
+        }
+    }
+
+    return modifiedRoute;
 }
 
 async function handleImportFile(event) {
@@ -1224,7 +1346,23 @@ async function handleImportFile(event) {
         }
 
         // Validate waypoints against database
-        const unknownWaypoints = validateImportedWaypoints(navlogData.waypoints);
+        const validationResult = validateImportedWaypoints(navlogData.waypoints);
+        const { unknown: unknownWaypoints, mismatches } = validationResult;
+
+        // For FPL imports, substitute unknown waypoint identifiers with their coordinates
+        if (format === 'fpl' && unknownWaypoints.length > 0) {
+            const originalRoute = navlogData.routeString;
+            navlogData.routeString = substituteUnknownWaypointsWithCoords(navlogData.routeString, unknownWaypoints);
+
+            // Also update routeMiddle if it exists
+            if (navlogData.routeMiddle) {
+                navlogData.routeMiddle = substituteUnknownWaypointsWithCoords(navlogData.routeMiddle, unknownWaypoints);
+            }
+
+            if (navlogData.routeString !== originalRoute) {
+                console.log(`[App] Route modified: ${originalRoute} -> ${navlogData.routeString}`);
+            }
+        }
 
         // Build import message
         let message = format === 'fpl'
@@ -1232,7 +1370,20 @@ async function handleImportFile(event) {
             : `NAVLOG IMPORTED\n\nRoute: ${navlogData.routeString}`;
 
         if (unknownWaypoints.length > 0) {
-            message += `\n\nWARNING: ${unknownWaypoints.length} waypoint(s) not in database:\n${unknownWaypoints.join(', ')}`;
+            const unknownWithCoords = unknownWaypoints.filter(w => w.lat !== null);
+            const unknownNoCoords = unknownWaypoints.filter(w => w.lat === null);
+
+            if (unknownWithCoords.length > 0) {
+                message += `\n\nNOTE: ${unknownWithCoords.length} waypoint(s) not in database - using FPL coordinates:\n${unknownWithCoords.map(w => `${w.ident} -> ${decimalToFaaCoord(w.lat, w.lon)}`).join(', ')}`;
+            }
+            if (unknownNoCoords.length > 0) {
+                message += `\n\nWARNING: ${unknownNoCoords.length} waypoint(s) not in database (no coordinates):\n${unknownNoCoords.map(w => w.ident).join(', ')}`;
+            }
+        }
+
+        if (mismatches.length > 0) {
+            message += `\n\nWARNING: ${mismatches.length} waypoint(s) have coordinate differences vs database:\n`;
+            message += mismatches.map(m => `${m.ident}: ${m.distanceNm} nm off`).join(', ');
         }
 
         // Check if TAS and altitude are set for auto-recalculation
