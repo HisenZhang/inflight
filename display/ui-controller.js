@@ -659,6 +659,18 @@ function clearRoute() {
     elements.destinationInput.value = '';
     elements.resultsSection.style.display = 'none';
     hideAutocomplete();
+
+    // Show placeholder
+    const navlogPlaceholder = document.getElementById('navlogPlaceholder');
+    if (navlogPlaceholder) navlogPlaceholder.style.display = 'block';
+
+    // Disable navlog action buttons
+    const printBtn = document.getElementById('printNavlogBtn');
+    const exportSelect = document.getElementById('exportNavlogSelect');
+    const copyBtn = document.getElementById('copyNavlogBtn');
+    if (printBtn) printBtn.disabled = true;
+    if (exportSelect) exportSelect.disabled = true;
+    if (copyBtn) copyBtn.disabled = true;
 }
 
 // ============================================
@@ -2478,6 +2490,14 @@ function displayResults(waypoints, legs, totalDistance, totalTime = null, fuelSt
     const navlogPlaceholder = document.getElementById('navlogPlaceholder');
     if (navlogPlaceholder) navlogPlaceholder.style.display = 'none';
     elements.resultsSection.style.display = 'block';
+
+    // Enable navlog action buttons
+    const printBtn = document.getElementById('printNavlogBtn');
+    const exportSelect = document.getElementById('exportNavlogSelect');
+    const copyBtn = document.getElementById('copyNavlogBtn');
+    if (printBtn) printBtn.disabled = false;
+    if (exportSelect) exportSelect.disabled = false;
+    if (copyBtn) copyBtn.disabled = false;
 }
 
 // ============================================
