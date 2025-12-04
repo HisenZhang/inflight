@@ -1045,30 +1045,16 @@ function setupExportDropdown() {
 }
 
 function setupImportDropdown() {
-    const formatSelect = document.getElementById('importFormatSelect');
     const fileInput = document.getElementById('importNavlogInput');
 
-    if (!formatSelect || !fileInput) return;
+    if (!fileInput) return;
 
-    // Update file input accept attribute when format changes
-    formatSelect.addEventListener('change', () => {
-        const format = formatSelect.value;
-        if (format === 'json') {
-            fileInput.accept = '.json';
-        } else if (format === 'fpl') {
-            fileInput.accept = '.fpl';
-        }
-    });
-
-    // Set initial accept based on default selection
-    fileInput.accept = formatSelect.value === 'fpl' ? '.fpl' : '.json';
+    // Accept both JSON and FPL files - format is auto-detected
+    fileInput.accept = '.json,.fpl';
 
     // Handle file selection - the label element triggers the file input directly
     // This works on iOS because clicking a <label for="input"> is a direct user gesture
     fileInput.addEventListener('change', (event) => {
-        // Get format from the select element
-        const format = formatSelect.value;
-        event.target.dataset.format = format;
         handleImportFile(event);
     });
 }
@@ -1133,27 +1119,50 @@ async function handleImportFile(event) {
     const file = event.target.files[0];
     if (!file) return;
 
-    // Get the format from the stored dataset or detect from file extension
     const fileInput = event.target;
-    const format = fileInput.dataset.format || (file.name.endsWith('.fpl') ? 'fpl' : 'json');
 
     try {
         if (!window.FlightState) {
             throw new Error('FlightState not available');
         }
 
+        // Read file content to auto-detect format
+        const content = await file.text();
+        const trimmed = content.trim();
+
+        // Auto-detect format: XML (FPL) starts with < or <?xml, JSON starts with {
+        const isXml = trimmed.startsWith('<?xml') || trimmed.startsWith('<');
+        const isJson = trimmed.startsWith('{');
+
+        let format;
+        if (isXml) {
+            format = 'fpl';
+        } else if (isJson) {
+            format = 'json';
+        } else {
+            // Fallback to extension
+            format = file.name.toLowerCase().endsWith('.fpl') ? 'fpl' : 'json';
+        }
+
         let navlogData;
 
         if (format === 'fpl') {
-            // Import ForeFlight .fpl (Garmin XML) file
-            navlogData = await window.FlightState.importFromForeFlightFPL(file);
+            // Import Garmin FPL (XML) file
+            navlogData = window.FlightState.parseFplXml(content);
+            console.log('[App] Garmin FPL imported:', navlogData.routeString);
 
             // FPL imports need route recalculation since they only have waypoint coordinates
-            // For now, just show the imported route - user can recalculate via GO button
             alert(`FPL IMPORTED\n\nRoute: ${navlogData.routeString}\nAltitude: ${navlogData.altitude} ft\n\nNote: Click GO to recalculate distances and times.`);
         } else {
             // Import IN-FLIGHT JSON file
-            navlogData = await window.FlightState.importFromFile(file);
+            navlogData = JSON.parse(content);
+
+            // Validate structure
+            if (!navlogData.routeString || !navlogData.waypoints || !navlogData.legs) {
+                throw new Error('Invalid navlog file structure');
+            }
+
+            console.log('[App] JSON navlog imported:', navlogData.routeString);
             alert(`NAVLOG IMPORTED\n\nRoute: ${navlogData.routeString}`);
         }
 
@@ -1171,9 +1180,8 @@ async function handleImportFile(event) {
         console.error('Import error:', error);
         alert(`ERROR: FAILED TO IMPORT\n\n${error.message}`);
     } finally {
-        // Clear file input and format
-        event.target.value = '';
-        delete fileInput.dataset.format;
+        // Clear file input
+        fileInput.value = '';
     }
 }
 
