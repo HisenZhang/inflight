@@ -2712,8 +2712,14 @@ function restoreNavlog(navlogData) {
 
     // Restore ICAO-style route inputs (departure/route/destination)
     if (navlogData.departure && navlogData.destination) {
-        // New format: restore to separate fields
-        setRouteInputs(navlogData.departure, navlogData.routeMiddle, navlogData.destination);
+        // Handle both string and object formats (FPL import returns objects)
+        const depStr = typeof navlogData.departure === 'string'
+            ? navlogData.departure
+            : (navlogData.departure.ident || navlogData.departure.icao || '');
+        const destStr = typeof navlogData.destination === 'string'
+            ? navlogData.destination
+            : (navlogData.destination.ident || navlogData.destination.icao || '');
+        setRouteInputs(depStr, navlogData.routeMiddle, destStr);
     } else {
         // Legacy format: parse routeString to extract departure and destination
         const parsed = parseRouteString(routeString);
