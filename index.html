@@ -424,7 +424,16 @@
                 <p>The navigation log displays your calculated flight plan with detailed leg-by-leg information.</p>
                 <p style="margin-bottom: 0;"><strong>Includes:</strong> Waypoints • Courses • Distances • Time estimates • Wind correction • Fuel calculations</p>
             </div>
-            <p class="text-secondary" style="font-size: 0.75rem;">Calculate a route in the ROUTE tab to see your navigation log here.</p>
+            <p class="text-secondary" style="font-size: 0.75rem; margin-bottom: 1rem;">Calculate a route in the ROUTE tab, or load a saved flight plan:</p>
+            <div class="navlog-import-actions">
+                <select id="importFormatSelect" class="btn btn-secondary btn-sm">
+                    <option value="json">JSON</option>
+                    <option value="fpl">FPL</option>
+                </select>
+                <label for="importNavlogInput" class="btn btn-secondary btn-sm" style="cursor: pointer; margin: 0;">IMPORT</label>
+                <input type="file" id="importNavlogInput" accept=".json,.fpl" style="display: none;">
+                <button id="pasteNavlogBtn" class="btn btn-secondary btn-sm" title="Paste from clipboard">PASTE</button>
+            </div>
         </div>
 
         <!-- Results Section -->
@@ -436,18 +445,11 @@
                     <select id="exportNavlogSelect" class="btn btn-secondary btn-sm">
                         <option value="">EXPORT</option>
                         <option value="json">IN-FLIGHT (.json)</option>
-                        <option value="fpl">ForeFlight (.fpl)</option>
+                        <option value="fpl">Garmin FPL (.fpl)</option>
                         <option value="csv">ForeFlight CSV (.csv)</option>
                         <option value="kml">ForeFlight KML (.kml)</option>
                     </select>
-                    <select id="importFormatSelect" class="btn btn-secondary btn-sm" style="width: auto; min-width: 100px;">
-                        <option value="json">JSON</option>
-                        <option value="fpl">FPL</option>
-                    </select>
-                    <label for="importNavlogInput" class="btn btn-secondary btn-sm" style="cursor: pointer; margin: 0;">IMPORT</label>
-                    <input type="file" id="importNavlogInput" accept=".json,.fpl" style="display: none;">
                     <button id="copyNavlogBtn" class="btn btn-secondary btn-sm" title="Copy to clipboard">COPY</button>
-                    <button id="pasteNavlogBtn" class="btn btn-secondary btn-sm" title="Paste from clipboard">PASTE</button>
                 </div>
             </div>
             <div id="routeSummary" class="route-summary"></div>

@@ -289,6 +289,16 @@ header {
     width: 5.5rem;
 }
 
+.navlog-import-actions {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+}
+
+.navlog-import-actions select {
+    width: 7rem;
+}
+
 /* Input Section */
 .input-section {
     background: var(--bg-primary);
