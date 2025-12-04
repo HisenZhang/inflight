@@ -1115,6 +1115,55 @@ function handleExportFormat(format) {
     }
 }
 
+/**
+ * Validate imported waypoints against database
+ * @param {Array} waypoints - Array of waypoint objects
+ * @returns {Array} Array of waypoint identifiers not found in database
+ */
+function validateImportedWaypoints(waypoints) {
+    const unknown = [];
+
+    if (!waypoints || !Array.isArray(waypoints)) {
+        return unknown;
+    }
+
+    for (const wp of waypoints) {
+        const ident = wp.ident || wp.icao || '';
+        if (!ident) continue;
+
+        // Check if waypoint exists in database
+        let found = false;
+
+        // Check airports
+        if (window.DataManager?.getAirport) {
+            const airport = window.DataManager.getAirport(ident);
+            if (airport) found = true;
+        }
+
+        // Check navaids and fixes via QueryEngine
+        if (!found && window.QueryEngine?.getTokenType) {
+            const tokenType = window.QueryEngine.getTokenType(ident);
+            if (tokenType) found = true;
+        }
+
+        // Check via App's queryEngine (v3 architecture)
+        if (!found && window.App?.queryEngine?.getWaypoint) {
+            const waypoint = window.App.queryEngine.getWaypoint(ident);
+            if (waypoint) found = true;
+        }
+
+        if (!found) {
+            unknown.push(ident);
+        }
+    }
+
+    if (unknown.length > 0) {
+        console.warn('[App] Unknown waypoints in import:', unknown);
+    }
+
+    return unknown;
+}
+
 async function handleImportFile(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -1150,9 +1199,6 @@ async function handleImportFile(event) {
             // Import Garmin FPL (XML) file
             navlogData = window.FlightState.parseFplXml(content);
             console.log('[App] Garmin FPL imported:', navlogData.routeString);
-
-            // FPL imports need route recalculation since they only have waypoint coordinates
-            alert(`FPL IMPORTED\n\nRoute: ${navlogData.routeString}\nAltitude: ${navlogData.altitude} ft\n\nNote: Click GO to recalculate distances and times.`);
         } else {
             // Import IN-FLIGHT JSON file
             navlogData = JSON.parse(content);
@@ -1163,8 +1209,25 @@ async function handleImportFile(event) {
             }
 
             console.log('[App] JSON navlog imported:', navlogData.routeString);
-            alert(`NAVLOG IMPORTED\n\nRoute: ${navlogData.routeString}`);
         }
+
+        // Validate waypoints against database
+        const unknownWaypoints = validateImportedWaypoints(navlogData.waypoints);
+
+        // Build import message
+        let message = format === 'fpl'
+            ? `FPL IMPORTED\n\nRoute: ${navlogData.routeString}\nAltitude: ${navlogData.altitude} ft`
+            : `NAVLOG IMPORTED\n\nRoute: ${navlogData.routeString}`;
+
+        if (unknownWaypoints.length > 0) {
+            message += `\n\nWARNING: ${unknownWaypoints.length} waypoint(s) not in database:\n${unknownWaypoints.join(', ')}`;
+        }
+
+        if (format === 'fpl') {
+            message += '\n\nNote: Click GO to recalculate distances and times.';
+        }
+
+        alert(message);
 
         // Restore the navlog
         UIController.restoreNavlog(navlogData);

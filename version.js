@@ -25,7 +25,7 @@ const AppVersion = {
     // Semantic version (sync with package.json)
     MAJOR: 3,
     MINOR: 3,
-    PATCH: 1,
+    PATCH: 2,
 
     // Full version string
     get VERSION() {
@@ -34,7 +34,7 @@ const AppVersion = {
 
     // Service worker cache version
     // Increment this number to force PWA updates
-    CACHE_VERSION: 150,
+    CACHE_VERSION: 151,
 
     // Full cache name for service worker
     get CACHE_NAME() {
@@ -42,10 +42,10 @@ const AppVersion = {
     },
 
     // Build metadata (optional)
-    BUILD_DATE: '2025-11-30',
+    BUILD_DATE: '2025-12-04',
 
     // Release name (optional)
-    RELEASE_NAME: 'Fix G-AIRMET polygon rendering outside view bounds',
+    RELEASE_NAME: 'Improve navlog import UX with smart format detection',
 
     /**
      * Get full version info object
