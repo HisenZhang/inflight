@@ -569,102 +569,139 @@ function drawAirspace(waypoints, project, strokeWidth, bounds) {
 // FIXES AND AIRWAYS RENDERING
 // ============================================
 
-// Draw fixes (triangles) and airways in the visible area
-// Only shown at zoom levels 50 and 25 (surrounding-50, surrounding-25)
-function drawFixesAndAirways(project, bounds, strokeWidth) {
+// Draw airways in the visible area
+// Shown at zoom levels 50 and 25 (surrounding-50, surrounding-25)
+function drawAirways(project, bounds, strokeWidth) {
     let svg = '';
 
-    if (!window.DataManager) return svg;
+    const queryEngine = window.App?.queryEngine;
+    const fixesData = window.DataManager?.getFixesData();
+    const airwaysData = window.DataManager?.getAirwaysData();
 
-    const fixesData = window.DataManager.getFixesData();
-    const airwaysData = window.DataManager.getAirwaysData();
+    if (!queryEngine || !fixesData || !airwaysData) return svg;
+    if (fixesData.size === 0 || airwaysData.size === 0) return svg;
 
-    if (!fixesData || fixesData.size === 0) return svg;
+    // Use spatial index for efficient bounds query
+    const fixesInBounds = queryEngine.findInBounds('fixes_spatial', bounds);
 
-    // Collect all fixes within bounds
-    const fixesInBounds = [];
-    for (const [ident, fix] of fixesData) {
-        if (fix.lat >= bounds.minLat && fix.lat <= bounds.maxLat &&
-            fix.lon >= bounds.minLon && fix.lon <= bounds.maxLon) {
-            fixesInBounds.push({ ident, fix, pos: project(fix.lat, fix.lon) });
-        }
-    }
-
-    // If no fixes in bounds, skip
-    if (fixesInBounds.length === 0) return svg;
-
-    // Create a map of fix idents to positions for airway drawing
+    // Build position map from spatial query results
     const fixPositionMap = new Map();
-    for (const { ident, pos } of fixesInBounds) {
-        fixPositionMap.set(ident, pos);
+    for (const fix of fixesInBounds) {
+        fixPositionMap.set(fix.ident, project(fix.lat, fix.lon));
     }
 
-    // Draw airways first (lines between fixes)
-    if (airwaysData && airwaysData.size > 0) {
-        svg += `<g class="airways-group">`;
+    if (fixPositionMap.size === 0) return svg;
 
-        for (const [airwayId, airway] of airwaysData) {
-            if (!airway.fixes || airway.fixes.length < 2) continue;
+    // Track segment labels to detect colocated airways
+    // Key: "x1,y1-x2,y2" (normalized so smaller coords come first)
+    const segmentLabels = new Map();
 
-            // Check if any segment of this airway is visible
-            let hasVisibleSegment = false;
-            const visibleSegments = [];
+    svg += `<g class="airways-group">`;
 
-            for (let i = 0; i < airway.fixes.length - 1; i++) {
-                const fix1Ident = airway.fixes[i];
-                const fix2Ident = airway.fixes[i + 1];
+    for (const [airwayId, airway] of airwaysData) {
+        if (!airway.fixes || airway.fixes.length < 2) continue;
 
-                // Get fix positions - first check our in-bounds fixes, then look up globally
-                let pos1 = fixPositionMap.get(fix1Ident);
-                let pos2 = fixPositionMap.get(fix2Ident);
+        // Check if any segment of this airway is visible
+        let hasVisibleSegment = false;
+        const visibleSegments = [];
 
-                // If fix not in bounds, get its coordinates and check if line might cross bounds
-                if (!pos1) {
-                    const fix1 = fixesData.get(fix1Ident);
-                    if (fix1) pos1 = project(fix1.lat, fix1.lon);
-                }
-                if (!pos2) {
-                    const fix2 = fixesData.get(fix2Ident);
-                    if (fix2) pos2 = project(fix2.lat, fix2.lon);
-                }
+        for (let i = 0; i < airway.fixes.length - 1; i++) {
+            const fix1Ident = airway.fixes[i];
+            const fix2Ident = airway.fixes[i + 1];
 
-                // If both positions found and at least one is in bounds, draw segment
-                if (pos1 && pos2) {
-                    const fix1InBounds = fixPositionMap.has(fix1Ident);
-                    const fix2InBounds = fixPositionMap.has(fix2Ident);
+            // Get fix positions - first check our in-bounds fixes, then look up globally
+            let pos1 = fixPositionMap.get(fix1Ident);
+            let pos2 = fixPositionMap.get(fix2Ident);
 
-                    if (fix1InBounds || fix2InBounds) {
-                        visibleSegments.push({ from: pos1, to: pos2 });
-                        hasVisibleSegment = true;
-                    }
-                }
+            // If fix not in bounds, get its coordinates and check if line might cross bounds
+            if (!pos1) {
+                const fix1 = fixesData.get(fix1Ident);
+                if (fix1) pos1 = project(fix1.lat, fix1.lon);
+            }
+            if (!pos2) {
+                const fix2 = fixesData.get(fix2Ident);
+                if (fix2) pos2 = project(fix2.lat, fix2.lon);
             }
 
-            // Draw airway segments
-            if (hasVisibleSegment) {
-                for (const segment of visibleSegments) {
-                    svg += `<line x1="${segment.from.x}" y1="${segment.from.y}" ` +
-                           `x2="${segment.to.x}" y2="${segment.to.y}" ` +
-                           `stroke="#808080" stroke-width="${strokeWidth * 0.5}" ` +
-                           `stroke-opacity="0.6" class="airway-line"/>`;
-                }
+            // If both positions found and at least one is in bounds, draw segment
+            if (pos1 && pos2) {
+                const fix1InBounds = fixPositionMap.has(fix1Ident);
+                const fix2InBounds = fixPositionMap.has(fix2Ident);
 
-                // Add airway label at midpoint of first visible segment
-                if (visibleSegments.length > 0) {
-                    const midSegment = visibleSegments[Math.floor(visibleSegments.length / 2)];
-                    const labelX = (midSegment.from.x + midSegment.to.x) / 2;
-                    const labelY = (midSegment.from.y + midSegment.to.y) / 2;
-
-                    svg += `<text x="${labelX}" y="${labelY - 8}" ` +
-                           `text-anchor="middle" fill="#808080" font-size="24" ` +
-                           `font-family="Roboto Mono" font-weight="500" ` +
-                           `class="airway-label">${airwayId}</text>`;
+                if (fix1InBounds || fix2InBounds) {
+                    visibleSegments.push({ from: pos1, to: pos2, fix1Ident, fix2Ident });
+                    hasVisibleSegment = true;
                 }
             }
         }
 
-        svg += `</g>`;
+        // Draw airway segments
+        if (hasVisibleSegment) {
+            for (const segment of visibleSegments) {
+                svg += `<line x1="${segment.from.x}" y1="${segment.from.y}" ` +
+                       `x2="${segment.to.x}" y2="${segment.to.y}" ` +
+                       `stroke="#808080" stroke-width="${strokeWidth * 0.5}" ` +
+                       `stroke-opacity="0.6" class="airway-line"/>`;
+            }
+
+            // Record label position for colocated airway detection
+            if (visibleSegments.length > 0) {
+                const midSegment = visibleSegments[Math.floor(visibleSegments.length / 2)];
+                // Create normalized segment key (smaller fix name first for consistency)
+                const segmentKey = midSegment.fix1Ident < midSegment.fix2Ident
+                    ? `${midSegment.fix1Ident}-${midSegment.fix2Ident}`
+                    : `${midSegment.fix2Ident}-${midSegment.fix1Ident}`;
+
+                if (!segmentLabels.has(segmentKey)) {
+                    segmentLabels.set(segmentKey, {
+                        x: (midSegment.from.x + midSegment.to.x) / 2,
+                        y: (midSegment.from.y + midSegment.to.y) / 2,
+                        airways: []
+                    });
+                }
+                segmentLabels.get(segmentKey).airways.push(airwayId);
+            }
+        }
     }
+
+    // Draw airway labels, stacking colocated airways vertically
+    for (const [, labelInfo] of segmentLabels) {
+        const { x, y, airways } = labelInfo;
+        const lineHeight = 26; // Vertical spacing between stacked labels
+        const startY = y - 8 - (airways.length - 1) * lineHeight / 2;
+
+        for (let i = 0; i < airways.length; i++) {
+            svg += `<text x="${x}" y="${startY + i * lineHeight}" ` +
+                   `text-anchor="middle" fill="#808080" font-size="24" ` +
+                   `font-family="Roboto Mono" font-weight="500" ` +
+                   `class="airway-label">${airways[i]}</text>`;
+        }
+    }
+
+    svg += `</g>`;
+
+    return svg;
+}
+
+// Draw fixes as triangles in the visible area
+// Only shown at zoom level 25 (surrounding-25)
+function drawFixes(project, bounds, strokeWidth) {
+    let svg = '';
+
+    const queryEngine = window.App?.queryEngine;
+    if (!queryEngine) return svg;
+
+    // Use spatial index for efficient bounds query
+    const fixResults = queryEngine.findInBounds('fixes_spatial', bounds);
+
+    // Build display data with projected positions
+    const fixesInBounds = fixResults.map(fix => ({
+        ident: fix.ident,
+        fix,
+        pos: project(fix.lat, fix.lon)
+    }));
+
+    if (fixesInBounds.length === 0) return svg;
 
     // Draw fixes as triangles
     const triangleSize = 8; // Size of the triangle
@@ -681,8 +718,11 @@ function drawFixesAndAirways(project, bounds, strokeWidth) {
         const x3 = pos.x + triangleSize / 2;
         const y3 = pos.y + h / 3; // Bottom right
 
+        // Use solid fill for reporting points, hollow for others
+        const fillColor = fix.isReportingPoint ? '#808080' : 'none';
+
         svg += `<polygon points="${x1},${y1} ${x2},${y2} ${x3},${y3}" ` +
-               `fill="none" stroke="#808080" stroke-width="${strokeWidth * 0.4}" ` +
+               `fill="${fillColor}" stroke="#808080" stroke-width="${strokeWidth * 0.4}" ` +
                `class="fix-triangle"/>`;
 
         // Fix label (grey text)
@@ -940,11 +980,16 @@ function generateMap(waypoints, legs) {
     svg += `</g>`;
 
     // ============================================
-    // LAYER 1.5: FIXES AND AIRWAYS (On top of airspace, zoom 50/25 only)
+    // LAYER 1.5: AIRWAYS (zoom 50/25) AND FIXES (zoom 25 only)
     // ============================================
     if (currentZoomMode === 'surrounding-50' || currentZoomMode === 'surrounding-25') {
-        svg += `<g id="layer-fixes-airways" opacity="1.0">`;
-        svg += drawFixesAndAirways(project, bounds, strokeWidth);
+        svg += `<g id="layer-airways" opacity="1.0">`;
+        svg += drawAirways(project, bounds, strokeWidth);
+        svg += `</g>`;
+    }
+    if (currentZoomMode === 'surrounding-25') {
+        svg += `<g id="layer-fixes" opacity="1.0">`;
+        svg += drawFixes(project, bounds, strokeWidth);
         svg += `</g>`;
     }
 
