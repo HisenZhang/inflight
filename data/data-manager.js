@@ -1671,6 +1671,8 @@ window.DataManager = {
     // Raw data access (for specialized queries)
     getAirportsData: () => airportsData,
     getNavaidsData: () => navaidsData,
+    getFixesData: () => fixesData,
+    getAirwaysData: () => airwaysData,
     getFrequenciesData: () => frequenciesData,
     getChartsData: () => chartsData,
 
