@@ -566,6 +566,138 @@ function drawAirspace(waypoints, project, strokeWidth, bounds) {
 }
 
 // ============================================
+// FIXES AND AIRWAYS RENDERING
+// ============================================
+
+// Draw fixes (triangles) and airways in the visible area
+// Only shown at zoom levels 50 and 25 (surrounding-50, surrounding-25)
+function drawFixesAndAirways(project, bounds, strokeWidth) {
+    let svg = '';
+
+    if (!window.DataManager) return svg;
+
+    const fixesData = window.DataManager.getFixesData();
+    const airwaysData = window.DataManager.getAirwaysData();
+
+    if (!fixesData || fixesData.size === 0) return svg;
+
+    // Collect all fixes within bounds
+    const fixesInBounds = [];
+    for (const [ident, fix] of fixesData) {
+        if (fix.lat >= bounds.minLat && fix.lat <= bounds.maxLat &&
+            fix.lon >= bounds.minLon && fix.lon <= bounds.maxLon) {
+            fixesInBounds.push({ ident, fix, pos: project(fix.lat, fix.lon) });
+        }
+    }
+
+    // If no fixes in bounds, skip
+    if (fixesInBounds.length === 0) return svg;
+
+    // Create a map of fix idents to positions for airway drawing
+    const fixPositionMap = new Map();
+    for (const { ident, pos } of fixesInBounds) {
+        fixPositionMap.set(ident, pos);
+    }
+
+    // Draw airways first (lines between fixes)
+    if (airwaysData && airwaysData.size > 0) {
+        svg += `<g class="airways-group">`;
+
+        for (const [airwayId, airway] of airwaysData) {
+            if (!airway.fixes || airway.fixes.length < 2) continue;
+
+            // Check if any segment of this airway is visible
+            let hasVisibleSegment = false;
+            const visibleSegments = [];
+
+            for (let i = 0; i < airway.fixes.length - 1; i++) {
+                const fix1Ident = airway.fixes[i];
+                const fix2Ident = airway.fixes[i + 1];
+
+                // Get fix positions - first check our in-bounds fixes, then look up globally
+                let pos1 = fixPositionMap.get(fix1Ident);
+                let pos2 = fixPositionMap.get(fix2Ident);
+
+                // If fix not in bounds, get its coordinates and check if line might cross bounds
+                if (!pos1) {
+                    const fix1 = fixesData.get(fix1Ident);
+                    if (fix1) pos1 = project(fix1.lat, fix1.lon);
+                }
+                if (!pos2) {
+                    const fix2 = fixesData.get(fix2Ident);
+                    if (fix2) pos2 = project(fix2.lat, fix2.lon);
+                }
+
+                // If both positions found and at least one is in bounds, draw segment
+                if (pos1 && pos2) {
+                    const fix1InBounds = fixPositionMap.has(fix1Ident);
+                    const fix2InBounds = fixPositionMap.has(fix2Ident);
+
+                    if (fix1InBounds || fix2InBounds) {
+                        visibleSegments.push({ from: pos1, to: pos2 });
+                        hasVisibleSegment = true;
+                    }
+                }
+            }
+
+            // Draw airway segments
+            if (hasVisibleSegment) {
+                for (const segment of visibleSegments) {
+                    svg += `<line x1="${segment.from.x}" y1="${segment.from.y}" ` +
+                           `x2="${segment.to.x}" y2="${segment.to.y}" ` +
+                           `stroke="#808080" stroke-width="${strokeWidth * 0.5}" ` +
+                           `stroke-opacity="0.6" class="airway-line"/>`;
+                }
+
+                // Add airway label at midpoint of first visible segment
+                if (visibleSegments.length > 0) {
+                    const midSegment = visibleSegments[Math.floor(visibleSegments.length / 2)];
+                    const labelX = (midSegment.from.x + midSegment.to.x) / 2;
+                    const labelY = (midSegment.from.y + midSegment.to.y) / 2;
+
+                    svg += `<text x="${labelX}" y="${labelY - 8}" ` +
+                           `text-anchor="middle" fill="#808080" font-size="24" ` +
+                           `font-family="Roboto Mono" font-weight="500" ` +
+                           `class="airway-label">${airwayId}</text>`;
+                }
+            }
+        }
+
+        svg += `</g>`;
+    }
+
+    // Draw fixes as triangles
+    const triangleSize = 8; // Size of the triangle
+
+    svg += `<g class="fixes-group">`;
+
+    for (const { ident, fix, pos } of fixesInBounds) {
+        // Triangle pointing up (equilateral)
+        const h = triangleSize * Math.sqrt(3) / 2; // Height of equilateral triangle
+        const x1 = pos.x;
+        const y1 = pos.y - h * 2 / 3; // Top vertex
+        const x2 = pos.x - triangleSize / 2;
+        const y2 = pos.y + h / 3; // Bottom left
+        const x3 = pos.x + triangleSize / 2;
+        const y3 = pos.y + h / 3; // Bottom right
+
+        svg += `<polygon points="${x1},${y1} ${x2},${y2} ${x3},${y3}" ` +
+               `fill="none" stroke="#808080" stroke-width="${strokeWidth * 0.4}" ` +
+               `class="fix-triangle"/>`;
+
+        // Fix label (grey text)
+        svg += `<text x="${pos.x}" y="${pos.y - triangleSize - 4}" ` +
+               `text-anchor="middle" fill="#808080" font-size="20" ` +
+               `font-family="Roboto Mono" font-weight="400" ` +
+               `class="fix-label">${ident}</text>`;
+    }
+
+    svg += `</g>`;
+
+    return svg;
+}
+
+// ============================================
 // DISPLAY FUNCTIONS
 // ============================================
 
@@ -806,6 +938,15 @@ function generateMap(waypoints, legs) {
     svg += `<g id="layer-airspace" opacity="1.0">`;
     svg += drawAirspace(waypoints, project, strokeWidth, bounds);
     svg += `</g>`;
+
+    // ============================================
+    // LAYER 1.5: FIXES AND AIRWAYS (On top of airspace, zoom 50/25 only)
+    // ============================================
+    if (currentZoomMode === 'surrounding-50' || currentZoomMode === 'surrounding-25') {
+        svg += `<g id="layer-fixes-airways" opacity="1.0">`;
+        svg += drawFixesAndAirways(project, bounds, strokeWidth);
+        svg += `</g>`;
+    }
 
     // ============================================
     // LAYER 2: WEATHER OVERLAYS (Behind route)
