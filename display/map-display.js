@@ -66,7 +66,8 @@ function updateGPSMarker(lat, lon, heading) {
     const pos = project(lat, lon);
 
     // Update transform (position + rotation)
-    gpsLayer.setAttribute('transform', `translate(${pos.x}, ${pos.y}) rotate(${heading - 90})`);
+    // heading 0° = north, rotation in SVG matches since arrow points up in local coords
+    gpsLayer.setAttribute('transform', `translate(${pos.x}, ${pos.y}) rotate(${heading})`);
 }
 
 /**
@@ -422,7 +423,10 @@ function updateLiveNavigation() {
             generateMap(waypoints, legs);
         } else {
             // Quick update: just move the GPS marker (no full redraw)
-            updateGPSMarker(currentPosition.lat, currentPosition.lon, currentPosition.heading || 0);
+            // Default to north (0°) when no ground speed (GPS heading unreliable when stationary)
+            const hasSpeed = currentPosition.speed && currentPosition.speed > 0.5; // > ~1 kt
+            const heading = hasSpeed && currentPosition.heading != null ? currentPosition.heading : 0;
+            updateGPSMarker(currentPosition.lat, currentPosition.lon, heading);
         }
     }
 }
@@ -924,28 +928,34 @@ function generateMap(waypoints, legs) {
     // ============================================
     svg += `<g id="layer-gps" opacity="1.0">`;
 
-    // Draw current position if available (tall isosceles triangle, classic vector style)
+    // Draw current position if available (navigation arrow with notch)
     if (currentPosition) {
         const pos = project(currentPosition.lat, currentPosition.lon);
-        const heading = currentPosition.heading || 0; // GPS heading in degrees
+        // Default to north (0°) when no ground speed (GPS heading unreliable when stationary)
+        const hasSpeed = currentPosition.speed && currentPosition.speed > 0.5; // > ~1 kt
+        const heading = hasSpeed && currentPosition.heading != null ? currentPosition.heading : 0;
 
-        // Tall isosceles triangle (like old vector graphics)
-        // Desktop: 4x size (160x80), Mobile: 2x size (80x40)
-        const triangleHeight = isMobile ? 80 : 60;
-        const triangleBaseWidth = isMobile ? 40 : 30;
+        // Navigation arrow dimensions
+        const arrowHeight = isMobile ? 80 : 60;
+        const arrowWidth = isMobile ? 48 : 36;
+        const notchDepth = isMobile ? 24 : 18; // Depth of the notch at the back
 
-        // Triangle vertices in local coordinates (tip points up, unrotated)
-        const tipLocalX = 0;
-        const tipLocalY = -triangleHeight;
-        const baseLeftLocalX = -triangleBaseWidth / 2;
-        const baseLeftLocalY = 0;
-        const baseRightLocalX = triangleBaseWidth / 2;
-        const baseRightLocalY = 0;
+        // Arrow vertices in local coordinates (tip points up = north, unrotated)
+        // Shape: pointed tip at top, notch cut into the base
+        const tipX = 0;
+        const tipY = -arrowHeight;
+        const leftX = -arrowWidth / 2;
+        const leftY = 0;
+        const notchX = 0;
+        const notchY = -notchDepth;
+        const rightX = arrowWidth / 2;
+        const rightY = 0;
 
-        // Draw using CSS transform for smooth rotation (heading - 90 because SVG 0° is East)
+        // Draw using CSS transform for smooth rotation
+        // heading 0° = north, rotation in SVG matches since arrow points up in local coords
         const arrowStrokeWidth = 6;
-        svg += `<g class="gps-arrow" transform="translate(${pos.x}, ${pos.y}) rotate(${heading - 90})">`;
-        svg += `<polygon points="${tipLocalX},${tipLocalY} ${baseLeftLocalX},${baseLeftLocalY} ${baseRightLocalX},${baseRightLocalY}"
+        svg += `<g class="gps-arrow" transform="translate(${pos.x}, ${pos.y}) rotate(${heading})">`;
+        svg += `<polygon points="${tipX},${tipY} ${leftX},${leftY} ${notchX},${notchY} ${rightX},${rightY}"
                 fill="#00ff00" stroke="#ffffff" stroke-width="${arrowStrokeWidth}" stroke-linejoin="miter"/>`;
         svg += `</g>`;
     }
