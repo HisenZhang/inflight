@@ -2,7 +2,7 @@
   "name": "IN-FLIGHT",
   "short_name": "IN-FLIGHT",
   "id": "/",
-  "version": "3.3.6",
+  "version": "3.4.0",
   "description": "Open source EFB Webapp - Electronic Flight Bag for pilots",
   "start_url": "./",
   "scope": "./",

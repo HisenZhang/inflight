@@ -24,8 +24,8 @@
 const AppVersion = {
     // Semantic version (sync with package.json)
     MAJOR: 3,
-    MINOR: 3,
-    PATCH: 6,
+    MINOR: 4,
+    PATCH: 0,
 
     // Full version string
     get VERSION() {
@@ -34,7 +34,7 @@ const AppVersion = {
 
     // Service worker cache version
     // Increment this number to force PWA updates
-    CACHE_VERSION: 155,
+    CACHE_VERSION: 156,
 
     // Full cache name for service worker
     get CACHE_NAME() {
@@ -42,10 +42,10 @@ const AppVersion = {
     },
 
     // Build metadata (optional)
-    BUILD_DATE: '2025-12-04',
+    BUILD_DATE: '2025-12-08',
 
     // Release name (optional)
-    RELEASE_NAME: 'Remove redundant tab headers, fix action bar overflow',
+    RELEASE_NAME: 'Responsive map viewport, 5nm zoom, airways & fixes with graduated opacity',
 
     /**
      * Get full version info object
