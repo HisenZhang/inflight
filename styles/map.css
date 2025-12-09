@@ -79,7 +79,8 @@
 
 .map-container {
     position: relative;
-    height: 600px;
+    height: calc(100vh - 280px); /* Tab nav (~50px) + Map header (~50px) + Nav panel (~150px) + margins (~30px) */
+    min-height: 400px;
     background: #000000;
     border-bottom: 2px solid var(--border-color);
     overflow: hidden;
@@ -497,7 +498,8 @@
     }
 
     .map-container {
-        height: 400px;
+        height: calc(100vh - 230px); /* Mobile: smaller tab nav + header + panel */
+        min-height: 300px;
     }
 
     .navigation-panel {
