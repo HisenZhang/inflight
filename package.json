@@ -17,7 +17,7 @@
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs",
     "deploy": "npx wrangler pages deploy . --project-name=inflight",
-    "deploy:docs": "npm run docs:build && npx wrangler pages deploy docs/.vitepress/dist --project-name=inflight-docs --config=wrangler-docs.toml"
+    "deploy:docs": "npm run docs:build && npx wrangler pages deploy docs/.vitepress/dist --project-name=inflight-doc --config=wrangler-docs.toml"
   },
   "keywords": [
     "flight-planning",

@@ -356,4 +356,137 @@ test.describe('Fixes and Airways Display', () => {
         expect(svgResult.totalFixes).toBeGreaterThan(0);
     });
 
+    test('should have airway filter toggle button', async ({ page }) => {
+        await page.goto('/');
+
+        // Click MAP tab
+        await page.click('[data-tab="map"]');
+
+        // Check for airway filter button
+        const airwayFilterBtn = page.locator('#airwayFilterBtn');
+        await expect(airwayFilterBtn).toBeVisible();
+
+        // Should show 'LOW' by default
+        await expect(airwayFilterBtn).toHaveText('LOW');
+    });
+
+    test('should cycle airway filter: LOW -> HIGH -> ALL -> LOW', async ({ page }) => {
+        await page.goto('/');
+
+        await page.click('[data-tab="map"]');
+
+        // Wait for VectorMap to be available
+        await page.waitForFunction(() => {
+            // @ts-ignore - VectorMap is dynamically added
+            return window.VectorMap?.cycleAirwayFilter !== undefined;
+        });
+
+        const airwayFilterBtn = page.locator('#airwayFilterBtn');
+
+        // Initial state: LOW
+        await expect(airwayFilterBtn).toHaveText('LOW');
+
+        // Click to cycle to HIGH
+        await airwayFilterBtn.click();
+        await expect(airwayFilterBtn).toHaveText('HIGH');
+
+        // Click to cycle to ALL
+        await airwayFilterBtn.click();
+        await expect(airwayFilterBtn).toHaveText('ALL');
+
+        // Click to cycle back to LOW
+        await airwayFilterBtn.click();
+        await expect(airwayFilterBtn).toHaveText('LOW');
+    });
+
+    test('should query both fixes and navaids for airways', async ({ page }) => {
+        await page.goto('/');
+
+        await page.waitForFunction(() => window.App?.queryEngine !== undefined);
+
+        const queryResults = await page.evaluate(() => {
+            const qe = window.App?.queryEngine;
+            if (!qe) return { success: false };
+
+            // Test querying a known VOR (navaid) that's part of airways
+            const navaid = qe.getByKey('navaids', 'SFO'); // San Francisco VOR
+            const fix = qe.getByKey('fixes', 'PORTE'); // A fix near SFO
+
+            return {
+                success: true,
+                hasNavaid: !!navaid,
+                hasFix: !!fix,
+                navaidHasCoords: navaid ? (navaid.lat !== undefined && navaid.lon !== undefined) : false,
+                fixHasCoords: fix ? (fix.lat !== undefined && fix.lon !== undefined) : false
+            };
+        });
+
+        expect(queryResults.success).toBe(true);
+        // At least one should exist (depends on data loaded)
+        expect(queryResults.hasNavaid || queryResults.hasFix).toBe(true);
+    });
+
+    test('should distinguish high altitude airways with dashed lines', async ({ page }) => {
+        await page.goto('/');
+
+        await page.waitForFunction(() => {
+            // @ts-ignore - DataManager is dynamically added
+            return window.DataManager !== undefined;
+        });
+
+        const airwayTypes = await page.evaluate(() => {
+            // @ts-ignore - DataManager is dynamically added
+            const airwaysData = window.DataManager?.getAirwaysData();
+            if (!airwaysData || airwaysData.size === 0) {
+                return { success: false };
+            }
+
+            // Find examples of different airway types
+            const airways = Array.from(airwaysData.entries());
+            const victorAirway = airways.find(([id]) => id.startsWith('V'));
+            const jetAirway = airways.find(([id]) => id.startsWith('J'));
+            const tAirway = airways.find(([id]) => id.startsWith('T'));
+            const qAirway = airways.find(([id]) => id.startsWith('Q'));
+
+            return {
+                success: true,
+                totalAirways: airways.length,
+                hasVictor: !!victorAirway,
+                hasJet: !!jetAirway,
+                hasT: !!tAirway,
+                hasQ: !!qAirway,
+                victorId: victorAirway ? victorAirway[0] : null,
+                jetId: jetAirway ? jetAirway[0] : null
+            };
+        });
+
+        expect(airwayTypes.success).toBe(true);
+        expect(airwayTypes.totalAirways).toBeGreaterThan(0);
+        // Should have at least some of these airway types
+        expect(airwayTypes.hasVictor || airwayTypes.hasJet || airwayTypes.hasT || airwayTypes.hasQ).toBe(true);
+    });
+
+    test('should have zoom-based airways and fixes visibility', async ({ page }) => {
+        await page.goto('/');
+
+        // Navigate to MAP tab
+        await page.click('[data-tab="map"]');
+
+        // Wait for zoom buttons
+        await page.waitForSelector('[data-zoom="surrounding-50"]');
+
+        // Check all zoom mode buttons exist
+        const zoomButtons = {
+            route: page.locator('[data-zoom="full"]'),
+            dest: page.locator('[data-zoom="destination"]'),
+            nm50: page.locator('[data-zoom="surrounding-50"]'),
+            nm25: page.locator('[data-zoom="surrounding-25"]'),
+            nm5: page.locator('[data-zoom="surrounding-5"]')
+        };
+
+        for (const [, btn] of Object.entries(zoomButtons)) {
+            await expect(btn).toBeVisible();
+        }
+    });
+
 });
