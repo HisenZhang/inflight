@@ -613,6 +613,7 @@
                     <button class="zoom-btn" data-zoom="destination">DEST</button>
                     <button class="zoom-btn" data-zoom="surrounding-50">50NM</button>
                     <button class="zoom-btn" data-zoom="surrounding-25">25NM</button>
+                    <button class="zoom-btn" data-zoom="surrounding-5">5NM</button>
                     <button class="zoom-btn" id="zoomOutBtn">−</button>
                     <button class="zoom-btn" id="zoomInBtn">+</button>
                 </div>
@@ -1465,6 +1466,7 @@
     <script src="data/core/storage-adapter.js"></script><!-- Abstract storage interface -->
     <script src="data/core/cache-strategy.js"></script> <!-- Cache invalidation strategies -->
     <script src="data/storage/memory-storage.js"></script><!-- In-memory storage adapter -->
+    <script src="data/sources/indexeddb-source.js"></script><!-- IndexedDB data source for cached data -->
     <script src="data/repository.js"></script>          <!-- Central data repository facade -->
 
     <!-- Data Layer - Legacy (coexists with v3) -->

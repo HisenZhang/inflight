@@ -6,7 +6,7 @@ let watchId = null;
 let routeData = null;
 let currentLegIndex = 0;
 let diversionWaypoint = null; // Stores the waypoint when in diversion mode (currentLegIndex = -1)
-let currentZoomMode = 'full'; // 'full', 'destination', 'surrounding-50', 'surrounding-25', 'custom'
+let currentZoomMode = 'full'; // 'full', 'destination', 'surrounding-50', 'surrounding-25', 'surrounding-5', 'custom'
 let customBounds = null; // Custom bounds for focused view (e.g., hazard polygon)
 let currentStatusItem = null; // Track currently visible status bar item
 let zoomLevel = 1; // Pinch zoom level (1.0 = default, max based on route bounds)
@@ -238,7 +238,7 @@ function updateLiveNavigation() {
         });
 
         // Redraw map if needed
-        if (currentZoomMode === 'destination' || currentZoomMode === 'surrounding-50' || currentZoomMode === 'surrounding-25') {
+        if (currentZoomMode === 'destination' || currentZoomMode === 'surrounding-50' || currentZoomMode === 'surrounding-25' || currentZoomMode === 'surrounding-5') {
             generateMap(waypoints, legs);
         }
 
@@ -384,7 +384,7 @@ function updateLiveNavigation() {
 
     // Update GPS position on map
     // Strategy: Quick marker update every GPS tick, full redraw only when needed
-    if (currentZoomMode === 'destination' || currentZoomMode === 'surrounding-50' || currentZoomMode === 'surrounding-25') {
+    if (currentZoomMode === 'destination' || currentZoomMode === 'surrounding-50' || currentZoomMode === 'surrounding-25' || currentZoomMode === 'surrounding-5') {
         const now = Date.now();
         let shouldFullRedraw = false;
 
@@ -449,7 +449,7 @@ function drawAirspace(waypoints, project, strokeWidth, bounds) {
     if (!window.DataManager || !window.QueryEngine) return svg;
 
     // Get all airports in the bounding box (with some padding for airspace that extends beyond)
-    const padding = 0.5; // ~30nm padding to catch airspace that extends into view
+    const padding = 1.0; // ~60nm padding to catch airspace that extends into view (increased for larger viewport)
     const expandedBounds = {
         minLat: bounds.minLat - padding,
         maxLat: bounds.maxLat + padding,
@@ -570,19 +570,40 @@ function drawAirspace(waypoints, project, strokeWidth, bounds) {
 // ============================================
 
 // Draw airways in the visible area
-// Shown at zoom levels 50 and 25 (surrounding-50, surrounding-25)
-function drawAirways(project, bounds, strokeWidth) {
+// Shown at zoom levels 50nm, 25nm, and 5nm (surrounding-50, surrounding-25, surrounding-5)
+// All airways displayed at all three zoom levels
+// zoomMode parameter determines opacity (50nm: lighter, 25/5nm: darker)
+function drawAirways(project, bounds, strokeWidth, zoomMode = 'surrounding-25') {
     let svg = '';
 
     const queryEngine = window.App?.queryEngine;
-    const fixesData = window.DataManager?.getFixesData();
-    const airwaysData = window.DataManager?.getAirwaysData();
+    console.log('[drawAirways] queryEngine exists:', !!queryEngine);
+    if (!queryEngine) return svg;
 
-    if (!queryEngine || !fixesData || !airwaysData) return svg;
-    if (fixesData.size === 0 || airwaysData.size === 0) return svg;
+    // Check spatial index status
+    const spatialIndex = queryEngine._indexes.get('fixes_spatial');
+    console.log('[drawAirways] Spatial index:', {
+        exists: !!spatialIndex,
+        size: spatialIndex?.size || 0,
+        cellCount: spatialIndex?.cellCount || 0
+    });
+
+    // Expand bounds to ensure we capture airways/fixes at edges of viewport
+    // Use larger padding for airways since they extend between fixes
+    // Account for visual padding (5%) added during projection
+    const padding = 1.5; // ~90nm padding to cover viewport edges plus visual margins
+    const expandedBounds = {
+        minLat: bounds.minLat - padding,
+        maxLat: bounds.maxLat + padding,
+        minLon: bounds.minLon - padding,
+        maxLon: bounds.maxLon + padding
+    };
 
     // Use spatial index for efficient bounds query
-    const fixesInBounds = queryEngine.findInBounds('fixes_spatial', bounds);
+    console.log('[drawAirways] Query bounds (expanded):', expandedBounds);
+    const fixesInBounds = queryEngine.findInBounds('fixes_spatial', expandedBounds);
+    console.log('[drawAirways] Fixes in bounds:', fixesInBounds.length);
+    if (fixesInBounds.length === 0) return svg;
 
     // Build position map from spatial query results
     const fixPositionMap = new Map();
@@ -598,7 +619,17 @@ function drawAirways(project, bounds, strokeWidth) {
 
     svg += `<g class="airways-group">`;
 
-    for (const [airwayId, airway] of airwaysData) {
+    // Get airways index
+    const airwaysIndex = queryEngine._indexes.get('airways');
+    const fixesIndex = queryEngine._indexes.get('fixes');
+    console.log('[drawAirways] Airways index size:', airwaysIndex?.size || 0);
+    console.log('[drawAirways] Fixes index size:', fixesIndex?.size || 0);
+    if (!airwaysIndex || !fixesIndex) {
+        console.warn('[drawAirways] Missing indexes!');
+        return svg;
+    }
+
+    for (const [airwayId, airway] of airwaysIndex.entries()) {
         if (!airway.fixes || airway.fixes.length < 2) continue;
 
         // Check if any segment of this airway is visible
@@ -615,11 +646,11 @@ function drawAirways(project, bounds, strokeWidth) {
 
             // If fix not in bounds, get its coordinates and check if line might cross bounds
             if (!pos1) {
-                const fix1 = fixesData.get(fix1Ident);
+                const fix1 = queryEngine.getByKey('fixes', fix1Ident);
                 if (fix1) pos1 = project(fix1.lat, fix1.lon);
             }
             if (!pos2) {
-                const fix2 = fixesData.get(fix2Ident);
+                const fix2 = queryEngine.getByKey('fixes', fix2Ident);
                 if (fix2) pos2 = project(fix2.lat, fix2.lon);
             }
 
@@ -635,13 +666,18 @@ function drawAirways(project, bounds, strokeWidth) {
             }
         }
 
-        // Draw airway segments
+        // Draw airway segments with zoom-dependent opacity
         if (hasVisibleSegment) {
+            // 50nm: 60%, 25nm: 80%, 5nm: 100%
+            let opacity = 1.0;
+            if (zoomMode === 'surrounding-50') opacity = 0.6;
+            else if (zoomMode === 'surrounding-25') opacity = 0.8;
+
             for (const segment of visibleSegments) {
                 svg += `<line x1="${segment.from.x}" y1="${segment.from.y}" ` +
                        `x2="${segment.to.x}" y2="${segment.to.y}" ` +
-                       `stroke="#808080" stroke-width="${strokeWidth * 0.5}" ` +
-                       `stroke-opacity="0.6" class="airway-line"/>`;
+                       `stroke="#808080" stroke-width="${strokeWidth * 1.0}" ` +
+                       `stroke-opacity="${opacity}" class="airway-line"/>`;
             }
 
             // Record label position for colocated airway detection
@@ -664,16 +700,25 @@ function drawAirways(project, bounds, strokeWidth) {
         }
     }
 
-    // Draw airway labels, stacking colocated airways vertically
+    // Draw airway labels directly on the line (not above), stacking colocated airways
+    // Apply same opacity as airways: 50nm: 60%, 25nm: 80%, 5nm: 100%
+    let labelOpacity = 1.0;
+    if (zoomMode === 'surrounding-50') labelOpacity = 0.6;
+    else if (zoomMode === 'surrounding-25') labelOpacity = 0.8;
+
     for (const [, labelInfo] of segmentLabels) {
         const { x, y, airways } = labelInfo;
         const lineHeight = 26; // Vertical spacing between stacked labels
-        const startY = y - 8 - (airways.length - 1) * lineHeight / 2;
+        const startY = y - (airways.length - 1) * lineHeight / 2; // Center vertically on the line
 
         for (let i = 0; i < airways.length; i++) {
+            // Use dominant-baseline="middle" to center text on the line
+            // Add black stroke for readability over the grey airway line
             svg += `<text x="${x}" y="${startY + i * lineHeight}" ` +
-                   `text-anchor="middle" fill="#808080" font-size="24" ` +
+                   `text-anchor="middle" dominant-baseline="middle" ` +
+                   `fill="#808080" fill-opacity="${labelOpacity}" font-size="24" ` +
                    `font-family="Roboto Mono" font-weight="500" ` +
+                   `stroke="#000000" stroke-width="4" stroke-opacity="${labelOpacity}" paint-order="stroke" ` +
                    `class="airway-label">${airways[i]}</text>`;
         }
     }
@@ -684,18 +729,50 @@ function drawAirways(project, bounds, strokeWidth) {
 }
 
 // Draw fixes as triangles in the visible area
-// Only shown at zoom level 25 (surrounding-25)
-function drawFixes(project, bounds, strokeWidth) {
+// Shown at zoom levels 50nm, 25nm, and 5nm (surrounding-50, surrounding-25, surrounding-5)
+// At 50nm & 25nm: reporting points + fixes that are part of airways
+// At 5nm: all fixes
+function drawFixes(project, bounds, strokeWidth, shapeScaleFactor = 2, zoomMode = 'surrounding-25') {
     let svg = '';
 
     const queryEngine = window.App?.queryEngine;
     if (!queryEngine) return svg;
 
+    // Expand bounds to ensure we capture fixes at edges of viewport
+    // Account for visual padding (5%) added during projection
+    const padding = 1.5; // ~90nm padding to cover viewport edges plus visual margins
+    const expandedBounds = {
+        minLat: bounds.minLat - padding,
+        maxLat: bounds.maxLat + padding,
+        minLon: bounds.minLon - padding,
+        maxLon: bounds.maxLon + padding
+    };
+
     // Use spatial index for efficient bounds query
-    const fixResults = queryEngine.findInBounds('fixes_spatial', bounds);
+    const fixResults = queryEngine.findInBounds('fixes_spatial', expandedBounds);
+
+    // Build set of fixes that are part of airways (needed for 50nm & 25nm filtering)
+    const fixesInAirways = new Set();
+    if (zoomMode === 'surrounding-50' || zoomMode === 'surrounding-25') {
+        const airwaysIndex = queryEngine._indexes.get('airways');
+        if (airwaysIndex) {
+            for (const [, airway] of airwaysIndex.entries()) {
+                if (airway.fixes && airway.fixes.length >= 2) {
+                    airway.fixes.forEach(fixIdent => fixesInAirways.add(fixIdent));
+                }
+            }
+        }
+    }
+
+    // Filter based on zoom level
+    const filteredFixes = zoomMode === 'surrounding-5'
+        ? fixResults // Show all fixes at 5nm zoom
+        : fixResults.filter(fix =>
+            fix.isReportingPoint || fixesInAirways.has(fix.ident)
+          ); // At 50nm & 25nm: reporting points + airway fixes
 
     // Build display data with projected positions
-    const fixesInBounds = fixResults.map(fix => ({
+    const fixesInBounds = filteredFixes.map(fix => ({
         ident: fix.ident,
         fix,
         pos: project(fix.lat, fix.lon)
@@ -703,8 +780,13 @@ function drawFixes(project, bounds, strokeWidth) {
 
     if (fixesInBounds.length === 0) return svg;
 
-    // Draw fixes as triangles
-    const triangleSize = 8; // Size of the triangle
+    // Draw fixes as triangles - responsive size (8 base * 2 = 16)
+    const triangleSize = 8 * shapeScaleFactor;
+
+    // Apply same opacity as airways: 50nm: 60%, 25nm: 80%, 5nm: 100%
+    let fixOpacity = 1.0;
+    if (zoomMode === 'surrounding-50') fixOpacity = 0.6;
+    else if (zoomMode === 'surrounding-25') fixOpacity = 0.8;
 
     svg += `<g class="fixes-group">`;
 
@@ -722,12 +804,14 @@ function drawFixes(project, bounds, strokeWidth) {
         const fillColor = fix.isReportingPoint ? '#808080' : 'none';
 
         svg += `<polygon points="${x1},${y1} ${x2},${y2} ${x3},${y3}" ` +
-               `fill="${fillColor}" stroke="#808080" stroke-width="${strokeWidth * 0.4}" ` +
+               `fill="${fillColor}" fill-opacity="${fixOpacity}" ` +
+               `stroke="#808080" stroke-width="${strokeWidth * 0.4}" stroke-opacity="${fixOpacity}" ` +
                `class="fix-triangle"/>`;
 
-        // Fix label (grey text)
+        // Fix label (grey text) - responsive font size
+        const labelFontSize = 7 * shapeScaleFactor; // 14px at scale factor 2
         svg += `<text x="${pos.x}" y="${pos.y - triangleSize - 4}" ` +
-               `text-anchor="middle" fill="#808080" font-size="20" ` +
+               `text-anchor="middle" fill="#808080" fill-opacity="${fixOpacity}" font-size="${labelFontSize}" ` +
                `font-family="Roboto Mono" font-weight="400" ` +
                `class="fix-label">${ident}</text>`;
     }
@@ -795,9 +879,12 @@ function generateMap(waypoints, legs) {
     // Calculate bounds based on zoom mode
     let bounds;
 
-    if ((currentZoomMode === 'surrounding-50' || currentZoomMode === 'surrounding-25') && currentPosition) {
-        // Radius around current position (50nm or 25nm)
-        const radiusNM = currentZoomMode === 'surrounding-25' ? 25 : 50;
+    if ((currentZoomMode === 'surrounding-50' || currentZoomMode === 'surrounding-25' || currentZoomMode === 'surrounding-5') && currentPosition) {
+        // Radius around current position (50nm, 25nm, or 5nm)
+        let radiusNM = 50;
+        if (currentZoomMode === 'surrounding-25') radiusNM = 25;
+        else if (currentZoomMode === 'surrounding-5') radiusNM = 5;
+
         const radiusDeg = radiusNM / 60; // 1 degree ≈ 60nm
 
         bounds = {
@@ -825,7 +912,7 @@ function generateMap(waypoints, legs) {
         const minRange = 0.02; // Minimum ~1.2nm range
         const effectiveLatRange = Math.max(latRange, minRange);
         const effectiveLonRange = Math.max(lonRange, minRange);
-        const padding = 0.15;
+        const padding = 0.20; // Increased padding for larger viewport
 
         bounds = {
             minLat: minLat - effectiveLatRange * padding,
@@ -846,10 +933,10 @@ function generateMap(waypoints, legs) {
         const minLon = Math.min(...lons);
         const maxLon = Math.max(...lons);
 
-        // 5% padding around route bounds
+        // Padding around route bounds (increased for larger viewport)
         const latRange = maxLat - minLat;
         const lonRange = maxLon - minLon;
-        const padding = 0.05;
+        const padding = 0.08;
 
         bounds = {
             minLat: minLat - latRange * padding,
@@ -980,16 +1067,51 @@ function generateMap(waypoints, legs) {
     svg += `</g>`;
 
     // ============================================
-    // LAYER 1.5: AIRWAYS (zoom 50/25) AND FIXES (zoom 25 only)
+    // LAYER 1.5: AIRWAYS AND FIXES (zoom 50nm, 25nm, and 5nm)
+    // Also shown in DEST view when within 50nm of destination
     // ============================================
-    if (currentZoomMode === 'surrounding-50' || currentZoomMode === 'surrounding-25') {
-        svg += `<g id="layer-airways" opacity="1.0">`;
-        svg += drawAirways(project, bounds, strokeWidth);
-        svg += `</g>`;
+    console.log('[VectorMap] Current zoom mode:', currentZoomMode);
+
+    // Check if we should show airways/fixes
+    let shouldShowDetails = false;
+    let effectiveZoomMode = currentZoomMode;
+
+    if (currentZoomMode === 'surrounding-50' || currentZoomMode === 'surrounding-25' || currentZoomMode === 'surrounding-5') {
+        shouldShowDetails = true;
+    } else if (currentZoomMode === 'destination' && currentPosition && waypoints.length > 0) {
+        // In DEST view, check distance to destination
+        const destination = waypoints[waypoints.length - 1];
+        const distanceToDestNM = window.RouteCalculator.calculateDistance(
+            currentPosition.lat, currentPosition.lon,
+            destination.lat, destination.lon
+        );
+
+        console.log('[VectorMap] Distance to destination:', distanceToDestNM.toFixed(1), 'nm');
+
+        // Enable details based on distance
+        if (distanceToDestNM <= 5) {
+            shouldShowDetails = true;
+            effectiveZoomMode = 'surrounding-5';
+        } else if (distanceToDestNM <= 25) {
+            shouldShowDetails = true;
+            effectiveZoomMode = 'surrounding-25';
+        } else if (distanceToDestNM <= 50) {
+            shouldShowDetails = true;
+            effectiveZoomMode = 'surrounding-50';
+        }
     }
-    if (currentZoomMode === 'surrounding-25') {
+
+    if (shouldShowDetails) {
+        console.log('[VectorMap] Drawing airways and fixes at detailed zoom (mode:', effectiveZoomMode, ')');
+        const airwaysSvg = drawAirways(project, bounds, strokeWidth, effectiveZoomMode);
+        const fixesSvg = drawFixes(project, bounds, strokeWidth, shapeScaleFactor, effectiveZoomMode);
+        console.log('[VectorMap] Airways SVG length:', airwaysSvg.length);
+        console.log('[VectorMap] Fixes SVG length:', fixesSvg.length);
+        svg += `<g id="layer-airways" opacity="1.0">`;
+        svg += airwaysSvg;
+        svg += `</g>`;
         svg += `<g id="layer-fixes" opacity="1.0">`;
-        svg += drawFixes(project, bounds, strokeWidth);
+        svg += fixesSvg;
         svg += `</g>`;
     }
 
@@ -1091,14 +1213,36 @@ function generateMap(waypoints, legs) {
     // ============================================
     svg += `<g id="layer-waypoints" opacity="1.0">`;
 
-    // Draw waypoints (all get circles, but only non-colliding get labels)
+    // Draw waypoints (fixes get triangles, others get circles)
     waypointData.forEach(({ waypoint, index, pos, code, color, labelY }) => {
         // Check if this is the target waypoint (next waypoint we're heading to)
         const isTargetWaypoint = (currentLegIndex >= 0 && index === currentLegIndex + 1);
         const targetClass = isTargetWaypoint ? ' target-waypoint' : '';
 
         svg += `<g class="map-waypoint${targetClass}" data-index="${index}">`;
-        svg += `<circle class="waypoint-circle" cx="${pos.x}" cy="${pos.y}" r="${waypointRadius}" fill="${color}" stroke="${color}" stroke-width="${strokeWidth}"/>`;
+
+        // Draw triangle for fixes, circle for others
+        if (waypoint.waypointType === 'fix') {
+            // Triangle pointing up (same as fix display)
+            const triangleSize = waypointRadius * 2; // Match scale to circle radius
+            const h = triangleSize * Math.sqrt(3) / 2; // Height of equilateral triangle
+            const x1 = pos.x;
+            const y1 = pos.y - h * 2 / 3; // Top vertex
+            const x2 = pos.x - triangleSize / 2;
+            const y2 = pos.y + h / 3; // Bottom left
+            const x3 = pos.x + triangleSize / 2;
+            const y3 = pos.y + h / 3; // Bottom right
+
+            // Solid fill for reporting points, hollow for others
+            const fillColor = waypoint.isReportingPoint ? color : 'none';
+
+            svg += `<polygon points="${x1},${y1} ${x2},${y2} ${x3},${y3}" ` +
+                   `fill="${fillColor}" stroke="${color}" stroke-width="${strokeWidth}" ` +
+                   `class="waypoint-triangle"/>`;
+        } else {
+            // Circle for airports and navaids
+            svg += `<circle class="waypoint-circle" cx="${pos.x}" cy="${pos.y}" r="${waypointRadius}" fill="${color}" stroke="${color}" stroke-width="${strokeWidth}"/>`;
+        }
 
         if (visibleLabels.has(index)) {
             svg += `<text class="waypoint-label" x="${pos.x}" y="${labelY}" text-anchor="middle" fill="${color}" font-size="${waypointLabelSize}" font-family="Roboto Mono" font-weight="700">${code}</text>`;
@@ -1590,7 +1734,7 @@ function updateNavigationDisplay(navData) {
 // ============================================
 
 function setZoomMode(mode) {
-    if (['full', 'destination', 'surrounding-50', 'surrounding-25'].includes(mode)) {
+    if (['full', 'destination', 'surrounding-50', 'surrounding-25', 'surrounding-5'].includes(mode)) {
         currentZoomMode = mode;
         zoomLevel = 1; // Reset zoom level when switching modes
         panOffset = { x: 0, y: 0 }; // Reset pan offset when switching modes
