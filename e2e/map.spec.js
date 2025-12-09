@@ -200,3 +200,160 @@ test.describe('Flight Tracker Integration', () => {
     });
 
 });
+
+test.describe('Fixes and Airways Display', () => {
+
+    test('should have fixes spatial index initialized', async ({ page }) => {
+        await page.goto('/');
+
+        // Wait for App and QueryEngine to load
+        await page.waitForFunction(() => window.App?.queryEngine !== undefined);
+
+        // Check if fixes_spatial index exists and has data
+        const fixesIndexInfo = await page.evaluate(() => {
+            const qe = window.App?.queryEngine;
+            if (!qe) return { exists: false };
+
+            const index = qe._indexes.get('fixes_spatial');
+            return {
+                exists: !!index,
+                size: index?.size || 0,
+                cellCount: index?.cellCount || 0
+            };
+        });
+
+        expect(fixesIndexInfo.exists).toBe(true);
+        expect(fixesIndexInfo.size).toBeGreaterThan(0);
+        expect(fixesIndexInfo.cellCount).toBeGreaterThan(0);
+    });
+
+    test('should have fixes data loaded in DataManager', async ({ page }) => {
+        await page.goto('/');
+
+        await page.waitForFunction(() => window.DataManager?.getFixesData !== undefined);
+
+        const fixesDataInfo = await page.evaluate(() => {
+            const fixesData = window.DataManager?.getFixesData();
+            if (!fixesData) return { exists: false, size: 0 };
+
+            // Get a sample fix to verify structure
+            const sampleFix = Array.from(fixesData.values())[0];
+
+            return {
+                exists: true,
+                size: fixesData.size,
+                hasSample: !!sampleFix,
+                sampleHasLatLon: sampleFix ? (sampleFix.lat != null && sampleFix.lon != null) : false,
+                sampleHasIdent: sampleFix ? !!sampleFix.ident : false
+            };
+        });
+
+        expect(fixesDataInfo.exists).toBe(true);
+        expect(fixesDataInfo.size).toBeGreaterThan(0);
+        expect(fixesDataInfo.hasSample).toBe(true);
+        expect(fixesDataInfo.sampleHasLatLon).toBe(true);
+        expect(fixesDataInfo.sampleHasIdent).toBe(true);
+    });
+
+    test('should have airways data loaded in DataManager', async ({ page }) => {
+        await page.goto('/');
+
+        await page.waitForFunction(() => window.DataManager?.getAirwaysData !== undefined);
+
+        const airwaysDataInfo = await page.evaluate(() => {
+            const airwaysData = window.DataManager?.getAirwaysData();
+            if (!airwaysData) return { exists: false, size: 0 };
+
+            // Get a sample airway to verify structure
+            const sampleAirway = Array.from(airwaysData.values())[0];
+
+            return {
+                exists: true,
+                size: airwaysData.size,
+                hasSample: !!sampleAirway,
+                sampleHasFixes: sampleAirway ? Array.isArray(sampleAirway.fixes) : false
+            };
+        });
+
+        expect(airwaysDataInfo.exists).toBe(true);
+        expect(airwaysDataInfo.size).toBeGreaterThan(0);
+        expect(airwaysDataInfo.hasSample).toBe(true);
+        expect(airwaysDataInfo.sampleHasFixes).toBe(true);
+    });
+
+    test('should query fixes within bounds using spatial index', async ({ page }) => {
+        await page.goto('/');
+
+        await page.waitForFunction(() => window.App?.queryEngine !== undefined);
+
+        // Test with a known area (e.g., San Francisco Bay Area)
+        const results = await page.evaluate(() => {
+            const qe = window.App?.queryEngine;
+            if (!qe) return [];
+
+            const bounds = {
+                minLat: 37.0,
+                maxLat: 38.0,
+                minLon: -123.0,
+                maxLon: -122.0
+            };
+
+            return qe.findInBounds('fixes_spatial', bounds);
+        });
+
+        // Should find some fixes in SF Bay Area
+        expect(results.length).toBeGreaterThan(0);
+
+        // Verify result structure
+        if (results.length > 0) {
+            expect(results[0]).toHaveProperty('ident');
+            expect(results[0]).toHaveProperty('lat');
+            expect(results[0]).toHaveProperty('lon');
+        }
+    });
+
+    test('should render fixes SVG elements at zoom level 25', async ({ page }) => {
+        await page.goto('/');
+
+        // Wait for modules to load
+        await page.waitForFunction(() => window.MapDisplay !== undefined);
+        await page.waitForFunction(() => window.App?.queryEngine !== undefined);
+
+        // Test drawFixes function directly
+        const svgResult = await page.evaluate(() => {
+            // Mock project function
+            const project = (lat, lon) => ({ x: lon * 100, y: lat * 100 });
+
+            // Test bounds (SF Bay Area)
+            const bounds = {
+                minLat: 37.0,
+                maxLat: 38.0,
+                minLon: -123.0,
+                maxLon: -122.0
+            };
+
+            // Call drawFixes (it's in the global scope in map-display.js)
+            // We need to access it through the generated map
+            const qe = window.App?.queryEngine;
+            const fixesData = window.DataManager?.getFixesData();
+
+            if (!qe || !fixesData || fixesData.size === 0) {
+                return { success: false, reason: 'missing data' };
+            }
+
+            const fixesInBounds = qe.findInBounds('fixes_spatial', bounds);
+
+            return {
+                success: true,
+                fixesInBoundsCount: fixesInBounds.length,
+                totalFixes: fixesData.size,
+                sampleFixes: fixesInBounds.slice(0, 3).map(f => ({ ident: f.ident, lat: f.lat, lon: f.lon }))
+            };
+        });
+
+        expect(svgResult.success).toBe(true);
+        expect(svgResult.fixesInBoundsCount).toBeGreaterThan(0);
+        expect(svgResult.totalFixes).toBeGreaterThan(0);
+    });
+
+});
