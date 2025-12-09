@@ -55,6 +55,61 @@ IN-FLIGHT displays controlled airspace around airports for situational awareness
 - ✅ **Always refer to current sectional charts** for exact boundaries, altitudes, and operating requirements
 - ✅ Use to get a general sense of nearby controlled airspace locations only
 
+### Airways and Fixes (Detailed Zoom Levels)
+
+IN-FLIGHT displays the airway system and navigation fixes at closer zoom levels for enhanced situational awareness.
+
+**Airway Visualization:**
+- **Solid grey lines** = Low altitude airways (Victor, RNAV T, colored airways)
+- **Dashed grey lines** = High altitude airways (Jet routes, Q-routes)
+- Airways appear automatically at 50NM and 25NM zoom
+- Opacity adjusts based on zoom: 60% at 50NM, 80% at 25NM
+
+**Fix Markers:**
+- **Small triangles** = Navigation fixes (intersections, waypoints)
+- Appears at 25NM and 5NM zoom levels
+- At 50NM and 25NM: Shows only reporting points + fixes that are part of airways
+- At 5NM: Shows all fixes for detailed approach planning
+
+**Airway Filter (LOW/HIGH/ALL button):**
+- **LOW**: Shows only low altitude airways (Victor, RNAV T, colored airways)
+  - Use for flights below FL180
+  - Matches FAA Low Altitude Enroute charts
+- **HIGH**: Shows only high altitude airways (Jet routes, Q-routes)
+  - Use for flights at/above FL180
+  - Matches FAA High Altitude Enroute charts
+- **ALL**: Shows all airways regardless of altitude
+  - Use for mixed altitude planning or complete airway structure
+
+**Progressive Detail by Zoom Level:**
+
+| Zoom Mode | Airways | Fixes | Best For |
+|-----------|---------|-------|----------|
+| ROUTE | Hidden | Hidden | Complete route overview |
+| 50NM | Shown (60%) | Hidden | Enroute strategic view with airway structure |
+| 25NM | Shown (80%) | Shown | Tactical navigation, airway + fix details |
+| 5NM | Hidden | Shown | Approach planning, fix-by-fix navigation |
+
+**What you see:**
+- Airways connect navaids (VORs) and fixes to create the IFR route structure
+- Airway names displayed on the line (may stack if multiple airways share segments)
+- Fixes show navigation intersections you might reference in clearances
+- All airways include both segment endpoints (navaids and fixes)
+
+**Why this is useful:**
+- **"Cleared to KSFO via V244, direct KSBA"** - See V244 airway on map
+- **"Hold at PORTE intersection"** - Locate PORTE fix visually
+- **"Cross BRINY at or above 8000"** - Find BRINY on the map
+- **Altitude planning** - Toggle LOW/HIGH to see relevant airways for your cruise altitude
+
+**IMPORTANT LIMITATIONS:**
+- **Situational awareness only** - Airways shown for reference, not navigation
+- **No MEA/MOCA/altitude limits** - Consult enroute charts for altitude restrictions
+- **Simplified representation** - Airways may have complex routing not fully depicted
+- **Not all fixes shown** - Only reporting points and airway fixes at 50NM/25NM zoom
+- ✅ **Always refer to current enroute charts** for exact routing, altitudes, and restrictions
+- ✅ Use IFR-certified GPS for actual airway navigation
+
 ### GPS Position (When Enabled)
 
 **Your aircraft:**
@@ -155,27 +210,53 @@ Located at top-right of map.
 **DEST:**
 - Zooms to destination airport area
 - Shows: Arrival waypoints, local navaids, airport
+- Auto-shows airways/fixes when within 50nm of destination
 - Good for: Approach planning, reviewing STAR
 - Use when: Within 50nm of destination
 
 **50NM:**
-- Close-range view: 50 nautical mile radius around your aircraft
-- Shows: Upcoming waypoints, route ahead
-- Good for: Enroute navigation, mid-range situational awareness
+- Medium-range view: 50 nautical mile radius around your aircraft
+- Shows: Airways (60% opacity), upcoming waypoints, route ahead
+- Fixes hidden (cleaner view)
+- Good for: Enroute navigation, airway structure awareness
 - **Use this for most of your flight**
 
 **25NM:**
-- Close map view: 25 nautical mile radius
-- Shows: Immediate vicinity, terminal area details
-- Good for: Terminal area, pattern entry, close navigation
+- Close-range view: 25 nautical mile radius
+- Shows: Airways (80% opacity) AND fixes (reporting points + airway fixes)
+- Good for: Terminal area, tactical navigation with airway/fix details
 - Use when: Approaching airport or navigating complex airspace
+
+**5NM:**
+- Approach view: 5 nautical mile radius
+- Shows: All fixes (100% opacity), no airways
+- Good for: Approach planning, fix-by-fix navigation, holding patterns
+- Use when: Final approach or complex terminal procedures
+
+### Airway Filter Button (LOW/HIGH/ALL)
+
+**Located:** Next to zoom controls
+
+**Cycles through:**
+1. **LOW** - Shows only low altitude airways (Victor, RNAV T, colored airways)
+2. **HIGH** - Shows only high altitude airways (Jet routes, Q-routes)
+3. **ALL** - Shows all airways
+
+**When to use:**
+- **Below FL180:** Use LOW filter to match your Low Altitude Enroute chart
+- **At/Above FL180:** Use HIGH filter to match your High Altitude Enroute chart
+- **Mixed altitude planning:** Use ALL to see complete airway network
+
+**Visual distinction:**
+- Low altitude airways = Solid lines
+- High altitude airways = Dashed lines
 
 ### Manual Zoom (+ and − Buttons)
 
 **+ button**: Zoom in for more detail
 **− button**: Zoom out for wider view
 
-**Tip:** After manual zoom, clicking any preset (ROUTE/DEST/50NM/25NM) returns to standard views.
+**Tip:** After manual zoom, clicking any preset (ROUTE/DEST/50NM/25NM/5NM) returns to standard views.
 
 ## Auto-Waypoint Advancement
 
