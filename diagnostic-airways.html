@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Airways Diagnostic</title>
+    <style>
+        body {
+            font-family: monospace;
+            margin: 20px;
+            background: #1a1a1a;
+            color: #00ff00;
+        }
+        h1 { color: #ff00ff; }
+        .section { margin: 20px 0; padding: 10px; border: 1px solid #333; }
+        .error { color: #ff0000; }
+        .success { color: #00ff00; }
+        pre { background: #000; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Airways Diagnostic Tool</h1>
+    <div id="output"></div>
+
+    <script>
+        async function checkAirways() {
+            const output = document.getElementById('output');
+            let html = '';
+
+            try {
+                // Open IndexedDB
+                const db = await new Promise((resolve, reject) => {
+                    const request = indexedDB.open('FlightPlanningDB', 12);
+                    request.onerror = () => reject(request.error);
+                    request.onsuccess = () => resolve(request.result);
+                });
+
+                html += '<div class="section success">✓ Database opened successfully</div>';
+
+                // Get cached data
+                const data = await new Promise((resolve, reject) => {
+                    const tx = db.transaction(['flightdata'], 'readonly');
+                    const store = tx.objectStore('flightdata');
+                    const req = store.get('flightdata_cache_v12');
+                    req.onerror = () => reject(req.error);
+                    req.onsuccess = () => resolve(req.result);
+                });
+
+                if (!data) {
+                    html += '<div class="section error">✗ No cached data found (flightdata_cache_v12)</div>';
+                    output.innerHTML = html;
+                    return;
+                }
+
+                html += '<div class="section success">✓ Cached data found</div>';
+
+                // Check airways
+                const airwaysCount = data.airways ? data.airways.length : 0;
+                html += `<div class="section">
+                    <h2>Airways Statistics</h2>
+                    <p><strong>Total airways in IndexedDB:</strong> ${airwaysCount}</p>
+                    <p><strong>Expected from CSV:</strong> ~1,465</p>
+                    <p><strong>Match:</strong> ${airwaysCount >= 1400 ? '✓ GOOD' : '✗ MISSING DATA'}</p>
+                </div>`;
+
+                // Sample airways
+                if (airwaysCount > 0) {
+                    const samples = data.airways.slice(0, 20);
+                    html += '<div class="section"><h2>First 20 Airways</h2><pre>';
+                    for (const [id, airway] of samples) {
+                        const fixCount = airway.fixes ? airway.fixes.length : 0;
+                        const fixList = airway.fixes ? airway.fixes.slice(0, 5).join(' ') : '';
+                        html += `${id}: ${fixCount} fixes (${fixList}...)\n`;
+                    }
+                    html += '</pre></div>';
+
+                    // Check for specific common airways
+                    const airwaysMap = new Map(data.airways);
+                    const commonAirways = ['J1', 'J2', 'V1', 'V2', 'Q1', 'Q2', 'A1', 'B1', 'G1', 'T1'];
+                    html += '<div class="section"><h2>Common Airways Check</h2><pre>';
+                    for (const awy of commonAirways) {
+                        const exists = airwaysMap.has(awy);
+                        const fixes = exists ? airwaysMap.get(awy).fixes?.length || 0 : 0;
+                        html += `${awy}: ${exists ? '✓ Found (' + fixes + ' fixes)' : '✗ Missing'}\n`;
+                    }
+                    html += '</pre></div>';
+
+                    // Airway type distribution
+                    const typeCount = {};
+                    for (const [id] of data.airways) {
+                        const prefix = id.match(/^[A-Z]+/)?.[0] || 'OTHER';
+                        typeCount[prefix] = (typeCount[prefix] || 0) + 1;
+                    }
+                    html += '<div class="section"><h2>Airway Types</h2><pre>';
+                    for (const [type, count] of Object.entries(typeCount).sort((a, b) => b[1] - a[1])) {
+                        html += `${type}: ${count}\n`;
+                    }
+                    html += '</pre></div>';
+                }
+
+                // Check other data
+                html += '<div class="section"><h2>Other Data</h2><pre>';
+                html += `Airports: ${data.airports?.length || 0}\n`;
+                html += `Navaids: ${data.navaids?.length || 0}\n`;
+                html += `Fixes: ${data.fixes?.length || 0}\n`;
+                html += `Version: ${data.version}\n`;
+                html += `Timestamp: ${new Date(data.timestamp).toLocaleString()}\n`;
+                html += `Compressed: ${data.compressed ? 'Yes' : 'No'}\n`;
+                html += '</pre></div>';
+
+                output.innerHTML = html;
+
+            } catch (error) {
+                html += `<div class="section error">✗ Error: ${error.message}</div>`;
+                output.innerHTML = html;
+                console.error(error);
+            }
+        }
+
+        checkAirways();
+    </script>
+</body>
+</html>

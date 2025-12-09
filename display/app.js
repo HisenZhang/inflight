@@ -182,6 +182,14 @@ function setupEventListeners() {
         zoomOutBtn.addEventListener('click', () => window.VectorMap.zoomOut());
     }
 
+    // Airway filter button (cycles LOW → HIGH → ALL)
+    const airwayFilterBtn = document.getElementById('airwayFilterBtn');
+    if (airwayFilterBtn) {
+        airwayFilterBtn.addEventListener('click', () => {
+            window.VectorMap.cycleAirwayFilter();
+        });
+    }
+
     // Weather overlay toggle buttons
     const pirepBtn = document.getElementById('pirepBtn');
     const sigmetBtn = document.getElementById('sigmetBtn');

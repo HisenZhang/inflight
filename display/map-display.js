@@ -11,6 +11,7 @@ let customBounds = null; // Custom bounds for focused view (e.g., hazard polygon
 let currentStatusItem = null; // Track currently visible status bar item
 let zoomLevel = 1; // Pinch zoom level (1.0 = default, max based on route bounds)
 let initialPinchDistance = null;
+let airwayFilter = 'low'; // 'low' (V/T/G/B/A/R - L charts), 'high' (J/Q - H charts), 'all'
 
 // Pan/drag state
 let panOffset = { x: 0, y: 0 }; // Pan offset in screen pixels
@@ -600,15 +601,27 @@ function drawAirways(project, bounds, strokeWidth, zoomMode = 'surrounding-25') 
     };
 
     // Use spatial index for efficient bounds query
+    // Query both fixes AND navaids (airways can connect both)
     console.log('[drawAirways] Query bounds (expanded):', expandedBounds);
     const fixesInBounds = queryEngine.findInBounds('fixes_spatial', expandedBounds);
-    console.log('[drawAirways] Fixes in bounds:', fixesInBounds.length);
-    if (fixesInBounds.length === 0) return svg;
+    const navaidsInBounds = queryEngine.findInBounds('navaids_spatial', expandedBounds);
+    const reportingPointsCount = fixesInBounds.filter(f => f.isReportingPoint).length;
+    console.log('[drawAirways] Fixes in bounds:', fixesInBounds.length,
+                '(reporting:', reportingPointsCount, 'non-reporting:', fixesInBounds.length - reportingPointsCount + ')');
+    console.log('[drawAirways] Navaids in bounds:', navaidsInBounds.length);
 
-    // Build position map from spatial query results
+    if (fixesInBounds.length === 0 && navaidsInBounds.length === 0) {
+        console.warn('[drawAirways] No fixes or navaids in bounds - skipping airways rendering');
+        return svg;
+    }
+
+    // Build position map from spatial query results (both fixes and navaids)
     const fixPositionMap = new Map();
     for (const fix of fixesInBounds) {
         fixPositionMap.set(fix.ident, project(fix.lat, fix.lon));
+    }
+    for (const navaid of navaidsInBounds) {
+        fixPositionMap.set(navaid.ident, project(navaid.lat, navaid.lon));
     }
 
     if (fixPositionMap.size === 0) return svg;
@@ -624,13 +637,46 @@ function drawAirways(project, bounds, strokeWidth, zoomMode = 'surrounding-25') 
     const fixesIndex = queryEngine._indexes.get('fixes');
     console.log('[drawAirways] Airways index size:', airwaysIndex?.size || 0);
     console.log('[drawAirways] Fixes index size:', fixesIndex?.size || 0);
+
+    // Log sample airways for debugging
+    if (airwaysIndex && airwaysIndex.size > 0) {
+        const sampleAirways = Array.from(airwaysIndex.entries()).slice(0, 10);
+        console.log('[drawAirways] Sample airways in index:', sampleAirways.map(([id]) => id).join(', '));
+    }
+
     if (!airwaysIndex || !fixesIndex) {
         console.warn('[drawAirways] Missing indexes!');
         return svg;
     }
 
+    let totalAirwaysProcessed = 0;
+    let airwaysWithVisibleSegments = 0;
+    let airwaysSkippedNoFixes = 0;
+    let fixLookupFailures = 0;
+    const missingFixes = new Set();
+
     for (const [airwayId, airway] of airwaysIndex.entries()) {
-        if (!airway.fixes || airway.fixes.length < 2) continue;
+        totalAirwaysProcessed++;
+
+        if (!airway.fixes || airway.fixes.length < 2) {
+            airwaysSkippedNoFixes++;
+            continue;
+        }
+
+        // Filter airways by altitude chart type (Low/High/All)
+        // Low altitude (L charts): V (Victor), T (RNAV), colored airways (G/B/A/R)
+        // High altitude (H charts): J (Jet), Q (Q-routes)
+        if (airwayFilter === 'low') {
+            const isLowAltitude = airwayId.startsWith('V') || airwayId.startsWith('T') ||
+                                  airwayId.startsWith('G') || airwayId.startsWith('B') ||
+                                  airwayId.startsWith('A') || airwayId.startsWith('R');
+            if (!isLowAltitude) continue;
+        }
+        if (airwayFilter === 'high') {
+            const isHighAltitude = airwayId.startsWith('J') || airwayId.startsWith('Q');
+            if (!isHighAltitude) continue;
+        }
+        // 'all': show all airways (no filter)
 
         // Check if any segment of this airway is visible
         let hasVisibleSegment = false;
@@ -645,13 +691,30 @@ function drawAirways(project, bounds, strokeWidth, zoomMode = 'surrounding-25') 
             let pos2 = fixPositionMap.get(fix2Ident);
 
             // If fix not in bounds, get its coordinates and check if line might cross bounds
+            // Try fixes first, then navaids (airways can connect both fixes and navaids)
             if (!pos1) {
-                const fix1 = queryEngine.getByKey('fixes', fix1Ident);
-                if (fix1) pos1 = project(fix1.lat, fix1.lon);
+                let point1 = queryEngine.getByKey('fixes', fix1Ident);
+                if (!point1) {
+                    point1 = queryEngine.getByKey('navaids', fix1Ident);
+                }
+                if (point1) {
+                    pos1 = project(point1.lat, point1.lon);
+                } else {
+                    fixLookupFailures++;
+                    missingFixes.add(fix1Ident);
+                }
             }
             if (!pos2) {
-                const fix2 = queryEngine.getByKey('fixes', fix2Ident);
-                if (fix2) pos2 = project(fix2.lat, fix2.lon);
+                let point2 = queryEngine.getByKey('fixes', fix2Ident);
+                if (!point2) {
+                    point2 = queryEngine.getByKey('navaids', fix2Ident);
+                }
+                if (point2) {
+                    pos2 = project(point2.lat, point2.lon);
+                } else {
+                    fixLookupFailures++;
+                    missingFixes.add(fix2Ident);
+                }
             }
 
             // If both positions found and at least one is in bounds, draw segment
@@ -668,16 +731,22 @@ function drawAirways(project, bounds, strokeWidth, zoomMode = 'surrounding-25') 
 
         // Draw airway segments with zoom-dependent opacity
         if (hasVisibleSegment) {
+            airwaysWithVisibleSegments++;
+
             // 50nm: 60%, 25nm: 80%, 5nm: 100%
             let opacity = 1.0;
             if (zoomMode === 'surrounding-50') opacity = 0.6;
             else if (zoomMode === 'surrounding-25') opacity = 0.8;
 
+            // Determine line style: solid for low altitude, dashed for high altitude
+            const isHighAltitude = airwayId.startsWith('J') || airwayId.startsWith('Q');
+            const dashArray = isHighAltitude ? '8,4' : 'none'; // Dashed for high, solid for low
+
             for (const segment of visibleSegments) {
                 svg += `<line x1="${segment.from.x}" y1="${segment.from.y}" ` +
                        `x2="${segment.to.x}" y2="${segment.to.y}" ` +
                        `stroke="#808080" stroke-width="${strokeWidth * 1.0}" ` +
-                       `stroke-opacity="${opacity}" class="airway-line"/>`;
+                       `stroke-opacity="${opacity}" stroke-dasharray="${dashArray}" class="airway-line"/>`;
             }
 
             // Record label position for colocated airway detection
@@ -724,6 +793,18 @@ function drawAirways(project, bounds, strokeWidth, zoomMode = 'surrounding-25') 
     }
 
     svg += `</g>`;
+
+    console.log('[drawAirways] Summary:', {
+        totalAirwaysProcessed,
+        airwaysWithVisibleSegments,
+        airwaysSkippedNoFixes,
+        fixLookupFailures,
+        percentageRendered: ((airwaysWithVisibleSegments / totalAirwaysProcessed) * 100).toFixed(1) + '%'
+    });
+
+    if (missingFixes.size > 0) {
+        console.warn('[drawAirways] Missing fixes (first 20):', Array.from(missingFixes).slice(0, 20));
+    }
 
     return svg;
 }
@@ -1103,16 +1184,28 @@ function generateMap(waypoints, legs) {
 
     if (shouldShowDetails) {
         console.log('[VectorMap] Drawing airways and fixes at detailed zoom (mode:', effectiveZoomMode, ')');
-        const airwaysSvg = drawAirways(project, bounds, strokeWidth, effectiveZoomMode);
-        const fixesSvg = drawFixes(project, bounds, strokeWidth, shapeScaleFactor, effectiveZoomMode);
+
+        // Airways: show at 50nm and 25nm zoom only (not at 5nm - too cluttered with fixes)
+        const shouldDrawAirways = effectiveZoomMode === 'surrounding-50' || effectiveZoomMode === 'surrounding-25';
+        const airwaysSvg = shouldDrawAirways ? drawAirways(project, bounds, strokeWidth, effectiveZoomMode) : '';
+
+        // Fixes: show at 25nm and 5nm zoom only (not at 50nm - too cluttered)
+        const shouldDrawFixes = effectiveZoomMode === 'surrounding-25' || effectiveZoomMode === 'surrounding-5';
+        const fixesSvg = shouldDrawFixes ? drawFixes(project, bounds, strokeWidth, shapeScaleFactor, effectiveZoomMode) : '';
+
         console.log('[VectorMap] Airways SVG length:', airwaysSvg.length);
         console.log('[VectorMap] Fixes SVG length:', fixesSvg.length);
-        svg += `<g id="layer-airways" opacity="1.0">`;
-        svg += airwaysSvg;
-        svg += `</g>`;
-        svg += `<g id="layer-fixes" opacity="1.0">`;
-        svg += fixesSvg;
-        svg += `</g>`;
+
+        if (shouldDrawAirways) {
+            svg += `<g id="layer-airways" opacity="1.0">`;
+            svg += airwaysSvg;
+            svg += `</g>`;
+        }
+        if (shouldDrawFixes) {
+            svg += `<g id="layer-fixes" opacity="1.0">`;
+            svg += fixesSvg;
+            svg += `</g>`;
+        }
     }
 
     // ============================================
@@ -2881,6 +2974,31 @@ function focusOnPolygon(coords) {
 }
 
 // ============================================
+// AIRWAY FILTER
+// ============================================
+
+function cycleAirwayFilter() {
+    const filterSequence = ['low', 'high', 'all'];
+    const currentIndex = filterSequence.indexOf(airwayFilter);
+    const nextIndex = (currentIndex + 1) % filterSequence.length;
+    airwayFilter = filterSequence[nextIndex];
+
+    // Update button text
+    const airwayFilterBtn = document.getElementById('airwayFilterBtn');
+    if (airwayFilterBtn) {
+        const labels = { 'low': 'LOW', 'high': 'HIGH', 'all': 'ALL' };
+        airwayFilterBtn.textContent = labels[airwayFilter];
+    }
+
+    console.log('[VectorMap] Airway filter changed to:', airwayFilter);
+
+    // Redraw map with new filter
+    if (routeData) {
+        generateMap(routeData.waypoints, routeData.legs);
+    }
+}
+
+// ============================================
 // EXPORTS
 // ============================================
 
@@ -2905,5 +3023,8 @@ window.VectorMap = {
     getTerrainAnalysis,
 
     // Focus map on a polygon area
-    focusOnPolygon
+    focusOnPolygon,
+
+    // Airway altitude filter
+    cycleAirwayFilter
 };

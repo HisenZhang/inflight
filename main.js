@@ -143,6 +143,9 @@
 
             if (data.airways.size > 0) {
                 console.log(`[App v3] Building airway indexes (${data.airways.size} entries)`);
+                // Log sample airways for debugging
+                const sampleAirways = Array.from(data.airways.entries()).slice(0, 10);
+                console.log('[App v3] Sample airways:', sampleAirways.map(([id, awy]) => `${id} (${awy.fixes?.length || 0} fixes)`).join(', '));
                 qe._indexes.get('airways')?.build(data.airways);
             }
 

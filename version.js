@@ -25,7 +25,7 @@ const AppVersion = {
     // Semantic version (sync with package.json)
     MAJOR: 3,
     MINOR: 4,
-    PATCH: 0,
+    PATCH: 1,
 
     // Full version string
     get VERSION() {
@@ -34,7 +34,7 @@ const AppVersion = {
 
     // Service worker cache version
     // Increment this number to force PWA updates
-    CACHE_VERSION: 156,
+    CACHE_VERSION: 157,
 
     // Full cache name for service worker
     get CACHE_NAME() {
@@ -45,7 +45,7 @@ const AppVersion = {
     BUILD_DATE: '2025-12-08',
 
     // Release name (optional)
-    RELEASE_NAME: 'Responsive map viewport, 5nm zoom, airways & fixes with graduated opacity',
+    RELEASE_NAME: 'Airways with navaid support, Low/High filter, dashed high altitude lines',
 
     /**
      * Get full version info object
