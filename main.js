@@ -9,10 +9,10 @@
      *
      * Initialization sequence:
      * 1. Create storage adapter
-     * 2. Create data repository with sources
+     * 2. Create data repository
      * 3. Create query engine with indexes
-     * 4. Initialize query engine (loads data, builds indexes)
-     * 5. Create services
+     * 4. Create services
+     * 5. Try to load data from IndexedDB cache
      * 6. Export to window.App
      */
     async function bootstrap() {
@@ -23,7 +23,7 @@
             // 1. Create storage adapter
             const storage = new window.MemoryStorage();
 
-            // 2. Create data repository with sources
+            // 2. Create data repository
             const repository = new window.DataRepository()
                 .setStorage(storage);
 
@@ -75,8 +75,8 @@
                 isReady: () => queryEngine.isReady(),
                 getStats: () => queryEngine.getStats(),
 
-                // Initialize from legacy DataManager
-                initFromLegacy: initFromLegacyDataManager
+                // Initialize from IndexedDB
+                loadFromCache: loadDataFromIndexedDB
             };
 
             const elapsed = Math.round(performance.now() - startTime);
@@ -91,130 +91,91 @@
     }
 
     /**
-     * Initialize v3 query engine from legacy DataManager data.
-     * Called after DataManager has loaded data from IndexedDB.
+     * Load aviation data from IndexedDB cache.
+     * This is called automatically on app startup.
      */
-    async function initFromLegacyDataManager() {
-        if (!window.App) {
-            console.warn('[App v3] App not bootstrapped yet');
-            return false;
-        }
-
-        if (!window.DataManager) {
-            console.warn('[App v3] Legacy DataManager not available');
-            return false;
-        }
-
-        // Check if legacy data is loaded
-        if (!window.DataManager.isDataLoaded || !window.DataManager.isDataLoaded()) {
-            console.log('[App v3] Waiting for legacy data to load...');
-            return false;
-        }
-
-        console.log('[App v3] Initializing from legacy DataManager...');
+    async function loadDataFromIndexedDB() {
+        console.log('[App v3] Loading data from IndexedDB...');
         const startTime = performance.now();
 
         try {
-            // Get data from legacy system
-            const airports = window.DataManager.getAirportsMap ?
-                window.DataManager.getAirportsMap() : new Map();
-            const navaids = window.DataManager.getNavaidsMap ?
-                window.DataManager.getNavaidsMap() : new Map();
-            const fixes = window.DataManager.getFixesMap ?
-                window.DataManager.getFixesMap() : new Map();
-            const airways = window.DataManager.getAirwaysMap ?
-                window.DataManager.getAirwaysMap() : new Map();
+            // Create IndexedDB source
+            const dbSource = new window.IndexedDBSource();
 
-            // Build indexes directly
+            // Load data
+            const data = await dbSource.load();
+
+            if (!data || data.airports.size === 0) {
+                console.log('[App v3] No cached data found in IndexedDB');
+                return false;
+            }
+
+            console.log('[App v3] Data loaded from IndexedDB:', {
+                airports: data.airports.size,
+                navaids: data.navaids.size,
+                fixes: data.fixes.size,
+                airways: data.airways.size
+            });
+
+            // Build query engine indexes
             const qe = window.App.queryEngine;
 
-            if (airports.size > 0) {
-                console.log(`[App v3] Building airport indexes (${airports.size} entries)`);
-                qe._indexes.get('airports')?.build(airports);
-                qe._indexes.get('airports_search')?.build(airports);
-                qe._indexes.get('airports_spatial')?.build(airports);
+            if (data.airports.size > 0) {
+                console.log(`[App v3] Building airport indexes (${data.airports.size} entries)`);
+                qe._indexes.get('airports')?.build(data.airports);
+                qe._indexes.get('airports_search')?.build(data.airports);
+                qe._indexes.get('airports_spatial')?.build(data.airports);
             }
 
-            if (navaids.size > 0) {
-                console.log(`[App v3] Building navaid indexes (${navaids.size} entries)`);
-                qe._indexes.get('navaids')?.build(navaids);
-                qe._indexes.get('navaids_search')?.build(navaids);
-                qe._indexes.get('navaids_spatial')?.build(navaids);
+            if (data.navaids.size > 0) {
+                console.log(`[App v3] Building navaid indexes (${data.navaids.size} entries)`);
+                qe._indexes.get('navaids')?.build(data.navaids);
+                qe._indexes.get('navaids_search')?.build(data.navaids);
+                qe._indexes.get('navaids_spatial')?.build(data.navaids);
             }
 
-            if (fixes.size > 0) {
-                console.log(`[App v3] Building fix indexes (${fixes.size} entries)`);
-                qe._indexes.get('fixes')?.build(fixes);
-                qe._indexes.get('fixes_search')?.build(fixes);
-                qe._indexes.get('fixes_spatial')?.build(fixes);
+            if (data.fixes.size > 0) {
+                console.log(`[App v3] Building fix indexes (${data.fixes.size} entries)`);
+                qe._indexes.get('fixes')?.build(data.fixes);
+                qe._indexes.get('fixes_search')?.build(data.fixes);
+                qe._indexes.get('fixes_spatial')?.build(data.fixes);
             }
 
-            if (airways.size > 0) {
-                console.log(`[App v3] Building airway indexes (${airways.size} entries)`);
-                qe._indexes.get('airways')?.build(airways);
+            if (data.airways.size > 0) {
+                console.log(`[App v3] Building airway indexes (${data.airways.size} entries)`);
+                qe._indexes.get('airways')?.build(data.airways);
             }
 
             // Build token type index
             const tokenTypes = new Map();
-            for (const [code] of airports) tokenTypes.set(code, 'AIRPORT');
-            for (const [code] of navaids) tokenTypes.set(code, 'NAVAID');
-            for (const [code] of fixes) tokenTypes.set(code, 'FIX');
-            for (const [code] of airways) tokenTypes.set(code, 'AIRWAY');
+            for (const [code] of data.airports) tokenTypes.set(code, 'AIRPORT');
+            for (const [code] of data.navaids) tokenTypes.set(code, 'NAVAID');
+            for (const [code] of data.fixes) tokenTypes.set(code, 'FIX');
+            for (const [code] of data.airways) tokenTypes.set(code, 'AIRWAY');
             qe._indexes.get('tokenTypes')?.build(tokenTypes);
 
             qe._initialized = true;
 
             const elapsed = Math.round(performance.now() - startTime);
-            console.log(`[App v3] Legacy data loaded in ${elapsed}ms`);
+            console.log(`[App v3] IndexedDB data loaded in ${elapsed}ms`);
             console.log('[App v3] Stats:', window.App.getStats());
+
+            // Close DB connection
+            dbSource.close();
 
             return true;
 
         } catch (error) {
-            console.error('[App v3] Failed to init from legacy:', error);
+            console.error('[App v3] Failed to load from IndexedDB:', error);
             return false;
         }
     }
 
-    /**
-     * Initialize with custom data sources (for future use)
-     */
-    async function initializeWithData(dataConfig) {
-        if (!window.App) {
-            await bootstrap();
-        }
-
-        console.log('[App v3] Initializing with data sources...');
-
-        for (const [name, config] of Object.entries(dataConfig)) {
-            window.App.repository.registerSource(
-                name,
-                config.source,
-                config.strategy
-            );
-        }
-
-        await window.App.queryEngine.initialize(window.App.repository);
-
-        console.log('[App v3] Data initialization complete');
-        console.log('[App v3] Stats:', window.App.getStats());
-    }
-
-    // Export bootstrap functions
+    // Export bootstrap function
     window.bootstrapApp = bootstrap;
-    window.initializeAppWithData = initializeWithData;
-    window.initFromLegacyDataManager = initFromLegacyDataManager;
 
-    // Auto-bootstrap when script loads (after app.js has initialized)
-    bootstrap().then(() => {
-        // Try to init from legacy if data already loaded
-        setTimeout(() => {
-            if (window.DataManager && window.DataManager.isDataLoaded &&
-                window.DataManager.isDataLoaded()) {
-                initFromLegacyDataManager();
-            }
-        }, 100);
-    }).catch(err => {
+    // Auto-bootstrap when script loads
+    bootstrap().catch(err => {
         console.error('[App v3] Auto-bootstrap failed:', err);
     });
 

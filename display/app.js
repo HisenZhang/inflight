@@ -61,7 +61,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Check for cached data
         const cacheResult = await DataManager.checkCachedData();
+        console.log('[App] Cache result:', cacheResult);
         if (cacheResult.loaded) {
+            console.log('[App] Data loaded from cache, initializing v3 query engine...');
+            // Initialize v3 query engine from IndexedDB
+            if (window.App?.loadFromCache) {
+                console.log('[App] Calling App.loadFromCache()...');
+                await window.App.loadFromCache();
+            } else {
+                console.warn('[App] window.App.loadFromCache not available!');
+            }
             UIController.showDataInfo();
             UIController.enableRouteInput();
         } else if (cacheResult.corrupted) {
@@ -524,6 +533,12 @@ async function handleLoadData() {
         // Complete
         if (progressText) progressText.textContent = 'Database loaded successfully!';
 
+        // Initialize v3 query engine from IndexedDB
+        if (window.App?.loadFromCache) {
+            console.log('[App] Initializing v3 query engine from loaded data...');
+            await window.App.loadFromCache();
+        }
+
         UIController.showDataInfo();
         UIController.enableRouteInput();
 
@@ -686,6 +701,12 @@ async function checkVersionAndReindex() {
                 console.log(`[DataManager] ${message}`);
             });
 
+            // Initialize v3 query engine from IndexedDB
+            if (window.App?.loadFromCache) {
+                console.log('[App] Initializing v3 query engine after auto-reindex...');
+                await window.App.loadFromCache();
+            }
+
             UIController.updateStatus('[✓] AUTO-REINDEX COMPLETE', 'success');
             console.log('[App] Auto-reindex successful');
 
@@ -746,6 +767,12 @@ async function handleReindexCache() {
             UIController.updateStatus(message, type);
             console.log(`[DataManager] ${message}`);
         });
+
+        // Initialize v3 query engine from IndexedDB
+        if (window.App?.loadFromCache) {
+            console.log('[App] Initializing v3 query engine after manual reindex...');
+            await window.App.loadFromCache();
+        }
 
         UIController.updateStatus('[✓] DATABASE REINDEXED', 'success');
         UIController.showDataInfo();
