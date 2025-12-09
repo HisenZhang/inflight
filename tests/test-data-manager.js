@@ -235,3 +235,49 @@ TestFramework.describe('DataManager - Memory Management', function({ it }) {
         }
     });
 });
+
+TestFramework.describe('DataManager - Raw Data Access Methods', function({ it }) {
+
+    // ============================================
+    // RAW DATA ACCESS (for query engine integration)
+    // ============================================
+
+    it('should have getAirportsData method', () => {
+        assert.isTrue(typeof window.DataManager.getAirportsData === 'function',
+            'DataManager should have getAirportsData method');
+    });
+
+    it('should have getNavaidsData method', () => {
+        assert.isTrue(typeof window.DataManager.getNavaidsData === 'function',
+            'DataManager should have getNavaidsData method');
+    });
+
+    it('should have getFixesData method', () => {
+        assert.isTrue(typeof window.DataManager.getFixesData === 'function',
+            'DataManager should have getFixesData method');
+    });
+
+    it('should have getAirwaysData method', () => {
+        assert.isTrue(typeof window.DataManager.getAirwaysData === 'function',
+            'DataManager should have getAirwaysData method');
+    });
+
+    it('should have getFrequenciesData method', () => {
+        assert.isTrue(typeof window.DataManager.getFrequenciesData === 'function',
+            'DataManager should have getFrequenciesData method');
+    });
+
+    it('should return Map objects from data access methods', () => {
+        const airports = window.DataManager.getAirportsData();
+        const navaids = window.DataManager.getNavaidsData();
+        const fixes = window.DataManager.getFixesData();
+        const airways = window.DataManager.getAirwaysData();
+        const frequencies = window.DataManager.getFrequenciesData();
+
+        assert.isTrue(airports instanceof Map, 'getAirportsData should return a Map');
+        assert.isTrue(navaids instanceof Map, 'getNavaidsData should return a Map');
+        assert.isTrue(fixes instanceof Map, 'getFixesData should return a Map');
+        assert.isTrue(airways instanceof Map, 'getAirwaysData should return a Map');
+        assert.isTrue(frequencies instanceof Map, 'getFrequenciesData should return a Map');
+    });
+});
