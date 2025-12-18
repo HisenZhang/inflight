@@ -261,6 +261,15 @@ function setupEventListeners() {
         });
     }
 
+    // Procedure overlay toggle button
+    const procBtn = document.getElementById('procBtn');
+
+    if (procBtn) {
+        procBtn.addEventListener('click', () => {
+            window.VectorMap.toggleProcedures();
+        });
+    }
+
     // Navlog export/import dropdowns
     setupExportDropdown();
     setupImportDropdown();

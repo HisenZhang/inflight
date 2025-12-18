@@ -60,16 +60,15 @@ async function getNASRInfo() {
 
 // Get total size of all NASR files from /info endpoint
 async function getNASRTotalSize() {
+    // NOTE: We now use CIFP for procedures/airways/airspace
+    // Only download core airport/navaid data from NASR
     const filesToDownload = [
-        'APT_BASE.csv',
-        'APT_RWY.csv',
-        'NAV_BASE.csv',
-        'FIX_BASE.csv',
-        'FRQ.csv',
-        'AWY_BASE.csv',
-        'STAR_RTE.csv',
-        'DP_RTE.csv',
-        'CLS_ARSP.csv'
+        'APT_BASE.csv',  // Airports (basic data)
+        'APT_RWY.csv',   // Runways
+        'NAV_BASE.csv',  // Navaids (VOR/NDB)
+        'FIX_BASE.csv',  // Waypoints/Fixes
+        'FRQ.csv'        // Frequencies (not in CIFP!)
+        // Airways, SIDs, STARs, Airspace now from CIFP
     ];
 
     try {
@@ -717,16 +716,14 @@ async function loadNASRData(onStatusUpdate, onFileLoaded) {
         }
 
         // Define files to download
+        // NOTE: Airways, SIDs, STARs, and Airspace are now loaded from CIFP
         const filesToDownload = [
             { id: 'nasr_airports', filename: 'APT_BASE.csv', label: 'AIRPORTS', parser: parseNASRAirports },
             { id: 'nasr_runways', filename: 'APT_RWY.csv', label: 'RUNWAYS', parser: parseNASRRunways },
             { id: 'nasr_navaids', filename: 'NAV_BASE.csv', label: 'NAVAIDS', parser: parseNASRNavaids },
             { id: 'nasr_fixes', filename: 'FIX_BASE.csv', label: 'FIXES', parser: parseNASRFixes },
-            { id: 'nasr_frequencies', filename: 'FRQ.csv', label: 'FREQUENCIES', parser: parseNASRFrequencies },
-            { id: 'nasr_airways', filename: 'AWY_BASE.csv', label: 'AIRWAYS', parser: parseNASRAirways },
-            { id: 'nasr_stars', filename: 'STAR_RTE.csv', label: 'STARs', parser: parseNASRSTARs },
-            { id: 'nasr_dps', filename: 'DP_RTE.csv', label: 'DPs', parser: parseNASRDPs },
-            { id: 'nasr_airspace', filename: 'CLS_ARSP.csv', label: 'AIRSPACE', parser: parseNASRAirspaceClass }
+            { id: 'nasr_frequencies', filename: 'FRQ.csv', label: 'FREQUENCIES', parser: parseNASRFrequencies }
+            // CIFP provides: Airways (ER), SIDs (PD), STARs (PE), Airspace (UC/UR)
         ];
 
         const parsedData = {};

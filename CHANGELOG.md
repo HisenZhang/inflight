@@ -5,6 +5,98 @@ All notable changes to IN-FLIGHT will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+#### Procedure Display (SID/STAR/Approach) - MVP
+- **Procedure Overlay** - Visual display of instrument procedures on moving map
+  - Toggle button (PROC) in MAP tab weather overlay controls
+  - Purple button styling with active state indicator
+  - Draws selected procedure over map when procedures are enabled
+  - File: [display/map-display.js](display/map-display.js) updated (~500 lines added)
+
+- **Procedure Selector Modal** - Airport procedure selection interface
+  - Triggered by tapping airport waypoints when PROC is active
+  - Shows PROC button in waypoint info popup (airports only)
+  - Three sections: SIDs, STARs, Approaches
+  - Groups procedures by base name with transitions listed
+  - Selectable list with visual feedback (purple highlight)
+  - File: [index.html](index.html) - Modal HTML structure
+  - File: [styles/map.css](styles/map.css) - Modal styling (~260 lines)
+
+- **Procedure Visualization** - Color-coded procedure display
+  - **SIDs**: Green dashed line (#00ff00)
+  - **STARs**: Cyan dashed line (#00aaff)
+  - **Approaches**: Magenta solid line (#ff00ff)
+  - Waypoint markers with labels
+  - Altitude constraints shown for approaches
+  - FAF (Final Approach Fix) highlighted with fill
+  - Automatic waypoint coordinate resolution from database
+
+- **CIFP Procedure Data** - Wired to procedure display system
+  - `window.App.cifpData` contains SIDs, STARs, Approaches
+  - Procedure parsing from ARINC 424 PD/PE/PF/HF records
+  - Runway/transition grouping and formatting
+  - Approach type decoding (ILS, RNAV, VOR, NDB, etc.)
+  - File: [data/data-manager.js](data/data-manager.js) - CIFP storage
+
+#### CIFP Data Integration
+- **FAA CIFP Data Source** - Added support for Coded Instrument Flight Procedures (ARINC 424-18)
+  - Official FAA data source for procedures, airspace, and MORA grid
+  - File: [data/sources/cifp-source.js](data/sources/cifp-source.js) (484 lines)
+  - Downloads from FAA AeroNav: `https://aeronav.faa.gov/Upload_313-d/cifp/CIFP_251127.zip` (~9 MB)
+  - Uses CORS proxy (`cors.hisenz.com`) to bypass CORS restrictions
+  - Uses JSZip library (CDN) to extract FAACIFP18 from ZIP archive
+  - Updates every 28 days (AIRAC cycle) - update `CIFP_FILENAME` constant for new cycles
+
+- **ARINC 424 Parser** - Full ARINC 424-18 record parsing
+  - **AS Records** - Grid MORA (Minimum Off-Route Altitude) - 1° grid
+  - **ER Records** - Airways (enroute) - **Now primary source for airways!**
+  - **UC Records** - Controlled Airspace (Class B/C/D) with precise boundaries
+  - **UR Records** - Special Use Airspace (MOA, Restricted, Warning, etc.)
+  - **PD Records** - SID (Standard Instrument Departure) procedures
+  - **PE Records** - STAR (Standard Terminal Arrival) procedures
+  - **PF/HF Records** - Approach procedures (airport/heliport)
+  - Coordinate parsing: ARINC 424 degrees/minutes/seconds format
+  - Boundary codes: Circle, Arc, Great Circle, Rhumb Line
+  - Path terminators: IF, TF, CF, RF (for future procedure visualization)
+
+- **MORA Integration** - TerrainAnalyzer now uses official FAA CIFP MORA data
+  - Preferred source: CIFP AS records (official FAA)
+  - Fallback: NASR CSV (backward compatible)
+  - Cached in IndexedDB for offline use
+  - File: [compute/terrain-analyzer.js](compute/terrain-analyzer.js) updated
+
+- **Testing**
+  - 11 new tests for CIFP parser ([tests/test-cifp-parser.js](tests/test-cifp-parser.js))
+  - Tests: Coordinate parsing, MORA, airspace, procedures
+  - Total test count: ~612 tests (all passing)
+
+- **Documentation**
+  - Complete CIFP integration guide: [docs/developer/05-cifp-integration.md](docs/developer/05-cifp-integration.md)
+  - ARINC 424 format reference
+  - Coordinate parsing examples
+  - Future roadmap (airspace display, procedure visualization)
+
+### Changed
+- **Data Manager** - Now loads NASR, OurAirports, and CIFP in parallel
+  - File: [data/data-manager.js](data/data-manager.js) updated
+  - UI text: "FAA NASR + OurAirports + CIFP (Procedures/Airspace)"
+- **HTML** - Added CIFP source script to [index.html](index.html)
+
+### Technical Details
+- **Data Size:** CIFP adds ~9 MB (compressed) to total download
+- **Parse Time:** ~2-5 seconds for full CIFP file
+- **Record Count:** ~100,000 CIFP records parsed
+- **Coverage:** US airspace, procedures, and MORA grid
+
+### Future Enhancements (Not Yet Implemented)
+- [ ] Airspace display on map (v3.5)
+- [ ] Procedure visualization (SID/STAR/Approach routes) (v3.6)
+- [ ] Path terminator engine (TF, RF, CF legs) (v3.6)
+- [ ] Vertical guidance (VNAV) (v3.7)
+
 ## [3.3.0] - 2025-11-30
 
 ### Added

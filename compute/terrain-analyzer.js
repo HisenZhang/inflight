@@ -10,6 +10,9 @@ const TERRAIN_CORS_PROXY = 'https://cors.hisenz.com/?url=';
 // Global MORA data from NASR API (1° x 1° grid, FAA + terrain-derived)
 const NASR_MORA_URL = 'https://nasr.hisenz.com/files/MORA.csv';
 
+// MORA data source preference: 'cifp' (official FAA CIFP) or 'csv' (NASR CSV)
+let moraDataSource = 'cifp'; // Default to CIFP for official FAA data
+
 /**
  * Build proxied API URL with location parameters
  * @param {string} locations - Pipe-separated lat,lon pairs
@@ -294,12 +297,13 @@ async function getCacheStats() {
 // ============================================
 
 /**
- * Load global MORA data from NASR API
+ * Load global MORA data from CIFP (preferred) or NASR CSV API (fallback)
  * Format: lat,lon,mora_ft,source (one row per 1°×1° grid, center coordinates at x.5)
  * Source: FAA (official CIFP) or TERRAIN (computed from ETOPO)
+ * @param {Map} [cifpMoraData] - Optional MORA data from CIFP source (passed by DataManager)
  * @returns {Promise<boolean>} True if loaded successfully
  */
-async function loadMORAData() {
+async function loadMORAData(cifpMoraData = null) {
     if (moraDataLoaded && moraCache.size > 0) {
         console.log(`[TerrainAnalyzer] MORA data already loaded (${moraCache.size} grid cells)`);
         return true;
@@ -321,8 +325,23 @@ async function loadMORAData() {
         }
     }
 
-    // Fetch from NASR API
-    console.log('[TerrainAnalyzer] Fetching global MORA data from NASR API...');
+    // Use CIFP MORA data if provided (preferred - official FAA ARINC 424)
+    if (cifpMoraData && cifpMoraData.size > 0) {
+        console.log(`[TerrainAnalyzer] Using CIFP MORA data (${cifpMoraData.size} grid cells)`);
+        moraCache = new Map(cifpMoraData);
+        moraDataLoaded = true;
+
+        // Save to IndexedDB for offline use
+        if (terrainDB) {
+            const moraEntries = Array.from(cifpMoraData.values());
+            await saveMORAToDB(moraEntries);
+        }
+
+        return true;
+    }
+
+    // Fallback: Fetch from NASR CSV API
+    console.log('[TerrainAnalyzer] Fetching global MORA data from NASR CSV (fallback)...');
     try {
         const response = await fetch(NASR_MORA_URL);
         if (!response.ok) {

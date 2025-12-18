@@ -43,8 +43,8 @@ let fixesData = new Map();           // Waypoints/fixes (NASR only)
 let frequenciesData = new Map();     // Frequencies by airport ID
 let runwaysData = new Map();         // Runways by airport ID/code
 let airwaysData = new Map();         // Airways (NASR only)
-let starsData = new Map();           // STARs (NASR only)
-let dpsData = new Map();             // DPs (NASR only)
+let starsData = new Map();           // STARs (CIFP primary, converted to NASR format)
+let dpsData = new Map();             // DPs/SIDs (CIFP primary, converted to NASR format)
 let airspaceData = new Map();        // Airspace class by airport ID (NASR only)
 let chartsData = new Map();          // Charts by airport ICAO code (FAA d-TPP)
 let chartsIataMap = new Map();       // IATA to ICAO mapping for charts
@@ -143,7 +143,7 @@ async function saveToCache() {
                 chartsIataMap: Array.from(chartsIataMap.entries()),
                 dataSources: dataSources,
                 timestamp: Date.now(),
-                version: 12,
+                version: 15, // v15: CIFP procedures with name field for token type indexing
                 // Track individual file metadata
                 fileMetadata: Object.fromEntries(fileMetadata),
                 // Store NASR validity info
@@ -235,13 +235,13 @@ async function loadData(onStatusUpdate) {
     };
 
     try {
-        // Load NASR, OurAirports, and MORA data in parallel for better performance
+        // Load NASR, OurAirports, and CIFP data in parallel for better performance
         onStatusUpdate('[...] LOADING DATA SOURCES IN PARALLEL', 'loading');
 
         const results = await Promise.allSettled([
             window.NASRAdapter.loadNASRData(onStatusUpdate, onFileLoaded),
             window.OurAirportsAdapter.loadOurAirportsData(onStatusUpdate, onFileLoaded),
-            window.TerrainAnalyzer ? window.TerrainAnalyzer.loadMORAData() : Promise.resolve(false)
+            window.CIFPSource ? (new window.CIFPSource()).load() : Promise.resolve(null)
         ]);
 
         if (results[0].status === 'fulfilled') {
@@ -297,17 +297,37 @@ async function loadData(onStatusUpdate) {
             onStatusUpdate('[!] OURAIRPORTS UNAVAILABLE', 'warning');
         }
 
-        // Handle MORA data result
-        if (results[2].status === 'fulfilled' && results[2].value === true) {
-            dataSources.push('MORA');
-            console.log('[DataManager] MORA terrain data loaded successfully');
+        // Handle CIFP data result (MORA, airspace, procedures)
+        let cifpData = null;
+        if (results[2].status === 'fulfilled' && results[2].value) {
+            cifpData = results[2].value;
+            dataSources.push('CIFP');
+            console.log('[DataManager] CIFP data loaded successfully');
+            console.log(`[DataManager] CIFP: MORA=${cifpData.moraGrid.size}, Airspace=${cifpData.airspaces.size}, SUA=${cifpData.suaAirspaces.size}`);
+            console.log(`[DataManager] CIFP: Airways=${cifpData.airways.size}, SIDs=${cifpData.sids.size}, STARs=${cifpData.stars.size}, Approaches=${cifpData.approaches.size}`);
+
+            // Pass CIFP MORA data to TerrainAnalyzer
+            if (window.TerrainAnalyzer && cifpData.moraGrid) {
+                await window.TerrainAnalyzer.loadMORAData(cifpData.moraGrid);
+            }
+
+            // Store CIFP data in window.App for procedure display
+            if (window.App) {
+                window.App.cifpData = cifpData;
+                console.log('[DataManager] CIFP data stored in window.App');
+            }
         } else {
+            console.warn('[DataManager] CIFP loading failed, using NASR CSV fallback for MORA');
+            // Load MORA from CSV fallback
+            if (window.TerrainAnalyzer) {
+                await window.TerrainAnalyzer.loadMORAData(null);
+            }
             console.warn('[DataManager] MORA loading skipped or failed');
         }
 
-        // Merge data sources
+        // Merge data sources (will apply CIFP data at the end)
         onStatusUpdate('[...] MERGING WORLDWIDE DATABASE', 'loading');
-        mergeDataSources(nasrData, ourairportsData, onStatusUpdate);
+        mergeDataSources(nasrData, ourairportsData, cifpData, onStatusUpdate);
 
         // Load charts data (non-blocking - charts are optional)
         try {
@@ -536,11 +556,12 @@ async function reparseFromRawCSV(onStatusUpdate) {
     mergeDataSources(
         Object.keys(nasrData.data).length > 0 ? nasrData : null,
         Object.keys(ourairportsData.data).length > 0 ? ourairportsData : null,
+        null, // No CIFP data in reparse path (CIFP not cached in raw CSV)
         onStatusUpdate
     );
 }
 
-function mergeDataSources(nasrData, ourairportsData, onStatusUpdate = null) {
+function mergeDataSources(nasrData, ourairportsData, cifpData = null, onStatusUpdate = null) {
     // Clear existing data
     airportsData.clear();
     iataToIcao.clear();
@@ -574,17 +595,28 @@ function mergeDataSources(nasrData, ourairportsData, onStatusUpdate = null) {
         for (const [code, freqs] of nasrData.data.frequencies) {
             frequenciesData.set(code, freqs);
         }
-        for (const [id, airway] of nasrData.data.airways) {
-            airwaysData.set(id, airway);
+        // Airways now come from CIFP (loaded separately), skip NASR airways
+        if (nasrData.data.airways) {
+            for (const [id, airway] of nasrData.data.airways) {
+                airwaysData.set(id, airway);
+            }
         }
-        for (const [id, star] of nasrData.data.stars) {
-            starsData.set(id, star);
+        // SIDs/STARs now come from CIFP, skip NASR procedures
+        if (nasrData.data.stars) {
+            for (const [id, star] of nasrData.data.stars) {
+                starsData.set(id, star);
+            }
         }
-        for (const [id, dp] of nasrData.data.dps) {
-            dpsData.set(id, dp);
+        if (nasrData.data.dps) {
+            for (const [id, dp] of nasrData.data.dps) {
+                dpsData.set(id, dp);
+            }
         }
-        for (const [arptId, airspace] of nasrData.data.airspace) {
-            airspaceData.set(arptId, airspace);
+        // Airspace now comes from CIFP, skip NASR airspace
+        if (nasrData.data.airspace) {
+            for (const [arptId, airspace] of nasrData.data.airspace) {
+                airspaceData.set(arptId, airspace);
+            }
         }
 
         dataSources.push('NASR');
@@ -633,6 +665,68 @@ function mergeDataSources(nasrData, ourairportsData, onStatusUpdate = null) {
         dataSources.push('OurAirports');
     }
 
+    // AFTER merging NASR and OurAirports, apply CIFP data (airways and procedures)
+    if (cifpData) {
+        console.log('[DataManager] Applying CIFP airways and procedures after merge...');
+
+        // Use CIFP airways (replaces NASR airways)
+        if (cifpData.airways && cifpData.airways.size > 0) {
+            airwaysData.clear();
+            airwaysData = cifpData.airways;
+            console.log(`[DataManager] Using CIFP airways: ${airwaysData.size} airways`);
+        }
+
+        // Convert CIFP procedures to NASR format for RouteExpander
+        if (cifpData.stars && cifpData.stars.size > 0) {
+            starsData.clear();
+            cifpData.stars.forEach((star, key) => {
+                // Convert CIFP format to NASR format
+                const nasrFormat = {
+                    airport: star.airport,
+                    name: star.ident, // Add procedure name for token type indexing
+                    body: {
+                        fixes: star.waypoints ? star.waypoints.map(wp => wp.ident) : []
+                    }
+                };
+
+                // Store with full key (KORD_WYNDE3_FNT)
+                starsData.set(key, nasrFormat);
+
+                // Also store with just procedure name (WYNDE3) for RouteExpander lookup
+                if (star.ident) {
+                    starsData.set(star.ident, nasrFormat);
+                }
+            });
+            console.log(`[DataManager] Using CIFP STARs: ${starsData.size} procedures`);
+        }
+
+        if (cifpData.sids && cifpData.sids.size > 0) {
+            dpsData.clear();
+            cifpData.sids.forEach((sid, key) => {
+                // Convert CIFP format to NASR format
+                const nasrFormat = {
+                    airport: sid.airport,
+                    name: sid.ident, // Add procedure name for token type indexing
+                    body: {
+                        fixes: sid.waypoints ? sid.waypoints.map(wp => wp.ident) : []
+                        }
+                };
+
+                // Store with full key (KORD_ORDHARE6_RW28C)
+                dpsData.set(key, nasrFormat);
+
+                // Also store with just procedure name (ORDHARE6) for RouteExpander lookup
+                if (sid.ident) {
+                    dpsData.set(sid.ident, nasrFormat);
+                }
+            });
+            console.log(`[DataManager] Using CIFP SIDs: ${dpsData.size} procedures`);
+        }
+
+        console.log('[DataManager] CIFP airways and procedures applied successfully');
+        dataSources.push('CIFP');
+    }
+
     // Build token type lookup map
     if (onStatusUpdate) onStatusUpdate('[...] BUILDING TOKEN TYPE MAP', 'loading');
     buildTokenTypeMap();
@@ -646,16 +740,18 @@ function mergeDataSources(nasrData, ourairportsData, onStatusUpdate = null) {
     // Initialize RouteExpander with data
     if (typeof window.RouteExpander !== 'undefined') {
         if (onStatusUpdate) onStatusUpdate('[...] INITIALIZING ROUTE EXPANDER', 'loading');
+        console.log(`[DataManager] Setting RouteExpander data: Airways=${airwaysData.size}, STARs=${starsData.size}, DPs=${dpsData.size}`);
         window.RouteExpander.setAirwaysData(airwaysData);
         window.RouteExpander.setStarsData(starsData);
         window.RouteExpander.setDpsData(dpsData);
+        console.log('[DataManager] RouteExpander initialized');
     }
 }
 
 async function checkCachedData() {
     try {
         const cachedData = await loadFromCacheDB();
-        if (cachedData && (cachedData.version === 12 || cachedData.version === 11 || cachedData.version === 10) && cachedData.timestamp) {
+        if (cachedData && cachedData.version === 15 && cachedData.timestamp) {
             const age = Date.now() - cachedData.timestamp;
             const daysOld = Math.floor(age / (24 * 60 * 60 * 1000));
 
@@ -807,9 +903,11 @@ async function loadFromCache(onStatusUpdate) {
 
         // Initialize RouteExpander with data
         if (typeof window.RouteExpander !== 'undefined') {
+            console.log(`[DataManager] [CACHE PATH] Setting RouteExpander data: Airways=${airwaysData.size}, STARs=${starsData.size}, DPs=${dpsData.size}`);
             window.RouteExpander.setAirwaysData(airwaysData);
             window.RouteExpander.setStarsData(starsData);
             window.RouteExpander.setDpsData(dpsData);
+            console.log('[DataManager] [CACHE PATH] RouteExpander initialized');
         }
         return;
     }
@@ -886,9 +984,11 @@ async function loadFromCache(onStatusUpdate) {
         // Initialize RouteExpander with data
         if (typeof window.RouteExpander !== 'undefined') {
             onStatusUpdate('[...] INITIALIZING ROUTE EXPANDER', 'loading');
+            console.log(`[DataManager] [REPARSE PATH] Setting RouteExpander data: Airways=${airwaysData.size}, STARs=${starsData.size}, DPs=${dpsData.size}`);
             window.RouteExpander.setAirwaysData(airwaysData);
             window.RouteExpander.setStarsData(starsData);
             window.RouteExpander.setDpsData(dpsData);
+            console.log('[DataManager] [REPARSE PATH] RouteExpander initialized');
         }
 
         // Save reparsed data back to cache (will re-compress raw CSV)

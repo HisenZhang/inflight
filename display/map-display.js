@@ -13,6 +13,11 @@ let zoomLevel = 1; // Pinch zoom level (1.0 = default, max based on route bounds
 let initialPinchDistance = null;
 let airwayFilter = 'low'; // 'low' (V/T/G/B/A/R - L charts), 'high' (J/Q - H charts), 'all'
 
+// Procedure overlay state
+let proceduresEnabled = false;
+let selectedProcedure = null; // { type: 'sid'|'star'|'approach', key: string, data: object }
+let selectedAirportForProcedures = null; // ICAO code of airport for procedure modal
+
 // Pan/drag state
 let panOffset = { x: 0, y: 0 }; // Pan offset in screen pixels
 let isPanning = false;
@@ -1229,6 +1234,15 @@ function generateMap(waypoints, legs) {
     svg += `</g>`;
 
     // ============================================
+    // LAYER 2.5: PROCEDURE OVERLAY (SID/STAR/Approach)
+    // ============================================
+    if (proceduresEnabled && selectedProcedure) {
+        svg += `<g id="layer-procedures" class="procedure-overlay">`;
+        svg += drawProcedures(project, bounds);
+        svg += `</g>`;
+    }
+
+    // ============================================
     // LAYER 3: ROUTE LINES (Above weather)
     // ============================================
     svg += `<g id="layer-route" opacity="1.0">`;
@@ -1566,6 +1580,13 @@ function showPopup(waypoint, legs, index) {
         setNextWptHTML = `<button class="btn btn-secondary btn-sm" id="setNextWptBtn" style="width: 100%; margin-top: 0.25rem; padding: 0.15rem 0.25rem; font-size: 0.7rem;">${buttonText}</button>`;
     }
 
+    // Procedure button for airports (only show if procedures are enabled)
+    let procButtonHTML = '';
+    if (waypoint.waypointType === 'airport' && proceduresEnabled) {
+        const airportCode = waypoint.icao || waypoint.ident;
+        procButtonHTML = `<button class="btn btn-secondary btn-sm" id="viewProcBtn" style="width: 100%; margin-top: 0.25rem; padding: 0.15rem 0.25rem; font-size: 0.7rem;">PROC</button>`;
+    }
+
     // Build waypoint row using exact navlog structure
     let html = `
         <tr class="wpt-row">
@@ -1574,6 +1595,7 @@ function showPopup(waypoint, legs, index) {
                 <div class="${colorClass} wpt-code">${code}</div>
                 <div class="text-xs text-secondary">${typeDisplay}</div>
                 ${setNextWptHTML}
+                ${procButtonHTML}
             </td>
             <td colspan="2">
                 <div class="text-secondary text-xs">${pos}</div>
@@ -1617,6 +1639,15 @@ function showPopup(waypoint, legs, index) {
                 }
                 updateNavButtonLabels();
             }
+        });
+    }
+
+    // Attach event listener to "View Procedures" button
+    const viewProcBtn = document.getElementById('viewProcBtn');
+    if (viewProcBtn) {
+        viewProcBtn.addEventListener('click', () => {
+            const airportCode = waypoint.icao || waypoint.ident;
+            openProcedureModal(airportCode);
         });
     }
 }
@@ -2999,6 +3030,428 @@ function cycleAirwayFilter() {
 }
 
 // ============================================
+// PROCEDURE OVERLAYS (SID/STAR/Approach)
+// ============================================
+
+/**
+ * Toggle procedure overlay display
+ */
+function toggleProcedures() {
+    const btn = document.getElementById('procBtn');
+    proceduresEnabled = !proceduresEnabled;
+
+    if (proceduresEnabled) {
+        btn?.classList.add('active');
+    } else {
+        btn?.classList.remove('active');
+        // Clear selected procedure when disabling
+        selectedProcedure = null;
+        closeProcedureModal();
+    }
+
+    // Regenerate map to show/hide procedures
+    if (routeData && routeData.waypoints && routeData.legs) {
+        generateMap(routeData.waypoints, routeData.legs);
+    }
+}
+
+/**
+ * Check if procedures overlay is enabled
+ * @returns {boolean}
+ */
+function isProceduresEnabled() {
+    return proceduresEnabled;
+}
+
+/**
+ * Open procedure selector modal for an airport
+ * @param {string} icao - Airport ICAO code
+ */
+function openProcedureModal(icao) {
+    selectedAirportForProcedures = icao;
+    const modal = document.getElementById('procedureModal');
+    const title = document.getElementById('procedureModalTitle');
+
+    if (!modal) return;
+
+    // Get airport name from data
+    const airport = window.DataManager?.getAirport(icao);
+    const airportName = airport?.name || icao;
+
+    title.textContent = `PROCEDURES - ${icao} (${airportName})`;
+
+    // Populate procedure lists from CIFP data
+    populateProcedureLists(icao);
+
+    modal.style.display = 'flex';
+}
+
+/**
+ * Close procedure selector modal
+ */
+function closeProcedureModal() {
+    const modal = document.getElementById('procedureModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+/**
+ * Populate procedure lists in modal from CIFP data
+ * @param {string} icao - Airport ICAO code
+ */
+function populateProcedureLists(icao) {
+    const sidList = document.getElementById('sidList');
+    const starList = document.getElementById('starList');
+    const approachList = document.getElementById('approachList');
+
+    if (!sidList || !starList || !approachList) return;
+
+    // Clear existing lists
+    sidList.innerHTML = '';
+    starList.innerHTML = '';
+    approachList.innerHTML = '';
+
+    // Get CIFP data
+    const cifpData = window.App?.cifpData;
+    if (!cifpData) {
+        sidList.innerHTML = '<div class="procedure-empty">CIFP data not loaded</div>';
+        starList.innerHTML = '<div class="procedure-empty">CIFP data not loaded</div>';
+        approachList.innerHTML = '<div class="procedure-empty">CIFP data not loaded</div>';
+        return;
+    }
+
+    // Filter SIDs for this airport
+    let sidCount = 0;
+    if (cifpData.sids) {
+        const sidsForAirport = [];
+        cifpData.sids.forEach((sid, key) => {
+            if (sid.airport === icao) {
+                sidsForAirport.push({ key, ...sid });
+            }
+        });
+
+        // Group by procedure name and list transitions
+        const sidsByName = new Map();
+        sidsForAirport.forEach(sid => {
+            const baseName = sid.ident.split('.')[0] || sid.ident;
+            if (!sidsByName.has(baseName)) {
+                sidsByName.set(baseName, []);
+            }
+            sidsByName.get(baseName).push(sid);
+        });
+
+        sidsByName.forEach((sids, name) => {
+            const transitions = sids.map(s => s.transition || 'COMMON').filter(t => t).join(', ');
+            const item = createProcedureItem('sid', sids[0].key, name, transitions);
+            sidList.appendChild(item);
+            sidCount++;
+        });
+    }
+
+    if (sidCount === 0) {
+        sidList.innerHTML = '<div class="procedure-empty">No SIDs available</div>';
+    }
+
+    // Filter STARs for this airport
+    let starCount = 0;
+    if (cifpData.stars) {
+        const starsForAirport = [];
+        cifpData.stars.forEach((star, key) => {
+            if (star.airport === icao) {
+                starsForAirport.push({ key, ...star });
+            }
+        });
+
+        const starsByName = new Map();
+        starsForAirport.forEach(star => {
+            const baseName = star.ident.split('.')[0] || star.ident;
+            if (!starsByName.has(baseName)) {
+                starsByName.set(baseName, []);
+            }
+            starsByName.get(baseName).push(star);
+        });
+
+        starsByName.forEach((stars, name) => {
+            const transitions = stars.map(s => s.transition || 'COMMON').filter(t => t).join(', ');
+            const item = createProcedureItem('star', stars[0].key, name, transitions);
+            starList.appendChild(item);
+            starCount++;
+        });
+    }
+
+    if (starCount === 0) {
+        starList.innerHTML = '<div class="procedure-empty">No STARs available</div>';
+    }
+
+    // Filter Approaches for this airport
+    let approachCount = 0;
+    if (cifpData.approaches) {
+        const approachesForAirport = [];
+        cifpData.approaches.forEach((approach, key) => {
+            if (approach.airport === icao) {
+                approachesForAirport.push({ key, ...approach });
+            }
+        });
+
+        approachesForAirport.forEach(approach => {
+            const name = formatApproachName(approach.ident, approach.runway);
+            const detail = approach.runway || '';
+            const item = createProcedureItem('approach', approach.key, name, detail);
+            approachList.appendChild(item);
+            approachCount++;
+        });
+    }
+
+    if (approachCount === 0) {
+        approachList.innerHTML = '<div class="procedure-empty">No approaches available</div>';
+    }
+
+    console.log(`[VectorMap] Populated procedures for ${icao}: ${sidCount} SIDs, ${starCount} STARs, ${approachCount} approaches`);
+}
+
+/**
+ * Format approach name from CIFP ident
+ * @param {string} ident - Approach identifier (e.g., "D16I", "R16C")
+ * @param {string} runway - Runway (e.g., "RW16L")
+ * @returns {string} Formatted name
+ */
+function formatApproachName(ident, runway) {
+    // First character indicates approach type
+    const typeMap = {
+        'I': 'ILS',
+        'L': 'LOC',
+        'D': 'ILS or LOC DME',
+        'B': 'LOC BC',
+        'R': 'RNAV (GPS)',
+        'G': 'GPS',
+        'V': 'VOR',
+        'N': 'NDB',
+        'Q': 'NDB/DME',
+        'S': 'VOR/DME',
+        'P': 'LDA',
+        'T': 'TACAN',
+        'X': 'LDA/DME',
+        'U': 'SDF',
+        'H': 'RNAV (RNP)'
+    };
+
+    const typeCode = ident[0];
+    const typeName = typeMap[typeCode] || typeCode;
+    const runwayNum = runway?.replace('RW', '') || '';
+
+    return `${typeName} ${runwayNum}`;
+}
+
+/**
+ * Create a procedure item element
+ * @param {string} type - 'sid', 'star', or 'approach'
+ * @param {string} key - Procedure key in CIFP data
+ * @param {string} name - Display name
+ * @param {string} detail - Additional detail text
+ * @returns {HTMLElement}
+ */
+function createProcedureItem(type, key, name, detail) {
+    const item = document.createElement('div');
+    item.className = 'procedure-item';
+    item.dataset.type = type;
+    item.dataset.key = key;
+
+    item.innerHTML = `
+        <div class="procedure-item-name">${name}</div>
+        ${detail ? `<div class="procedure-item-detail">${detail}</div>` : ''}
+    `;
+
+    item.addEventListener('click', () => selectProcedure(type, key));
+
+    return item;
+}
+
+/**
+ * Select a procedure to display on the map
+ * @param {string} type - 'sid', 'star', or 'approach'
+ * @param {string} key - Procedure key in CIFP data
+ */
+function selectProcedure(type, key) {
+    const cifpData = window.App?.cifpData;
+    if (!cifpData) return;
+
+    // Get procedure data
+    let procedureData = null;
+    if (type === 'sid' && cifpData.sids) {
+        procedureData = cifpData.sids.get(key);
+    } else if (type === 'star' && cifpData.stars) {
+        procedureData = cifpData.stars.get(key);
+    } else if (type === 'approach' && cifpData.approaches) {
+        procedureData = cifpData.approaches.get(key);
+    }
+
+    if (!procedureData) {
+        console.warn(`[VectorMap] Procedure not found: ${type} ${key}`);
+        return;
+    }
+
+    // Toggle selection (clicking same procedure deselects)
+    if (selectedProcedure && selectedProcedure.key === key && selectedProcedure.type === type) {
+        selectedProcedure = null;
+    } else {
+        selectedProcedure = { type, key, data: procedureData };
+    }
+
+    // Update UI selection state
+    document.querySelectorAll('.procedure-item').forEach(item => {
+        if (item.dataset.key === key && item.dataset.type === type && selectedProcedure) {
+            item.classList.add('selected');
+        } else {
+            item.classList.remove('selected');
+        }
+    });
+
+    // Redraw map with procedure
+    if (routeData && routeData.waypoints && routeData.legs) {
+        generateMap(routeData.waypoints, routeData.legs);
+    }
+
+    console.log(`[VectorMap] Selected ${type}: ${procedureData.ident}`);
+}
+
+/**
+ * Draw procedure overlay on map
+ * @param {Function} project - Coordinate projection function
+ * @param {Object} bounds - Map bounds
+ * @returns {string} SVG content
+ */
+function drawProcedures(project, bounds) {
+    if (!selectedProcedure || !selectedProcedure.data) return '';
+
+    const procedure = selectedProcedure.data;
+    const waypoints = procedure.waypoints;
+
+    if (!waypoints || waypoints.length === 0) return '';
+
+    let svg = '';
+    const type = selectedProcedure.type;
+
+    // Resolve waypoint coordinates from CIFP data or database
+    const resolvedWaypoints = resolveWaypointCoordinates(waypoints);
+
+    if (resolvedWaypoints.length < 2) {
+        console.log('[VectorMap] Not enough resolved waypoints for procedure');
+        return '';
+    }
+
+    // Determine CSS classes based on type
+    let lineClass, waypointClass, labelClass;
+    if (type === 'sid') {
+        lineClass = 'procedure-sid-line';
+        waypointClass = 'procedure-sid-waypoint';
+        labelClass = 'procedure-sid-label';
+    } else if (type === 'star') {
+        lineClass = 'procedure-star-line';
+        waypointClass = 'procedure-star-waypoint';
+        labelClass = 'procedure-star-label';
+    } else {
+        lineClass = 'procedure-approach-line';
+        waypointClass = 'procedure-approach-waypoint';
+        labelClass = 'procedure-approach-label';
+    }
+
+    // Draw path connecting waypoints
+    let pathD = '';
+    resolvedWaypoints.forEach((wp, i) => {
+        const pos = project(wp.lat, wp.lon);
+        if (i === 0) {
+            pathD = `M ${pos.x} ${pos.y}`;
+        } else {
+            pathD += ` L ${pos.x} ${pos.y}`;
+        }
+    });
+
+    svg += `<path d="${pathD}" class="${lineClass}"/>`;
+
+    // Draw waypoint markers
+    resolvedWaypoints.forEach((wp, i) => {
+        const pos = project(wp.lat, wp.lon);
+        const radius = 6;
+
+        // Special styling for FAF (Final Approach Fix) in approaches
+        const isFAF = type === 'approach' && wp.pathTerminator === 'CF' && i > 0;
+        const wpClass = isFAF ? 'procedure-approach-waypoint-faf' : waypointClass;
+
+        svg += `<circle cx="${pos.x}" cy="${pos.y}" r="${radius}" class="${wpClass}"/>`;
+
+        // Label above waypoint
+        svg += `<text x="${pos.x}" y="${pos.y - 12}" text-anchor="middle" class="${labelClass}">${wp.ident}</text>`;
+
+        // Altitude constraint (for approaches)
+        if (wp.altitude && type === 'approach') {
+            const altText = wp.altitude + (wp.altitudeDescriptor === '+' ? '↑' : wp.altitudeDescriptor === '-' ? '↓' : '');
+            svg += `<text x="${pos.x}" y="${pos.y + 16}" text-anchor="middle" class="procedure-altitude-constraint">${altText}</text>`;
+        }
+    });
+
+    console.log(`[VectorMap] Drew ${type} procedure: ${procedure.ident} with ${resolvedWaypoints.length} waypoints`);
+    return svg;
+}
+
+/**
+ * Resolve waypoint coordinates from CIFP data or database
+ * @param {Array} waypoints - Procedure waypoints from CIFP
+ * @returns {Array} Waypoints with lat/lon coordinates
+ */
+function resolveWaypointCoordinates(waypoints) {
+    const resolved = [];
+
+    waypoints.forEach(wp => {
+        // Check if waypoint already has coordinates
+        if (wp.lat && wp.lon) {
+            resolved.push(wp);
+            return;
+        }
+
+        // Try to find waypoint in database
+        const ident = wp.ident;
+        if (!ident) return;
+
+        // Search in fixes
+        const fix = window.DataManager?.getFix(ident);
+        if (fix && fix.lat && fix.lon) {
+            resolved.push({ ...wp, lat: fix.lat, lon: fix.lon });
+            return;
+        }
+
+        // Search in navaids
+        const navaid = window.DataManager?.getNavaid(ident);
+        if (navaid && navaid.lat && navaid.lon) {
+            resolved.push({ ...wp, lat: navaid.lat, lon: navaid.lon });
+            return;
+        }
+
+        // Search in airports
+        const airport = window.DataManager?.getAirport(ident);
+        if (airport && airport.lat && airport.lon) {
+            resolved.push({ ...wp, lat: airport.lat, lon: airport.lon });
+            return;
+        }
+
+        console.log(`[VectorMap] Could not resolve coordinates for waypoint: ${ident}`);
+    });
+
+    return resolved;
+}
+
+/**
+ * Get the currently selected procedure (for navlog display)
+ * @returns {Object|null} Selected procedure data
+ */
+function getSelectedProcedure() {
+    return selectedProcedure;
+}
+
+// Make closeProcedureModal available globally for onclick
+window.closeProcedureModal = closeProcedureModal;
+
+// ============================================
 // EXPORTS
 // ============================================
 
@@ -3026,5 +3479,12 @@ window.VectorMap = {
     focusOnPolygon,
 
     // Airway altitude filter
-    cycleAirwayFilter
+    cycleAirwayFilter,
+
+    // Procedure overlays (SID/STAR/Approach)
+    toggleProcedures,
+    isProceduresEnabled,
+    openProcedureModal,
+    closeProcedureModal,
+    getSelectedProcedure
 };

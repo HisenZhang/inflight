@@ -329,47 +329,151 @@ function searchWaypoints(term, previousToken = null, limit = 15) {
     // If no search term and no context-aware suggestions, return empty
     if (!upperTerm || upperTerm.length < 1) return [];
 
-    // Check if search term looks like a procedure (e.g., HIDEY1, CHPPR1)
-    // If so, search for matching procedures
-    if (/^[A-Z]{3,}\d+$/.test(upperTerm)) {
+    // Search for airways that match the search term (e.g., Q822, V123, J45)
+    if (qe_airwaysData && upperTerm.length >= 1) {
+        for (const [airwayId, airway] of qe_airwaysData) {
+            const upperAirwayId = airwayId.toUpperCase();
+
+            if (upperAirwayId === upperTerm) {
+                exactMatches.push({
+                    code: upperAirwayId,
+                    name: upperAirwayId,
+                    type: TOKEN_TYPE_AIRWAY,
+                    waypointType: WAYPOINT_TYPE_AIRWAY,
+                    location: `${airway.fixes ? airway.fixes.length : 0} fixes`,
+                    contextHint: 'Airway'
+                });
+            } else if (upperAirwayId.startsWith(upperTerm)) {
+                prefixMatches.push({
+                    code: upperAirwayId,
+                    name: upperAirwayId,
+                    type: TOKEN_TYPE_AIRWAY,
+                    waypointType: WAYPOINT_TYPE_AIRWAY,
+                    location: `${airway.fixes ? airway.fixes.length : 0} fixes`,
+                    contextHint: 'Airway'
+                });
+            } else if (upperAirwayId.includes(upperTerm)) {
+                substringMatches.push({
+                    code: upperAirwayId,
+                    name: upperAirwayId,
+                    type: TOKEN_TYPE_AIRWAY,
+                    waypointType: WAYPOINT_TYPE_AIRWAY,
+                    location: `${airway.fixes ? airway.fixes.length : 0} fixes`,
+                    contextHint: 'Airway'
+                });
+            }
+        }
+    }
+
+    // Search for procedures that match the search term (e.g., HIDEY1, CHPPR1, WYNDE3)
+    // Allow partial matches for better autocomplete UX
+    if (upperTerm.length >= 2 && /^[A-Z0-9]+$/.test(upperTerm)) {
         // Search for procedures that match this pattern
         const dpsData = window.DataManager?.getDpsData?.() || new Map();
         const starsData = window.DataManager?.getStarsData?.() || new Map();
 
-        // Extract base name for searching
-        const match = upperTerm.match(/^([A-Z]{3,})(\d+)$/);
+        // Check if it looks like a complete procedure name (letters + digits)
+        const match = upperTerm.match(/^([A-Z]{3,})(\d*)$/);
         if (match) {
             const [, name, number] = match;
 
-            // Search DPs
+            // Search DPs - use Set to track unique procedure names
+            const foundDPs = new Set();
             for (const [key, data] of dpsData) {
-                // Match patterns like: HIDEY.HIDEY1, HIDEY1.HIDEY
-                if (key.toUpperCase().includes(upperTerm)) {
-                    prefixMatches.push({
-                        code: upperTerm,
-                        name: upperTerm,
-                        type: 'DP',
-                        waypointType: WAYPOINT_TYPE_PROCEDURE,
-                        location: 'Departure Procedure',
-                        contextHint: 'Click to see transitions'
-                    });
-                    break; // Only add once
+                // Match patterns like: HIDEY1, KORD_HIDEY1_RW28C, HIDEY.HIDEY1, HIDEY1.HIDEY
+                const upperKey = key.toUpperCase();
+                let procName = null;
+
+                // Extract procedure name from different key formats
+                if (upperKey.includes('_')) {
+                    // CIFP format: KORD_HIDEY1_RW28C -> HIDEY1 is at position 1
+                    const parts = upperKey.split('_');
+                    if (parts.length >= 2) {
+                        procName = parts[1];
+                    }
+                } else if (upperKey.includes('.')) {
+                    // Legacy NASR format: HIDEY.HIDEY1 or HIDEY1.HIDEY
+                    const parts = upperKey.split('.');
+                    // Use the part that has digits (the procedure name)
+                    procName = parts.find(p => /\d/.test(p)) || parts[0];
+                } else {
+                    // Simple key: just the procedure name
+                    procName = upperKey;
+                }
+
+                // Check if procedure name matches search term
+                if (procName && !foundDPs.has(procName)) {
+                    if (procName === upperTerm || procName.startsWith(upperTerm)) {
+                        prefixMatches.push({
+                            code: procName,
+                            name: procName,
+                            type: 'DP',
+                            waypointType: WAYPOINT_TYPE_PROCEDURE,
+                            location: 'Departure Procedure',
+                            contextHint: 'Click to see transitions'
+                        });
+                        foundDPs.add(procName);
+                    } else if (procName.includes(upperTerm)) {
+                        substringMatches.push({
+                            code: procName,
+                            name: procName,
+                            type: 'DP',
+                            waypointType: WAYPOINT_TYPE_PROCEDURE,
+                            location: 'Departure Procedure',
+                            contextHint: 'Click to see transitions'
+                        });
+                        foundDPs.add(procName);
+                    }
                 }
             }
 
-            // Search STARs
+            // Search STARs - use Set to track unique procedure names
+            const foundSTARs = new Set();
             for (const [key, data] of starsData) {
-                // Match patterns like: CHPPR.CHPPR1, CHPPR1.CHPPR
-                if (key.toUpperCase().includes(upperTerm)) {
-                    prefixMatches.push({
-                        code: upperTerm,
-                        name: upperTerm,
-                        type: 'STAR',
-                        waypointType: WAYPOINT_TYPE_PROCEDURE,
-                        location: 'Arrival Procedure',
-                        contextHint: 'Click to see transitions'
-                    });
-                    break; // Only add once
+                // Match patterns like: WYNDE3, KORD_WYNDE3_FNT, CHPPR.CHPPR1, CHPPR1.CHPPR
+                const upperKey = key.toUpperCase();
+                let procName = null;
+
+                // Extract procedure name from different key formats
+                if (upperKey.includes('_')) {
+                    // CIFP format: KORD_WYNDE3_FNT -> WYNDE3 is at position 1
+                    const parts = upperKey.split('_');
+                    if (parts.length >= 2) {
+                        procName = parts[1];
+                    }
+                } else if (upperKey.includes('.')) {
+                    // Legacy NASR format: CHPPR.CHPPR1 or CHPPR1.CHPPR
+                    const parts = upperKey.split('.');
+                    // Use the part that has digits (the procedure name)
+                    procName = parts.find(p => /\d/.test(p)) || parts[0];
+                } else {
+                    // Simple key: just the procedure name
+                    procName = upperKey;
+                }
+
+                // Check if procedure name matches search term
+                if (procName && !foundSTARs.has(procName)) {
+                    if (procName === upperTerm || procName.startsWith(upperTerm)) {
+                        prefixMatches.push({
+                            code: procName,
+                            name: procName,
+                            type: 'STAR',
+                            waypointType: WAYPOINT_TYPE_PROCEDURE,
+                            location: 'Arrival Procedure',
+                            contextHint: 'Click to see transitions'
+                        });
+                        foundSTARs.add(procName);
+                    } else if (procName.includes(upperTerm)) {
+                        substringMatches.push({
+                            code: procName,
+                            name: procName,
+                            type: 'STAR',
+                            waypointType: WAYPOINT_TYPE_PROCEDURE,
+                            location: 'Arrival Procedure',
+                            contextHint: 'Click to see transitions'
+                        });
+                        foundSTARs.add(procName);
+                    }
                 }
             }
         }

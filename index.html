@@ -156,7 +156,7 @@
                 </div>
 
                 <p class="help-text">
-                    <span class="text-secondary">FAA NASR (US) + OurAirports (Worldwide)</span>
+                    <span class="text-secondary">FAA NASR + OurAirports + CIFP (Procedures/Airspace)</span>
                 </p>
             </div>
 
@@ -629,6 +629,7 @@
                     <button class="zoom-btn gairmet-btn" id="gairmetMtnBtn" title="Toggle Mountain Obscuration G-AIRMETs">MTN</button>
                     <button class="zoom-btn gairmet-btn" id="gairmetFzlvlBtn" title="Toggle Freezing Level G-AIRMETs">FZLVL</button>
                     <button class="zoom-btn terrain-btn" id="terrainBtn" title="Toggle MORA Grid Overlay">MORA</button>
+                    <button class="zoom-btn proc-btn" id="procBtn" title="Toggle Procedures (SID/STAR/Approach)">PROC</button>
                 </div>
             </div>
 
@@ -1446,6 +1447,37 @@
         <div id="pwa-install-status"></div>
     </div>
 
+    <!-- Procedure Selector Modal -->
+    <div id="procedureModal" class="procedure-modal" style="display: none;">
+        <div class="procedure-modal-content">
+            <div class="procedure-modal-header">
+                <h3 id="procedureModalTitle">PROCEDURES</h3>
+                <button class="procedure-modal-close" onclick="closeProcedureModal()">&times;</button>
+            </div>
+            <div class="procedure-modal-body">
+                <!-- SIDs Section -->
+                <div class="procedure-section">
+                    <h4 class="procedure-section-title">🛫 DEPARTURE (SID)</h4>
+                    <div id="sidList" class="procedure-list"></div>
+                </div>
+                <!-- STARs Section -->
+                <div class="procedure-section">
+                    <h4 class="procedure-section-title">🛬 ARRIVAL (STAR)</h4>
+                    <div id="starList" class="procedure-list"></div>
+                </div>
+                <!-- Approaches Section -->
+                <div class="procedure-section">
+                    <h4 class="procedure-section-title">🛬 APPROACHES</h4>
+                    <div id="approachList" class="procedure-list"></div>
+                </div>
+            </div>
+            <div class="procedure-modal-footer">
+                <button class="btn btn-secondary" onclick="clearSelectedProcedure()">CLEAR</button>
+                <button class="btn btn-primary" onclick="closeProcedureModal()">DONE</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts - Load modules in order (3-Engine Architecture) -->
 
     <!-- Version Configuration (loaded first) -->
@@ -1455,6 +1487,7 @@
     <!-- External Libraries -->
     <script src="lib/geodesy.js"></script>              <!-- WGS84 + WMM2025 library -->
     <script src="lib/wind-stations.js"></script>        <!-- Wind station data -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script> <!-- ZIP extraction for CIFP -->
 
     <!-- Utilities Layer -->
     <script src="utils/formatters.js"></script>         <!-- Shared formatting utilities -->
@@ -1468,6 +1501,7 @@
     <script src="data/core/cache-strategy.js"></script> <!-- Cache invalidation strategies -->
     <script src="data/storage/memory-storage.js"></script><!-- In-memory storage adapter -->
     <script src="data/sources/indexeddb-source.js"></script><!-- IndexedDB data source for cached data -->
+    <script src="data/sources/cifp-source.js"></script> <!-- CIFP data source (ARINC 424-18) -->
     <script src="data/repository.js"></script>          <!-- Central data repository facade -->
 
     <!-- Data Layer - Legacy (coexists with v3) -->
