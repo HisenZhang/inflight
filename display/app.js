@@ -1408,6 +1408,27 @@ async function handleImportFile(event) {
             }
         }
 
+        // For FPL imports, also substitute waypoints with coordinate mismatches
+        // This ensures we use FPL file coordinates even when waypoint is in database
+        if (format === 'fpl' && mismatches.length > 0) {
+            const originalRoute = navlogData.routeString;
+            const mismatchedWaypoints = mismatches.map(m => ({
+                ident: m.ident,
+                lat: m.fplLat,
+                lon: m.fplLon
+            }));
+            navlogData.routeString = substituteUnknownWaypointsWithCoords(navlogData.routeString, mismatchedWaypoints);
+
+            // Also update routeMiddle if it exists
+            if (navlogData.routeMiddle) {
+                navlogData.routeMiddle = substituteUnknownWaypointsWithCoords(navlogData.routeMiddle, mismatchedWaypoints);
+            }
+
+            if (navlogData.routeString !== originalRoute) {
+                console.log(`[App] Route modified for coordinate mismatches: ${originalRoute} -> ${navlogData.routeString}`);
+            }
+        }
+
         // Build import message
         let message = format === 'fpl'
             ? `FPL IMPORTED\n\nRoute: ${navlogData.routeString}\nAltitude: ${navlogData.altitude} ft`
@@ -1426,8 +1447,8 @@ async function handleImportFile(event) {
         }
 
         if (mismatches.length > 0) {
-            message += `\n\nWARNING: ${mismatches.length} waypoint(s) have coordinate differences vs database:\n`;
-            message += mismatches.map(m => `${m.ident}: ${m.distanceNm} nm off`).join(', ');
+            message += `\n\nNOTE: ${mismatches.length} waypoint(s) have different coordinates in FPL vs database - using FPL coordinates:\n`;
+            message += mismatches.map(m => `${m.ident} -> ${decimalToFaaCoord(m.fplLat, m.fplLon)} (database: ${m.distanceNm} nm away)`).join(', ');
         }
 
         // Check if TAS and altitude are set for auto-recalculation
