@@ -1272,15 +1272,18 @@ function generateMap(waypoints, legs) {
             color = waypoint.isReportingPoint ? '#ffbf00' : '#ffffff'; // Amber or White
         }
 
-        // Priority: first/last waypoints (airports usually) > airports > navaids > fixes
-        let priority = 0;
+        // Priority: departure/destination > airports > navaids > reporting points > other fixes
+        let priority = 0; // Default: other fixes (lowest priority)
         if (index === 0 || index === waypoints.length - 1) {
-            priority = 3; // Departure/destination always visible
+            priority = 4; // Departure/destination always visible
         } else if (isAirport) {
-            priority = 2;
+            priority = 3; // Airports always display
         } else if (waypoint.waypointType === 'navaid') {
-            priority = 1;
+            priority = 2; // Navaids high priority
+        } else if (waypoint.waypointType === 'fix' && waypoint.isReportingPoint) {
+            priority = 1; // Reporting points medium priority
         }
+        // Other fixes remain at priority 0
 
         // Label offset: radius + half text size + small padding
         const labelOffset = waypointRadius + (waypointLabelSize / 2) + 4;
