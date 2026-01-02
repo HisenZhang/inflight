@@ -5,6 +5,7 @@ importScripts('./version.js');
 
 // Use centralized cache name from version.js
 const CACHE_NAME = self.AppVersion.CACHE_NAME;
+const FONT_CACHE_NAME = 'inflight-fonts-v1';
 console.log('[ServiceWorker] Cache name:', CACHE_NAME, '| App version:', self.AppVersion.VERSION);
 const ASSETS_TO_CACHE = [
     './',
@@ -92,7 +93,7 @@ self.addEventListener('activate', (event) => {
     event.waitUntil(
         caches.keys().then((keyList) => {
             return Promise.all(keyList.map((key) => {
-                if (key !== CACHE_NAME) {
+                if (key !== CACHE_NAME && key !== FONT_CACHE_NAME) {
                     console.log('[ServiceWorker] Removing old cache', key);
                     return caches.delete(key);
                 }
@@ -107,11 +108,41 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
     const url = new URL(event.request.url);
 
+    // Handle Google Fonts with CACHE FIRST strategy for offline support
+    const isGoogleFont = url.origin === 'https://fonts.googleapis.com' ||
+                         url.origin === 'https://fonts.gstatic.com';
+
+    if (isGoogleFont) {
+        event.respondWith(
+            caches.match(event.request).then((cachedResponse) => {
+                if (cachedResponse) {
+                    console.log('[ServiceWorker] Font from cache:', event.request.url);
+                    return cachedResponse;
+                }
+                // Not in cache, fetch from network and cache it
+                return fetch(event.request).then((networkResponse) => {
+                    if (networkResponse && networkResponse.status === 200) {
+                        const responseClone = networkResponse.clone();
+                        caches.open(FONT_CACHE_NAME).then((cache) => {
+                            cache.put(event.request, responseClone);
+                            console.log('[ServiceWorker] Cached font:', event.request.url);
+                        });
+                    }
+                    return networkResponse;
+                }).catch((error) => {
+                    console.error('[ServiceWorker] Font fetch failed:', event.request.url, error);
+                    throw error;
+                });
+            })
+        );
+        return;
+    }
+
     // Handle same-origin requests only (no external CDN dependencies)
     const isSameOrigin = url.origin === location.origin;
 
     if (!isSameOrigin) {
-        // Let the browser handle cross-origin requests (CORS proxy, Google Fonts)
+        // Let the browser handle other cross-origin requests (CORS proxy, etc.)
         return;
     }
 

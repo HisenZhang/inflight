@@ -1,6 +1,6 @@
 {
   "name": "inflight",
-  "version": "3.4.3",
+  "version": "3.4.4",
   "description": "Open source EFB Webapp - Electronic Flight Bag for route planning, navigation, and moving map",
   "main": "index.html",
   "scripts": {
