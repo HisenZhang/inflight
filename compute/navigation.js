@@ -410,6 +410,103 @@
         },
 
         /**
+         * Calculate proper bounding box for waypoints on a sphere
+         * Handles anti-meridian crossings and routes > 180° longitude span
+         * @param {Array} waypoints - Array of {lat, lon} objects
+         * @returns {Object} {minLat, maxLat, minLon, maxLon}
+         */
+        calculateSphericalBounds(waypoints) {
+            if (!waypoints || waypoints.length === 0) {
+                return { minLat: -90, maxLat: 90, minLon: -180, maxLon: 180 };
+            }
+
+            if (waypoints.length === 1) {
+                return {
+                    minLat: waypoints[0].lat,
+                    maxLat: waypoints[0].lat,
+                    minLon: waypoints[0].lon,
+                    maxLon: waypoints[0].lon
+                };
+            }
+
+            // Helper: Normalize longitude to -180 to +180 range
+            const normalizeLon = (lon) => {
+                while (lon > 180) lon -= 360;
+                while (lon < -180) lon += 360;
+                return lon;
+            };
+
+            // Check if route crosses anti-meridian (±180° line)
+            // by looking for large longitude jumps between consecutive waypoints
+            let crossesAntiMeridian = false;
+            for (let i = 1; i < waypoints.length; i++) {
+                const lon1 = normalizeLon(waypoints[i - 1].lon);
+                const lon2 = normalizeLon(waypoints[i].lon);
+                const diff = Math.abs(lon2 - lon1);
+
+                // If consecutive points differ by > 180°, they cross the anti-meridian
+                // (shortest path goes across ±180° rather than the long way around)
+                if (diff > 180) {
+                    crossesAntiMeridian = true;
+                    break;
+                }
+            }
+
+            // Latitude is straightforward (no wrapping)
+            const lats = waypoints.map(w => w.lat);
+            const minLat = Math.min(...lats);
+            const maxLat = Math.max(...lats);
+
+            let minLon, maxLon;
+
+            if (crossesAntiMeridian) {
+                // Convert longitudes to 0-360 range to avoid discontinuity
+                const adjustedLons = waypoints.map(w => {
+                    const lon = normalizeLon(w.lon);
+                    return lon < 0 ? lon + 360 : lon;
+                });
+
+                // Find min/max in 0-360 range
+                const minLon360 = Math.min(...adjustedLons);
+                const maxLon360 = Math.max(...adjustedLons);
+
+                // Check if the span is > 180° (going the "long way")
+                const span = maxLon360 - minLon360;
+
+                if (span > 180) {
+                    // Route spans > 180° - take the OPPOSITE bounds (shorter arc)
+                    // Example: waypoints at 170° and -170° (190° and 170° in 0-360)
+                    // Span = 20°, but simple min/max gives 170-190 (wrong!)
+                    // We want: max=170°, min=-170° (or 190° in 0-360)
+                    // So swap: the "min" becomes the max, "max" becomes the min
+                    minLon = normalizeLon(maxLon360);
+                    maxLon = normalizeLon(minLon360);
+                } else {
+                    // Normal case: convert back to -180 to +180
+                    minLon = normalizeLon(minLon360);
+                    maxLon = normalizeLon(maxLon360);
+                }
+            } else {
+                // No anti-meridian crossing - use simple min/max
+                const lons = waypoints.map(w => normalizeLon(w.lon));
+                minLon = Math.min(...lons);
+                maxLon = Math.max(...lons);
+
+                // Double-check: if span > 180°, we're going the long way
+                // (This can happen even without crossing ±180° line)
+                const span = maxLon - minLon;
+                if (span > 180) {
+                    // Swap bounds to get the shorter arc
+                    const temp = minLon;
+                    minLon = maxLon;
+                    maxLon = temp;
+                }
+            }
+
+            return { minLat, maxLat, minLon, maxLon };
+        },
+
+        /**
          * Calculate return trip fuel estimate
          * Reverses the route direction and calculates new wind effects
          * @param {Array} legs - Original route legs with wind and fuel data
