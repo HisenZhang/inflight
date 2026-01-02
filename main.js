@@ -39,6 +39,8 @@
                 .registerIndex('fixes_search', new window.TrieIndex())
                 .registerIndex('fixes_spatial', new window.SpatialGridIndex())
                 .registerIndex('airways', new window.MapIndex())
+                .registerIndex('stars', new window.MapIndex())
+                .registerIndex('dps', new window.MapIndex())
                 .registerIndex('tokenTypes', new window.MapIndex());
 
             // 4. Create services
@@ -114,7 +116,9 @@
                 airports: data.airports.size,
                 navaids: data.navaids.size,
                 fixes: data.fixes.size,
-                airways: data.airways.size
+                airways: data.airways.size,
+                stars: data.stars?.size || 0,
+                dps: data.dps?.size || 0
             });
 
             // Build query engine indexes
@@ -149,12 +153,34 @@
                 qe._indexes.get('airways')?.build(data.airways);
             }
 
+            if (data.stars && data.stars.size > 0) {
+                console.log(`[App v3] Building STAR indexes (${data.stars.size} entries)`);
+                qe._indexes.get('stars')?.build(data.stars);
+            }
+
+            if (data.dps && data.dps.size > 0) {
+                console.log(`[App v3] Building DP/SID indexes (${data.dps.size} entries)`);
+                qe._indexes.get('dps')?.build(data.dps);
+            }
+
             // Build token type index
             const tokenTypes = new Map();
             for (const [code] of data.airports) tokenTypes.set(code, 'AIRPORT');
             for (const [code] of data.navaids) tokenTypes.set(code, 'NAVAID');
             for (const [code] of data.fixes) tokenTypes.set(code, 'FIX');
             for (const [code] of data.airways) tokenTypes.set(code, 'AIRWAY');
+            if (data.stars) {
+                for (const [code, star] of data.stars) {
+                    // Index by STAR name if available (v15+ has name field)
+                    if (star.name) tokenTypes.set(star.name, 'STAR');
+                }
+            }
+            if (data.dps) {
+                for (const [code, dp] of data.dps) {
+                    // Index by DP name if available (v15+ has name field)
+                    if (dp.name) tokenTypes.set(dp.name, 'DP');
+                }
+            }
             qe._indexes.get('tokenTypes')?.build(tokenTypes);
 
             qe._initialized = true;

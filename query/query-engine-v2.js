@@ -62,6 +62,16 @@
                 this._indexes.get('airways')?.build(data.airways);
             }
 
+            if (data.stars) {
+                console.log(`[QueryEngineV2] Building STAR indexes (${data.stars.size || 0} entries)`);
+                this._indexes.get('stars')?.build(data.stars);
+            }
+
+            if (data.dps) {
+                console.log(`[QueryEngineV2] Building DP/SID indexes (${data.dps.size || 0} entries)`);
+                this._indexes.get('dps')?.build(data.dps);
+            }
+
             // Build token type index
             this._buildTokenTypeIndex(data);
 
@@ -99,6 +109,20 @@
             if (data.airways) {
                 for (const [code] of data.airways) {
                     tokenTypes.set(code, 'AIRWAY');
+                }
+            }
+
+            if (data.stars) {
+                for (const [code, star] of data.stars) {
+                    // Index by STAR name if available (v15+ has name field)
+                    if (star.name) tokenTypes.set(star.name, 'STAR');
+                }
+            }
+
+            if (data.dps) {
+                for (const [code, dp] of data.dps) {
+                    // Index by DP name if available (v15+ has name field)
+                    if (dp.name) tokenTypes.set(dp.name, 'DP');
                 }
             }
 
@@ -210,6 +234,24 @@
          */
         getAirway(ident) {
             return this.getByKey('airways', ident?.toUpperCase());
+        }
+
+        /**
+         * Get STAR by identifier
+         * @param {string} ident - STAR identifier
+         * @returns {Object|null} STAR data
+         */
+        getStar(ident) {
+            return this.getByKey('stars', ident?.toUpperCase());
+        }
+
+        /**
+         * Get DP/SID by identifier
+         * @param {string} ident - DP/SID identifier
+         * @returns {Object|null} DP data
+         */
+        getDP(ident) {
+            return this.getByKey('dps', ident?.toUpperCase());
         }
 
         /**
