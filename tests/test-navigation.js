@@ -554,3 +554,153 @@ TestFramework.describe('Navigation - Return Fuel Calculations', function({ it })
         assert.isTrue(result.fuelDifference < 0, 'Return should use less fuel');
     });
 });
+
+// ============================================
+// SPHERICAL BOUNDING BOX CALCULATIONS
+// ============================================
+
+TestFramework.describe('Navigation - Spherical Bounding Box', function({ it }) {
+
+    it('should have calculateSphericalBounds method', () => {
+        assert.isFunction(window.Navigation.calculateSphericalBounds,
+            'Should have calculateSphericalBounds method');
+    });
+
+    it('should handle empty waypoint array', () => {
+        const bounds = window.Navigation.calculateSphericalBounds([]);
+        assert.isDefined(bounds, 'Should return bounds');
+        assert.equals(bounds.minLat, -90, 'Min lat should be -90');
+        assert.equals(bounds.maxLat, 90, 'Max lat should be 90');
+        assert.equals(bounds.minLon, -180, 'Min lon should be -180');
+        assert.equals(bounds.maxLon, 180, 'Max lon should be 180');
+    });
+
+    it('should handle single waypoint', () => {
+        const waypoints = [{ lat: 37.62, lon: -122.38 }]; // KSFO
+        const bounds = window.Navigation.calculateSphericalBounds(waypoints);
+
+        assert.equals(bounds.minLat, 37.62, 'Min lat should equal waypoint lat');
+        assert.equals(bounds.maxLat, 37.62, 'Max lat should equal waypoint lat');
+        assert.equals(bounds.minLon, -122.38, 'Min lon should equal waypoint lon');
+        assert.equals(bounds.maxLon, -122.38, 'Max lon should equal waypoint lon');
+    });
+
+    it('should calculate normal bounds for domestic US route (no anti-meridian)', () => {
+        const waypoints = [
+            { lat: 37.62, lon: -122.38 }, // KSFO (San Francisco)
+            { lat: 40.64, lon: -73.78 }   // KJFK (New York)
+        ];
+        const bounds = window.Navigation.calculateSphericalBounds(waypoints);
+
+        // Latitude is straightforward
+        assert.equals(bounds.minLat, 37.62, 'Min lat should be SFO');
+        assert.equals(bounds.maxLat, 40.64, 'Max lat should be JFK');
+
+        // Longitude should be simple min/max (west to east)
+        assert.equals(bounds.minLon, -122.38, 'Min lon should be SFO (westmost)');
+        assert.equals(bounds.maxLon, -73.78, 'Max lon should be JFK (eastmost)');
+    });
+
+    it('should handle anti-meridian crossing (Pacific route)', () => {
+        const waypoints = [
+            { lat: 35.68, lon: 139.65 },  // Tokyo (RJTT): 139.65°E
+            { lat: 21.31, lon: -157.86 }  // Honolulu (PHNL): -157.86°E (or 202.14°)
+        ];
+        const bounds = window.Navigation.calculateSphericalBounds(waypoints);
+
+        // The route crosses the anti-meridian (±180°)
+        // Shortest path goes eastward from Tokyo (139.65°) to Honolulu (-157.86°)
+        // Crossing the dateline at 180°
+        // The bounding box should wrap around correctly
+
+        // Latitude is straightforward
+        assert.isTrue(bounds.minLat >= 21.31 && bounds.minLat <= 21.31,
+            'Min lat should be around Honolulu');
+        assert.isTrue(bounds.maxLat >= 35.68 && bounds.maxLat <= 35.68,
+            'Max lat should be around Tokyo');
+
+        // Longitude: the bounds should NOT span the whole globe
+        // Correct bounds should be approximately Tokyo (139.65°) to Honolulu (-157.86°)
+        // going eastward across the dateline
+        const lonSpan = bounds.maxLon - bounds.minLon;
+        if (lonSpan < 0) {
+            // Handles anti-meridian crossing with minLon > maxLon
+            const actualSpan = 360 + (bounds.maxLon - bounds.minLon);
+            assert.isTrue(actualSpan < 180,
+                `Longitude span should be < 180° for shortest path, got ${actualSpan.toFixed(1)}°`);
+        } else {
+            assert.isTrue(lonSpan < 180,
+                `Longitude span should be < 180° for shortest path, got ${lonSpan.toFixed(1)}°`);
+        }
+    });
+
+    it('should handle route longer than halfway around Earth', () => {
+        // Create a route that goes the "long way" around (> 180° span)
+        // Example: From Alaska to Russia, but going WEST (the long way)
+        const waypoints = [
+            { lat: 61.17, lon: -150.0 },  // PANC (Anchorage): -150°
+            { lat: 60.0, lon: -90.0 },    // Waypoint 1
+            { lat: 55.0, lon: -30.0 },    // Waypoint 2
+            { lat: 50.0, lon: 30.0 },     // Waypoint 3
+            { lat: 55.75, lon: 37.62 }    // UUEE (Moscow): 37.62°
+        ];
+        const bounds = window.Navigation.calculateSphericalBounds(waypoints);
+
+        // Total longitude span: -150° to 37.62° = 187.62°
+        // This is > 180°, so we're going the "long way"
+        // The bounding box should encompass this entire path
+
+        const lonSpan = Math.abs(bounds.maxLon - bounds.minLon);
+        assert.isTrue(lonSpan > 100,
+            `For long path, longitude span should be large, got ${lonSpan.toFixed(1)}°`);
+    });
+
+    it('should handle route near but not crossing anti-meridian', () => {
+        const waypoints = [
+            { lat: 60.0, lon: 170.0 },  // Near dateline (west side)
+            { lat: 55.0, lon: 175.0 }   // Closer to dateline
+        ];
+        const bounds = window.Navigation.calculateSphericalBounds(waypoints);
+
+        // Should be simple min/max since we don't cross ±180°
+        assert.equals(bounds.minLon, 170.0, 'Min lon should be 170°');
+        assert.equals(bounds.maxLon, 175.0, 'Max lon should be 175°');
+    });
+
+    it('should handle polar route crossing anti-meridian multiple times', () => {
+        const waypoints = [
+            { lat: 60.0, lon: -179.0 },  // Just west of dateline
+            { lat: 70.0, lon: 179.0 },   // Just east of dateline
+            { lat: 75.0, lon: -178.0 },  // Back to west side
+            { lat: 80.0, lon: 178.0 }    // Back to east side
+        ];
+        const bounds = window.Navigation.calculateSphericalBounds(waypoints);
+
+        // Route zigzags across the dateline
+        // Bounding box should recognize anti-meridian crossing
+        const lonSpan = bounds.maxLon - bounds.minLon;
+        if (lonSpan < 0) {
+            // Wraps around anti-meridian
+            const actualSpan = 360 + lonSpan;
+            assert.isTrue(actualSpan < 180,
+                'Polar route bounds should use shorter arc');
+        } else {
+            assert.isTrue(lonSpan < 180,
+                'Polar route bounds should use shorter arc');
+        }
+    });
+
+    it('should normalize longitude values outside -180 to +180 range', () => {
+        const waypoints = [
+            { lat: 40.0, lon: -190.0 },  // Out of range (should normalize to 170°)
+            { lat: 40.0, lon: 200.0 }    // Out of range (should normalize to -160°)
+        ];
+        const bounds = window.Navigation.calculateSphericalBounds(waypoints);
+
+        // Both longitudes should be normalized
+        assert.isTrue(bounds.minLon >= -180 && bounds.minLon <= 180,
+            'Min lon should be normalized to -180 to +180 range');
+        assert.isTrue(bounds.maxLon >= -180 && bounds.maxLon <= 180,
+            'Max lon should be normalized to -180 to +180 range');
+    });
+});

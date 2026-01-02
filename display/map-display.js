@@ -983,16 +983,13 @@ function generateMap(waypoints, legs) {
         // Zoom to show current position and destination only
         // As you get closer, the view zooms in dynamically
         const destination = waypoints[waypoints.length - 1];
-        const lats = [currentPosition.lat, destination.lat];
-        const lons = [currentPosition.lon, destination.lon];
 
-        const minLat = Math.min(...lats);
-        const maxLat = Math.max(...lats);
-        const minLon = Math.min(...lons);
-        const maxLon = Math.max(...lons);
+        // Use spherical bounds calculation to handle anti-meridian crossings
+        const points = [currentPosition, destination];
+        const sphericalBounds = window.Navigation.calculateSphericalBounds(points);
 
-        const latRange = maxLat - minLat;
-        const lonRange = maxLon - minLon;
+        const latRange = sphericalBounds.maxLat - sphericalBounds.minLat;
+        const lonRange = Math.abs(sphericalBounds.maxLon - sphericalBounds.minLon);
 
         // Use larger padding for very short distances to avoid extreme zoom
         const minRange = 0.02; // Minimum ~1.2nm range
@@ -1001,34 +998,29 @@ function generateMap(waypoints, legs) {
         const padding = 0.20; // Increased padding for larger viewport
 
         bounds = {
-            minLat: minLat - effectiveLatRange * padding,
-            maxLat: maxLat + effectiveLatRange * padding,
-            minLon: minLon - effectiveLonRange * padding,
-            maxLon: maxLon + effectiveLonRange * padding
+            minLat: sphericalBounds.minLat - effectiveLatRange * padding,
+            maxLat: sphericalBounds.maxLat + effectiveLatRange * padding,
+            minLon: sphericalBounds.minLon - effectiveLonRange * padding,
+            maxLon: sphericalBounds.maxLon + effectiveLonRange * padding
         };
     } else if (currentZoomMode === 'custom' && customBounds) {
         // Custom bounds (e.g., hazard polygon focus)
         bounds = { ...customBounds };
     } else {
         // Full route view (default) - show only route waypoints, not current position
-        const lats = waypoints.map(w => w.lat);
-        const lons = waypoints.map(w => w.lon);
-
-        const minLat = Math.min(...lats);
-        const maxLat = Math.max(...lats);
-        const minLon = Math.min(...lons);
-        const maxLon = Math.max(...lons);
+        // Use spherical bounds calculation to handle anti-meridian crossings and long paths
+        const sphericalBounds = window.Navigation.calculateSphericalBounds(waypoints);
 
         // Padding around route bounds (increased for larger viewport)
-        const latRange = maxLat - minLat;
-        const lonRange = maxLon - minLon;
+        const latRange = sphericalBounds.maxLat - sphericalBounds.minLat;
+        const lonRange = Math.abs(sphericalBounds.maxLon - sphericalBounds.minLon);
         const padding = 0.08;
 
         bounds = {
-            minLat: minLat - latRange * padding,
-            maxLat: maxLat + latRange * padding,
-            minLon: minLon - lonRange * padding,
-            maxLon: maxLon + lonRange * padding
+            minLat: sphericalBounds.minLat - latRange * padding,
+            maxLat: sphericalBounds.maxLat + latRange * padding,
+            minLon: sphericalBounds.minLon - lonRange * padding,
+            maxLon: sphericalBounds.maxLon + lonRange * padding
         };
     }
 
