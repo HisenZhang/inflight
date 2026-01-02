@@ -76,6 +76,8 @@
                     navaids: new Map(),
                     fixes: new Map(),
                     airways: new Map(),
+                    stars: new Map(),
+                    dps: new Map(),
                     frequencies: new Map(),
                     iataToIcao: new Map()
                 };
@@ -87,6 +89,8 @@
                 navaids: new Map(rawData.navaids || []),
                 fixes: new Map(rawData.fixes || []),
                 airways: new Map(rawData.airways || []),
+                stars: new Map(rawData.stars || []),
+                dps: new Map(rawData.dps || []),
                 frequencies: new Map(rawData.frequencies || []),
                 iataToIcao: new Map(rawData.iataToIcao || [])
             };
