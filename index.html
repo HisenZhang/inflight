@@ -608,28 +608,38 @@
         <!-- Vector Map Display -->
         <div id="mapDisplay" class="map-display" style="display: none;">
             <div class="map-header">
-                <div class="zoom-controls">
-                    <button class="zoom-btn active" data-zoom="full">ROUTE</button>
-                    <button class="zoom-btn" data-zoom="destination">DEST</button>
-                    <button class="zoom-btn" data-zoom="surrounding-50">50NM</button>
-                    <button class="zoom-btn" data-zoom="surrounding-25">25NM</button>
-                    <button class="zoom-btn" data-zoom="surrounding-5">5NM</button>
-                    <button class="zoom-btn" id="zoomOutBtn">−</button>
-                    <button class="zoom-btn" id="zoomInBtn">+</button>
-                    <button class="zoom-btn" id="airwayFilterBtn" title="Toggle Low/High Altitude Airways">LOW</button>
+                <!-- Primary Control Row -->
+                <div class="map-controls-primary">
+                    <button class="map-control-btn active" id="viewControlBtn" data-control="view" title="View & Zoom Controls">VIEW</button>
+                    <button class="map-control-btn" id="wxControlBtn" data-control="wx" title="Weather Overlays">WX</button>
+                    <button class="map-control-btn" id="airwayFilterBtn" title="Toggle Low/High Altitude Airways">LOW</button>
+                    <button class="map-control-btn proc-btn" id="procBtn" title="Toggle Procedures (SID/STAR/Approach)">PROC</button>
+                    <button class="map-control-btn terrain-btn" id="terrainBtn" title="Toggle MORA Grid Overlay">MORA</button>
                 </div>
 
-                <!-- Weather Overlay Controls -->
-                <div class="weather-overlay-controls">
-                    <button class="zoom-btn gairmet-btn" id="pirepBtn" title="Toggle PIREPs (Pilot Reports)">PIREP</button>
-                    <button class="zoom-btn gairmet-btn" id="sigmetBtn" title="Toggle SIGMETs (Significant Meteorological Information)">SIGMET</button>
-                    <button class="zoom-btn gairmet-btn" id="gairmetIceBtn" title="Toggle Icing G-AIRMETs">ICE</button>
-                    <button class="zoom-btn gairmet-btn" id="gairmetTurbBtn" title="Toggle Turbulence G-AIRMETs">TURB</button>
-                    <button class="zoom-btn gairmet-btn" id="gairmetIfrBtn" title="Toggle IFR G-AIRMETs">IFR</button>
-                    <button class="zoom-btn gairmet-btn" id="gairmetMtnBtn" title="Toggle Mountain Obscuration G-AIRMETs">MTN</button>
-                    <button class="zoom-btn gairmet-btn" id="gairmetFzlvlBtn" title="Toggle Freezing Level G-AIRMETs">FZLVL</button>
-                    <button class="zoom-btn terrain-btn" id="terrainBtn" title="Toggle MORA Grid Overlay">MORA</button>
-                    <button class="zoom-btn proc-btn" id="procBtn" title="Toggle Procedures (SID/STAR/Approach)">PROC</button>
+                <!-- Secondary Control Row (Contextual) -->
+                <div class="map-controls-secondary">
+                    <!-- View Controls (shown when VIEW is active) -->
+                    <div class="control-group active" id="viewControls" data-group="view">
+                        <button class="zoom-btn active" data-zoom="full">ROUTE</button>
+                        <button class="zoom-btn" data-zoom="destination">DEST</button>
+                        <button class="zoom-btn" data-zoom="surrounding-50">50NM</button>
+                        <button class="zoom-btn" data-zoom="surrounding-25">25NM</button>
+                        <button class="zoom-btn" data-zoom="surrounding-5">5NM</button>
+                        <button class="zoom-btn" id="zoomOutBtn">−</button>
+                        <button class="zoom-btn" id="zoomInBtn">+</button>
+                    </div>
+
+                    <!-- Weather Controls (shown when WX is active) -->
+                    <div class="control-group" id="wxControls" data-group="wx" style="display: none;">
+                        <button class="zoom-btn gairmet-btn" id="pirepBtn" title="Toggle PIREPs (Pilot Reports)">PIREP</button>
+                        <button class="zoom-btn gairmet-btn" id="sigmetBtn" title="Toggle SIGMETs (Significant Meteorological Information)">SIGMET</button>
+                        <button class="zoom-btn gairmet-btn" id="gairmetIceBtn" title="Toggle Icing G-AIRMETs">ICE</button>
+                        <button class="zoom-btn gairmet-btn" id="gairmetTurbBtn" title="Toggle Turbulence G-AIRMETs">TURB</button>
+                        <button class="zoom-btn gairmet-btn" id="gairmetIfrBtn" title="Toggle IFR G-AIRMETs">IFR</button>
+                        <button class="zoom-btn gairmet-btn" id="gairmetMtnBtn" title="Toggle Mountain Obscuration G-AIRMETs">MTN</button>
+                        <button class="zoom-btn gairmet-btn" id="gairmetFzlvlBtn" title="Toggle Freezing Level G-AIRMETs">FZLVL</button>
+                    </div>
                 </div>
             </div>
 

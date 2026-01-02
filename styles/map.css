@@ -12,16 +12,15 @@
     border-bottom: 2px solid var(--border-color);
     padding: var(--space-md);
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column;
     gap: 8px;
-    align-items: center;
 }
 
 /* Mobile: Stack vertically */
 @media (max-width: 768px) {
     .map-header {
-        flex-direction: column;
-        align-items: flex-start;
+        padding: var(--space-sm);
+        gap: 6px;
     }
 }
 
@@ -30,6 +29,58 @@
     margin: 0;
 }
 
+/* Primary control row */
+.map-controls-primary {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+/* Secondary control row (contextual) */
+.map-controls-secondary {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+/* Control groups within secondary row */
+.control-group {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.control-group:not(.active) {
+    display: none;
+}
+
+/* Primary control buttons */
+.map-control-btn {
+    padding: 6px 12px;
+    font-size: 10px;
+    font-family: 'Roboto Mono', monospace;
+    font-weight: 500;
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.map-control-btn:hover {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border-color: var(--color-metric);
+}
+
+.map-control-btn.active {
+    background: var(--color-metric);
+    color: var(--bg-primary);
+    border-color: var(--color-metric);
+    font-weight: 700;
+}
+
+/* Legacy support for zoom controls */
 .zoom-controls {
     display: flex;
     gap: 4px;
