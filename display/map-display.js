@@ -20,7 +20,8 @@ const BREADCRUMB_MIN_DISTANCE = 0.05; // Min distance (nm) between breadcrumbs
 
 // Procedure overlay state
 let proceduresEnabled = false;
-let selectedProcedure = null; // { type: 'sid'|'star'|'approach', key: string, data: object }
+let selectedProcedure = null; // { type: 'sid'|'star'|'approach', key: string, data: object } - legacy for modal
+let selectedProcedures = []; // Array of procedures to display when PROC button is enabled
 let selectedAirportForProcedures = null; // ICAO code of airport for procedure modal
 
 // Pan/drag state
@@ -123,15 +124,15 @@ function getRangeIntervalsForZoom(zoomMode) {
         case 'full':
             return []; // No range circles for full route view
         case 'destination':
-            return [10, 25, 50]; // Approaching destination
+            return [10, 20, 30, 40, 50]; // Approaching destination - equal 10nm spacing
         case 'surrounding-50':
-            return [10, 25, 50];
+            return [10, 20, 30, 40, 50]; // Equal 10nm spacing
         case 'surrounding-25':
-            return [5, 10, 25];
+            return [5, 10, 15, 20, 25]; // Equal 5nm spacing
         case 'surrounding-5':
-            return [1, 2, 5];
+            return [1, 2, 3, 4, 5]; // Equal 1nm spacing
         default:
-            return [5, 10, 25]; // Default intervals
+            return [5, 10, 15, 20, 25]; // Default intervals - equal 5nm spacing
     }
 }
 
@@ -1277,9 +1278,8 @@ function generateMap(waypoints, legs) {
     if (shouldShowDetails) {
         console.log('[VectorMap] Drawing airways and fixes at detailed zoom (mode:', effectiveZoomMode, ')');
 
-        // Airways: show at 50nm and 25nm zoom only (not at 5nm - too cluttered with fixes)
-        const shouldDrawAirways = effectiveZoomMode === 'surrounding-50' || effectiveZoomMode === 'surrounding-25';
-        const airwaysSvg = shouldDrawAirways ? drawAirways(project, bounds, strokeWidth, effectiveZoomMode) : '';
+        // Airways: always show when shouldShowDetails is true (no longer restricted by zoom level)
+        const airwaysSvg = drawAirways(project, bounds, strokeWidth, effectiveZoomMode);
 
         // Fixes: show at 25nm and 5nm zoom only (not at 50nm - too cluttered)
         const shouldDrawFixes = effectiveZoomMode === 'surrounding-25' || effectiveZoomMode === 'surrounding-5';
@@ -1288,11 +1288,11 @@ function generateMap(waypoints, legs) {
         console.log('[VectorMap] Airways SVG length:', airwaysSvg.length);
         console.log('[VectorMap] Fixes SVG length:', fixesSvg.length);
 
-        if (shouldDrawAirways) {
-            svg += `<g id="layer-airways" opacity="1.0">`;
-            svg += airwaysSvg;
-            svg += `</g>`;
-        }
+        // Always draw airways when shouldShowDetails is true
+        svg += `<g id="layer-airways" opacity="1.0">`;
+        svg += airwaysSvg;
+        svg += `</g>`;
+
         if (shouldDrawFixes) {
             svg += `<g id="layer-fixes" opacity="1.0">`;
             svg += fixesSvg;
@@ -1323,7 +1323,7 @@ function generateMap(waypoints, legs) {
     // ============================================
     // LAYER 2.5: PROCEDURE OVERLAY (SID/STAR/Approach)
     // ============================================
-    if (proceduresEnabled && selectedProcedure) {
+    if (proceduresEnabled && selectedProcedures.length > 0) {
         svg += `<g id="layer-procedures" class="procedure-overlay">`;
         svg += drawProcedures(project, bounds);
         svg += `</g>`;
@@ -1479,8 +1479,8 @@ function generateMap(waypoints, legs) {
                         fill="none" stroke="#00ff00" stroke-width="3" opacity="0.6"/>`;
 
                 // Add range label
-                const labelY = pos.y - radiusPixels + 15;
-                svg += `<text x="${pos.x + 5}" y="${labelY}" fill="#00ff00" font-size="16" font-family="Roboto Mono" font-weight="700">${rangeNM}NM</text>`;
+                const labelY = pos.y - radiusPixels + 20;
+                svg += `<text x="${pos.x + 5}" y="${labelY}" fill="#00ff00" font-size="24" font-family="Roboto Mono" font-weight="700">${rangeNM}NM</text>`;
             });
             svg += `</g>`;
         }
@@ -3188,6 +3188,63 @@ function setAirwayFilter(filter) {
 // ============================================
 
 /**
+ * Load all SIDs from departure airport and all STARs from destination airport
+ * Includes all transitions for each procedure
+ */
+function loadAllProceduresForRoute() {
+    selectedProcedures = [];
+
+    if (!routeData || !routeData.waypoints || routeData.waypoints.length < 2) {
+        console.log('[VectorMap] No route data for procedures');
+        return;
+    }
+
+    const cifpData = window.App?.cifpData;
+    if (!cifpData) {
+        console.log('[VectorMap] CIFP data not loaded');
+        return;
+    }
+
+    // Get departure and destination airports
+    const departureWaypoint = routeData.waypoints[0];
+    const destinationWaypoint = routeData.waypoints[routeData.waypoints.length - 1];
+
+    // Find departure airport ICAO (should be an airport)
+    let departureICAO = null;
+    if (departureWaypoint.waypointType === 'airport') {
+        departureICAO = departureWaypoint.ident;
+    }
+
+    // Find destination airport ICAO (should be an airport)
+    let destinationICAO = null;
+    if (destinationWaypoint.waypointType === 'airport') {
+        destinationICAO = destinationWaypoint.ident;
+    }
+
+    console.log(`[VectorMap] Loading procedures - Departure: ${departureICAO}, Destination: ${destinationICAO}`);
+
+    // Load all SIDs from departure airport (including all transitions)
+    if (departureICAO && cifpData.sids) {
+        cifpData.sids.forEach((sid, key) => {
+            if (sid.airport === departureICAO) {
+                selectedProcedures.push({ type: 'sid', key, data: sid });
+            }
+        });
+    }
+
+    // Load all STARs from destination airport (including all transitions)
+    if (destinationICAO && cifpData.stars) {
+        cifpData.stars.forEach((star, key) => {
+            if (star.airport === destinationICAO) {
+                selectedProcedures.push({ type: 'star', key, data: star });
+            }
+        });
+    }
+
+    console.log(`[VectorMap] Loaded ${selectedProcedures.filter(p => p.type === 'sid').length} SIDs and ${selectedProcedures.filter(p => p.type === 'star').length} STARs`);
+}
+
+/**
  * Toggle procedure overlay display
  */
 function toggleProcedures() {
@@ -3196,10 +3253,13 @@ function toggleProcedures() {
 
     if (proceduresEnabled) {
         btn?.classList.add('active');
+        // Load all SIDs from departure and all STARs from destination
+        loadAllProceduresForRoute();
     } else {
         btn?.classList.remove('active');
-        // Clear selected procedure when disabling
+        // Clear all procedures when disabling
         selectedProcedure = null;
+        selectedProcedures = [];
         closeProcedureModal();
     }
 
@@ -3476,38 +3536,67 @@ function selectProcedure(type, key) {
  * @returns {string} SVG content
  */
 function drawProcedures(project, bounds) {
-    if (!selectedProcedure || !selectedProcedure.data) return '';
+    // Draw all selected procedures (SIDs and STARs)
+    if (!selectedProcedures || selectedProcedures.length === 0) {
+        // Fallback to legacy single procedure for modal selection
+        if (!selectedProcedure || !selectedProcedure.data) return '';
+        return drawSingleProcedure(selectedProcedure, project);
+    }
 
-    const procedure = selectedProcedure.data;
+    let svg = '';
+    let sidCount = 0;
+    let starCount = 0;
+
+    // Draw all procedures with different colors
+    selectedProcedures.forEach(selectedProc => {
+        svg += drawSingleProcedure(selectedProc, project);
+        if (selectedProc.type === 'sid') sidCount++;
+        if (selectedProc.type === 'star') starCount++;
+    });
+
+    console.log(`[VectorMap] Drew ${sidCount} SIDs and ${starCount} STARs`);
+    return svg;
+}
+
+/**
+ * Draw a single procedure on the map
+ * @param {Object} selectedProc - { type, key, data }
+ * @param {Function} project - Projection function
+ * @returns {string} SVG markup
+ */
+function drawSingleProcedure(selectedProc, project) {
+    const procedure = selectedProc.data;
     const waypoints = procedure.waypoints;
 
     if (!waypoints || waypoints.length === 0) return '';
 
     let svg = '';
-    const type = selectedProcedure.type;
+    const type = selectedProc.type;
 
     // Resolve waypoint coordinates from CIFP data or database
     const resolvedWaypoints = resolveWaypointCoordinates(waypoints);
 
     if (resolvedWaypoints.length < 2) {
-        console.log('[VectorMap] Not enough resolved waypoints for procedure');
         return '';
     }
 
-    // Determine CSS classes based on type
-    let lineClass, waypointClass, labelClass;
+    // Determine colors based on type
+    // SIDs: Cyan/Light Blue (#00BFFF)
+    // STARs: Magenta/Pink (#FF00FF)
+    // Approaches: Yellow (legacy)
+    let lineColor, waypointColor, labelColor;
     if (type === 'sid') {
-        lineClass = 'procedure-sid-line';
-        waypointClass = 'procedure-sid-waypoint';
-        labelClass = 'procedure-sid-label';
+        lineColor = '#00BFFF';     // Cyan for SIDs
+        waypointColor = '#00BFFF';
+        labelColor = '#00BFFF';
     } else if (type === 'star') {
-        lineClass = 'procedure-star-line';
-        waypointClass = 'procedure-star-waypoint';
-        labelClass = 'procedure-star-label';
+        lineColor = '#FF00FF';     // Magenta for STARs
+        waypointColor = '#FF00FF';
+        labelColor = '#FF00FF';
     } else {
-        lineClass = 'procedure-approach-line';
-        waypointClass = 'procedure-approach-waypoint';
-        labelClass = 'procedure-approach-label';
+        lineColor = '#FFFF00';     // Yellow for approaches
+        waypointColor = '#FFFF00';
+        labelColor = '#FFFF00';
     }
 
     // Draw path connecting waypoints
@@ -3521,30 +3610,19 @@ function drawProcedures(project, bounds) {
         }
     });
 
-    svg += `<path d="${pathD}" class="${lineClass}"/>`;
+    svg += `<path d="${pathD}" stroke="${lineColor}" stroke-width="2" fill="none" opacity="0.7"/>`;
 
     // Draw waypoint markers
     resolvedWaypoints.forEach((wp, i) => {
         const pos = project(wp.lat, wp.lon);
-        const radius = 6;
+        const radius = 4;
 
-        // Special styling for FAF (Final Approach Fix) in approaches
-        const isFAF = type === 'approach' && wp.pathTerminator === 'CF' && i > 0;
-        const wpClass = isFAF ? 'procedure-approach-waypoint-faf' : waypointClass;
+        svg += `<circle cx="${pos.x}" cy="${pos.y}" r="${radius}" fill="${waypointColor}" opacity="0.6"/>`;
 
-        svg += `<circle cx="${pos.x}" cy="${pos.y}" r="${radius}" class="${wpClass}"/>`;
-
-        // Label above waypoint
-        svg += `<text x="${pos.x}" y="${pos.y - 12}" text-anchor="middle" class="${labelClass}">${wp.ident}</text>`;
-
-        // Altitude constraint (for approaches)
-        if (wp.altitude && type === 'approach') {
-            const altText = wp.altitude + (wp.altitudeDescriptor === '+' ? '↑' : wp.altitudeDescriptor === '-' ? '↓' : '');
-            svg += `<text x="${pos.x}" y="${pos.y + 16}" text-anchor="middle" class="procedure-altitude-constraint">${altText}</text>`;
-        }
+        // Label above waypoint (smaller and less prominent to avoid clutter)
+        svg += `<text x="${pos.x}" y="${pos.y - 10}" text-anchor="middle" fill="${labelColor}" font-size="10" font-family="Roboto Mono" opacity="0.7">${wp.ident}</text>`;
     });
 
-    console.log(`[VectorMap] Drew ${type} procedure: ${procedure.ident} with ${resolvedWaypoints.length} waypoints`);
     return svg;
 }
 
