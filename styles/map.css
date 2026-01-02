@@ -80,6 +80,31 @@
     font-weight: 700;
 }
 
+/* Special styling for toggle buttons (PROC, MORA) */
+.map-control-btn.terrain-btn {
+    background: #654321;
+    color: var(--text-primary);
+}
+
+.map-control-btn.terrain-btn.active {
+    background: #8B4513 !important;
+    color: var(--text-primary) !important;
+    border-color: #8B4513 !important;
+    box-shadow: 0 0 8px rgba(139, 69, 19, 0.8);
+}
+
+.map-control-btn.proc-btn {
+    background: #9932CC;
+    color: var(--text-primary);
+}
+
+.map-control-btn.proc-btn.active {
+    background: #BA55D3 !important;
+    color: var(--text-primary) !important;
+    border-color: #BA55D3 !important;
+    box-shadow: 0 0 8px rgba(186, 85, 211, 0.8);
+}
+
 /* Legacy support for zoom controls */
 .zoom-controls {
     display: flex;
