@@ -159,11 +159,13 @@ function setupEventListeners() {
         nextNavWptBtn.addEventListener('click', () => window.VectorMap.navigateToNextWaypoint());
     }
 
-    // Map control group toggling (VIEW / WX)
+    // Map control group toggling (VIEW / WX / AIRWAY)
     const viewControlBtn = document.getElementById('viewControlBtn');
     const wxControlBtn = document.getElementById('wxControlBtn');
+    const airwayControlBtn = document.getElementById('airwayControlBtn');
     const viewControls = document.getElementById('viewControls');
     const wxControls = document.getElementById('wxControls');
+    const airwayControls = document.getElementById('airwayControls');
 
     function switchControlGroup(activeBtn, activeGroup) {
         // Update primary button states
@@ -197,6 +199,12 @@ function setupEventListeners() {
         });
     }
 
+    if (airwayControlBtn) {
+        airwayControlBtn.addEventListener('click', () => {
+            switchControlGroup(airwayControlBtn, airwayControls);
+        });
+    }
+
     // Zoom controls
     const zoomBtns = document.querySelectorAll('.zoom-btn[data-zoom]');
     zoomBtns.forEach(btn => {
@@ -220,12 +228,36 @@ function setupEventListeners() {
         zoomOutBtn.addEventListener('click', () => window.VectorMap.zoomOut());
     }
 
-    // Airway filter button (cycles LOW → HIGH → ALL)
-    const airwayFilterBtn = document.getElementById('airwayFilterBtn');
-    if (airwayFilterBtn) {
-        airwayFilterBtn.addEventListener('click', () => {
-            window.VectorMap.cycleAirwayFilter();
-        });
+    // Airway filter buttons (LOW / HIGH / ALL / NONE)
+    const airwayBtns = {
+        low: document.getElementById('airwayLowBtn'),
+        high: document.getElementById('airwayHighBtn'),
+        all: document.getElementById('airwayAllBtn'),
+        none: document.getElementById('airwayNoneBtn')
+    };
+
+    function setAirwayFilter(filter) {
+        // Update VectorMap filter
+        window.VectorMap.setAirwayFilter(filter);
+
+        // Update button states
+        Object.values(airwayBtns).forEach(btn => btn && btn.classList.remove('active'));
+        if (airwayBtns[filter]) {
+            airwayBtns[filter].classList.add('active');
+        }
+    }
+
+    if (airwayBtns.low) {
+        airwayBtns.low.addEventListener('click', () => setAirwayFilter('low'));
+    }
+    if (airwayBtns.high) {
+        airwayBtns.high.addEventListener('click', () => setAirwayFilter('high'));
+    }
+    if (airwayBtns.all) {
+        airwayBtns.all.addEventListener('click', () => setAirwayFilter('all'));
+    }
+    if (airwayBtns.none) {
+        airwayBtns.none.addEventListener('click', () => setAirwayFilter('none'));
     }
 
     // Weather overlay toggle buttons
@@ -289,6 +321,40 @@ function setupEventListeners() {
     setupGairmetButton(gairmetIfrBtn, 'ifr');
     setupGairmetButton(gairmetMtnBtn, 'mtn');
     setupGairmetButton(gairmetFzlvlBtn, 'fzlvl');
+
+    // WX All/None buttons
+    const wxAllBtn = document.getElementById('wxAllBtn');
+    const wxNoneBtn = document.getElementById('wxNoneBtn');
+
+    if (wxAllBtn) {
+        wxAllBtn.addEventListener('click', () => {
+            // Enable all weather overlays
+            const weatherTypes = ['pireps', 'sigmets', 'gairmet-ice', 'gairmet-turb', 'gairmet-ifr', 'gairmet-mtn', 'gairmet-fzlvl'];
+            weatherTypes.forEach(type => {
+                window.VectorMap.toggleWeatherOverlays(type, true);
+            });
+
+            // Update button states
+            [pirepBtn, sigmetBtn, gairmetIceBtn, gairmetTurbBtn, gairmetIfrBtn, gairmetMtnBtn, gairmetFzlvlBtn].forEach(btn => {
+                if (btn) btn.classList.add('active');
+            });
+        });
+    }
+
+    if (wxNoneBtn) {
+        wxNoneBtn.addEventListener('click', () => {
+            // Disable all weather overlays
+            const weatherTypes = ['pireps', 'sigmets', 'gairmet-ice', 'gairmet-turb', 'gairmet-ifr', 'gairmet-mtn', 'gairmet-fzlvl'];
+            weatherTypes.forEach(type => {
+                window.VectorMap.toggleWeatherOverlays(type, false);
+            });
+
+            // Update button states
+            [pirepBtn, sigmetBtn, gairmetIceBtn, gairmetTurbBtn, gairmetIfrBtn, gairmetMtnBtn, gairmetFzlvlBtn].forEach(btn => {
+                if (btn) btn.classList.remove('active');
+            });
+        });
+    }
 
     // MORA grid toggle button
     const terrainBtn = document.getElementById('terrainBtn');

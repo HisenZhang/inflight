@@ -612,7 +612,7 @@
                 <div class="map-controls-primary">
                     <button class="map-control-btn active" id="viewControlBtn" data-control="view" title="View & Zoom Controls">VIEW</button>
                     <button class="map-control-btn" id="wxControlBtn" data-control="wx" title="Weather Overlays">WX</button>
-                    <button class="map-control-btn" id="airwayFilterBtn" title="Toggle Low/High Altitude Airways">LOW</button>
+                    <button class="map-control-btn" id="airwayControlBtn" data-control="airway" title="Airway Filters">AIRWAY</button>
                     <button class="map-control-btn proc-btn" id="procBtn" title="Toggle Procedures (SID/STAR/Approach)">PROC</button>
                     <button class="map-control-btn terrain-btn" id="terrainBtn" title="Toggle MORA Grid Overlay">MORA</button>
                 </div>
@@ -632,6 +632,8 @@
 
                     <!-- Weather Controls (shown when WX is active) -->
                     <div class="control-group" id="wxControls" data-group="wx" style="display: none;">
+                        <button class="zoom-btn" id="wxAllBtn" title="Enable All Weather Overlays">ALL</button>
+                        <button class="zoom-btn" id="wxNoneBtn" title="Disable All Weather Overlays">NONE</button>
                         <button class="zoom-btn gairmet-btn" id="pirepBtn" title="Toggle PIREPs (Pilot Reports)">PIREP</button>
                         <button class="zoom-btn gairmet-btn" id="sigmetBtn" title="Toggle SIGMETs (Significant Meteorological Information)">SIGMET</button>
                         <button class="zoom-btn gairmet-btn" id="gairmetIceBtn" title="Toggle Icing G-AIRMETs">ICE</button>
@@ -639,6 +641,14 @@
                         <button class="zoom-btn gairmet-btn" id="gairmetIfrBtn" title="Toggle IFR G-AIRMETs">IFR</button>
                         <button class="zoom-btn gairmet-btn" id="gairmetMtnBtn" title="Toggle Mountain Obscuration G-AIRMETs">MTN</button>
                         <button class="zoom-btn gairmet-btn" id="gairmetFzlvlBtn" title="Toggle Freezing Level G-AIRMETs">FZLVL</button>
+                    </div>
+
+                    <!-- Airway Controls (shown when AIRWAY is active) -->
+                    <div class="control-group" id="airwayControls" data-group="airway" style="display: none;">
+                        <button class="zoom-btn active" id="airwayLowBtn" title="Show Low Altitude Airways (V/T/G/B/A/R)">LOW</button>
+                        <button class="zoom-btn" id="airwayHighBtn" title="Show High Altitude Airways (J/Q)">HIGH</button>
+                        <button class="zoom-btn" id="airwayAllBtn" title="Show All Airways">ALL</button>
+                        <button class="zoom-btn" id="airwayNoneBtn" title="Hide All Airways">NONE</button>
                     </div>
                 </div>
             </div>

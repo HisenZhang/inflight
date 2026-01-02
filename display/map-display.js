@@ -744,9 +744,12 @@ function drawAirways(project, bounds, strokeWidth, zoomMode = 'surrounding-25') 
             continue;
         }
 
-        // Filter airways by altitude chart type (Low/High/All)
+        // Filter airways by altitude chart type (Low/High/All/None)
         // Low altitude (L charts): V (Victor), T (RNAV), colored airways (G/B/A/R)
         // High altitude (H charts): J (Jet), Q (Q-routes)
+        if (airwayFilter === 'none') {
+            continue; // Skip all airways if filter is 'none'
+        }
         if (airwayFilter === 'low') {
             const isLowAltitude = airwayId.startsWith('V') || airwayId.startsWith('T') ||
                                   airwayId.startsWith('G') || airwayId.startsWith('B') ||
@@ -1473,11 +1476,11 @@ function generateMap(waypoints, legs) {
                 const radiusPixels = Math.abs(edgePoint.y - pos.y);
 
                 svg += `<circle cx="${pos.x}" cy="${pos.y}" r="${radiusPixels}"
-                        fill="none" stroke="#00ff00" stroke-width="2" stroke-dasharray="8,4" opacity="0.5"/>`;
+                        fill="none" stroke="#00ff00" stroke-width="3" opacity="0.6"/>`;
 
                 // Add range label
                 const labelY = pos.y - radiusPixels + 15;
-                svg += `<text x="${pos.x + 5}" y="${labelY}" fill="#00ff00" font-size="12" font-family="Roboto Mono" font-weight="500">${rangeNM}NM</text>`;
+                svg += `<text x="${pos.x + 5}" y="${labelY}" fill="#00ff00" font-size="16" font-family="Roboto Mono" font-weight="700">${rangeNM}NM</text>`;
             });
             svg += `</g>`;
         }
@@ -3156,19 +3159,15 @@ function focusOnPolygon(coords) {
 // AIRWAY FILTER
 // ============================================
 
-function cycleAirwayFilter() {
-    const filterSequence = ['low', 'high', 'all'];
-    const currentIndex = filterSequence.indexOf(airwayFilter);
-    const nextIndex = (currentIndex + 1) % filterSequence.length;
-    airwayFilter = filterSequence[nextIndex];
-
-    // Update button text
-    const airwayFilterBtn = document.getElementById('airwayFilterBtn');
-    if (airwayFilterBtn) {
-        const labels = { 'low': 'LOW', 'high': 'HIGH', 'all': 'ALL' };
-        airwayFilterBtn.textContent = labels[airwayFilter];
+function setAirwayFilter(filter) {
+    // Validate filter value
+    const validFilters = ['low', 'high', 'all', 'none'];
+    if (!validFilters.includes(filter)) {
+        console.warn('[VectorMap] Invalid airway filter:', filter);
+        return;
     }
 
+    airwayFilter = filter;
     console.log('[VectorMap] Airway filter changed to:', airwayFilter);
 
     // Redraw map with new filter
@@ -3627,7 +3626,7 @@ window.VectorMap = {
     focusOnPolygon,
 
     // Airway altitude filter
-    cycleAirwayFilter,
+    setAirwayFilter,
 
     // Procedure overlays (SID/STAR/Approach)
     toggleProcedures,
