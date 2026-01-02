@@ -69,6 +69,13 @@
                 Terrain: window.Terrain,
                 Weather: window.Weather,
 
+                // CIFP procedure data (for map display compatibility)
+                cifpData: {
+                    sids: new Map(),
+                    stars: new Map(),
+                    approaches: new Map()
+                },
+
                 // Version info
                 version: '3.0.0',
                 architecture: 'v3',
@@ -162,6 +169,14 @@
                 console.log(`[App v3] Building DP/SID indexes (${data.dps.size} entries)`);
                 qe._indexes.get('dps')?.build(data.dps);
             }
+
+            // Expose procedure data for map display compatibility
+            // Map display expects window.App.cifpData with sids/stars/approaches
+            window.App.cifpData = {
+                sids: data.dps || new Map(),
+                stars: data.stars || new Map(),
+                approaches: new Map() // Approaches not yet implemented in v3
+            };
 
             // Build token type index
             const tokenTypes = new Map();
