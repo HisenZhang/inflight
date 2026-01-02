@@ -159,6 +159,44 @@ function setupEventListeners() {
         nextNavWptBtn.addEventListener('click', () => window.VectorMap.navigateToNextWaypoint());
     }
 
+    // Map control group toggling (VIEW / WX)
+    const viewControlBtn = document.getElementById('viewControlBtn');
+    const wxControlBtn = document.getElementById('wxControlBtn');
+    const viewControls = document.getElementById('viewControls');
+    const wxControls = document.getElementById('wxControls');
+
+    function switchControlGroup(activeBtn, activeGroup) {
+        // Update primary button states
+        document.querySelectorAll('.map-controls-primary .map-control-btn[data-control]').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        if (activeBtn) {
+            activeBtn.classList.add('active');
+        }
+
+        // Update control group visibility
+        document.querySelectorAll('.control-group').forEach(group => {
+            group.classList.remove('active');
+            group.style.display = 'none';
+        });
+        if (activeGroup) {
+            activeGroup.classList.add('active');
+            activeGroup.style.display = 'flex';
+        }
+    }
+
+    if (viewControlBtn) {
+        viewControlBtn.addEventListener('click', () => {
+            switchControlGroup(viewControlBtn, viewControls);
+        });
+    }
+
+    if (wxControlBtn) {
+        wxControlBtn.addEventListener('click', () => {
+            switchControlGroup(wxControlBtn, wxControls);
+        });
+    }
+
     // Zoom controls
     const zoomBtns = document.querySelectorAll('.zoom-btn[data-zoom]');
     zoomBtns.forEach(btn => {

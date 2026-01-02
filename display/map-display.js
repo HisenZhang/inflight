@@ -13,6 +13,11 @@ let zoomLevel = 1; // Pinch zoom level (1.0 = default, max based on route bounds
 let initialPinchDistance = null;
 let airwayFilter = 'low'; // 'low' (V/T/G/B/A/R - L charts), 'high' (J/Q - H charts), 'all'
 
+// Range circles and breadcrumbs
+let breadcrumbs = []; // GPS track history for breadcrumb trail
+const MAX_BREADCRUMBS = 100; // Limit breadcrumbs to avoid clutter
+const BREADCRUMB_MIN_DISTANCE = 0.05; // Min distance (nm) between breadcrumbs
+
 // Procedure overlay state
 let proceduresEnabled = false;
 let selectedProcedure = null; // { type: 'sid'|'star'|'approach', key: string, data: object }
@@ -108,6 +113,74 @@ async function checkAndUpdateWeather() {
     return false;
 }
 
+/**
+ * Get range circle intervals based on current zoom mode
+ * @param {string} zoomMode - Current zoom mode
+ * @returns {number[]} Array of range intervals in nautical miles
+ */
+function getRangeIntervalsForZoom(zoomMode) {
+    switch (zoomMode) {
+        case 'full':
+            return []; // No range circles for full route view
+        case 'destination':
+            return [10, 25, 50]; // Approaching destination
+        case 'surrounding-50':
+            return [10, 25, 50];
+        case 'surrounding-25':
+            return [5, 10, 25];
+        case 'surrounding-5':
+            return [1, 2, 5];
+        default:
+            return [5, 10, 25]; // Default intervals
+    }
+}
+
+/**
+ * Get breadcrumb color based on age (gradient from black to bright red)
+ * @param {number} progress - Progress from 0 (oldest) to 1 (newest)
+ * @returns {string} RGB color string
+ */
+function getBreadcrumbColor(progress) {
+    // Gradient: black (#000000) → dark red (#8B0000) → bright red (#FF0000)
+    if (progress < 0.5) {
+        // First half: black to dark red
+        const t = progress * 2; // 0 to 1
+        const r = Math.round(139 * t);
+        return `rgb(${r}, 0, 0)`;
+    } else {
+        // Second half: dark red to bright red
+        const t = (progress - 0.5) * 2; // 0 to 1
+        const r = Math.round(139 + (255 - 139) * t);
+        return `rgb(${r}, 0, 0)`;
+    }
+}
+
+/**
+ * Add a breadcrumb to the trail if far enough from last crumb
+ * @param {number} lat - Latitude
+ * @param {number} lon - Longitude
+ */
+function addBreadcrumb(lat, lon) {
+    // Check if we should add a new breadcrumb
+    if (breadcrumbs.length > 0) {
+        const lastCrumb = breadcrumbs[breadcrumbs.length - 1];
+        const distance = window.Geodesy.vincentyDistance(lastCrumb.lat, lastCrumb.lon, lat, lon);
+
+        // Only add if moved enough distance
+        if (distance < BREADCRUMB_MIN_DISTANCE) {
+            return;
+        }
+    }
+
+    // Add breadcrumb
+    breadcrumbs.push({ lat, lon, timestamp: Date.now() });
+
+    // Limit breadcrumbs
+    if (breadcrumbs.length > MAX_BREADCRUMBS) {
+        breadcrumbs.shift(); // Remove oldest
+    }
+}
+
 function startGPSTracking() {
     if (!navigator.geolocation) {
         console.warn('[VectorMap] Geolocation not supported');
@@ -125,6 +198,9 @@ function startGPSTracking() {
                 heading: position.coords.heading, // true heading in degrees
                 speed: position.coords.speed // m/s
             };
+
+            // Add breadcrumb to trail
+            addBreadcrumb(position.coords.latitude, position.coords.longitude);
 
             // Feed data to Flight Tracker
             if (window.FlightTracker) {
@@ -1383,6 +1459,67 @@ function generateMap(waypoints, legs) {
         const hasSpeed = currentPosition.speed && currentPosition.speed > 0.5; // > ~1 kt
         const heading = hasSpeed && currentPosition.heading != null ? currentPosition.heading : 0;
 
+        // ============================================
+        // Range Circles (adaptive based on zoom mode)
+        // ============================================
+        const rangeIntervals = getRangeIntervalsForZoom(currentZoomMode);
+        if (rangeIntervals && rangeIntervals.length > 0) {
+            svg += `<g id="range-circles" opacity="0.6">`;
+            rangeIntervals.forEach(rangeNM => {
+                // Calculate pixel radius for this range
+                // Use approximate projection: 1nm ≈ 1/60 degree latitude
+                const rangeDegrees = rangeNM / 60;
+                const edgePoint = project(currentPosition.lat + rangeDegrees, currentPosition.lon);
+                const radiusPixels = Math.abs(edgePoint.y - pos.y);
+
+                svg += `<circle cx="${pos.x}" cy="${pos.y}" r="${radiusPixels}"
+                        fill="none" stroke="#00ff00" stroke-width="2" stroke-dasharray="8,4" opacity="0.5"/>`;
+
+                // Add range label
+                const labelY = pos.y - radiusPixels + 15;
+                svg += `<text x="${pos.x + 5}" y="${labelY}" fill="#00ff00" font-size="12" font-family="Roboto Mono" font-weight="500">${rangeNM}NM</text>`;
+            });
+            svg += `</g>`;
+        }
+
+        // ============================================
+        // Breadcrumb Trail
+        // ============================================
+        if (breadcrumbs.length > 1) {
+            svg += `<g id="breadcrumb-trail" opacity="0.8">`;
+
+            // Draw path segments with gradient from black (oldest) to bright red (newest)
+            for (let i = 0; i < breadcrumbs.length - 1; i++) {
+                const crumb1 = breadcrumbs[i];
+                const crumb2 = breadcrumbs[i + 1];
+                const pos1 = project(crumb1.lat, crumb1.lon);
+                const pos2 = project(crumb2.lat, crumb2.lon);
+
+                // Calculate color based on position (0 = oldest/black, 1 = newest/bright red)
+                const progress = i / (breadcrumbs.length - 1);
+                const color = getBreadcrumbColor(progress);
+
+                svg += `<line x1="${pos1.x}" y1="${pos1.y}" x2="${pos2.x}" y2="${pos2.y}"
+                        stroke="${color}" stroke-width="3" stroke-linecap="round"/>`;
+            }
+
+            // Draw breadcrumb dots
+            breadcrumbs.forEach((crumb, index) => {
+                const crumbPos = project(crumb.lat, crumb.lon);
+                const progress = index / (breadcrumbs.length - 1);
+                const color = getBreadcrumbColor(progress);
+                const crumbSize = index === breadcrumbs.length - 1 ? 8 : 5; // Larger for most recent
+
+                svg += `<circle cx="${crumbPos.x}" cy="${crumbPos.y}" r="${crumbSize}"
+                        fill="${color}" stroke="#ffffff" stroke-width="1.5"/>`;
+            });
+
+            svg += `</g>`;
+        }
+
+        // ============================================
+        // GPS Arrow (on top of everything)
+        // ============================================
         // Navigation arrow dimensions
         const arrowHeight = isMobile ? 80 : 60;
         const arrowWidth = isMobile ? 48 : 36;

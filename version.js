@@ -24,8 +24,8 @@
 const AppVersion = {
     // Semantic version (sync with package.json)
     MAJOR: 3,
-    MINOR: 4,
-    PATCH: 6,
+    MINOR: 5,
+    PATCH: 0,
 
     // Full version string
     get VERSION() {
@@ -45,7 +45,7 @@ const AppVersion = {
     BUILD_DATE: '2026-01-02',
 
     // Release name (optional)
-    RELEASE_NAME: 'Fix reversed path views for trans-Pacific routes',
+    RELEASE_NAME: 'Map controls redesign with range circles and breadcrumb trail',
 
     /**
      * Get full version info object
