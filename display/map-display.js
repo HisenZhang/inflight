@@ -1145,7 +1145,23 @@ function generateMap(waypoints, legs) {
 
     // Calculate projection center (center of visible area)
     const centerLat = (bounds.minLat + bounds.maxLat) / 2;
-    const centerLon = (bounds.minLon + bounds.maxLon) / 2;
+
+    // Handle wraparound case where minLon > maxLon (e.g., Pacific routes)
+    // Example: minLon=121.8°E, maxLon=-97°W represents eastward Pacific crossing
+    // The center should be in the Pacific, not the arithmetic mean
+    let centerLon;
+    if (bounds.minLon > bounds.maxLon) {
+        // Wraparound case: calculate center going eastward from minLon to maxLon
+        // Convert to 0-360 range, find midpoint, convert back
+        const minLon360 = bounds.minLon;
+        const maxLon360 = bounds.maxLon + 360;
+        const centerLon360 = (minLon360 + maxLon360) / 2;
+        centerLon = centerLon360 > 180 ? centerLon360 - 360 : centerLon360;
+    } else {
+        // Normal case: simple average
+        centerLon = (bounds.minLon + bounds.maxLon) / 2;
+    }
+
     const centerLatRad = centerLat * Math.PI / 180;
     const centerLonRad = centerLon * Math.PI / 180;
 

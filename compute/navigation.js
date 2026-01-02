@@ -492,15 +492,9 @@
                 minLon = Math.min(...lons);
                 maxLon = Math.max(...lons);
 
-                // Double-check: if span > 180°, we're going the long way
-                // (This can happen even without crossing ±180° line)
-                const span = maxLon - minLon;
-                if (span > 180) {
-                    // Swap bounds to get the shorter arc
-                    const temp = minLon;
-                    minLon = maxLon;
-                    maxLon = temp;
-                }
+                // If span > 180°, this is a legitimate long-path route
+                // (e.g., trans-Pacific or trans-Atlantic routes)
+                // Keep the bounds as-is - don't swap
             }
 
             return { minLat, maxLat, minLon, maxLon };
