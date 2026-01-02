@@ -136,6 +136,26 @@ function getRangeIntervalsForZoom(zoomMode) {
 }
 
 /**
+ * Get breadcrumb color based on age (gradient from black to bright red)
+ * @param {number} progress - Progress from 0 (oldest) to 1 (newest)
+ * @returns {string} RGB color string
+ */
+function getBreadcrumbColor(progress) {
+    // Gradient: black (#000000) → dark red (#8B0000) → bright red (#FF0000)
+    if (progress < 0.5) {
+        // First half: black to dark red
+        const t = progress * 2; // 0 to 1
+        const r = Math.round(139 * t);
+        return `rgb(${r}, 0, 0)`;
+    } else {
+        // Second half: dark red to bright red
+        const t = (progress - 0.5) * 2; // 0 to 1
+        const r = Math.round(139 + (255 - 139) * t);
+        return `rgb(${r}, 0, 0)`;
+    }
+}
+
+/**
  * Add a breadcrumb to the trail if far enough from last crumb
  * @param {number} lat - Latitude
  * @param {number} lon - Longitude
@@ -1450,27 +1470,32 @@ function generateMap(waypoints, legs) {
         // Breadcrumb Trail
         // ============================================
         if (breadcrumbs.length > 1) {
-            svg += `<g id="breadcrumb-trail" opacity="0.7">`;
+            svg += `<g id="breadcrumb-trail" opacity="0.8">`;
 
-            // Draw path connecting breadcrumbs
-            let pathData = '';
-            breadcrumbs.forEach((crumb, index) => {
-                const crumbPos = project(crumb.lat, crumb.lon);
-                if (index === 0) {
-                    pathData += `M ${crumbPos.x},${crumbPos.y}`;
-                } else {
-                    pathData += ` L ${crumbPos.x},${crumbPos.y}`;
-                }
-            });
+            // Draw path segments with gradient from black (oldest) to bright red (newest)
+            for (let i = 0; i < breadcrumbs.length - 1; i++) {
+                const crumb1 = breadcrumbs[i];
+                const crumb2 = breadcrumbs[i + 1];
+                const pos1 = project(crumb1.lat, crumb1.lon);
+                const pos2 = project(crumb2.lat, crumb2.lon);
 
-            svg += `<path d="${pathData}" fill="none" stroke="#00aaff" stroke-width="3" stroke-opacity="0.6"/>`;
+                // Calculate color based on position (0 = oldest/black, 1 = newest/bright red)
+                const progress = i / (breadcrumbs.length - 1);
+                const color = getBreadcrumbColor(progress);
+
+                svg += `<line x1="${pos1.x}" y1="${pos1.y}" x2="${pos2.x}" y2="${pos2.y}"
+                        stroke="${color}" stroke-width="3" stroke-linecap="round"/>`;
+            }
 
             // Draw breadcrumb dots
             breadcrumbs.forEach((crumb, index) => {
                 const crumbPos = project(crumb.lat, crumb.lon);
-                const crumbSize = index === breadcrumbs.length - 1 ? 6 : 4; // Larger for most recent
+                const progress = index / (breadcrumbs.length - 1);
+                const color = getBreadcrumbColor(progress);
+                const crumbSize = index === breadcrumbs.length - 1 ? 8 : 5; // Larger for most recent
+
                 svg += `<circle cx="${crumbPos.x}" cy="${crumbPos.y}" r="${crumbSize}"
-                        fill="#00aaff" stroke="#ffffff" stroke-width="1"/>`;
+                        fill="${color}" stroke="#ffffff" stroke-width="1.5"/>`;
             });
 
             svg += `</g>`;
