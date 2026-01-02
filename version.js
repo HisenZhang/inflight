@@ -25,7 +25,7 @@ const AppVersion = {
     // Semantic version (sync with package.json)
     MAJOR: 3,
     MINOR: 4,
-    PATCH: 5,
+    PATCH: 6,
 
     // Full version string
     get VERSION() {
@@ -34,7 +34,7 @@ const AppVersion = {
 
     // Service worker cache version
     // Increment this number to force PWA updates
-    CACHE_VERSION: 161,
+    CACHE_VERSION: 162,
 
     // Full cache name for service worker
     get CACHE_NAME() {
@@ -45,7 +45,7 @@ const AppVersion = {
     BUILD_DATE: '2026-01-02',
 
     // Release name (optional)
-    RELEASE_NAME: 'Fix bounding box for long-path routes crossing anti-meridian',
+    RELEASE_NAME: 'Fix reversed path views for trans-Pacific routes',
 
     /**
      * Get full version info object
