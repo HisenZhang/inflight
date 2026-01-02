@@ -1731,11 +1731,18 @@ function showPopup(waypoint, legs, index) {
         setNextWptHTML = `<button class="btn btn-secondary btn-sm" id="setNextWptBtn" style="width: 100%; margin-top: 0.25rem; padding: 0.15rem 0.25rem; font-size: 0.7rem;">${buttonText}</button>`;
     }
 
-    // Procedure button for airports (only show if procedures are enabled)
+    // Procedure button for airports
     let procButtonHTML = '';
-    if (waypoint.waypointType === 'airport' && proceduresEnabled) {
+    if (waypoint.waypointType === 'airport') {
         const airportCode = waypoint.icao || waypoint.ident;
         procButtonHTML = `<button class="btn btn-secondary btn-sm" id="viewProcBtn" style="width: 100%; margin-top: 0.25rem; padding: 0.15rem 0.25rem; font-size: 0.7rem;">PROC</button>`;
+    }
+
+    // Airway button for fixes and navaids
+    let airwayButtonHTML = '';
+    if (waypoint.waypointType === 'fix' || waypoint.waypointType === 'navaid') {
+        const waypointCode = waypoint.ident;
+        airwayButtonHTML = `<button class="btn btn-secondary btn-sm" id="viewAirwaysBtn" style="width: 100%; margin-top: 0.25rem; padding: 0.15rem 0.25rem; font-size: 0.7rem;">AIRWAY</button>`;
     }
 
     // Build waypoint row using exact navlog structure

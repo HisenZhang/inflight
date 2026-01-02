@@ -25,7 +25,7 @@ const AppVersion = {
     // Semantic version (sync with package.json)
     MAJOR: 3,
     MINOR: 5,
-    PATCH: 1,
+    PATCH: 2,
 
     // Full version string
     get VERSION() {
@@ -34,7 +34,7 @@ const AppVersion = {
 
     // Service worker cache version
     // Increment this number to force PWA updates
-    CACHE_VERSION: 163,
+    CACHE_VERSION: 164,
 
     // Full cache name for service worker
     get CACHE_NAME() {
@@ -45,7 +45,7 @@ const AppVersion = {
     BUILD_DATE: '2026-01-02',
 
     // Release name (optional)
-    RELEASE_NAME: 'Fix missing STAR and DP procedures in v3 architecture indexing',
+    RELEASE_NAME: 'Fix PROC button visibility in waypoint details',
 
     /**
      * Get full version info object
