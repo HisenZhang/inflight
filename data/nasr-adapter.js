@@ -60,15 +60,16 @@ async function getNASRInfo() {
 
 // Get total size of all NASR files from /info endpoint
 async function getNASRTotalSize() {
-    // NOTE: We now use CIFP for procedures/airways/airspace
-    // Only download core airport/navaid data from NASR
+    // NOTE: We now use CIFP for procedures/airways
+    // Core airport/navaid data + airspace from NASR
     const filesToDownload = [
         'APT_BASE.csv',  // Airports (basic data)
         'APT_RWY.csv',   // Runways
         'NAV_BASE.csv',  // Navaids (VOR/NDB)
         'FIX_BASE.csv',  // Waypoints/Fixes
-        'FRQ.csv'        // Frequencies (not in CIFP!)
-        // Airways, SIDs, STARs, Airspace now from CIFP
+        'FRQ.csv',       // Frequencies (not in CIFP!)
+        'CLS_ARSP.csv'   // Airspace (CIFP airspace UC/UR not yet implemented)
+        // Airways, SIDs, STARs now from CIFP
     ];
 
     try {
@@ -716,14 +717,16 @@ async function loadNASRData(onStatusUpdate, onFileLoaded) {
         }
 
         // Define files to download
-        // NOTE: Airways, SIDs, STARs, and Airspace are now loaded from CIFP
+        // NOTE: Airways, SIDs, STARs are now loaded from CIFP
         const filesToDownload = [
             { id: 'nasr_airports', filename: 'APT_BASE.csv', label: 'AIRPORTS', parser: parseNASRAirports },
             { id: 'nasr_runways', filename: 'APT_RWY.csv', label: 'RUNWAYS', parser: parseNASRRunways },
             { id: 'nasr_navaids', filename: 'NAV_BASE.csv', label: 'NAVAIDS', parser: parseNASRNavaids },
             { id: 'nasr_fixes', filename: 'FIX_BASE.csv', label: 'FIXES', parser: parseNASRFixes },
-            { id: 'nasr_frequencies', filename: 'FRQ.csv', label: 'FREQUENCIES', parser: parseNASRFrequencies }
-            // CIFP provides: Airways (ER), SIDs (PD), STARs (PE), Airspace (UC/UR)
+            { id: 'nasr_frequencies', filename: 'FRQ.csv', label: 'FREQUENCIES', parser: parseNASRFrequencies },
+            { id: 'nasr_airspace', filename: 'CLS_ARSP.csv', label: 'AIRSPACE', parser: parseNASRAirspaceClass }
+            // CIFP provides: Airways (ER), SIDs (PD), STARs (PE)
+            // Airspace restored from NASR (CIFP airspace UC/UR not yet implemented)
         ];
 
         const parsedData = {};

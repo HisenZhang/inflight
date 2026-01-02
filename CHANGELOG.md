@@ -92,10 +92,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Coverage:** US airspace, procedures, and MORA grid
 
 ### Future Enhancements (Not Yet Implemented)
-- [ ] Airspace display on map (v3.5)
+- [ ] CIFP airspace sector-based display with precise boundaries (v3.5)
+  - CIFP UC/UR records provide exact polygon/arc boundaries for Class B/C/D and SUA
+  - Current display uses simple NASR circular approximations
+  - Requires SVG path/polygon rendering support in map-display.js
 - [ ] Procedure visualization (SID/STAR/Approach routes) (v3.6)
 - [ ] Path terminator engine (TF, RF, CF legs) (v3.6)
 - [ ] Vertical guidance (VNAV) (v3.7)
+
+## [3.4.3] - 2026-01-02
+
+### Fixed
+- **NASR Airspace Restored** - Brought back Class B/C/D airspace display on map
+  - Restored CLS_ARSP.csv loading from NASR (removed during CIFP migration)
+  - Airspace now displays as colored circles around controlled airports
+  - Class B: Blue filled circles (30nm radius), Class C: Magenta (10nm), Class D: Blue dashed (5nm)
+  - CIFP airspace (UC/UR records) provides precise sector boundaries but display code not yet updated
+  - Files: [data/nasr-adapter.js](data/nasr-adapter.js), [data/data-manager.js](data/data-manager.js)
+
+### Changed
+- **Cache Version** - Bumped to 159 to force PWA update with airspace data
 
 ## [3.3.0] - 2025-11-30
 

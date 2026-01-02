@@ -25,7 +25,7 @@ const AppVersion = {
     // Semantic version (sync with package.json)
     MAJOR: 3,
     MINOR: 4,
-    PATCH: 2,
+    PATCH: 3,
 
     // Full version string
     get VERSION() {
@@ -34,7 +34,7 @@ const AppVersion = {
 
     // Service worker cache version
     // Increment this number to force PWA updates
-    CACHE_VERSION: 158,
+    CACHE_VERSION: 159,
 
     // Full cache name for service worker
     get CACHE_NAME() {
@@ -42,10 +42,10 @@ const AppVersion = {
     },
 
     // Build metadata (optional)
-    BUILD_DATE: '2026-01-01',
+    BUILD_DATE: '2026-01-02',
 
     // Release name (optional)
-    RELEASE_NAME: 'FPL import: use file coordinates even when waypoint in database',
+    RELEASE_NAME: 'Restore NASR airspace data loading and map display',
 
     /**
      * Get full version info object
