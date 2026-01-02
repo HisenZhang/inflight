@@ -612,7 +612,7 @@ function mergeDataSources(nasrData, ourairportsData, cifpData = null, onStatusUp
                 dpsData.set(id, dp);
             }
         }
-        // Airspace now comes from CIFP, skip NASR airspace
+        // Airspace from NASR (CIFP airspace UC/UR not yet implemented)
         if (nasrData.data.airspace) {
             for (const [arptId, airspace] of nasrData.data.airspace) {
                 airspaceData.set(arptId, airspace);
