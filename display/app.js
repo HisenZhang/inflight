@@ -1393,41 +1393,10 @@ async function handleImportFile(event) {
         const validationResult = validateImportedWaypoints(navlogData.waypoints);
         const { unknown: unknownWaypoints, mismatches } = validationResult;
 
-        // For FPL imports, substitute unknown waypoint identifiers with their coordinates
-        if (format === 'fpl' && unknownWaypoints.length > 0) {
-            const originalRoute = navlogData.routeString;
-            navlogData.routeString = substituteUnknownWaypointsWithCoords(navlogData.routeString, unknownWaypoints);
-
-            // Also update routeMiddle if it exists
-            if (navlogData.routeMiddle) {
-                navlogData.routeMiddle = substituteUnknownWaypointsWithCoords(navlogData.routeMiddle, unknownWaypoints);
-            }
-
-            if (navlogData.routeString !== originalRoute) {
-                console.log(`[App] Route modified: ${originalRoute} -> ${navlogData.routeString}`);
-            }
-        }
-
-        // For FPL imports, also substitute waypoints with coordinate mismatches
-        // This ensures we use FPL file coordinates even when waypoint is in database
-        if (format === 'fpl' && mismatches.length > 0) {
-            const originalRoute = navlogData.routeString;
-            const mismatchedWaypoints = mismatches.map(m => ({
-                ident: m.ident,
-                lat: m.fplLat,
-                lon: m.fplLon
-            }));
-            navlogData.routeString = substituteUnknownWaypointsWithCoords(navlogData.routeString, mismatchedWaypoints);
-
-            // Also update routeMiddle if it exists
-            if (navlogData.routeMiddle) {
-                navlogData.routeMiddle = substituteUnknownWaypointsWithCoords(navlogData.routeMiddle, mismatchedWaypoints);
-            }
-
-            if (navlogData.routeString !== originalRoute) {
-                console.log(`[App] Route modified for coordinate mismatches: ${originalRoute} -> ${navlogData.routeString}`);
-            }
-        }
+        // For FPL imports, DON'T substitute waypoint identifiers with coordinates
+        // The waypoints already have their lat/lon from the FPL file
+        // We keep their identifiers for display (e.g., "PLADO" instead of "5207N/17044E")
+        // This only applies to named waypoints - coordinate waypoints already display as coordinates
 
         // Build import message
         let message = format === 'fpl'
@@ -1439,7 +1408,7 @@ async function handleImportFile(event) {
             const unknownNoCoords = unknownWaypoints.filter(w => w.lat === null);
 
             if (unknownWithCoords.length > 0) {
-                message += `\n\nNOTE: ${unknownWithCoords.length} waypoint(s) not in database - using FPL coordinates:\n${unknownWithCoords.map(w => `${w.ident} -> ${decimalToFaaCoord(w.lat, w.lon)}`).join(', ')}`;
+                message += `\n\nNOTE: ${unknownWithCoords.length} waypoint(s) not in database - using FPL coordinates:\n${unknownWithCoords.map(w => `${w.ident} (${decimalToFaaCoord(w.lat, w.lon)})`).join(', ')}`;
             }
             if (unknownNoCoords.length > 0) {
                 message += `\n\nWARNING: ${unknownNoCoords.length} waypoint(s) not in database (no coordinates):\n${unknownNoCoords.map(w => w.ident).join(', ')}`;
@@ -1448,7 +1417,7 @@ async function handleImportFile(event) {
 
         if (mismatches.length > 0) {
             message += `\n\nNOTE: ${mismatches.length} waypoint(s) have different coordinates in FPL vs database - using FPL coordinates:\n`;
-            message += mismatches.map(m => `${m.ident} -> ${decimalToFaaCoord(m.fplLat, m.fplLon)} (database: ${m.distanceNm} nm away)`).join(', ');
+            message += mismatches.map(m => `${m.ident} (${decimalToFaaCoord(m.fplLat, m.fplLon)}, database: ${m.distanceNm} nm away)`).join(', ');
         }
 
         // Check if TAS and altitude are set for auto-recalculation
