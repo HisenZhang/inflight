@@ -1278,9 +1278,8 @@ function generateMap(waypoints, legs) {
     if (shouldShowDetails) {
         console.log('[VectorMap] Drawing airways and fixes at detailed zoom (mode:', effectiveZoomMode, ')');
 
-        // Airways: show at 50nm and 25nm zoom only (not at 5nm - too cluttered with fixes)
-        const shouldDrawAirways = effectiveZoomMode === 'surrounding-50' || effectiveZoomMode === 'surrounding-25';
-        const airwaysSvg = shouldDrawAirways ? drawAirways(project, bounds, strokeWidth, effectiveZoomMode) : '';
+        // Airways: always show when shouldShowDetails is true (no longer restricted by zoom level)
+        const airwaysSvg = drawAirways(project, bounds, strokeWidth, effectiveZoomMode);
 
         // Fixes: show at 25nm and 5nm zoom only (not at 50nm - too cluttered)
         const shouldDrawFixes = effectiveZoomMode === 'surrounding-25' || effectiveZoomMode === 'surrounding-5';
@@ -1289,11 +1288,11 @@ function generateMap(waypoints, legs) {
         console.log('[VectorMap] Airways SVG length:', airwaysSvg.length);
         console.log('[VectorMap] Fixes SVG length:', fixesSvg.length);
 
-        if (shouldDrawAirways) {
-            svg += `<g id="layer-airways" opacity="1.0">`;
-            svg += airwaysSvg;
-            svg += `</g>`;
-        }
+        // Always draw airways when shouldShowDetails is true
+        svg += `<g id="layer-airways" opacity="1.0">`;
+        svg += airwaysSvg;
+        svg += `</g>`;
+
         if (shouldDrawFixes) {
             svg += `<g id="layer-fixes" opacity="1.0">`;
             svg += fixesSvg;
