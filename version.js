@@ -25,7 +25,7 @@ const AppVersion = {
     // Semantic version (sync with package.json)
     MAJOR: 3,
     MINOR: 6,
-    PATCH: 0,
+    PATCH: 1,
 
     // Full version string
     get VERSION() {
@@ -34,7 +34,7 @@ const AppVersion = {
 
     // Service worker cache version
     // Increment this number to force PWA updates
-    CACHE_VERSION: 165,
+    CACHE_VERSION: 166,
 
     // Full cache name for service worker
     get CACHE_NAME() {
@@ -45,7 +45,7 @@ const AppVersion = {
     BUILD_DATE: '2026-01-02',
 
     // Release name (optional)
-    RELEASE_NAME: 'Improved range rings, PROC display, and airway visibility',
+    RELEASE_NAME: 'Simplified PROC button - direct SID/STAR display without modal',
 
     /**
      * Get full version info object

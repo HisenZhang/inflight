@@ -1467,37 +1467,6 @@
         <div id="pwa-install-status"></div>
     </div>
 
-    <!-- Procedure Selector Modal -->
-    <div id="procedureModal" class="procedure-modal" style="display: none;">
-        <div class="procedure-modal-content">
-            <div class="procedure-modal-header">
-                <h3 id="procedureModalTitle">PROCEDURES</h3>
-                <button class="procedure-modal-close" onclick="closeProcedureModal()">&times;</button>
-            </div>
-            <div class="procedure-modal-body">
-                <!-- SIDs Section -->
-                <div class="procedure-section">
-                    <h4 class="procedure-section-title">🛫 DEPARTURE (SID)</h4>
-                    <div id="sidList" class="procedure-list"></div>
-                </div>
-                <!-- STARs Section -->
-                <div class="procedure-section">
-                    <h4 class="procedure-section-title">🛬 ARRIVAL (STAR)</h4>
-                    <div id="starList" class="procedure-list"></div>
-                </div>
-                <!-- Approaches Section -->
-                <div class="procedure-section">
-                    <h4 class="procedure-section-title">🛬 APPROACHES</h4>
-                    <div id="approachList" class="procedure-list"></div>
-                </div>
-            </div>
-            <div class="procedure-modal-footer">
-                <button class="btn btn-secondary" onclick="clearSelectedProcedure()">CLEAR</button>
-                <button class="btn btn-primary" onclick="closeProcedureModal()">DONE</button>
-            </div>
-        </div>
-    </div>
-
     <!-- Scripts - Load modules in order (3-Engine Architecture) -->
 
     <!-- Version Configuration (loaded first) -->
