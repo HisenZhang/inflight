@@ -15,6 +15,20 @@ npm start
 
 Open `http://localhost:8000` → Click "LOAD DATA" → Enter route → Fly.
 
+## Local Kiosk Mode
+
+To run a dedicated display (e.g., flight simulator station):
+
+```bash
+# Mac/Linux
+npm run start:kiosk
+
+# Windows
+scripts\start-kiosk.bat
+```
+
+This starts a local web server and launches Chrome in full-screen Kiosk mode.
+
 ## What Makes This Different
 
 - **Zero friction**: Type URL, load data once, use forever offline
